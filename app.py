@@ -129,6 +129,9 @@ class RaceCar:
     
     def update_position(self, dt):
         """Aggiorna posizione dell'auto basandosi sulla distanza e stato"""
+        if is_paused:
+            return  # Non muovere le auto se in pausa
+            
         current_time = time.time()
         session_time = current_time - self.session_start_time
         
@@ -260,13 +263,30 @@ def get_position_by_distance(distance):
 
 # Variabili globali per la sessione
 session_start_time = time.time()
+session_start_real_time = time.time()  # Tempo reale di inizio
 SESSION_DURATION = 3600  # 60 minuti in secondi
 game_speed_multiplier = 1.0  # Moltiplicatore velocità di gioco
+is_paused = False
+pause_start_time = None
+total_paused_time = 0
 
 def get_session_time_remaining():
-    """Restituisce il tempo rimanente della sessione (aggiustato per velocità gioco)"""
-    elapsed = (time.time() - session_start_time) * game_speed_multiplier
-    remaining = max(0, SESSION_DURATION - elapsed)
+    """Restituisce il tempo rimanente della sessione (aggiustato per velocità gioco e pause)"""
+    if is_paused:
+        # Se in pausa, ritorna l'ultimo tempo calcolato
+        return max(0, SESSION_DURATION - ((session_start_real_time + total_paused_time - session_start_time) * game_speed_multiplier))
+    
+    # Calcola tempo trascorso reale (escluse pause)
+    current_real_time = time.time()
+    if pause_start_time:
+        # Se attualmente in pausa, non contare questo tempo
+        elapsed_real = (pause_start_time - session_start_real_time) - total_paused_time
+    else:
+        elapsed_real = (current_real_time - session_start_real_time) - total_paused_time
+    
+    # Applica moltiplicatore velocità
+    elapsed_game = elapsed_real * game_speed_multiplier
+    remaining = max(0, SESSION_DURATION - elapsed_game)
     return remaining
 
 def format_session_time(seconds):
@@ -280,6 +300,23 @@ def set_game_speed(multiplier):
     global game_speed_multiplier
     game_speed_multiplier = multiplier
     return game_speed_multiplier
+
+def toggle_pause():
+    """Attiva/disattiva la pausa"""
+    global is_paused, pause_start_time, total_paused_time
+    
+    if is_paused:
+        # Riprendi il gioco
+        if pause_start_time:
+            total_paused_time += time.time() - pause_start_time
+        pause_start_time = None
+        is_paused = False
+        return False
+    else:
+        # Metti in pausa
+        pause_start_time = time.time()
+        is_paused = True
+        return True
 
 # Inizializza 20 auto (2 per team) con posizioni sfalsate
 race_cars = []
@@ -295,6 +332,15 @@ for team_name, team_data in F1_TEAMS.items():
         car.box_time_until = random.uniform(30, 300)  # Prima uscita tra 30s-5min
         car_index += 1
         race_cars.append(car)
+
+@app.route('/api/toggle_pause', methods=['POST'])
+def toggle_pause_route():
+    """Attiva/disattiva la pausa"""
+    is_paused_state = toggle_pause()
+    return jsonify({
+        'message': 'Game ' + ('paused' if is_paused_state else 'resumed'),
+        'is_paused': is_paused_state
+    })
 
 @app.route('/api/set_speed', methods=['POST'])
 def set_speed():
@@ -376,7 +422,8 @@ def race_simulation():
             'cars': cars_data,
             'session_time_remaining': session_remaining,
             'session_time_formatted': format_session_time(session_remaining),
-            'game_speed': game_speed_multiplier
+            'game_speed': game_speed_multiplier,
+            'is_paused': is_paused
         })
 
 if __name__ == '__main__':
