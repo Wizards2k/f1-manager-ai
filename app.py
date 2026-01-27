@@ -203,7 +203,7 @@ class RaceCar:
             # Hot lap con tempi migliori
             realistic_lap_time = 79.5 + random.uniform(-2.5, 2.5)
         elif lap_type == CarState.IN_LAP:
-            # In lappiù lento
+            # In lap più lento
             realistic_lap_time = 88.0 + random.uniform(-3.0, 3.0)
         else:
             realistic_lap_time = 80.0 + random.uniform(-3.0, 3.0)

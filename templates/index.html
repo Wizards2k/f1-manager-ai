@@ -318,10 +318,10 @@
         
         // Aggiorna tabella tempi
         function updateTimingTable(cars) {
-            // Ordina per ultimo tempo sul giro (solo hot laps)
+            // Ordina per ultimo tempo sul giro (tutti i tipi)
             const sortedCars = [...cars].sort((a, b) => {
-                if (!a.last_lap_time || a.last_lap_type !== 'HOT_LAP') return 1;
-                if (!b.last_lap_time || b.last_lap_type !== 'HOT_LAP') return -1;
+                if (!a.last_lap_time) return 1;
+                if (!b.last_lap_time) return -1;
                 return a.last_lap_time - b.last_lap_time;
             });
             
@@ -340,7 +340,8 @@
                         </div>
                         <div>
                             <div class="lap-time">
-                                ${car.last_lap_time && car.last_lap_type === 'HOT_LAP' ? formatLapTime(car.last_lap_time) : '--:--.---'}
+                                ${car.last_lap_time ? formatLapTime(car.last_lap_time) : '--:--.---'}
+                                ${car.last_lap_type && car.last_lap_type !== 'HOT_LAP' ? `<small style="color: #888;">(${car.last_lap_type})</small>` : ''}
                             </div>
                             <div class="lap-count">
                                 Lap ${car.total_laps}
