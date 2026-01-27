@@ -27,7 +27,7 @@
         }
         
         .circuit-container {
-            width: 75%;
+            width: 65%;
             position: relative;
             background: #0a0a0a;
         }
@@ -38,7 +38,7 @@
         }
         
         .timing-container {
-            width: 25%;
+            width: 35%;
             background: #0f0f0f;
             border-left: 2px solid #333;
             padding: 20px;
@@ -97,36 +97,37 @@
         
         .speed-btn {
             background: #333;
+            color: #fff;
             border: none;
-            color: white;
-            padding: 5px 8px;
+            padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 11px;
+            font-weight: bold;
             transition: all 0.3s ease;
         }
         
         .speed-btn:hover {
             background: #555;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
         }
         
         .speed-btn.active {
             background: #e10600;
-            color: white;
+            color: #fff;
             box-shadow: 0 2px 8px rgba(225, 6, 0, 0.5);
         }
         
         .pause-btn {
             background: #333;
+            color: #fff;
             border: none;
-            color: white;
-            padding: 8px 12px;
+            padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
-            margin-bottom: 8px;
+            font-weight: bold;
             transition: all 0.3s ease;
+            min-width: 40px;
+            font-size: 16px;
         }
         
         .pause-btn:hover {
@@ -135,7 +136,9 @@
         }
         
         .pause-btn.paused {
-            background: #00aa00;
+            background: #ff6600;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(255, 102, 0, 0.5);
         }
         
         .current-speed {
@@ -160,25 +163,11 @@
             background: #1a1a1a;
             border-radius: 6px;
             border-left: 3px solid;
-            transition: all 0.3s ease;
-        }
-        
-        .driver-row.in-box {
-            opacity: 0.6;
-            background: #0f0f0f;
-        }
-        
-        .driver-row.in-box .status-indicator {
-            background: #666;
-        }
-        
-        .driver-row.on-track .status-indicator {
-            background: #00ff00;
+            gap: 6px;
         }
         
         .driver-row:hover {
             background: #252525;
-            transform: translateX(5px);
         }
         
         .driver-number {
@@ -331,7 +320,6 @@
             border-radius: 50%;
             background: #00ff00;
             margin-left: 4px;
-            animation: pulse 2s infinite;
         }
         
         @keyframes pulse {
