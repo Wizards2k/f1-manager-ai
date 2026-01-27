@@ -391,7 +391,7 @@
             
             timingTable.innerHTML = sortedCars.map((car, index) => {
                 const isInBox = car.state === 'BOX';
-                const stateClass = car.state.toLowerCase().replace('_', '-');
+                const stateClass = car.state ? car.state.toLowerCase().replace('_', '-') : 'box';
                 
                 return `
                     <div class="driver-row ${isInBox ? 'in-box' : 'on-track'}" style="border-left-color: ${car.team_color}">
@@ -413,7 +413,7 @@
                             </div>
                         </div>
                         <div class="state-indicator ${stateClass}">
-                            ${car.state}
+                            ${car.state || 'BOX'}
                         </div>
                         <div class="status-indicator"></div>
                     </div>
@@ -471,15 +471,21 @@
                 console.log('Setting speed to:', speed);
                 
                 try {
-                    const response = await fetch(`/api/set_speed/${speed}`);
-                    const data = await response.json();
+                    const response = await fetch(`/api/set_speed/${speed}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
                     
-                    if (response.ok) {
-                        updateSpeedIndicator(speed);
-                        console.log('Speed changed successfully:', data.message);
-                    } else {
-                        console.error('Speed change error:', data.error);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
+                    
+                    const data = await response.json();
+                    updateSpeedIndicator(speed);
+                    console.log('Speed changed successfully:', data.message);
+                    
                 } catch (error) {
                     console.error('Network error setting speed:', error);
                 }
