@@ -1,0 +1,65 @@
+{
+  "monza": {
+    "name": "Autodromo Nazionale Monza",
+    "total_length": 5793,
+    "sectors": {
+      "sector1": {
+        "distance": 1900,
+        "description": "Start to Variante della Roggia",
+        "key_features": ["Rettifilo", "Variante del Rettifilo", "Curva Grande", "Variante della Roggia"]
+      },
+      "sector2": {
+        "distance": 3700,
+        "description": "Variante della Roggia to Variante Ascari",
+        "key_features": ["Lesmo 1", "Lesmo 2", "Rettilineo verso Ascari"]
+      },
+      "sector3": {
+        "distance": 5793,
+        "description": "Variante Ascari to Finish Line",
+        "key_features": ["Variante Ascari", "Parabolica", "Rettilineo finale"]
+      }
+    }
+  },
+  "silverstone": {
+    "name": "Silverstone Circuit",
+    "total_length": 5891,
+    "sectors": {
+      "sector1": {
+        "distance": 1800,
+        "description": "Start to Village",
+        "key_features": ["Abbey", "Farm", "Village"]
+      },
+      "sector2": {
+        "distance": 3400,
+        "description": "Village to Stowe",
+        "key_features": ["Aintree", "Wellington", "Brooklands", "Luffield", "Woodcote"]
+      },
+      "sector3": {
+        "distance": 5891,
+        "description": "Stowe to Finish Line",
+        "key_features": ["Copse", "Maggotts", "Becketts", "Chapel", "Hangar Straight", "Stowe"]
+      }
+    }
+  },
+  "monaco": {
+    "name": "Circuit de Monaco",
+    "total_length": 3337,
+    "sectors": {
+      "sector1": {
+        "distance": 1200,
+        "description": "Start to Casino Square",
+        "key_features": ["Sainte Devote", "Beau Rivage", "Massenet", "Casino Square"]
+      },
+      "sector2": {
+        "distance": 2300,
+        "description": "Casino Square to Portier",
+        "key_features": ["Mirabeau", "Grand Hotel Hairpin", "Portier"]
+      },
+      "sector3": {
+        "distance": 3337,
+        "description": "Portier to Finish Line",
+        "key_features": ["Tunnel", "Nouvelle Chicane", "Tabac", "Piscine", "Rascasse", "Anthony Noghes"]
+      }
+    }
+  }
+}

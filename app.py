@@ -17,6 +17,14 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 with open('monza_circuit.json', 'r') as f:
     circuit_data = json.load(f)
 
+# Carica configurazione settori
+with open('sectors_config.json', 'r') as f:
+    sectors_config = json.load(f)
+
+# Ottieni configurazione settori per il circuito corrente (Monza)
+current_circuit = 'monza'
+circuit_sectors = sectors_config[current_circuit]['sectors']
+
 # Configurazione team e piloti F1 2025 con numeri reali ufficiali
 F1_TEAMS = {
     'Red Bull Racing': {
@@ -120,6 +128,13 @@ class RaceCar:
         self.total_session_laps = 0  # Giri totali in sessione
         self.last_lap_type = None
         
+        # Attributi per tempi settoriali
+        self.current_lap_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
+        self.best_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
+        self.last_sector_times = {'sector1': None, 'sector2': None, 'sector3': None}
+        self.current_lap_sector_start_time = time.time()
+        self.last_sector_distance = 0
+        
     def get_position(self):
         """Restituisce coordinate attuali lungo il circuito"""
         if self.state == CarState.BOX:
@@ -148,7 +163,11 @@ class RaceCar:
             # Out lap più lento (riscaldamento gomme) - velocità base
             base_speed_ms = (60 + self.speed * 20)  # 60-80 m/s
             actual_speed_ms = base_speed_ms * game_speed_multiplier
+            old_distance = self.distance_traveled
             self.distance_traveled += actual_speed_ms * adjusted_dt
+            
+            # Controlla PRIMA passaggio settori, POI completamento giro
+            self.check_sector_crossing(old_distance, self.distance_traveled)
             
             # Controlla completamento giro
             if self.distance_traveled >= circuit_length:
@@ -161,7 +180,11 @@ class RaceCar:
             # Hot lap a velocità massima - velocità base
             base_speed_ms = (70 + self.speed * 30)  # 70-100 m/s
             actual_speed_ms = base_speed_ms * game_speed_multiplier
+            old_distance = self.distance_traveled
             self.distance_traveled += actual_speed_ms * adjusted_dt
+            
+            # Controlla PRIMA passaggio settori, POI completamento giro
+            self.check_sector_crossing(old_distance, self.distance_traveled)
             
             # Controlla completamento giro
             if self.distance_traveled >= circuit_length:
@@ -178,7 +201,11 @@ class RaceCar:
             # In lap più lento (raffreddamento) - velocità base
             base_speed_ms = (55 + self.speed * 15)  # 55-70 m/s
             actual_speed_ms = base_speed_ms * game_speed_multiplier
+            old_distance = self.distance_traveled
             self.distance_traveled += actual_speed_ms * adjusted_dt
+            
+            # Controlla PRIMA passaggio settori, POI completamento giro
+            self.check_sector_crossing(old_distance, self.distance_traveled)
             
             # Controlla completamento giro
             if self.distance_traveled >= circuit_length:
@@ -186,12 +213,92 @@ class RaceCar:
                 self.complete_lap(CarState.IN_LAP)
                 self.enter_box()
                 
+    def check_sector_crossing(self, old_distance, new_distance):
+        """Controlla se l'auto ha attraversato un settore e registra il tempo"""
+        current_time = time.time()
+        
+        # Gestisce il wrap-around del circuito
+        if old_distance > new_distance:  # Ha completato un giro
+            old_distance = 0
+            
+        # Controlla attraversamento Sector 1
+        sector1_distance = circuit_sectors['sector1']['distance']
+        if old_distance < sector1_distance <= new_distance:
+            # Calcola tempo simulato del settore 1 basato sulla distanza
+            sector_distance = sector1_distance
+            sector_time = self.calculate_simulated_sector_time(sector_distance, self.state)
+            
+            self.current_lap_sectors['sector1'] = sector_time
+            self.last_sector_times['sector1'] = sector_time
+            
+            # Resetta settori successivi SOLO quando si inizia un nuovo giro (S1)
+            self.current_lap_sectors['sector2'] = None
+            self.current_lap_sectors['sector3'] = None
+            
+            # Aggiorna miglior settore se necessario
+            if not self.best_sectors['sector1'] or sector_time < self.best_sectors['sector1']:
+                self.best_sectors['sector1'] = sector_time
+                
+        # Controlla attraversamento Sector 2
+        sector2_distance = circuit_sectors['sector2']['distance']
+        if old_distance < sector2_distance <= new_distance:
+            # Calcola tempo simulato del settore 2 basato sulla distanza del settore
+            sector_distance = sector2_distance - circuit_sectors['sector1']['distance']
+            sector_time = self.calculate_simulated_sector_time(sector_distance, self.state)
+            
+            self.current_lap_sectors['sector2'] = sector_time
+            self.last_sector_times['sector2'] = sector_time
+            
+            # NON resettare settore 3 - logica TV F1
+            # self.current_lap_sectors['sector3'] = None  # RIMOSSO
+            
+            # Aggiorna miglior settore se necessario
+            if not self.best_sectors['sector2'] or sector_time < self.best_sectors['sector2']:
+                self.best_sectors['sector2'] = sector_time
+                
+        # Controlla attraversamento Sector 3 (fine giro)
+        sector3_distance = circuit_sectors['sector3']['distance']
+        if old_distance < sector3_distance <= new_distance:
+            # Calcola tempo simulato del settore 3 basato sulla distanza del settore
+            sector_distance = sector3_distance - circuit_sectors['sector2']['distance']
+            sector_time = self.calculate_simulated_sector_time(sector_distance, self.state)
+            
+            self.current_lap_sectors['sector3'] = sector_time
+            self.last_sector_times['sector3'] = sector_time
+            
+            # Aggiorna miglior settore se necessario
+            if not self.best_sectors['sector3'] or sector_time < self.best_sectors['sector3']:
+                self.best_sectors['sector3'] = sector_time
+    
+    def calculate_simulated_sector_time(self, sector_distance, lap_type):
+        """Calcola tempo simulato per un settore basato sulla distanza e tipo di giro"""
+        # Velocità media in m/s per tipo di giro
+        if lap_type == CarState.OUT_LAP:
+            avg_speed = random.uniform(65, 75)  # m/s
+        elif lap_type == CarState.HOT_LAP:
+            avg_speed = random.uniform(70, 80)  # m/s  
+        elif lap_type == CarState.IN_LAP:
+            avg_speed = random.uniform(60, 70)  # m/s
+        else:
+            avg_speed = random.uniform(68, 78)  # m/s
+            
+        # Calcola tempo base = distanza / velocità
+        base_time = sector_distance / avg_speed
+        
+        # Aggiungi variazione casuale per realismo
+        variation = random.uniform(-0.5, 0.5)
+        
+        return base_time + variation
+                
     def exit_box(self):
         """Auto esce dai box per nuova stint"""
         self.state = CarState.OUT_LAP
         self.stint_laps_remaining = self.stint_target_laps
         self.current_lap_start = time.time()
         self.distance_traveled = 0
+        
+        # Resetta settori per nuovo stint
+        self.current_lap_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
         
     def enter_box(self):
         """Auto rientra ai box"""
@@ -221,6 +328,10 @@ class RaceCar:
         self.total_laps += 1
         self.total_session_laps += 1
         self.last_lap_type = lap_type
+        
+        # Aggiorna miglior tempo in sessione
+        if not hasattr(self, 'best_lap_time') or realistic_lap_time < self.best_lap_time:
+            self.best_lap_time = realistic_lap_time
     
 
 # Calcola distanze tra punti per movimento costante
@@ -405,6 +516,13 @@ def get_cars():
 @socketio.on('connect')
 def handle_connect():
     print('Client connected')
+    # Resetta variabili di sessione per nuovo client
+    global accumulated_game_time, last_speed_change_time, session_start_time, session_start_real_time
+    accumulated_game_time = 0.0
+    last_speed_change_time = time.time()
+    session_start_time = time.time()
+    session_start_real_time = time.time()
+    print('Session variables reset for new client')
     emit('connected', {'data': 'Connected to F1 Manager AI'})
 
 def race_simulation():
@@ -434,7 +552,11 @@ def race_simulation():
                 'session_laps': car.total_session_laps,
                 'stint_laps_remaining': car.stint_laps_remaining,
                 'last_lap_type': car.last_lap_type.value if car.last_lap_type else None,
-                'last_lap_time': car.lap_times[-1] if car.lap_times else None
+                'last_lap_time': car.lap_times[-1] if car.lap_times else None,
+                'best_lap_time': getattr(car, 'best_lap_time', None),
+                'last_sector_times': getattr(car, 'last_sector_times', {}),
+                'current_lap_sectors': getattr(car, 'current_lap_sectors', {}),
+                'best_sectors': getattr(car, 'best_sectors', {})
             })
         
         socketio.emit('race_update', {
