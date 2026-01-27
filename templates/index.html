@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Manager AI - Monza Circuit</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .circuit-container {
+            width: 75%;
+            position: relative;
+            background: #0a0a0a;
+        }
+        
+        #circuit-map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .timing-container {
+            width: 25%;
+            background: #0f0f0f;
+            border-left: 2px solid #333;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .timing-header {
+            background: linear(135deg, #e10600 0%, #b80400 100%);
+            padding: 15px;
+            margin: -20px -20px 20px -20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 18px;
+            box-shadow: 0 2px 10px rgba(225, 6, 0, 0.3);
+        }
+        
+        .driver-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            background: #1a1a1a;
+            border-radius: 8px;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+        
+        .driver-row:hover {
+            background: #252525;
+            transform: translateX(5px);
+        }
+        
+        .driver-number {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            margin-right: 12px;
+            border: 2px solid white;
+        }
+        
+        .driver-info {
+            flex: 1;
+        }
+        
+        .driver-name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .driver-team {
+            font-size: 11px;
+            color: #999;
+        }
+        
+        .lap-time {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 14px;
+            color: #00ff00;
+        }
+        
+        .lap-count {
+            font-size: 11px;
+            color: #666;
+            margin-left: 8px;
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff00;
+            margin-left: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .circuit-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+        
+        .circuit-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #e10600;
+        }
+        
+        .circuit-details {
+            font-size: 12px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="circuit-container">
+            <div id="circuit-map"></div>
+            <div class="circuit-info">
+                <div class="circuit-title">Autodromo Nazionale Monza</div>
+                <div class="circuit-details">5.793 km • Temple of Speed</div>
+            </div>
+        </div>
+        
+        <div class="timing-container">
+            <div class="timing-header">
+                ⏱️ LIVE TIMING
+            </div>
+            <div id="timing-table"></div>
+        </div>
+    </div>
+
+    <script>
+        // Inizializzazione mappa
+        const map = L.map('circuit-map').setView([45.6216, 45.6216], 15);
+        
+        // Tile layer dark theme
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap contributors © CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+        
+        // Carica circuito
+        fetch('/api/circuit')
+            .then(response => response.json())
+            .then(data => {
+                const coordinates = data.features[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                
+                // Disegna tracciato
+                const circuitLine = L.polyline(coordinates, {
+                    color: '#ffffff',
+                    weight: 4,
+                    opacity: 0.8
+                }).addTo(map);
+                
+                // Adatta view al circuito con zoom maggiore
+                map.fitBounds(circuitLine.getBounds(), { padding: [20, 20] });
+                
+                // Disegna bordo tracciato
+                L.polyline(coordinates, {
+                    color: '#e10600',
+                    weight: 6,
+                    opacity: 0.3
+                }).addTo(map);
+            });
+        
+        // Socket.IO per aggiornamenti real-time
+        const socket = io();
+        const carMarkers = {};
+        const timingTable = document.getElementById('timing-table');
+        
+        // Formatta tempo
+        function formatLapTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = (seconds % 60).toFixed(3);
+            return `${mins}:${secs.padStart(6, '0')}`;
+        }
+        
+        // Crea marker per auto
+        function createCarMarker(car) {
+            const icon = L.divIcon({
+                className: 'car-marker',
+                html: `<div style="
+                    background: ${car.team_color};
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 50%;
+                    border: 2px solid white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    font-size: 10px;
+                    color: white;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+                ">${car.driver_number}</div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            
+            return L.marker([car.position[1], car.position[0]], { icon });
+        }
+        
+        // Aggiorna tabella tempi
+        function updateTimingTable(cars) {
+            // Ordina per ultimo tempo sul giro
+            const sortedCars = [...cars].sort((a, b) => {
+                if (!a.last_lap_time) return 1;
+                if (!b.last_lap_time) return -1;
+                return a.last_lap_time - b.last_lap_time;
+            });
+            
+            timingTable.innerHTML = sortedCars.map((car, index) => `
+                <div class="driver-row" style="border-left-color: ${car.team_color}">
+                    <div class="driver-number" style="background: ${car.team_color}">
+                        ${car.driver_number}
+                    </div>
+                    <div class="driver-info">
+                        <div class="driver-name">${car.driver_name}</div>
+                        <div class="driver-team">${car.team_name}</div>
+                    </div>
+                    <div>
+                        <div class="lap-time">
+                            ${car.last_lap_time ? formatLapTime(car.last_lap_time) : '--:--.---'}
+                        </div>
+                        <div class="lap-count">Lap ${car.total_laps}</div>
+                    </div>
+                    <div class="status-indicator"></div>
+                </div>
+            `).join('');
+        }
+        
+        // Ricevi aggiornamenti
+        socket.on('race_update', function(data) {
+            data.cars.forEach(car => {
+                if (!carMarkers[car.driver_number]) {
+                    carMarkers[car.driver_number] = createCarMarker(car);
+                    carMarkers[car.driver_number].addTo(map);
+                } else {
+                    carMarkers[car.driver_number].setLatLng([car.position[1], car.position[0]]);
+                }
+            });
+            
+            updateTimingTable(data.cars);
+        });
+        
+        // Carica stato iniziale
+        fetch('/api/cars')
+            .then(response => response.json())
+            .then(cars => {
+                cars.forEach(car => {
+                    carMarkers[car.driver_number] = createCarMarker(car);
+                    carMarkers[car.driver_number].addTo(map);
+                });
+                updateTimingTable(cars);
+            });
+    </script>
+</body>
+</html>
