@@ -132,6 +132,9 @@ class RaceCar:
         current_time = time.time()
         session_time = current_time - self.session_start_time
         
+        # Applica moltiplicatore velocità di gioco al movimento
+        adjusted_dt = dt * game_speed_multiplier
+        
         # Logica stati per prove libere
         if self.state == CarState.BOX:
             if session_time >= self.box_time_until:
@@ -139,9 +142,10 @@ class RaceCar:
             return
             
         elif self.state == CarState.OUT_LAP:
-            # Out lap più lento (riscaldamento gomme)
-            speed_ms = (60 + self.speed * 20)  # 60-80 m/s
-            self.distance_traveled += speed_ms * dt
+            # Out lap più lento (riscaldamento gomme) - velocità base
+            base_speed_ms = (60 + self.speed * 20)  # 60-80 m/s
+            actual_speed_ms = base_speed_ms * game_speed_multiplier
+            self.distance_traveled += actual_speed_ms * adjusted_dt
             
             # Controlla completamento giro
             if self.distance_traveled >= circuit_length:
@@ -151,9 +155,10 @@ class RaceCar:
                 self.current_lap_start = current_time
                 
         elif self.state == CarState.HOT_LAP:
-            # Hot lap a velocità massima
-            speed_ms = (70 + self.speed * 30)  # 70-100 m/s
-            self.distance_traveled += speed_ms * dt
+            # Hot lap a velocità massima - velocità base
+            base_speed_ms = (70 + self.speed * 30)  # 70-100 m/s
+            actual_speed_ms = base_speed_ms * game_speed_multiplier
+            self.distance_traveled += actual_speed_ms * adjusted_dt
             
             # Controlla completamento giro
             if self.distance_traveled >= circuit_length:
@@ -167,9 +172,10 @@ class RaceCar:
                     self.current_lap_start = current_time
                     
         elif self.state == CarState.IN_LAP:
-            # In lap più lento (raffreddamento)
-            speed_ms = (55 + self.speed * 15)  # 55-70 m/s
-            self.distance_traveled += speed_ms * dt
+            # In lap più lento (raffreddamento) - velocità base
+            base_speed_ms = (55 + self.speed * 15)  # 55-70 m/s
+            actual_speed_ms = base_speed_ms * game_speed_multiplier
+            self.distance_traveled += actual_speed_ms * adjusted_dt
             
             # Controlla completamento giro
             if self.distance_traveled >= circuit_length:
@@ -192,10 +198,10 @@ class RaceCar:
         self.distance_traveled = 0
         
     def complete_lap(self, lap_type):
-        """Registra tempo sul giro in base al tipo"""
+        """Registra tempo sul giro in base al tipo (tempi reali non influenzati da velocità gioco)"""
         lap_time = time.time() - self.current_lap_start
         
-        # Tempi realistici in base al tipo di giro
+        # Tempi realistici in base al tipo di giro (sempre basati su velocità reale)
         if lap_type == CarState.OUT_LAP:
             # Out lap più lento
             realistic_lap_time = 85.0 + random.uniform(-2.0, 2.0)
@@ -255,10 +261,11 @@ def get_position_by_distance(distance):
 # Variabili globali per la sessione
 session_start_time = time.time()
 SESSION_DURATION = 3600  # 60 minuti in secondi
+game_speed_multiplier = 1.0  # Moltiplicatore velocità di gioco
 
 def get_session_time_remaining():
-    """Restituisce il tempo rimanente della sessione"""
-    elapsed = time.time() - session_start_time
+    """Restituisce il tempo rimanente della sessione (aggiustato per velocità gioco)"""
+    elapsed = (time.time() - session_start_time) * game_speed_multiplier
     remaining = max(0, SESSION_DURATION - elapsed)
     return remaining
 
@@ -267,6 +274,12 @@ def format_session_time(seconds):
     minutes = int(seconds // 60)
     secs = int(seconds % 60)
     return f"{minutes:02d}:{secs:02d}"
+
+def set_game_speed(multiplier):
+    """Imposta la velocità di gioco"""
+    global game_speed_multiplier
+    game_speed_multiplier = multiplier
+    return game_speed_multiplier
 
 # Inizializza 20 auto (2 per team) con posizioni sfalsate
 race_cars = []
@@ -282,6 +295,18 @@ for team_name, team_data in F1_TEAMS.items():
         car.box_time_until = random.uniform(30, 300)  # Prima uscita tra 30s-5min
         car_index += 1
         race_cars.append(car)
+
+@app.route('/api/set_speed/<float:speed>')
+def set_speed(speed):
+    """Imposta la velocità di gioco"""
+    if speed not in [1.0, 2.0, 4.0, 6.0]:
+        return jsonify({'error': 'Speed must be 1.0, 2.0, 4.0, or 6.0'}), 400
+    
+    set_game_speed(speed)
+    return jsonify({
+        'message': f'Game speed set to {speed}x',
+        'speed': speed
+    })
 
 @app.route('/')
 def index():
@@ -347,7 +372,8 @@ def race_simulation():
         socketio.emit('race_update', {
             'cars': cars_data,
             'session_time_remaining': session_remaining,
-            'session_time_formatted': format_session_time(session_remaining)
+            'session_time_formatted': format_session_time(session_remaining),
+            'game_speed': game_speed_multiplier
         })
 
 if __name__ == '__main__':

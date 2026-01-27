@@ -79,6 +79,50 @@
             animation: pulse 1s infinite;
         }
         
+        .speed-controls {
+            background: #1a1a1a;
+            padding: 15px;
+            margin: 0 0 20px 0;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #333;
+        }
+        
+        .speed-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        
+        .speed-btn {
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .speed-btn:hover {
+            background: #555;
+            transform: translateY(-2px);
+        }
+        
+        .speed-btn.active {
+            background: #e10600;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(225, 6, 0, 0.5);
+        }
+        
+        .current-speed {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+        }
+        
         .driver-row {
             display: flex;
             align-items: center;
@@ -240,6 +284,15 @@
             <div class="session-timer" id="session-timer">
                 60:00
             </div>
+            <div class="speed-controls">
+                <div class="speed-buttons">
+                    <button class="speed-btn active" data-speed="1">1x</button>
+                    <button class="speed-btn" data-speed="2">2x</button>
+                    <button class="speed-btn" data-speed="4">4x</button>
+                    <button class="speed-btn" data-speed="6">6x</button>
+                </div>
+                <div class="current-speed" id="current-speed">Speed: 1x</div>
+            </div>
             <div id="timing-table"></div>
         </div>
     </div>
@@ -370,6 +423,7 @@
             
             updateTimingTable(data.cars);
             updateSessionTimer(data.session_time_remaining, data.session_time_formatted);
+            updateSpeedIndicator(data.game_speed);
         });
         
         // Aggiorna timer della sessione
@@ -385,6 +439,40 @@
                 timerElement.classList.add('warning');
             }
         }
+        
+        // Aggiorna indicatore velocità
+        function updateSpeedIndicator(speed) {
+            document.getElementById('current-speed').textContent = `Speed: ${speed}x`;
+            
+            // Aggiorna stato pulsanti
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (parseFloat(btn.dataset.speed) === speed) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+        
+        // Controlli velocità
+        document.querySelectorAll('.speed-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const speed = parseFloat(this.dataset.speed);
+                
+                try {
+                    const response = await fetch(`/api/set_speed/${speed}`);
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        updateSpeedIndicator(speed);
+                        console.log(data.message);
+                    } else {
+                        console.error(data.error);
+                    }
+                } catch (error) {
+                    console.error('Error setting speed:', error);
+                }
+            });
+        });
         
         // Carica stato iniziale
         fetch('/api/cars')
