@@ -266,6 +266,8 @@ session_start_time = time.time()
 session_start_real_time = time.time()  # Tempo reale di inizio
 SESSION_DURATION = 3600  # 60 minuti in secondi
 game_speed_multiplier = 1.0  # Moltiplicatore velocità di gioco
+accumulated_game_time = 0.0  # Tempo di gioco accumulato
+last_speed_change_time = time.time()  # Tempo dell'ultimo cambio velocità
 is_paused = False
 pause_start_time = None
 total_paused_time = 0
@@ -273,20 +275,21 @@ total_paused_time = 0
 def get_session_time_remaining():
     """Restituisce il tempo rimanente della sessione (aggiustato per velocità gioco e pause)"""
     if is_paused:
-        # Se in pausa, ritorna l'ultimo tempo calcolato
-        return max(0, SESSION_DURATION - ((session_start_real_time + total_paused_time - session_start_time) * game_speed_multiplier))
+        # Se in pausa, ritorna il tempo accumulato
+        remaining = max(0, SESSION_DURATION - accumulated_game_time)
+        return remaining
     
-    # Calcola tempo trascorso reale (escluse pause)
+    # Calcola tempo trascorso dall'ultimo cambio velocità
     current_real_time = time.time()
     if pause_start_time:
         # Se attualmente in pausa, non contare questo tempo
-        elapsed_real = (pause_start_time - session_start_real_time) - total_paused_time
+        elapsed_since_last_change = 0
     else:
-        elapsed_real = (current_real_time - session_start_real_time) - total_paused_time
+        elapsed_since_last_change = current_real_time - last_speed_change_time
     
-    # Applica moltiplicatore velocità
-    elapsed_game = elapsed_real * game_speed_multiplier
-    remaining = max(0, SESSION_DURATION - elapsed_game)
+    # Calcola tempo totale di gioco
+    current_game_time = accumulated_game_time + (elapsed_since_last_change * game_speed_multiplier)
+    remaining = max(0, SESSION_DURATION - current_game_time)
     return remaining
 
 def format_session_time(seconds):
@@ -297,13 +300,23 @@ def format_session_time(seconds):
 
 def set_game_speed(multiplier):
     """Imposta la velocità di gioco"""
-    global game_speed_multiplier
+    global game_speed_multiplier, accumulated_game_time, last_speed_change_time
+    
+    # Calcola tempo accumulato fino ad ora
+    current_real_time = time.time()
+    if not is_paused:
+        elapsed_since_last_change = current_real_time - last_speed_change_time
+        accumulated_game_time += elapsed_since_last_change * game_speed_multiplier
+    
+    # Aggiorna velocità e tempo di cambio
     game_speed_multiplier = multiplier
+    last_speed_change_time = current_real_time
+    
     return game_speed_multiplier
 
 def toggle_pause():
     """Attiva/disattiva la pausa"""
-    global is_paused, pause_start_time, total_paused_time
+    global is_paused, pause_start_time, total_paused_time, accumulated_game_time, last_speed_change_time
     
     if is_paused:
         # Riprendi il gioco
@@ -311,10 +324,16 @@ def toggle_pause():
             total_paused_time += time.time() - pause_start_time
         pause_start_time = None
         is_paused = False
+        last_speed_change_time = time.time()  # Resetta tempo per nuovo calcolo
         return False
     else:
         # Metti in pausa
-        pause_start_time = time.time()
+        # Calcola tempo accumulato prima della pausa
+        current_real_time = time.time()
+        elapsed_since_last_change = current_real_time - last_speed_change_time
+        accumulated_game_time += elapsed_since_last_change * game_speed_multiplier
+        
+        pause_start_time = current_real_time
         is_paused = True
         return True
 
