@@ -298,8 +298,19 @@
     </div>
 
     <script>
-        // Inizializzazione mappa
-        const map = L.map('circuit-map').setView([45.6216, 45.6216], 15);
+        // Inizializzazione mappa con controlli disabilitati
+        const map = L.map('circuit-map', {
+            center: [45.6216, 45.6216],
+            zoom: 15,
+            zoomControl: false,
+            dragging: false,
+            touchZoom: false,
+            doubleClickZoom: false,
+            scrollWheelZoom: false,
+            boxZoom: false,
+            keyboard: false,
+            tap: false
+        });
         
         // Tile layer dark theme
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -457,6 +468,7 @@
         document.querySelectorAll('.speed-btn').forEach(btn => {
             btn.addEventListener('click', async function() {
                 const speed = parseFloat(this.dataset.speed);
+                console.log('Setting speed to:', speed);
                 
                 try {
                     const response = await fetch(`/api/set_speed/${speed}`);
@@ -464,12 +476,12 @@
                     
                     if (response.ok) {
                         updateSpeedIndicator(speed);
-                        console.log(data.message);
+                        console.log('Speed changed successfully:', data.message);
                     } else {
-                        console.error(data.error);
+                        console.error('Speed change error:', data.error);
                     }
                 } catch (error) {
-                    console.error('Error setting speed:', error);
+                    console.error('Network error setting speed:', error);
                 }
             });
         });
