@@ -129,6 +129,9 @@ class RaceCar:
     
     def update_position(self, dt):
         """Aggiorna posizione dell'auto basandosi sulla distanza e stato"""
+        if is_paused:
+            return  # Non muovere le auto se in pausa
+            
         current_time = time.time()
         session_time = current_time - self.session_start_time
         
@@ -260,13 +263,33 @@ def get_position_by_distance(distance):
 
 # Variabili globali per la sessione
 session_start_time = time.time()
+session_start_real_time = time.time()  # Tempo reale di inizio
 SESSION_DURATION = 3600  # 60 minuti in secondi
 game_speed_multiplier = 1.0  # Moltiplicatore velocità di gioco
+accumulated_game_time = 0.0  # Tempo di gioco accumulato
+last_speed_change_time = time.time()  # Tempo dell'ultimo cambio velocità
+is_paused = False
+pause_start_time = None
+total_paused_time = 0
 
 def get_session_time_remaining():
-    """Restituisce il tempo rimanente della sessione (aggiustato per velocità gioco)"""
-    elapsed = (time.time() - session_start_time) * game_speed_multiplier
-    remaining = max(0, SESSION_DURATION - elapsed)
+    """Restituisce il tempo rimanente della sessione (aggiustato per velocità gioco e pause)"""
+    if is_paused:
+        # Se in pausa, ritorna il tempo accumulato
+        remaining = max(0, SESSION_DURATION - accumulated_game_time)
+        return remaining
+    
+    # Calcola tempo trascorso dall'ultimo cambio velocità
+    current_real_time = time.time()
+    if pause_start_time:
+        # Se attualmente in pausa, non contare questo tempo
+        elapsed_since_last_change = 0
+    else:
+        elapsed_since_last_change = current_real_time - last_speed_change_time
+    
+    # Calcola tempo totale di gioco
+    current_game_time = accumulated_game_time + (elapsed_since_last_change * game_speed_multiplier)
+    remaining = max(0, SESSION_DURATION - current_game_time)
     return remaining
 
 def format_session_time(seconds):
@@ -277,9 +300,42 @@ def format_session_time(seconds):
 
 def set_game_speed(multiplier):
     """Imposta la velocità di gioco"""
-    global game_speed_multiplier
+    global game_speed_multiplier, accumulated_game_time, last_speed_change_time
+    
+    # Calcola tempo accumulato fino ad ora
+    current_real_time = time.time()
+    if not is_paused:
+        elapsed_since_last_change = current_real_time - last_speed_change_time
+        accumulated_game_time += elapsed_since_last_change * game_speed_multiplier
+    
+    # Aggiorna velocità e tempo di cambio
     game_speed_multiplier = multiplier
+    last_speed_change_time = current_real_time
+    
     return game_speed_multiplier
+
+def toggle_pause():
+    """Attiva/disattiva la pausa"""
+    global is_paused, pause_start_time, total_paused_time, accumulated_game_time, last_speed_change_time
+    
+    if is_paused:
+        # Riprendi il gioco
+        if pause_start_time:
+            total_paused_time += time.time() - pause_start_time
+        pause_start_time = None
+        is_paused = False
+        last_speed_change_time = time.time()  # Resetta tempo per nuovo calcolo
+        return False
+    else:
+        # Metti in pausa
+        # Calcola tempo accumulato prima della pausa
+        current_real_time = time.time()
+        elapsed_since_last_change = current_real_time - last_speed_change_time
+        accumulated_game_time += elapsed_since_last_change * game_speed_multiplier
+        
+        pause_start_time = current_real_time
+        is_paused = True
+        return True
 
 # Inizializza 20 auto (2 per team) con posizioni sfalsate
 race_cars = []
@@ -296,9 +352,21 @@ for team_name, team_data in F1_TEAMS.items():
         car_index += 1
         race_cars.append(car)
 
-@app.route('/api/set_speed/<float:speed>')
-def set_speed(speed):
+@app.route('/api/toggle_pause', methods=['POST'])
+def toggle_pause_route():
+    """Attiva/disattiva la pausa"""
+    is_paused_state = toggle_pause()
+    return jsonify({
+        'message': 'Game ' + ('paused' if is_paused_state else 'resumed'),
+        'is_paused': is_paused_state
+    })
+
+@app.route('/api/set_speed', methods=['POST'])
+def set_speed():
     """Imposta la velocità di gioco"""
+    from flask import request
+    speed = float(request.json.get('speed', 1.0))
+    
     if speed not in [1.0, 2.0, 4.0, 6.0]:
         return jsonify({'error': 'Speed must be 1.0, 2.0, 4.0, or 6.0'}), 400
     
@@ -373,7 +441,8 @@ def race_simulation():
             'cars': cars_data,
             'session_time_remaining': session_remaining,
             'session_time_formatted': format_session_time(session_remaining),
-            'game_speed': game_speed_multiplier
+            'game_speed': game_speed_multiplier,
+            'is_paused': is_paused
         })
 
 if __name__ == '__main__':

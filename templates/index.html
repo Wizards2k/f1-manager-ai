@@ -111,6 +111,30 @@
             transform: translateY(-2px);
         }
         
+        .pause-btn {
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            min-width: 40px;
+            font-size: 16px;
+        }
+        
+        .pause-btn:hover {
+            background: #555;
+            transform: translateY(-2px);
+        }
+        
+        .pause-btn.paused {
+            background: #ff6600;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(255, 102, 0, 0.5);
+        }
+        
         .speed-btn.active {
             background: #e10600;
             color: #fff;
@@ -286,6 +310,7 @@
             </div>
             <div class="speed-controls">
                 <div class="speed-buttons">
+                    <button class="pause-btn" id="pause-btn" title="Pause/Resume">⏸</button>
                     <button class="speed-btn active" data-speed="1">1x</button>
                     <button class="speed-btn" data-speed="2">2x</button>
                     <button class="speed-btn" data-speed="4">4x</button>
@@ -298,8 +323,19 @@
     </div>
 
     <script>
-        // Inizializzazione mappa
-        const map = L.map('circuit-map').setView([45.6216, 45.6216], 15);
+        // Inizializzazione mappa con controlli disabilitati
+        const map = L.map('circuit-map', {
+            center: [45.6216, 45.6216],
+            zoom: 15,
+            zoomControl: false,
+            dragging: false,
+            touchZoom: false,
+            doubleClickZoom: false,
+            scrollWheelZoom: false,
+            boxZoom: false,
+            keyboard: false,
+            tap: false
+        });
         
         // Tile layer dark theme
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -380,7 +416,7 @@
             
             timingTable.innerHTML = sortedCars.map((car, index) => {
                 const isInBox = car.state === 'BOX';
-                const stateClass = car.state.toLowerCase().replace('_', '-');
+                const stateClass = car.state ? car.state.toLowerCase().replace('_', '-') : 'box';
                 
                 return `
                     <div class="driver-row ${isInBox ? 'in-box' : 'on-track'}" style="border-left-color: ${car.team_color}">
@@ -402,7 +438,7 @@
                             </div>
                         </div>
                         <div class="state-indicator ${stateClass}">
-                            ${car.state}
+                            ${car.state || 'BOX'}
                         </div>
                         <div class="status-indicator"></div>
                     </div>
@@ -424,6 +460,7 @@
             updateTimingTable(data.cars);
             updateSessionTimer(data.session_time_remaining, data.session_time_formatted);
             updateSpeedIndicator(data.game_speed);
+            updatePauseButton(data.is_paused);
         });
         
         // Aggiorna timer della sessione
@@ -453,23 +490,68 @@
             });
         }
         
+        // Aggiorna pulsante pausa
+        function updatePauseButton(isPaused) {
+            const pauseBtn = document.getElementById('pause-btn');
+            if (isPaused) {
+                pauseBtn.textContent = '▶';
+                pauseBtn.classList.add('paused');
+                pauseBtn.title = 'Resume';
+            } else {
+                pauseBtn.textContent = '⏸';
+                pauseBtn.classList.remove('paused');
+                pauseBtn.title = 'Pause';
+            }
+        }
+        
+        // Pulsante pausa
+        document.getElementById('pause-btn').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/api/toggle_pause', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                updatePauseButton(data.is_paused);
+                console.log(data.message);
+                
+            } catch (error) {
+                console.error('Error toggling pause:', error);
+            }
+        });
+        
         // Controlli velocità
         document.querySelectorAll('.speed-btn').forEach(btn => {
             btn.addEventListener('click', async function() {
                 const speed = parseFloat(this.dataset.speed);
+                console.log('Setting speed to:', speed);
                 
                 try {
-                    const response = await fetch(`/api/set_speed/${speed}`);
-                    const data = await response.json();
+                    const response = await fetch('/api/set_speed', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ speed: speed })
+                    });
                     
-                    if (response.ok) {
-                        updateSpeedIndicator(speed);
-                        console.log(data.message);
-                    } else {
-                        console.error(data.error);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
+                    
+                    const data = await response.json();
+                    updateSpeedIndicator(speed);
+                    console.log('Speed changed successfully:', data.message);
+                    
                 } catch (error) {
-                    console.error('Error setting speed:', error);
+                    console.error('Network error setting speed:', error);
                 }
             });
         });
