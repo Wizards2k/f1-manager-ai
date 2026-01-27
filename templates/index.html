@@ -471,11 +471,12 @@
                 console.log('Setting speed to:', speed);
                 
                 try {
-                    const response = await fetch(`/api/set_speed/${speed}`, {
-                        method: 'GET',
+                    const response = await fetch('/api/set_speed', {
+                        method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
-                        }
+                        },
+                        body: JSON.stringify({ speed: speed })
                     });
                     
                     if (!response.ok) {

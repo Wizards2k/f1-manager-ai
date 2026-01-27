@@ -296,9 +296,12 @@ for team_name, team_data in F1_TEAMS.items():
         car_index += 1
         race_cars.append(car)
 
-@app.route('/api/set_speed/<float:speed>')
-def set_speed(speed):
+@app.route('/api/set_speed', methods=['POST'])
+def set_speed():
     """Imposta la velocità di gioco"""
+    from flask import request
+    speed = float(request.json.get('speed', 1.0))
+    
     if speed not in [1.0, 2.0, 4.0, 6.0]:
         return jsonify({'error': 'Speed must be 1.0, 2.0, 4.0, or 6.0'}), 400
     
