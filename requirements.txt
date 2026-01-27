@@ -1,5 +1,5 @@
-Flask==2.3.3
-Flask-CORS==4.0.0
-Flask-SocketIO==5.3.6
-python-socketio==5.9.0
-numpy==1.24.3
+Flask>=3.0.0
+Flask-CORS>=4.0.0
+Flask-SocketIO>=5.3.6
+python-socketio>=5.9.0
+numpy>=1.24.0
