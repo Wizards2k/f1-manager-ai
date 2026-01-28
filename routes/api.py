@@ -29,7 +29,10 @@ def register_routes(app):
                 'team_color': car.team_color,
                 'position': pos,
                 'lap_times': car.lap_times[-5:],  # Ultimi 5 tempi
-                'total_laps': car.total_laps
+                'total_laps': car.total_laps,
+                'current_tire': car.current_tire.value,
+                'tire_age': car.tire_age,
+                'tire_wear': car.tire_wear
             })
         return jsonify(cars_data)
 

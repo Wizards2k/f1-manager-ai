@@ -12,6 +12,14 @@ class CarState(Enum):
     HOT_LAP = "HOT LAP"
     IN_LAP = "IN LAP"
 
+class TireCompound(Enum):
+    """Tipi di gomme F1"""
+    SOFT = "soft"
+    MEDIUM = "medium"
+    HARD = "hard"
+    INTERMEDIATE = "intermediate"
+    WET = "wet"
+
 class RaceCar:
     def __init__(self, driver_number, driver_name, team_name, team_color):
         self.driver_number = driver_number
@@ -46,6 +54,32 @@ class RaceCar:
         self.session_start_time = None
         self.sector3_start_time = None
         
+        # Gestione gomme
+        self.current_tire = TireCompound.MEDIUM  # Gomma iniziale
+        self.tire_age = 0  # Età della gomma in giri
+        self.tire_wear = 0.0  # Usura della gomma (0.0 - 1.0)
+        
+    def set_tire_compound(self, compound):
+        """Imposta il compound di gomme"""
+        self.current_tire = compound
+        self.tire_age = 0
+        self.tire_wear = 0.0
+        
+    def update_tire_wear(self):
+        """Aggiorna l'usura delle gomme"""
+        if self.state == CarState.HOT_LAP:
+            self.tire_age += 1
+            # Usura base per giro + variazione casuale
+            base_wear = {
+                TireCompound.SOFT: 0.08,
+                TireCompound.MEDIUM: 0.05,
+                TireCompound.HARD: 0.03,
+                TireCompound.INTERMEDIATE: 0.04,
+                TireCompound.WET: 0.02
+            }
+            wear_increment = base_wear[self.current_tire] + random.uniform(-0.01, 0.01)
+            self.tire_wear = min(1.0, self.tire_wear + wear_increment)
+        
     def get_position(self):
         """Restituisce coordinate attuali lungo il circuito"""
         # La logica di posizione rimane in app.py per evitare import circolari
@@ -61,6 +95,11 @@ class RaceCar:
         # Resetta settori per nuovo stint
         self.current_lap_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
         self.sector3_start_time = None
+        
+        # Sceglie gomme casuali per la nuova stint
+        available_compounds = [TireCompound.SOFT, TireCompound.MEDIUM, TireCompound.HARD]
+        new_tire = random.choice(available_compounds)
+        self.set_tire_compound(new_tire)
         
     def enter_box(self):
         """Auto rientra ai box"""
@@ -97,6 +136,9 @@ class RaceCar:
         self.total_laps += 1
         self.total_session_laps += 1
         self.last_lap_type = lap_type
+        
+        # Aggiorna usura gomme
+        self.update_tire_wear()
         
         # Aggiorna miglior tempo in sessione
         if not hasattr(self, 'best_lap_time') or realistic_lap_time < self.best_lap_time:

@@ -15,7 +15,7 @@ from utils.game_logic import get_game_speed, get_pause_state
 
 print("F1 Manager AI - Modular version starting...")
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = SECRET_KEY
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins=SOCKETIO_CORS_ORIGINS)
@@ -69,7 +69,10 @@ def race_simulation():
                 'last_sector_times': getattr(car, 'last_sector_times', {}),
                 'current_lap_sectors': getattr(car, 'current_lap_sectors', {}),
                 'best_sectors': getattr(car, 'best_sectors', {}),
-                'best_lap_sectors': getattr(car, 'best_lap_sectors', {})
+                'best_lap_sectors': getattr(car, 'best_lap_sectors', {}),
+                'current_tire': car.current_tire.value,
+                'tire_age': car.tire_age,
+                'tire_wear': car.tire_wear
             })
         
         socketio.emit('race_update', {
