@@ -1,103 +1,24 @@
 from flask import Flask, render_template, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
-import json
 import numpy as np
 import time
 import random
 from datetime import datetime, timedelta
 from enum import Enum
 
+# Importa configurazione
+from config import (
+    circuit_data, sectors_config, circuit_sectors, F1_TEAMS,
+    SESSION_DURATION, UPDATE_INTERVAL, DEFAULT_GAME_SPEED, TARGET_SPEEDS
+)
+
+print("APP: Importata configurazione da config.py")
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'f1-manager-secret'
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
-
-# Carica dati del circuito di Monza
-with open('monza_circuit.json', 'r') as f:
-    circuit_data = json.load(f)
-
-# Carica configurazione settori
-with open('sectors_config.json', 'r') as f:
-    sectors_config = json.load(f)
-
-# Ottieni configurazione settori per il circuito corrente (Monza)
-current_circuit = 'monza'
-circuit_sectors = sectors_config[current_circuit]['sectors']
-
-# Configurazione team e piloti F1 2025 con numeri reali ufficiali
-F1_TEAMS = {
-    'Red Bull Racing': {
-        'color': '#1E41FF', 
-        'drivers': {
-            33: 'Max Verstappen',
-            30: 'Liam Lawson'
-        }
-    },
-    'Ferrari': {
-        'color': '#DC0000', 
-        'drivers': {
-            16: 'Charles Leclerc',
-            44: 'Lewis Hamilton'
-        }
-    },
-    'Mercedes': {
-        'color': '#00D2BE', 
-        'drivers': {
-            63: 'George Russell',
-            12: 'Andrea Kimi Antonelli'
-        }
-    },
-    'McLaren': {
-        'color': '#FF8700', 
-        'drivers': {
-            4: 'Lando Norris',
-            81: 'Oscar Piastri'
-        }
-    },
-    'Alpine': {
-        'color': '#0090FF', 
-        'drivers': {
-            10: 'Pierre Gasly',
-            7: 'Jack Doohan'
-        }
-    },
-    'Aston Martin': {
-        'color': '#006F62', 
-        'drivers': {
-            14: 'Fernando Alonso',
-            18: 'Lance Stroll'
-        }
-    },
-    'Williams': {
-        'color': '#005AFF', 
-        'drivers': {
-            23: 'Alexander Albon',
-            55: 'Carlos Sainz Jnr'
-        }
-    },
-    'Racing Bulls': {
-        'color': '#2B4562', 
-        'drivers': {
-            22: 'Yuki Tsunoda',
-            6: 'Isack Hadjar'
-        }
-    },
-    'Sauber': {
-        'color': '#52E252', 
-        'drivers': {
-            27: 'Nico Hulkenberg',
-            5: 'Gabriel Bortoleto'
-        }
-    },
-    'Haas': {
-        'color': '#FFFFFF', 
-        'drivers': {
-            87: 'Oliver Bearman',
-            31: 'Esteban Ocon'
-        }
-    }
-}
 
 # Stati possibili per le auto durante le prove libere
 class CarState(Enum):
@@ -391,13 +312,12 @@ def get_position_by_distance(distance):
 # Variabili globali per la sessione
 session_start_time = time.time()
 session_start_real_time = time.time()  # Tempo reale di inizio
-SESSION_DURATION = 3600  # 60 minuti in secondi
 game_speed_multiplier = 1.0  # Moltiplicatore velocità di gioco
 accumulated_game_time = 0.0  # Tempo di gioco accumulato
 last_speed_change_time = time.time()  # Tempo dell'ultimo cambio velocità
-is_paused = False
-pause_start_time = None
-total_paused_time = 0
+total_paused_time = 0.0  # Tempo totale passato in pausa
+pause_start_time = None  # Quando è iniziata la pausa corrente
+is_paused = False  # Stato di pausa corrente
 
 def get_session_time_remaining():
     """Restituisce il tempo rimanente della sessione (aggiustato per velocità gioco e pause)"""
