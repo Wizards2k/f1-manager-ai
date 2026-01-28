@@ -11,7 +11,7 @@ from utils import (
     race_cars, get_session_time_remaining, format_session_time,
     update_car_position, get_car_position
 )
-from utils.game_logic import game_speed_multiplier, is_paused
+from utils.game_logic import get_game_speed, get_pause_state
 
 print("F1 Manager AI - Modular version starting...")
 
@@ -47,6 +47,8 @@ def race_simulation():
         
         # Invia aggiornamenti ai client
         session_remaining = get_session_time_remaining()
+        current_pause_state = get_pause_state()
+        
         cars_data = []
         for car in race_cars:
             pos = get_car_position(car)
@@ -74,8 +76,8 @@ def race_simulation():
             'cars': cars_data,
             'session_time_remaining': session_remaining,
             'session_time_formatted': format_session_time(session_remaining),
-            'game_speed': game_speed_multiplier,
-            'is_paused': is_paused
+            'game_speed': get_game_speed(),
+            'is_paused': current_pause_state
         })
 
 if __name__ == '__main__':

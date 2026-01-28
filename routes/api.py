@@ -17,9 +17,7 @@ def register_routes(app):
     @app.route('/api/cars')
     def get_cars():
         """Restituisce posizioni attuali delle auto"""
-        from config import circuit_data
-        from models import race_cars
-        from utils.position import get_car_position
+        from utils import race_cars, get_car_position
         
         cars_data = []
         for car in race_cars:
