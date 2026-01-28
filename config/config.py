@@ -97,4 +97,8 @@ TARGET_SPEEDS = {
     'IN_LAP': 75   # m/s (~270 km/h)
 }
 
+# Costanti Flask
+SECRET_KEY = 'f1-manager-secret'
+SOCKETIO_CORS_ORIGINS = "*"
+
 print("CONFIG: Caricate costanti F1 Manager AI")
