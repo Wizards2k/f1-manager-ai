@@ -41,69 +41,76 @@
             width: 35%;
             background: #0f0f0f;
             border-left: 2px solid #333;
-            padding: 20px;
+            padding: 14px;
             overflow-y: auto;
         }
         
+        .timing-toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: rgba(15, 15, 15, 0.92);
+            backdrop-filter: blur(6px);
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 0 0 12px 0;
+        }
+
+        .toolbar-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
         .timing-header {
             background: linear(135deg, #e10600 0%, #b80400 100%);
             padding: 10px;
-            margin: -15px -15px 15px -15px;
+            margin: -14px -14px 10px -14px;
             text-align: center;
             font-weight: bold;
             font-size: 14px;
             box-shadow: 0 2px 10px rgba(225, 6, 0, 0.3);
         }
-        
+
         .session-timer {
-            background: #1a1a1a;
-            padding: 8px;
-            margin: 0 0 15px 0;
-            border-radius: 8px;
-            text-align: center;
             font-family: 'Courier New', monospace;
-            font-size: 14px;
-            font-weight: bold;
+            font-size: 18px;
+            font-weight: 800;
             color: #00ff00;
-            border: 1px solid #333;
+            letter-spacing: 1px;
+            min-width: 76px;
+            text-align: left;
         }
-        
+
         .session-timer.warning {
             color: #ffaa00;
-            border-color: #ffaa00;
         }
-        
+
         .session-timer.danger {
             color: #ff4444;
-            border-color: #ff4444;
-            animation: pulse 1s infinite;
         }
-        
-        .speed-controls {
-            background: #1a1a1a;
-            padding: 10px;
-            margin: 0 0 15px 0;
-            border-radius: 8px;
-            text-align: center;
-            border: 1px solid #333;
-        }
-        
+
         .speed-buttons {
             display: flex;
-            gap: 5px;
-            justify-content: center;
-            margin-bottom: 8px;
+            gap: 6px;
+            justify-content: flex-end;
+            align-items: center;
+            flex-wrap: nowrap;
         }
         
         .speed-btn {
             background: #333;
             color: #fff;
             border: none;
-            padding: 8px 16px;
+            padding: 7px 12px;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
             transition: all 0.3s ease;
+            min-width: 44px;
+            height: 34px;
         }
         
         .speed-btn:hover {
@@ -121,13 +128,14 @@
             background: #333;
             color: #fff;
             border: none;
-            padding: 8px 16px;
+            padding: 7px 10px;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
             transition: all 0.3s ease;
             min-width: 40px;
-            font-size: 16px;
+            height: 34px;
+            font-size: 14px;
         }
         
         .pause-btn:hover {
@@ -142,15 +150,16 @@
         }
         
         .current-speed {
-            font-size: 10px;
+            font-size: 11px;
             color: #888;
-            margin-top: 5px;
+            margin-top: 6px;
+            text-align: right;
         }
         
         .position {
             width: 20px;
             font-weight: bold;
-            font-size: 12px;
+            font-size: 13px;
             color: #e10600;
             margin-right: 6px;
         }
@@ -178,7 +187,7 @@
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            font-size: 10px;
+            font-size: 11px;
             margin-right: 8px;
             border: 2px solid white;
         }
@@ -189,77 +198,94 @@
         
         .driver-name {
             font-weight: bold;
-            font-size: 12px;
+            font-size: 13px;
         }
         
         .driver-team {
-            font-size: 9px;
+            font-size: 10px;
             color: #999;
         }
         
         .lap-times {
             display: flex;
             flex-direction: column;
-            min-width: 140px;
+            min-width: 170px;
         }
         
         .sector-times {
             display: flex;
             flex-direction: column;
-            margin: 2px 0;
+            margin: 4px 0;
             background: rgba(255,255,255,0.05);
             border-radius: 3px;
-            padding: 2px;
+            padding: 4px;
         }
         
         .sector-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 8px;
-            margin: 1px 0;
+            font-size: 10px;
+            margin: 2px 0;
         }
         
         .sector-row span:first-child {
             color: #888;
             font-weight: bold;
-            min-width: 15px;
+            min-width: 18px;
         }
         
         .sector-time {
             font-family: 'Courier New', monospace;
             color: #00ff00;
             font-weight: bold;
-            min-width: 35px;
+            min-width: 52px;
             text-align: right;
-            font-size: 8px;
+            font-size: 11px;
         }
         
         .sector-best {
             font-family: 'Courier New', monospace;
             color: #e10600;
-            font-size: 7px;
+            font-size: 10px;
             margin-left: 2px;
-            min-width: 35px;
+            min-width: 56px;
             text-align: right;
+        }
+
+        .sector-delta {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            margin-left: 0px;
+            min-width: 46px;
+            text-align: right;
+            color: #888;
+        }
+
+        .sector-delta.positive {
+            color: #ffffff;
+        }
+
+        .sector-delta.negative {
+            color: #00ff00;
         }
         
         .best-lap {
             font-family: 'Courier New', monospace;
             font-weight: bold;
-            font-size: 10px;
+            font-size: 13px;
             color: #e10600;
-            margin-bottom: 1px;
+            margin-bottom: 2px;
         }
         
         .last-lap {
             font-family: 'Courier New', monospace;
-            font-size: 9px;
+            font-size: 12px;
             color: #00ff00;
         }
         
         .lap-times small {
-            font-size: 7px;
+            font-size: 10px;
             color: #888;
             margin-left: 2px;
         }
@@ -272,12 +298,12 @@
         }
         
         .state-indicator {
-            font-size: 8px;
+            font-size: 10px;
             font-weight: bold;
-            padding: 1px 4px;
+            padding: 2px 6px;
             border-radius: 3px;
             margin-left: 4px;
-            min-width: 35px;
+            min-width: 44px;
             text-align: center;
         }
         
@@ -302,14 +328,14 @@
         }
         
         .lap-count {
-            font-size: 9px;
+            font-size: 12px;
             color: #666;
             margin-left: 4px;
-            min-width: 60px;
+            min-width: 84px;
         }
         
         .session-laps {
-            font-size: 8px;
+            font-size: 10px;
             color: #888;
             margin-left: 2px;
         }
@@ -366,16 +392,16 @@
             <div class="timing-header">
                 🏁 FREE PRACTICE - LIVE TIMING
             </div>
-            <div class="session-timer" id="session-timer">
-                60:00
-            </div>
-            <div class="speed-controls">
-                <div class="speed-buttons">
-                    <button class="pause-btn" id="pause-btn" title="Pause/Resume">⏸</button>
-                    <button class="speed-btn active" data-speed="1">1x</button>
-                    <button class="speed-btn" data-speed="2">2x</button>
-                    <button class="speed-btn" data-speed="4">4x</button>
-                    <button class="speed-btn" data-speed="6">6x</button>
+            <div class="timing-toolbar">
+                <div class="toolbar-row">
+                    <div class="session-timer" id="session-timer">60:00</div>
+                    <div class="speed-buttons">
+                        <button class="pause-btn" id="pause-btn" title="Pause/Resume">⏸</button>
+                        <button class="speed-btn active" data-speed="1">1x</button>
+                        <button class="speed-btn" data-speed="2">2x</button>
+                        <button class="speed-btn" data-speed="4">4x</button>
+                        <button class="speed-btn" data-speed="6">6x</button>
+                    </div>
                 </div>
                 <div class="current-speed" id="current-speed">Speed: 1x</div>
             </div>
@@ -440,6 +466,13 @@
             const secs = (seconds % 60).toFixed(3);
             return `${mins}:${secs.padStart(6, '0')}`;
         }
+
+        function formatSectorDelta(current, best) {
+            if (current == null || best == null) return null;
+            const delta = current - best;
+            const sign = delta >= 0 ? '+' : '-';
+            return `${sign}${Math.abs(delta).toFixed(3)}`;
+        }
         
         // Crea marker per auto
         function createCarMarker(car) {
@@ -498,17 +531,38 @@
                                 <div class="sector-row">
                                     <span>S1:</span>
                                     <span class="sector-time">${car.current_lap_sectors?.sector1 ? formatSectorTime(car.current_lap_sectors.sector1) : '--:--'}</span>
-                                    <span class="sector-best">${car.best_sectors?.sector1 ? '(' + formatSectorTime(car.best_sectors.sector1) + ')' : ''}</span>
+                                    ${(() => {
+                                        const ref = car.best_lap_sectors?.sector1;
+                                        const cur = car.current_lap_sectors?.sector1;
+                                        const delta = formatSectorDelta(cur, ref);
+                                        if (!delta) return '<span class="sector-delta"></span>';
+                                        const cls = (cur - ref) >= 0 ? 'positive' : 'negative';
+                                        return `<span class="sector-delta ${cls}">(${delta})</span>`;
+                                    })()}
                                 </div>
                                 <div class="sector-row">
                                     <span>S2:</span>
                                     <span class="sector-time">${car.current_lap_sectors?.sector2 ? formatSectorTime(car.current_lap_sectors.sector2) : '--:--'}</span>
-                                    <span class="sector-best">${car.best_sectors?.sector2 ? '(' + formatSectorTime(car.best_sectors.sector2) + ')' : ''}</span>
+                                    ${(() => {
+                                        const ref = car.best_lap_sectors?.sector2;
+                                        const cur = car.current_lap_sectors?.sector2;
+                                        const delta = formatSectorDelta(cur, ref);
+                                        if (!delta) return '<span class="sector-delta"></span>';
+                                        const cls = (cur - ref) >= 0 ? 'positive' : 'negative';
+                                        return `<span class="sector-delta ${cls}">(${delta})</span>`;
+                                    })()}
                                 </div>
                                 <div class="sector-row">
                                     <span>S3:</span>
                                     <span class="sector-time">${car.current_lap_sectors?.sector3 ? formatSectorTime(car.current_lap_sectors.sector3) : '--:--'}</span>
-                                    <span class="sector-best">${car.best_sectors?.sector3 ? '(' + formatSectorTime(car.best_sectors.sector3) + ')' : ''}</span>
+                                    ${(() => {
+                                        const ref = car.best_lap_sectors?.sector3;
+                                        const cur = car.current_lap_sectors?.sector3;
+                                        const delta = formatSectorDelta(cur, ref);
+                                        if (!delta) return '<span class="sector-delta"></span>';
+                                        const cls = (cur - ref) >= 0 ? 'positive' : 'negative';
+                                        return `<span class="sector-delta ${cls}">(${delta})</span>`;
+                                    })()}
                                 </div>
                             </div>
                             <div class="last-lap">
@@ -533,6 +587,16 @@
         // Ricevi aggiornamenti
         socket.on('race_update', function(data) {
             data.cars.forEach(car => {
+                // Nascondi le auto ai box dalla mappa
+                if (car.state === 'BOX') {
+                    if (carMarkers[car.driver_number]) {
+                        // Rimuovi il marker dalla mappa
+                        map.removeLayer(carMarkers[car.driver_number]);
+                        delete carMarkers[car.driver_number];
+                    }
+                    return; // Skip processing BOX cars
+                }
+                
                 if (!carMarkers[car.driver_number]) {
                     carMarkers[car.driver_number] = createCarMarker(car);
                     carMarkers[car.driver_number].addTo(map);

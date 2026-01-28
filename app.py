@@ -132,8 +132,10 @@ class RaceCar:
         self.current_lap_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
         self.best_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
         self.last_sector_times = {'sector1': None, 'sector2': None, 'sector3': None}
+        self.best_lap_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
         self.current_lap_sector_start_time = time.time()
         self.last_sector_distance = 0
+        self.sector3_start_time = None  # Tempo quando inizia il settore 3
         
     def get_position(self):
         """Restituisce coordinate attuali lungo il circuito"""
@@ -249,8 +251,8 @@ class RaceCar:
             self.current_lap_sectors['sector2'] = sector_time
             self.last_sector_times['sector2'] = sector_time
             
-            # NON resettare settore 3 - logica TV F1
-            # self.current_lap_sectors['sector3'] = None  # RIMOSSO
+            # Inizia a tracciare il tempo per il settore 3
+            self.sector3_start_time = current_time
             
             # Aggiorna miglior settore se necessario
             if not self.best_sectors['sector2'] or sector_time < self.best_sectors['sector2']:
@@ -259,7 +261,7 @@ class RaceCar:
         # Controlla attraversamento Sector 3 (fine giro)
         sector3_distance = circuit_sectors['sector3']['distance']
         if old_distance < sector3_distance <= new_distance:
-            # Calcola tempo simulato del settore 3 basato sulla distanza del settore
+            # Calcola tempo simulato del settore 3 basato sulla distanza del settore 3
             sector_distance = sector3_distance - circuit_sectors['sector2']['distance']
             sector_time = self.calculate_simulated_sector_time(sector_distance, self.state)
             
@@ -299,6 +301,7 @@ class RaceCar:
         
         # Resetta settori per nuovo stint
         self.current_lap_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
+        self.sector3_start_time = None
         
     def enter_box(self):
         """Auto rientra ai box"""
@@ -317,7 +320,14 @@ class RaceCar:
             realistic_lap_time = 85.0 + random.uniform(-2.0, 2.0)
         elif lap_type == CarState.HOT_LAP:
             # Hot lap con tempi migliori
-            realistic_lap_time = 79.5 + random.uniform(-2.5, 2.5)
+            # Se abbiamo i 3 settori, rendi il lap time coerente con la somma dei settori
+            s1 = self.current_lap_sectors.get('sector1')
+            s2 = self.current_lap_sectors.get('sector2')
+            s3 = self.current_lap_sectors.get('sector3')
+            if s1 is not None and s2 is not None and s3 is not None:
+                realistic_lap_time = (s1 + s2 + s3) + random.uniform(-0.15, 0.15)
+            else:
+                realistic_lap_time = 79.5 + random.uniform(-2.5, 2.5)
         elif lap_type == CarState.IN_LAP:
             # In lap più lento
             realistic_lap_time = 88.0 + random.uniform(-3.0, 3.0)
@@ -332,6 +342,12 @@ class RaceCar:
         # Aggiorna miglior tempo in sessione
         if not hasattr(self, 'best_lap_time') or realistic_lap_time < self.best_lap_time:
             self.best_lap_time = realistic_lap_time
+            # Snapshot dei settori del best lap (stesso giro) per delta coerenti
+            self.best_lap_sectors = {
+                'sector1': self.current_lap_sectors.get('sector1'),
+                'sector2': self.current_lap_sectors.get('sector2'),
+                'sector3': self.current_lap_sectors.get('sector3')
+            }
     
 
 # Calcola distanze tra punti per movimento costante
@@ -556,7 +572,8 @@ def race_simulation():
                 'best_lap_time': getattr(car, 'best_lap_time', None),
                 'last_sector_times': getattr(car, 'last_sector_times', {}),
                 'current_lap_sectors': getattr(car, 'current_lap_sectors', {}),
-                'best_sectors': getattr(car, 'best_sectors', {})
+                'best_sectors': getattr(car, 'best_sectors', {}),
+                'best_lap_sectors': getattr(car, 'best_lap_sectors', {})
             })
         
         socketio.emit('race_update', {
