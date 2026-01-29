@@ -65,23 +65,35 @@
         }
 
         .timing-header {
-            background: linear(135deg, #e10600 0%, #b80400 100%);
-            padding: 10px;
-            margin: -14px -14px 10px -14px;
-            text-align: center;
+            background: linear-gradient(135deg, #e10600 0%, #ff6b35 100%);
+            color: white;
+            padding: 12px 16px;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
             box-shadow: 0 2px 10px rgba(225, 6, 0, 0.3);
         }
-
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .session-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
         .session-timer {
             font-family: 'Courier New', monospace;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 800;
-            color: #00ff00;
-            letter-spacing: 1px;
-            min-width: 76px;
-            text-align: left;
+            color: #ffffff;
+            text-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+            text-align: right;
         }
 
         .session-timer.warning {
@@ -405,11 +417,13 @@
         
         <div class="timing-container">
             <div class="timing-header">
-                🏁 FREE PRACTICE - LIVE TIMING
+                <div class="header-content">
+                    <span class="session-title">🏁 FREE PRACTICE - LIVE TIMING</span>
+                    <div class="session-timer" id="session-timer">60:00</div>
+                </div>
             </div>
             <div class="timing-toolbar">
                 <div class="toolbar-row">
-                    <div class="session-timer" id="session-timer">60:00</div>
                     <div class="speed-buttons">
                         <button class="pause-btn" id="pause-btn" title="Pause/Resume">⏸</button>
                         <button class="speed-btn active" data-speed="1">1x</button>

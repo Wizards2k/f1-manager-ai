@@ -15,7 +15,7 @@ def update_car_position(car, dt):
     current_time = time.time()
     session_time = current_time - car.session_start_time
     
-    # Applica moltiplicatore velocità di gioco al movimento
+    # Applica moltiplicatore velocità di gioco SOLO al tempo (non doppio)
     adjusted_dt = dt * game_speed_multiplier
     
     # Logica stati per prove libere
@@ -27,9 +27,8 @@ def update_car_position(car, dt):
     elif car.state == CarState.OUT_LAP:
         # Out lap più lento (riscaldamento gomme) - velocità base
         base_speed_ms = (60 + car.speed * 20)  # 60-80 m/s
-        actual_speed_ms = base_speed_ms * game_speed_multiplier
         old_distance = car.distance_traveled
-        car.distance_traveled += actual_speed_ms * adjusted_dt
+        car.distance_traveled += base_speed_ms * adjusted_dt
         
         # Controlla PRIMA passaggio settori, POI completamento giro
         check_car_sector_crossing(car, old_distance, car.distance_traveled)
@@ -40,13 +39,12 @@ def update_car_position(car, dt):
             car.complete_lap(CarState.OUT_LAP)
             car.state = CarState.HOT_LAP
             car.current_lap_start = current_time
-            
+                
     elif car.state == CarState.HOT_LAP:
         # Hot lap a velocità massima - velocità base
         base_speed_ms = (70 + car.speed * 30)  # 70-100 m/s
-        actual_speed_ms = base_speed_ms * game_speed_multiplier
         old_distance = car.distance_traveled
-        car.distance_traveled += actual_speed_ms * adjusted_dt
+        car.distance_traveled += base_speed_ms * adjusted_dt
         
         # Controlla PRIMA passaggio settori, POI completamento giro
         check_car_sector_crossing(car, old_distance, car.distance_traveled)
@@ -56,18 +54,17 @@ def update_car_position(car, dt):
             car.distance_traveled = car.distance_traveled % circuit_length
             car.complete_lap(CarState.HOT_LAP)
             car.stint_laps_remaining -= 1
-            
+                
             # Se ha finito i giri della stint, inizia rientro
             if car.stint_laps_remaining <= 0:
                 car.state = CarState.IN_LAP
                 car.current_lap_start = current_time
-                
+                    
     elif car.state == CarState.IN_LAP:
         # In lap più lento (raffreddamento) - velocità base
         base_speed_ms = (55 + car.speed * 15)  # 55-70 m/s
-        actual_speed_ms = base_speed_ms * game_speed_multiplier
         old_distance = car.distance_traveled
-        car.distance_traveled += actual_speed_ms * adjusted_dt
+        car.distance_traveled += base_speed_ms * adjusted_dt
         
         # Controlla PRIMA passaggio settori, POI completamento giro
         check_car_sector_crossing(car, old_distance, car.distance_traveled)
