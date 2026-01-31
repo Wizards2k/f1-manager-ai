@@ -4,6 +4,7 @@
 import json
 import os
 import math
+from pathlib import Path
 
 def geojson_to_svg(geojson_file, output_file):
     """Convert GeoJSON circuit to SVG path"""
@@ -87,11 +88,10 @@ def geojson_to_svg(geojson_file, output_file):
 def convert_all_circuits():
     """Convert all F1 2025 circuits"""
     
-    circuits_dir = "/Users/wizards/Desktop/Sviluppo/F1 Manager AI/circuits"
-    svg_dir = "/Users/wizards/Desktop/Sviluppo/F1 Manager AI/circuits/svg"
-    
-    # Create SVG directory
-    os.makedirs(svg_dir, exist_ok=True)
+    base_dir = Path(__file__).resolve().parent
+    circuits_dir = base_dir / "circuits"
+    svg_dir = base_dir / "static" / "circuits"
+    svg_dir.mkdir(parents=True, exist_ok=True)
     
     # F1 2025 circuits
     f1_2025_circuits = [
@@ -124,9 +124,9 @@ def convert_all_circuits():
     svg_results = {}
     
     for circuit_file in f1_2025_circuits:
-        input_path = os.path.join(circuits_dir, circuit_file)
+        input_path = circuits_dir / circuit_file
         svg_filename = circuit_file.replace('.json', '.svg')
-        output_path = os.path.join(svg_dir, svg_filename)
+        output_path = svg_dir / svg_filename
         
         if os.path.exists(input_path):
             svg = geojson_to_svg(input_path, output_path)
@@ -145,7 +145,8 @@ def convert_all_circuits():
     
     js_content += "};\n"
     
-    with open(os.path.join(svg_dir, 'circuits_svg.js'), 'w') as f:
+    circuits_js = svg_dir / 'circuits_svg.js'
+    with open(circuits_js, 'w') as f:
         f.write(js_content)
     
     print(f"\n🎯 Converted {len(svg_results)} circuits to SVG")
