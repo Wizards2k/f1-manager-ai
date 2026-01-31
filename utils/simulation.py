@@ -4,6 +4,7 @@ import random
 import config
 from models import CarState
 from utils.position import circuit_length
+from utils.game_logic import update_session_bests
 
 def update_car_position(car, dt):
     """Aggiorna posizione dell'auto basandosi sulla distanza e stato"""
@@ -106,6 +107,8 @@ def check_car_sector_crossing(car, old_distance, new_distance):
         # Aggiorna miglior settore se necessario
         if not car.best_sectors['sector1'] or sector_time < car.best_sectors['sector1']:
             car.best_sectors['sector1'] = sector_time
+            # Aggiorna anche session best
+            update_session_bests(car)
             
     # Controlla attraversamento Sector 2
     sector2_distance = config.circuit_sectors['sector2']['distance']
@@ -123,6 +126,8 @@ def check_car_sector_crossing(car, old_distance, new_distance):
         # Aggiorna miglior settore se necessario
         if not car.best_sectors['sector2'] or sector_time < car.best_sectors['sector2']:
             car.best_sectors['sector2'] = sector_time
+            # Aggiorna anche session best
+            update_session_bests(car)
             
     # Controlla attraversamento Sector 3 (fine giro)
     sector3_distance = config.circuit_sectors['sector3']['distance']
@@ -137,6 +142,8 @@ def check_car_sector_crossing(car, old_distance, new_distance):
         # Aggiorna miglior settore se necessario
         if not car.best_sectors['sector3'] or sector_time < car.best_sectors['sector3']:
             car.best_sectors['sector3'] = sector_time
+            # Aggiorna anche session best
+            update_session_bests(car)
 
 def calculate_simulated_sector_time(sector_distance, lap_type):
     """Calcola tempo simulato per un settore basato sulla distanza e tipo di giro"""

@@ -149,3 +149,6 @@ class RaceCar:
                 'sector2': self.current_lap_sectors.get('sector2'),
                 'sector3': self.current_lap_sectors.get('sector3')
             }
+            # Aggiorna session bests
+            from utils.game_logic import update_session_bests
+            update_session_bests(self)

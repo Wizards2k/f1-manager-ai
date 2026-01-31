@@ -104,6 +104,29 @@
             color: #ff4444;
         }
 
+        /* F1 Timing Colors */
+        .time-session-best {
+            color: #ff00ff !important; /* Magenta/Purple - Session best */
+            text-shadow: 0 0 8px rgba(255, 0, 255, 0.6);
+        }
+        
+        .time-personal-best {
+            color: #00ff00 !important; /* Green - Personal best */
+        }
+        
+        .time-normal {
+            color: #ffffff !important; /* White - Normal */
+        }
+        
+        .time-slow {
+            color: #ffaa00 !important; /* Yellow - Outside 107% */
+        }
+        
+        .time-invalid {
+            color: #ff4444 !important; /* Red - Invalid */
+            text-decoration: line-through;
+        }
+
         .speed-buttons {
             display: flex;
             gap: 6px;
@@ -502,6 +525,12 @@
         const carMarkers = {};
         const timingTable = document.getElementById('timing-table');
         
+        // Session best times
+        let sessionBests = {
+            best_lap: null,
+            best_sectors: { sector1: null, sector2: null, sector3: null }
+        };
+        
         // Formatta tempo
         function formatLapTime(seconds) {
             const mins = Math.floor(seconds / 60);
@@ -516,6 +545,32 @@
             return `${sign}${Math.abs(delta).toFixed(3)}`;
         }
         
+        // Timing color helper functions
+        function getLapTimeColorClass(lapTime, personalBest, sessionBest) {
+            if (!lapTime) return '';
+            if (sessionBest && Math.abs(lapTime - sessionBest) < 0.001) {
+                return 'time-session-best';
+            }
+            if (personalBest && Math.abs(lapTime - personalBest) < 0.001) {
+                return 'time-personal-best';
+            }
+            if (sessionBest && lapTime > sessionBest * 1.07) {
+                return 'time-slow';
+            }
+            return 'time-normal';
+        }
+        
+        function getSectorTimeColorClass(sectorTime, personalBest, sessionBest) {
+            if (!sectorTime) return '';
+            if (sessionBest && Math.abs(sectorTime - sessionBest) < 0.001) {
+                return 'time-session-best';
+            }
+            if (personalBest && Math.abs(sectorTime - personalBest) < 0.001) {
+                return 'time-personal-best';
+            }
+            return 'time-normal';
+        }
+
         // Crea marker per auto
         function createCarMarker(car) {
             const icon = L.divIcon({
@@ -568,14 +623,14 @@
                             <img src="/static/tires/${car.current_tire || 'medium'}.svg" class="tire-icon" alt="${car.current_tire || 'MEDIUM'} tire">
                         </div>
                         <div class="lap-times">
-                            <div class="best-lap">
+                            <div class="best-lap ${getLapTimeColorClass(car.best_lap_time, car.best_lap_time, sessionBests.best_lap)}">
                                 ${car.best_lap_time ? formatLapTime(car.best_lap_time) : '--:--.---'}
                                 <small>BEST</small>
                             </div>
                             <div class="sector-times">
                                 <div class="sector-row">
                                     <span>S1:</span>
-                                    <span class="sector-time">${car.current_lap_sectors?.sector1 ? formatSectorTime(car.current_lap_sectors.sector1) : '--:--'}</span>
+                                    <span class="sector-time ${getSectorTimeColorClass(car.current_lap_sectors?.sector1, car.best_sectors?.sector1, sessionBests.best_sectors?.sector1)}">${car.current_lap_sectors?.sector1 ? formatSectorTime(car.current_lap_sectors.sector1) : '--:--'}</span>
                                     ${(() => {
                                         const ref = car.best_lap_sectors?.sector1;
                                         const cur = car.current_lap_sectors?.sector1;
@@ -587,7 +642,7 @@
                                 </div>
                                 <div class="sector-row">
                                     <span>S2:</span>
-                                    <span class="sector-time">${car.current_lap_sectors?.sector2 ? formatSectorTime(car.current_lap_sectors.sector2) : '--:--'}</span>
+                                    <span class="sector-time ${getSectorTimeColorClass(car.current_lap_sectors?.sector2, car.best_sectors?.sector2, sessionBests.best_sectors?.sector2)}">${car.current_lap_sectors?.sector2 ? formatSectorTime(car.current_lap_sectors.sector2) : '--:--'}</span>
                                     ${(() => {
                                         const ref = car.best_lap_sectors?.sector2;
                                         const cur = car.current_lap_sectors?.sector2;
@@ -599,7 +654,7 @@
                                 </div>
                                 <div class="sector-row">
                                     <span>S3:</span>
-                                    <span class="sector-time">${car.current_lap_sectors?.sector3 ? formatSectorTime(car.current_lap_sectors.sector3) : '--:--'}</span>
+                                    <span class="sector-time ${getSectorTimeColorClass(car.current_lap_sectors?.sector3, car.best_sectors?.sector3, sessionBests.best_sectors?.sector3)}">${car.current_lap_sectors?.sector3 ? formatSectorTime(car.current_lap_sectors.sector3) : '--:--'}</span>
                                     ${(() => {
                                         const ref = car.best_lap_sectors?.sector3;
                                         const cur = car.current_lap_sectors?.sector3;
@@ -610,7 +665,7 @@
                                     })()}
                                 </div>
                             </div>
-                            <div class="last-lap">
+                            <div class="last-lap ${getLapTimeColorClass(car.last_lap_time, car.best_lap_time, sessionBests.best_lap)}">
                                 ${car.last_lap_time ? formatLapTime(car.last_lap_time) : '--:--.---'}
                                 <small>LAST</small>
                                 ${car.last_lap_type && car.last_lap_type !== 'HOT_LAP' ? `<small style="color: #888;">(${car.last_lap_type})</small>` : ''}
@@ -631,6 +686,11 @@
         
         // Ricevi aggiornamenti
         socket.on('race_update', function(data) {
+            // Update session bests
+            if (data.session_bests) {
+                sessionBests = data.session_bests;
+            }
+            
             data.cars.forEach(car => {
                 // Nascondi le auto ai box dalla mappa
                 if (car.state === 'BOX') {

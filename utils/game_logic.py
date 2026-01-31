@@ -35,10 +35,24 @@ for team_name, team_data in F1_TEAMS.items():
         car_index += 1
         race_cars.append(car)
 
+# Session best times (across all cars)
+session_best_lap = None  # Best lap time in session
+session_best_sectors = {'sector1': None, 'sector2': None, 'sector3': None}  # Best sector times in session
+
+def reset_session_bests():
+    """Reset session bests for new session"""
+    global session_best_lap, session_best_sectors
+    session_best_lap = None
+    session_best_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
+
 def reset_cars_for_session(start_time):
     """Rimette tutte le auto ai box con uscite scaglionate."""
     global car_index
     car_index = 0
+    
+    # Reset session bests
+    reset_session_bests()
+    
     for car in race_cars:
         car.state = car.state.__class__.BOX
         car.distance_traveled = car_index * 150
@@ -136,3 +150,30 @@ def get_pause_state():
     """Restituisce lo stato di pausa corrente in modo thread-safe"""
     with state_lock:
         return is_paused
+
+# Session best times (across all cars)
+session_best_lap = None  # Best lap time in session
+session_best_sectors = {'sector1': None, 'sector2': None, 'sector3': None}  # Best sector times in session
+
+def update_session_bests(car):
+    """Update session best times when a car completes a lap or sector"""
+    global session_best_lap, session_best_sectors
+    
+    # Update best lap
+    if hasattr(car, 'best_lap_time') and car.best_lap_time is not None:
+        if session_best_lap is None or car.best_lap_time < session_best_lap:
+            session_best_lap = car.best_lap_time
+    
+    # Update best sectors
+    for sector in ['sector1', 'sector2', 'sector3']:
+        sector_time = car.best_sectors.get(sector)
+        if sector_time is not None:
+            if session_best_sectors[sector] is None or sector_time < session_best_sectors[sector]:
+                session_best_sectors[sector] = sector_time
+
+def get_session_bests():
+    """Get current session best times"""
+    return {
+        'best_lap': session_best_lap,
+        'best_sectors': session_best_sectors.copy()
+    }
