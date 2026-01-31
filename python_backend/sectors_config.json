@@ -1,0 +1,552 @@
+{
+  "monza": {
+    "name": "Autodromo Nazionale Monza",
+    "total_length": 5793,
+    "sectors": {
+      "sector1": {
+        "distance": 1900,
+        "description": "Start to Variante della Roggia",
+        "key_features": [
+          "Rettifilo",
+          "Variante del Rettifilo",
+          "Curva Grande",
+          "Variante della Roggia"
+        ]
+      },
+      "sector2": {
+        "distance": 3700,
+        "description": "Variante della Roggia to Variante Ascari",
+        "key_features": [
+          "Lesmo 1",
+          "Lesmo 2",
+          "Rettilineo verso Ascari"
+        ]
+      },
+      "sector3": {
+        "distance": 5793,
+        "description": "Variante Ascari to Finish Line",
+        "key_features": [
+          "Variante Ascari",
+          "Parabolica",
+          "Rettilineo finale"
+        ]
+      }
+    }
+  },
+  "silverstone": {
+    "name": "Silverstone Circuit",
+    "total_length": 5891,
+    "sectors": {
+      "sector1": {
+        "distance": 1800,
+        "description": "Start to Village",
+        "key_features": [
+          "Abbey",
+          "Farm",
+          "Village"
+        ]
+      },
+      "sector2": {
+        "distance": 3400,
+        "description": "Village to Stowe",
+        "key_features": [
+          "Aintree",
+          "Wellington",
+          "Brooklands",
+          "Luffield",
+          "Woodcote"
+        ]
+      },
+      "sector3": {
+        "distance": 5891,
+        "description": "Stowe to Finish Line",
+        "key_features": [
+          "Copse",
+          "Maggotts",
+          "Becketts",
+          "Chapel",
+          "Hangar Straight",
+          "Stowe"
+        ]
+      }
+    }
+  },
+  "monaco": {
+    "name": "Circuit de Monaco",
+    "total_length": 3337,
+    "sectors": {
+      "sector1": {
+        "distance": 1200,
+        "description": "Start to Casino Square",
+        "key_features": [
+          "Sainte Devote",
+          "Beau Rivage",
+          "Massenet",
+          "Casino Square"
+        ]
+      },
+      "sector2": {
+        "distance": 2300,
+        "description": "Casino Square to Portier",
+        "key_features": [
+          "Mirabeau",
+          "Grand Hotel Hairpin",
+          "Portier"
+        ]
+      },
+      "sector3": {
+        "distance": 3337,
+        "description": "Portier to Finish Line",
+        "key_features": [
+          "Tunnel",
+          "Nouvelle Chicane",
+          "Tabac",
+          "Piscine",
+          "Rascasse",
+          "Anthony Noghes"
+        ]
+      }
+    }
+  },
+  "au-1953_melbourne": {
+    "name": "Albert Park Grand Prix Circuit",
+    "total_length": 5231.8,
+    "sectors": {
+      "sector1": {
+        "distance": 1741.6,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3140.6,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5231.8,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "at-1969_spielberg": {
+    "name": "Red Bull Ring",
+    "total_length": 4297.7,
+    "sectors": {
+      "sector1": {
+        "distance": 1213.4,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 2898.9,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4297.7,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "az-2016_baku": {
+    "name": "Baku City Circuit",
+    "total_length": 5934.7,
+    "sectors": {
+      "sector1": {
+        "distance": 1995.4,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3986.4,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5934.7,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "bh-2002_sakhir": {
+    "name": "Bahrain International Circuit",
+    "total_length": 5366.3,
+    "sectors": {
+      "sector1": {
+        "distance": 1772.2,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3959.5,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5366.3,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "be-1925_spa_francorchamps": {
+    "name": "Circuit de Spa-Francorchamps",
+    "total_length": 6958.7,
+    "sectors": {
+      "sector1": {
+        "distance": 2242.0,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 5038.2,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 6958.7,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "br-1940_sao_paulo": {
+    "name": "Interlagos",
+    "total_length": 4250.9,
+    "sectors": {
+      "sector1": {
+        "distance": 1224.8,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3129.1,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4250.9,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "gb-1948_silverstone": {
+    "name": "Silverstone Circuit",
+    "total_length": 5835.9,
+    "sectors": {
+      "sector1": {
+        "distance": 1809.0,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 4253.3,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5835.9,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "ca-1978_montreal": {
+    "name": "Circuit Gilles-Villeneuve",
+    "total_length": 4323.8,
+    "sectors": {
+      "sector1": {
+        "distance": 1076.2,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 2470.6,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4323.8,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "cn-2004_shanghai": {
+    "name": "Shanghai International Circuit",
+    "total_length": 5398.4,
+    "sectors": {
+      "sector1": {
+        "distance": 1420.5,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 2956.8,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5398.4,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "it-1953_imola": {
+    "name": "Autodromo Enzo e Dino Ferrari",
+    "total_length": 4877.5,
+    "sectors": {
+      "sector1": {
+        "distance": 1769.0,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3366.3,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4877.5,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "hu-1986_budapest": {
+    "name": "Hungaroring",
+    "total_length": 4336.4,
+    "sectors": {
+      "sector1": {
+        "distance": 1725.1,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3249.3,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4336.4,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "it-1922_monza": {
+    "name": "Autodromo Nazionale di Monza",
+    "total_length": 5750.8,
+    "sectors": {
+      "sector1": {
+        "distance": 1890.4,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3715.9,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5750.8,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "jp-1962_suzuka": {
+    "name": "Suzuka International Racing Course",
+    "total_length": 5767.6,
+    "sectors": {
+      "sector1": {
+        "distance": 2165.8,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 4682.2,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5767.6,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "mx-1962_mexico_city": {
+    "name": "Aut\u00f3dromo Hermanos Rodr\u00edguez",
+    "total_length": 4239.0,
+    "sectors": {
+      "sector1": {
+        "distance": 1901.7,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3372.2,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4239.0,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "us-2022_miami": {
+    "name": "Miami International Autodrome",
+    "total_length": 5343.2,
+    "sectors": {
+      "sector1": {
+        "distance": 1796.2,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3649.4,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5343.2,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "mc-1929_monaco": {
+    "name": "Circuit de Monaco",
+    "total_length": 3286.4,
+    "sectors": {
+      "sector1": {
+        "distance": 1040.2,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 2437.6,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 3286.4,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "nl-1948_zandvoort": {
+    "name": "Circuit Zandvoort",
+    "total_length": 4239.8,
+    "sectors": {
+      "sector1": {
+        "distance": 1485.5,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 2932.0,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4239.8,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "sa-2021_jeddah": {
+    "name": "Jeddah Corniche Circuit",
+    "total_length": 6108.4,
+    "sectors": {
+      "sector1": {
+        "distance": 2075.0,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 4111.2,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 6108.4,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "sg-2008_singapore": {
+    "name": "Marina Bay Street Circuit",
+    "total_length": 4885.2,
+    "sectors": {
+      "sector1": {
+        "distance": 1627.8,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3424.6,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4885.2,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "es-1991_barcelona": {
+    "name": "Circuit de Barcelona-Catalunya",
+    "total_length": 4628.9,
+    "sectors": {
+      "sector1": {
+        "distance": 1603.3,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3366.1,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4628.9,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  },
+  "us-2012_austin": {
+    "name": "Circuit of the Americas",
+    "total_length": 5453.9,
+    "sectors": {
+      "sector1": {
+        "distance": 1647.3,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3885.7,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5453.9,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    }
+  }
+}
