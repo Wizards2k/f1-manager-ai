@@ -1,7 +1,7 @@
 # Simulation Logic F1 Manager AI
 import time
 import random
-import config
+from config import circuit_sectors
 from models import CarState
 from utils.position import circuit_length
 
@@ -34,9 +34,8 @@ def update_car_position(car, dt):
         check_car_sector_crossing(car, old_distance, car.distance_traveled)
         
         # Controlla completamento giro
-        current_circuit_length = circuit_length()
-        if car.distance_traveled >= current_circuit_length:
-            car.distance_traveled = car.distance_traveled % current_circuit_length
+        if car.distance_traveled >= circuit_length:
+            car.distance_traveled = car.distance_traveled % circuit_length
             car.complete_lap(CarState.OUT_LAP)
             car.state = CarState.HOT_LAP
             car.current_lap_start = current_time
@@ -51,9 +50,8 @@ def update_car_position(car, dt):
         check_car_sector_crossing(car, old_distance, car.distance_traveled)
         
         # Controlla completamento giro
-        current_circuit_length = circuit_length()
-        if car.distance_traveled >= current_circuit_length:
-            car.distance_traveled = car.distance_traveled % current_circuit_length
+        if car.distance_traveled >= circuit_length:
+            car.distance_traveled = car.distance_traveled % circuit_length
             car.complete_lap(CarState.HOT_LAP)
             car.stint_laps_remaining -= 1
                 
@@ -72,9 +70,8 @@ def update_car_position(car, dt):
         check_car_sector_crossing(car, old_distance, car.distance_traveled)
         
         # Controlla completamento giro
-        current_circuit_length = circuit_length()
-        if car.distance_traveled >= current_circuit_length:
-            car.distance_traveled = car.distance_traveled % current_circuit_length
+        if car.distance_traveled >= circuit_length:
+            car.distance_traveled = car.distance_traveled % circuit_length
             car.complete_lap(CarState.IN_LAP)
             car.enter_box()
 
@@ -86,11 +83,8 @@ def check_car_sector_crossing(car, old_distance, new_distance):
     if old_distance > new_distance:  # Ha completato un giro
         old_distance = 0
         
-    if not config.circuit_sectors:
-        return
-
     # Controlla attraversamento Sector 1
-    sector1_distance = config.circuit_sectors['sector1']['distance']
+    sector1_distance = circuit_sectors['sector1']['distance']
     if old_distance < sector1_distance <= new_distance:
         # Calcola tempo simulato del settore 1 basato sulla distanza
         sector_distance = sector1_distance
@@ -108,10 +102,10 @@ def check_car_sector_crossing(car, old_distance, new_distance):
             car.best_sectors['sector1'] = sector_time
             
     # Controlla attraversamento Sector 2
-    sector2_distance = config.circuit_sectors['sector2']['distance']
+    sector2_distance = circuit_sectors['sector2']['distance']
     if old_distance < sector2_distance <= new_distance:
         # Calcola tempo simulato del settore 2 basato sulla distanza del settore
-        sector_distance = sector2_distance - config.circuit_sectors['sector1']['distance']
+        sector_distance = sector2_distance - circuit_sectors['sector1']['distance']
         sector_time = calculate_simulated_sector_time(sector_distance, car.state)
         
         car.current_lap_sectors['sector2'] = sector_time
@@ -125,10 +119,10 @@ def check_car_sector_crossing(car, old_distance, new_distance):
             car.best_sectors['sector2'] = sector_time
             
     # Controlla attraversamento Sector 3 (fine giro)
-    sector3_distance = config.circuit_sectors['sector3']['distance']
+    sector3_distance = circuit_sectors['sector3']['distance']
     if old_distance < sector3_distance <= new_distance:
         # Calcola tempo simulato del settore 3 basato sulla distanza del settore 3
-        sector_distance = sector3_distance - config.circuit_sectors['sector2']['distance']
+        sector_distance = sector3_distance - circuit_sectors['sector2']['distance']
         sector_time = calculate_simulated_sector_time(sector_distance, car.state)
         
         car.current_lap_sectors['sector3'] = sector_time

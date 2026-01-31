@@ -1,45 +1,17 @@
 # Configurazione F1 Manager AI
 import json
-import os
+
+# Carica dati del circuito di Monza
+with open('monza_circuit.json', 'r') as f:
+    circuit_data = json.load(f)
 
 # Carica configurazione settori
 with open('sectors_config.json', 'r') as f:
     sectors_config = json.load(f)
 
-# Circuito corrente (default Monza)
-current_circuit = None
-circuit_data = None
-circuit_sectors = None
-
-def _resolve_circuit_file(circuit_id):
-    circuits_path = os.path.join('circuits', f'{circuit_id}.json')
-    if circuit_id and os.path.exists(circuits_path):
-        return circuits_path
-    return None
-
-def set_current_circuit(circuit_id):
-    """Imposta circuito corrente e settori, con fallback Monza."""
-    global current_circuit, circuit_data, circuit_sectors
-
-    circuit_file = _resolve_circuit_file(circuit_id)
-    if not circuit_file:
-        raise FileNotFoundError('No circuit file found')
-
-    with open(circuit_file, 'r') as f:
-        circuit_data = json.load(f)
-
-    current_circuit = circuit_id if circuit_id else 'monza'
-    if current_circuit in sectors_config:
-        circuit_sectors = sectors_config[current_circuit]['sectors']
-    else:
-        circuit_sectors = sectors_config['monza']['sectors']
-
-    return circuit_data
-
-# Inizializza circuito di default solo se disponibile
-default_circuit = 'it-1922_monza'
-if _resolve_circuit_file(default_circuit):
-    set_current_circuit(default_circuit)
+# Ottieni configurazione settori per il circuito corrente (Monza)
+current_circuit = 'monza'
+circuit_sectors = sectors_config[current_circuit]['sectors']
 
 # Configurazione team e piloti F1 2025 con numeri reali ufficiali
 F1_TEAMS = {

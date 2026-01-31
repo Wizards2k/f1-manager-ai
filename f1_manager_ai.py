@@ -11,7 +11,7 @@ from utils import (
     race_cars, get_session_time_remaining, format_session_time,
     update_car_position, get_car_position
 )
-from utils.game_logic import get_game_speed, get_pause_state
+from utils.game_logic import get_game_speed, get_pause_state, reset_cars_for_session
 
 print("F1 Manager AI - Modular version starting...")
 
@@ -32,6 +32,7 @@ def handle_connect():
     last_speed_change_time = time.time()
     session_start_time = time.time()
     session_start_real_time = time.time()
+    reset_cars_for_session(session_start_time)
     print('Session variables reset for new client')
     emit('connected', {'data': 'Connected to F1 Manager AI'})
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>F1 Manager AI - Circuit</title>
+    <title>F1 Manager AI - Monza Circuit</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
@@ -460,24 +460,11 @@
             maxZoom: 19
         }).addTo(map);
         
-        const params = new URLSearchParams(window.location.search);
-        const selectedCircuit = params.get('circuit');
-        if (selectedCircuit) {
-            document.title = `F1 Manager AI - ${selectedCircuit}`;
-        }
-
         // Carica circuito
-        const circuitQuery = selectedCircuit ? `?circuit=${encodeURIComponent(selectedCircuit)}` : '';
-        fetch(`/api/circuit${circuitQuery}`)
+        fetch('/api/circuit')
             .then(response => response.json())
             .then(data => {
-                const geometry = data.type === 'FeatureCollection'
-                    ? data.features?.[0]?.geometry
-                    : data.geometry;
-                if (!geometry || !geometry.coordinates) {
-                    throw new Error('Circuit geometry not available');
-                }
-                const coordinates = geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                const coordinates = data.features[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
                 
                 // Disegna tracciato
                 const circuitLine = L.polyline(coordinates, {

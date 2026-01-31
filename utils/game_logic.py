@@ -35,6 +35,28 @@ for team_name, team_data in F1_TEAMS.items():
         car_index += 1
         race_cars.append(car)
 
+def reset_cars_for_session(start_time):
+    """Rimette tutte le auto ai box con uscite scaglionate."""
+    global car_index
+    car_index = 0
+    for car in race_cars:
+        car.state = car.state.__class__.BOX
+        car.distance_traveled = car_index * 150
+        car.session_start_time = start_time
+        car.box_time_until = random.uniform(30, 300)
+        car.current_lap_start = None
+        car.lap_times = []
+        car.total_laps = 0
+        car.total_session_laps = 0
+        car.last_lap_type = None
+        car.current_lap_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
+        car.last_sector_times = {'sector1': None, 'sector2': None, 'sector3': None}
+        car.best_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
+        car.best_lap_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
+        car.stint_laps_remaining = car.stint_target_laps
+        car.sector3_start_time = None
+        car_index += 1
+
 def get_session_time_remaining():
     """Restituisce il tempo rimanente della sessione (aggiustato per velocità gioco e pause)"""
     global is_paused, accumulated_game_time, last_speed_change_time
