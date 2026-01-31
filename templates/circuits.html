@@ -44,6 +44,152 @@
             transform: translateY(-8px) scale(1.02);
             border-color: #e10600;
             box-shadow: 0 20px 40px rgba(224, 6, 0, 0.3);
+            cursor: pointer;
+        }
+
+        /* Circuit Detail Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(145deg, #1a1a1a 0%, #2a2a2a 100%);
+            border: 2px solid #e10600;
+            border-radius: 16px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(90deg, #e10600 0%, #ff2d2d 100%);
+            padding: 24px;
+            border-radius: 14px 14px 0 0;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: rgba(0, 0, 0, 0.5);
+            transform: rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 32px;
+        }
+
+        .circuit-detail-preview {
+            height: 200px;
+            background: linear-gradient(45deg, #333 25%, transparent 25%, transparent 75%, #333 75%, #333),
+                        linear-gradient(45deg, #333 25%, transparent 25%, transparent 75%, #333 75%, #333);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            border: 2px solid #333;
+        }
+
+        .circuit-detail-preview svg {
+            width: 90%;
+            height: 90%;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+        }
+
+        .detail-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin: 24px 0;
+        }
+
+        .detail-stat {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .detail-stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #e10600;
+        }
+
+        .detail-stat-label {
+            font-size: 0.875rem;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+
+        .play-button {
+            background: linear-gradient(90deg, #e10600 0%, #ff2d2d 100%);
+            color: white;
+            border: none;
+            padding: 18px 48px;
+            border-radius: 12px;
+            font-size: 1.25rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 24px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .play-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(224, 6, 0, 0.4);
         }
 
         .flag-icon {
@@ -178,6 +324,53 @@
         </div>
     </footer>
 
+    <!-- Circuit Detail Modal -->
+    <div id="circuit-modal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <button class="modal-close" onclick="closeCircuitModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+                <h2 id="modal-circuit-name" class="text-2xl font-bold"></h2>
+                <div class="flex items-center mt-2 text-white/80">
+                    <span id="modal-circuit-flag" class="text-2xl mr-2"></span>
+                    <span id="modal-circuit-location"></span>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div id="modal-circuit-preview" class="circuit-detail-preview"></div>
+                
+                <div class="detail-stats">
+                    <div class="detail-stat">
+                        <div id="modal-circuit-length" class="detail-stat-value"></div>
+                        <div class="detail-stat-label">Length</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div id="modal-circuit-laps" class="detail-stat-value"></div>
+                        <div class="detail-stat-label">Laps</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div id="modal-circuit-firstgp" class="detail-stat-value"></div>
+                        <div class="detail-stat-label">First GP</div>
+                    </div>
+                    <div class="detail-stat">
+                        <div id="modal-circuit-country" class="detail-stat-value" style="font-size: 1.2rem;"></div>
+                        <div class="detail-stat-label">Country</div>
+                    </div>
+                </div>
+                
+                <p class="text-gray-400 text-center text-sm mb-4">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Click play to start a race at this circuit
+                </p>
+                
+                <button id="modal-play-button" class="play-button" onclick="playCircuit()">
+                    <i class="fas fa-play mr-3"></i>GIOCA
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="/circuits/svg/circuits_svg.js"></script>
     <script>
         // Circuit data with real SVG previews from GeoJSON
@@ -228,7 +421,7 @@
                 const svg = circuitSvgs[circuit.id] || '<svg viewBox="0 0 200 120"><text x="100" y="60" text-anchor="middle" fill="#e10600" font-size="12">Circuit</text></svg>';
                 
                 return `
-                <div class="circuit-card rounded-xl p-6 cursor-pointer" onclick="selectCircuit('${circuit.id}')">
+                <div class="circuit-card rounded-xl p-6" onclick="showCircuitDetail('${circuit.id}')">
                     <div class="circuit-preview rounded-lg mb-4 flex items-center justify-center">
                         ${svg}
                     </div>
@@ -252,10 +445,6 @@
                             <span>${circuit.laps} laps</span>
                         </div>
                     </div>
-                    
-                    <button class="w-full mt-4 bg-red-600 hover:bg-red-700 py-2 rounded-lg font-bold transition-colors">
-                        <i class="fas fa-play mr-2"></i>Race Here
-                    </button>
                 </div>
             `;
             }).join('');
@@ -281,6 +470,60 @@
                 });
             });
         }
+
+        // Show circuit detail modal
+        function showCircuitDetail(circuitId) {
+            const circuit = circuits.find(c => c.id === circuitId);
+            if (!circuit) return;
+            
+            // Populate modal
+            document.getElementById('modal-circuit-name').textContent = circuit.name;
+            document.getElementById('modal-circuit-flag').textContent = circuit.flag;
+            document.getElementById('modal-circuit-location').textContent = circuit.location;
+            document.getElementById('modal-circuit-length').textContent = circuit.length;
+            document.getElementById('modal-circuit-laps').textContent = circuit.laps;
+            document.getElementById('modal-circuit-firstgp').textContent = circuit.firstGp;
+            document.getElementById('modal-circuit-country').textContent = circuit.country;
+            
+            // Set SVG preview
+            const svg = circuitSvgs[circuit.id] || '<svg viewBox="0 0 200 120"><text x="100" y="60" text-anchor="middle" fill="#e10600" font-size="12">Circuit</text></svg>';
+            document.getElementById('modal-circuit-preview').innerHTML = svg;
+            
+            // Store current circuit for play button
+            document.getElementById('modal-play-button').dataset.circuitId = circuitId;
+            
+            // Show modal
+            document.getElementById('circuit-modal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close circuit modal
+        function closeCircuitModal() {
+            document.getElementById('circuit-modal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close modal when clicking overlay
+        function closeModalOnOverlay(event) {
+            if (event.target === event.currentTarget) {
+                closeCircuitModal();
+            }
+        }
+
+        // Play selected circuit
+        function playCircuit() {
+            const circuitId = document.getElementById('modal-play-button').dataset.circuitId;
+            if (circuitId) {
+                selectCircuit(circuitId);
+            }
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeCircuitModal();
+            }
+        });
 
         // Select circuit and redirect to race
         function selectCircuit(circuitId) {
