@@ -12,6 +12,3 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Check if running in Electron
     isElectron: true
 });
-
-// Log that preload script has loaded
-console.log('[Electron] Preload script loaded successfully');

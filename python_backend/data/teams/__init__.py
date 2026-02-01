@@ -1,6 +1,6 @@
 """Roster ufficiale delle scuderie con forza auto e piloti titolari."""
 
-from models import Team, Nazionalita
+from python_backend.models import Team, Nazionalita
 from data.pilots import PILOTS
 
 TEAMS = [

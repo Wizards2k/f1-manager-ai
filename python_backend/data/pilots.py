@@ -1,7 +1,7 @@
 """Elenco piloti ufficiali con attributi base per la simulazione lap-time."""
 from typing import Optional
 
-from models import Pilota, Nazionalita
+from python_backend.models import Pilota, Nazionalita
 
 
 def _pilot(

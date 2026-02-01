@@ -43,7 +43,7 @@ function getBackendPath() {
 function startPythonBackend() {
     const pythonPath = getPythonExecutable();
     const backendPath = getBackendPath();
-    const mainScript = path.join(backendPath, 'f1_manager_ai.py');
+    const mainScript = path.join(backendPath, 'python_backend', 'f1_manager_ai.py');
     
     console.log('Starting Python backend...');
     console.log('Python:', pythonPath);

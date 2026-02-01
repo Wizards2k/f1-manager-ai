@@ -26,7 +26,7 @@ def register_routes(app):
 
     @app.route('/circuits/<path:filename>')
     def serve_circuit_files(filename):
-        return send_from_directory('circuits', filename)
+        return send_from_directory('python_backend/circuits', filename)
 
     @app.route('/api/circuit')
     def get_circuit():

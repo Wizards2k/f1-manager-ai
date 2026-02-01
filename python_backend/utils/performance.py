@@ -6,7 +6,7 @@ import random
 from typing import Dict, Optional, Tuple
 
 import config
-from models import CarState, RaceCar
+from python_backend.models import CarState, RaceCar
 from utils.position import circuit_length
 
 # Base constants
