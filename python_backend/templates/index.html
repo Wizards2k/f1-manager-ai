@@ -14,80 +14,128 @@
             box-sizing: border-box;
         }
 
-        .layout-columns {
-            display: flex;
-            gap: 16px;
-            height: calc(100% - 160px);
-            align-items: stretch;
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
         }
 
-        .timing-wrapper {
-            flex: 1;
-            min-width: 0;
-            overflow-y: auto;
+        .leaflet-control-attribution {
+            display: none !important;
         }
 
-        .garage-toggle {
-            align-self: flex-end;
-            margin: 6px 0 12px;
-            background: #222;
-            color: #ddd;
-            border: 1px solid #444;
-            border-radius: 999px;
-            padding: 6px 12px;
-            font-size: 11px;
-            letter-spacing: 0.08em;
-            cursor: pointer;
-        }
-
-        .player-panel {
-            flex: 0 0 320px;
-            min-width: 260px;
-            background: #141414;
-            border: 1px solid #2b2b2b;
-            border-radius: 14px;
-            padding: 14px;
+        .player-dock {
+            background: #0f0f0f;
+            border-top: 1px solid #1f1f1f;
+            padding: 10px 14px 12px;
             display: flex;
             flex-direction: column;
             gap: 10px;
-            max-height: 100%;
-            transition: width 0.25s ease, padding 0.25s ease, opacity 0.25s ease;
+            box-shadow: inset 0 8px 14px rgba(0,0,0,0.35);
+            font-family: 'Formula1 Display', 'Segoe UI', sans-serif;
         }
 
-        .player-panel.collapsed {
+        .player-dock.collapsed {
             display: none;
         }
 
-        .player-panel h3 {
-            margin: 0;
-            font-size: 15px;
-            letter-spacing: 0.08em;
-            color: #cfb53b;
+        .player-dock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .team-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .team-badge .badge-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid #2a2a2a;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
         }
 
         .player-team-label {
             font-size: 12px;
-            color: #ddd;
+            letter-spacing: 0.08em;
+            color: #e3e3e3;
+            text-transform: uppercase;
+            font-weight: 600;
         }
 
-        .player-msg {
+        .player-status-banner {
             font-size: 11px;
             color: #8bdcb8;
-            min-height: 16px;
+            margin-top: 2px;
         }
 
         #player-car-cards {
-            flex: 1;
-            overflow-y: auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        #player-car-cards .car-card {
+            flex: 1 1 320px;
+        }
+
+        .player-mini-grid {
+            display: none;
+        }
+
+        .mini-card {
+            background: #161616;
+            border: 1px solid #2f2f2f;
+            border-radius: 10px;
+            padding: 10px 12px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 6px;
+        }
+
+        .mini-card header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            letter-spacing: 0.06em;
+        }
+
+        .mini-state {
+            font-size: 10px;
+            color: #bbb;
+        }
+
+        .mini-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .mini-actions button {
+            flex: 1;
+            font-size: 11px;
+            padding: 6px;
         }
 
         .car-card {
             border: 1px solid #2e2e2e;
             border-radius: 10px;
-            padding: 12px;
+            padding: 8px 10px;
             background: #1b1b1b;
             display: flex;
             flex-direction: column;
@@ -98,54 +146,131 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 10px;
+        }
+
+        .driver-topline {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .driver-subline {
+            font-size: 10px;
+            color: #9a9a9a;
+            margin-top: 1px;
+        }
+
+        .driver-status-line {
+            font-size: 10px;
+            color: #c0c0c0;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .team-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.3);
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .driver-tag {
-            font-weight: 700;
-            letter-spacing: 0.05em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 11px;
         }
 
         .state-pill {
-            padding: 2px 10px;
-            border-radius: 999px;
             font-size: 10px;
-            background: #2f2f2f;
+            letter-spacing: 0.06em;
+            border-radius: 999px;
+            padding: 2px 6px;
+            background: #2a2a2a;
+            text-transform: uppercase;
         }
 
         .control-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 8px;
+            grid-template-columns: repeat(6, minmax(90px, 1fr));
+            gap: 6px;
+            align-items: end;
         }
 
         .control-grid label {
             display: block;
-            font-size: 11px;
+            font-size: 9px;
+            color: #bbb;
             text-transform: uppercase;
-            color: #a5a5a5;
+            letter-spacing: 0.08em;
             margin-bottom: 2px;
+        }
+
+        .label-hint {
+            font-size: 9px;
+            color: #888;
+            margin-left: 4px;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .tyre-row,
+        .numeric-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tyre-row select,
+        .numeric-row input {
+            flex: 1;
+        }
+
+        .wear-indicator,
+        .numeric-hint {
+            font-size: 9px;
+            color: #dcdcdc;
+            border: 1px solid #2f2f2f;
+            border-radius: 4px;
+            padding: 2px 6px;
+            min-width: 46px;
+            text-align: center;
+        }
+
+        .numeric-hint {
+            color: #a3a3a3;
         }
 
         .control-grid select,
         .control-grid input[type="number"],
         .control-grid input[type="range"] {
             width: 100%;
+            padding: 4px 6px;
+            border-radius: 5px;
+            border: 1px solid #333;
             background: #101010;
             color: #fff;
-            border: 1px solid #333;
-            border-radius: 6px;
-            padding: 4px 6px;
+            font-size: 11px;
         }
 
-        .control-grid input[type="range"] {
-            accent-color: #e10600;
-            padding: 0;
+        .control-grid input[type="number"] {
+            height: 28px;
+            width: 100%;
         }
 
-        .value-display {
-            font-size: 10px;
-            text-align: right;
-            color: #777;
+        .control-grid select {
+            height: 28px;
+        }
+
+        .field-wide {
+            grid-column: span 2;
         }
 
         .car-actions {
@@ -186,11 +311,14 @@
             width: 65%;
             position: relative;
             background: #0a0a0a;
+            display: flex;
+            flex-direction: column;
         }
         
         #circuit-map {
             width: 100%;
-            height: 100%;
+            flex: 1;
+            min-height: 0;
         }
         
         .timing-container {
@@ -617,12 +745,24 @@
                 <div class="circuit-title">Autodromo Nazionale Monza</div>
                 <div class="circuit-details">5.793 km • Temple of Speed</div>
             </div>
+            <div class="player-dock" id="player-dock">
+                <div class="player-dock-header">
+                    <div class="team-badge">
+                        <div class="badge-icon" id="player-team-badge">F1</div>
+                        <div>
+                            <div class="player-team-label" id="player-team-label">Loading...</div>
+                            <div class="player-status-banner" id="player-status-msg">Fetching factory instructions...</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="player-car-cards"></div>
+            </div>
         </div>
         
         <div class="timing-container">
             <div class="timing-header">
                 <div class="header-content">
-                    <span class="session-title">🏁 FREE PRACTICE - LIVE TIMING</span>
+                    <span class="session-title"> FREE PRACTICE - LIVE TIMING</span>
                     <div class="session-timer" id="session-timer">60:00</div>
                 </div>
             </div>
@@ -639,20 +779,9 @@
                 <div class="current-speed" id="current-speed">Speed: 1x</div>
             </div>
 
-            <div class="layout-columns">
-                <div class="timing-wrapper">
-                    <div id="timing-table"></div>
-                </div>
-                <div class="player-panel" id="player-panel">
-                    <div class="player-header" style="display:flex;justify-content:space-between;align-items:center;">
-                        <h3>PLAYER GARAGE</h3>
-                        <div class="player-team-label" id="player-team-label">Loading...</div>
-                    </div>
-                    <div class="player-msg" id="player-status-msg">Fetching factory instructions...</div>
-                    <div id="player-car-cards"></div>
-                </div>
+            <div class="timing-wrapper">
+                <div id="timing-table"></div>
             </div>
-            <button class="garage-toggle" id="garage-toggle" aria-expanded="true">Hide Garage</button>
         </div>
     </div>
 
@@ -731,20 +860,14 @@
                     opacity: 0.3
                 }).addTo(map);
             });
-        
-        // Socket.IO per aggiornamenti real-time
-        const socket = io();
-        const carMarkers = {};
+        // Missing functions - add these back
         const timingTable = document.getElementById('timing-table');
-        const playerPanel = document.getElementById('player-panel');
-        const garageToggle = document.getElementById('garage-toggle');
         const playerTeamLabel = document.getElementById('player-team-label');
         const playerStatusMsg = document.getElementById('player-status-msg');
         const playerCarCards = document.getElementById('player-car-cards');
-        const pauseBtn = document.getElementById('pause-btn');
-        const speedButtons = document.querySelectorAll('.speed-btn');
+        const socket = io();
+        const carMarkers = {};
 
-        // Missing functions - add these back
         function formatLapTime(seconds) {
             const mins = Math.floor(seconds / 60);
             const secs = (seconds % 60).toFixed(3);
@@ -841,31 +964,44 @@
             const iceMode = car.player_config?.ice_mode ?? car.ice_mode ?? 'Standard';
             const ersMode = car.player_config?.ers_mode ?? car.ers_mode ?? 'Neutral';
             const maxStint = car.max_stint_laps ?? stintTarget;
+            const tireWear = Math.max(0, Math.min(1, car.tire_wear ?? 0));
+            const tireHealthPct = Math.round((1 - tireWear) * 100);
+            const driverStatus = car.state === 'BOX'
+                ? 'Ready in BOX'
+                : `${car.state} ${car.total_laps ? `· Lap ${car.total_laps}` : ''}`;
             const isBox = car.state === 'BOX';
             return `
                 <div class="car-card" data-driver="${car.driver_number}" data-state="${car.state}">
                     <header>
                         <div>
-                            <div class="driver-tag">${car.driver_name || 'Driver'} • #${car.driver_number}</div>
-                            <small style="color:#888;">Fuel ${Math.round(car.fuel_percent ?? 100)}% • Tyre ${car.current_tire?.toUpperCase() || 'MED'}</small>
+                            <div class="driver-topline">
+                                <div class="team-dot" style="background:${car.team_color};">${car.driver_number}</div>
+                                <div>
+                                    <div class="driver-tag">${car.driver_name || 'Driver'}</div>
+                                    <div class="driver-subline">Fuel ${Math.round(car.fuel_percent ?? 100)}% • Tyre ${car.current_tire?.toUpperCase() || 'MED'}</div>
+                                    <div class="driver-status-line">${driverStatus}</div>
+                                </div>
+                            </div>
                         </div>
                         <span class="state-pill">${car.state || 'BOX'}</span>
                     </header>
                     <div class="control-grid">
                         <div>
                             <label>Tyre compound</label>
-                            <select data-field="tyre_compound" ${isBox ? '' : 'disabled'}>
-                                ${TYRE_OPTIONS.map(opt => `<option value="${opt.value}" ${opt.value === tyreChoice ? 'selected' : ''}>${opt.label}</option>`).join('')}
-                            </select>
+                            <div class="tyre-row">
+                                <select data-field="tyre_compound" ${isBox ? '' : 'disabled'}>
+                                    ${TYRE_OPTIONS.map(opt => `<option value="${opt.value}" ${opt.value === tyreChoice ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                                </select>
+                                <span class="wear-indicator">${tireHealthPct}%</span>
+                            </div>
                         </div>
                         <div>
                             <label>Fuel %</label>
                             <input type="number" data-field="fuel_percent" min="1" max="100" value="${fuelPercent}" ${isBox ? '' : 'disabled'}>
                         </div>
                         <div>
-                            <label>Stint laps</label>
+                            <label>Stint laps <span class="numeric-hint">max ${maxStint}</span></label>
                             <input type="number" data-field="stint_target_laps" min="1" max="${maxStint}" value="${stintTarget}" ${isBox ? '' : 'disabled'}>
-                            <div class="value-display">max ${maxStint}</div>
                         </div>
                         <div>
                             <label>Pace (${paceLevel})</label>
@@ -1041,11 +1177,6 @@
             }
         });
 
-        garageToggle.addEventListener('click', () => {
-            const collapsed = playerPanel.classList.toggle('collapsed');
-            garageToggle.textContent = collapsed ? 'Show Garage' : 'Hide Garage';
-            garageToggle.setAttribute('aria-expanded', (!collapsed).toString());
-        });
 
         const BOX_ONLY_FIELDS = new Set(['tyre_compound', 'fuel_percent', 'stint_target_laps']);
 
@@ -1216,26 +1347,30 @@
                 }
             }
             
+            // Aggiorna tabella tempi
             updateTimingTable(data.cars);
-            renderPlayerCars();
-            updateSessionTimer(data.session_time_remaining, data.session_time_formatted);
-            updateSpeedIndicator(data.game_speed);
-            updatePauseButton(data.is_paused);
-        });
-        
-        // Aggiorna timer della sessione
-        function updateSessionTimer(remaining, formatted) {
-            const timerElement = document.getElementById('session-timer');
-            timerElement.textContent = formatted;
             
-            // Cambia colore in base al tempo rimanente
-            timerElement.classList.remove('warning', 'danger');
-            if (remaining < 300) { // Meno di 5 minuti
-                timerElement.classList.add('danger');
-            } else if (remaining < 900) { // Meno di 15 minuti
-                timerElement.classList.add('warning');
+            // Aggiorna stato sessione
+            const timerElement = document.getElementById('session-timer');
+            if (data.session_time_remaining) {
+                const mins = Math.floor(data.session_time_remaining / 60);
+                const secs = (data.session_time_remaining % 60).toFixed(0).padStart(2, '0');
+                timerElement.textContent = `${mins}:${secs}`;
+                if (data.session_time_remaining < 300) {
+                    timerElement.classList.add('warning');
+                } else {
+                    timerElement.classList.remove('warning');
+                }
+                if (data.session_time_remaining < 60) {
+                    timerElement.classList.add('danger');
+                } else {
+                    timerElement.classList.remove('danger');
+                }
+            } else {
+                timerElement.textContent = '00:00';
+                timerElement.classList.remove('warning', 'danger');
             }
-        }
+        });
         
         // Aggiorna indicatore velocità
         function updateSpeedIndicator(speed) {
