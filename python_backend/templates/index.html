@@ -86,13 +86,14 @@
         }
 
         #player-car-cards {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
             gap: 16px;
+            align-items: stretch;
         }
 
         #player-car-cards .car-card {
-            flex: 1 1 320px;
+            min-width: 0;
         }
 
         .player-mini-grid {
@@ -140,6 +141,13 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+            height: 100%;
+        }
+
+        @media (max-width: 1100px) {
+            #player-car-cards {
+                grid-template-columns: 1fr;
+            }
         }
 
         .car-card header {
@@ -199,9 +207,29 @@
 
         .control-grid {
             display: grid;
-            grid-template-columns: repeat(6, minmax(90px, 1fr));
-            gap: 6px;
+            grid-template-columns: repeat(5, minmax(110px, 1fr));
+            gap: 8px 10px;
             align-items: end;
+        }
+
+        .field-span-2 {
+            grid-column: span 2;
+        }
+
+        .field-span-3 {
+            grid-column: span 3;
+        }
+
+        @media (max-width: 1400px) {
+            .control-grid {
+                grid-template-columns: repeat(3, minmax(120px, 1fr));
+            }
+        }
+
+        @media (max-width: 900px) {
+            .control-grid {
+                grid-template-columns: repeat(2, minmax(140px, 1fr));
+            }
         }
 
         .control-grid label {
@@ -231,6 +259,24 @@
         .tyre-row select,
         .numeric-row input {
             flex: 1;
+        }
+
+        .tyre-row select,
+        .select-compact {
+            flex: 0 0 110px;
+            max-width: 110px;
+        }
+
+        .input-compact {
+            width: 46px;
+            min-width: 46px;
+            flex: 0 0 46px;
+            text-align: left;
+            padding-right: 0;
+        }
+
+        .offset-left {
+            margin-left: -50px;
         }
 
         .wear-indicator,
@@ -263,6 +309,12 @@
         .control-grid input[type="number"] {
             height: 28px;
             width: 100%;
+            max-width: 110px;
+        }
+
+        .control-grid input[type="number"].input-compact {
+            width: 46px;
+            min-width: 46px;
         }
 
         .control-grid select {
@@ -966,9 +1018,11 @@
             const maxStint = car.max_stint_laps ?? stintTarget;
             const tireWear = Math.max(0, Math.min(1, car.tire_wear ?? 0));
             const tireHealthPct = Math.round((1 - tireWear) * 100);
-            const driverStatus = car.state === 'BOX'
+            const currentState = car.state || (car.is_on_track ? 'ON TRACK' : 'BOX');
+            const lapInfo = typeof car.total_laps === 'number' && car.total_laps > 0 ? `· Lap ${car.total_laps}` : '';
+            const driverStatus = currentState === 'BOX'
                 ? 'Ready in BOX'
-                : `${car.state} ${car.total_laps ? `· Lap ${car.total_laps}` : ''}`;
+                : `${currentState}${lapInfo ? ` ${lapInfo}` : ''}`;
             const isBox = car.state === 'BOX';
             return `
                 <div class="car-card" data-driver="${car.driver_number}" data-state="${car.state}">
@@ -986,36 +1040,36 @@
                         <span class="state-pill">${car.state || 'BOX'}</span>
                     </header>
                     <div class="control-grid">
-                        <div>
+                        <div class="field-span-2">
                             <label>Tyre compound</label>
                             <div class="tyre-row">
-                                <select data-field="tyre_compound" ${isBox ? '' : 'disabled'}>
+                                <select class="select-compact" data-field="tyre_compound" ${isBox ? '' : 'disabled'}>
                                     ${TYRE_OPTIONS.map(opt => `<option value="${opt.value}" ${opt.value === tyreChoice ? 'selected' : ''}>${opt.label}</option>`).join('')}
                                 </select>
                                 <span class="wear-indicator">${tireHealthPct}%</span>
                             </div>
                         </div>
-                        <div>
+                        <div class="offset-left">
                             <label>Fuel %</label>
-                            <input type="number" data-field="fuel_percent" min="1" max="100" value="${fuelPercent}" ${isBox ? '' : 'disabled'}>
+                            <input class="input-compact" type="number" data-field="fuel_percent" min="1" max="100" value="${fuelPercent}" ${isBox ? '' : 'disabled'}>
                         </div>
-                        <div>
+                        <div class="offset-left">
                             <label>Stint laps <span class="numeric-hint">max ${maxStint}</span></label>
-                            <input type="number" data-field="stint_target_laps" min="1" max="${maxStint}" value="${stintTarget}" ${isBox ? '' : 'disabled'}>
+                            <input class="input-compact" type="number" data-field="stint_target_laps" min="1" max="${maxStint}" value="${stintTarget}" ${isBox ? '' : 'disabled'}>
                         </div>
                         <div>
                             <label>Pace (${paceLevel})</label>
                             <input type="range" data-field="pace_level" min="1" max="10" value="${paceLevel}">
                         </div>
-                        <div>
+                        <div class="field-span-2">
                             <label>ICE map</label>
-                            <select data-field="ice_mode">
+                            <select class="select-compact" data-field="ice_mode">
                                 ${ICE_OPTIONS.map(mode => `<option value="${mode}" ${mode === iceMode ? 'selected' : ''}>${mode}</option>`).join('')}
                             </select>
                         </div>
-                        <div>
+                        <div class="field-span-2 offset-left">
                             <label>ERS mode</label>
-                            <select data-field="ers_mode">
+                            <select class="select-compact" data-field="ers_mode">
                                 ${ERS_OPTIONS.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
                             </select>
                         </div>
