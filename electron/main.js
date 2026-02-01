@@ -33,7 +33,7 @@ function getBackendPath() {
     const isDev = !app.isPackaged;
     
     if (isDev) {
-        return path.join(__dirname, '..', 'python_backend');
+        return path.join(__dirname, '..');
     } else {
         return path.join(process.resourcesPath, 'python_backend');
     }
