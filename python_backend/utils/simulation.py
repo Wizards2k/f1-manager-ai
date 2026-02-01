@@ -13,6 +13,9 @@ def update_car_position(car, dt):
     
     if is_paused:
         return  # Non muovere le auto se in pausa
+
+    if not getattr(car, 'is_player_controlled', False):
+        return
         
     current_time = time.time()
     session_time = current_time - car.session_start_time
@@ -22,6 +25,8 @@ def update_car_position(car, dt):
     
     # Logica stati per prove libere
     if car.state == CarState.BOX:
+        if car.is_player_controlled:
+            return
         if session_time >= car.box_time_until:
             car.exit_box()
         return

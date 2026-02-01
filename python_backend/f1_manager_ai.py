@@ -69,7 +69,14 @@ def race_simulation():
                 'best_lap_sectors': getattr(car, 'best_lap_sectors', {}),
                 'current_tire': car.current_tire.value,
                 'tire_age': car.tire_age,
-                'tire_wear': car.tire_wear
+                'tire_wear': car.tire_wear,
+                'is_player_controlled': car.is_player_controlled,
+                'player_config': car.player_config if car.is_player_controlled else None,
+                'fuel_percent': getattr(car, 'fuel_percent', None),
+                'pace_level': getattr(car, 'pace_level', None),
+                'ice_mode': getattr(car, 'ice_mode', None),
+                'ers_mode': getattr(car, 'ers_mode', None),
+                'stint_target_laps': getattr(car, 'stint_target_laps', None),
             })
         
         socketio.emit('race_update', {

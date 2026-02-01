@@ -1,6 +1,7 @@
 # Models F1 Manager AI - Solo classi, senza logica di posizione
 import time
 import random
+import math
 from enum import Enum, auto
 from typing import Any, Dict, List, Optional
 
@@ -377,12 +378,30 @@ class RaceCar:
         self.tire_age = 0
         self.tire_wear = 0.0
 
+        # Player control & configurazioni
+        self.is_player_controlled = False
+        self.max_fuel_laps_at_100 = 12
+        self.fuel_percent = 100
+        self.pace_level = 5
+        self.ice_mode = "Standard"
+        self.ers_mode = "Neutral"
+        self.player_config: Dict[str, Any] = {
+            "tyre_compound": self.current_tire.value,
+            "fuel_percent": self.fuel_percent,
+            "pace_level": self.pace_level,
+            "ice_mode": self.ice_mode,
+            "ers_mode": self.ers_mode,
+            "stint_target_laps": self.stint_target_laps,
+        }
+        self.setup_feedback: Optional[Dict[str, Any]] = None
+
     def set_tire_compound(self, compound, percentuale_vita: float = 1.0):
         """Imposta il compound di gomme"""
         self.current_tire = compound
         self.current_gomma = Gomma(compound, percentuale_vita=percentuale_vita)
         self.tire_age = 0
         self.tire_wear = 0.0
+        self.player_config["tyre_compound"] = self.current_tire.value
 
     def update_tire_wear(self):
         """Aggiorna l'usura delle gomme"""
@@ -412,16 +431,20 @@ class RaceCar:
         self.current_lap_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
         self.sector3_start_time = None
         
-        # Sceglie gomme casuali per la nuova stint
-        available_compounds = [TireCompound.SOFT, TireCompound.MEDIUM, TireCompound.HARD]
-        new_tire = random.choice(available_compounds)
-        self.set_tire_compound(new_tire)
+        if not self.is_player_controlled:
+            # AI: scegli gomme casuali per la nuova stint
+            available_compounds = [TireCompound.SOFT, TireCompound.MEDIUM, TireCompound.HARD]
+            new_tire = random.choice(available_compounds)
+            self.set_tire_compound(new_tire)
         
     def enter_box(self):
         """Auto rientra ai box"""
         self.state = CarState.BOX
-        # Tempo ai box per la prossima uscita (5-20 minuti)
-        self.box_time_until = time.time() - self.session_start_time + random.uniform(300, 1200)
+        if self.is_player_controlled:
+            self.box_time_until = float("inf")
+        else:
+            # Tempo ai box per la prossima uscita (5-20 minuti)
+            self.box_time_until = time.time() - self.session_start_time + random.uniform(300, 1200)
         self.distance_traveled = 0
         
     def complete_lap(self, lap_type):
@@ -455,6 +478,7 @@ class RaceCar:
         
         # Aggiorna usura gomme
         self.update_tire_wear()
+        self.consume_fuel(lap_type)
         
         # Aggiorna miglior tempo in sessione
         if not hasattr(self, 'best_lap_time') or realistic_lap_time < self.best_lap_time:
@@ -470,6 +494,25 @@ class RaceCar:
             update_session_bests(self)
 
         self._persist_lap_debug(lap_type, realistic_lap_time)
+
+    def compute_max_stint_laps(self, fuel_percent: int) -> int:
+        """Calcola il numero massimo di giri consentiti dal fuel percentuale."""
+        fuel_percent = MathUtils.clamp(fuel_percent, 1, 100)
+        estimated = math.floor((fuel_percent / 100.0) * self.max_fuel_laps_at_100)
+        return max(1, estimated)
+
+    def consume_fuel(self, lap_type: CarState):
+        if not self.is_player_controlled:
+            return
+        base_burn = 100.0 / max(1, self.max_fuel_laps_at_100)
+        if lap_type == CarState.HOT_LAP:
+            factor = 1.0
+        elif lap_type == CarState.OUT_LAP or lap_type == CarState.IN_LAP:
+            factor = 0.8
+        else:
+            factor = 0.5
+        self.fuel_percent = max(1.0, self.fuel_percent - base_burn * factor)
+        self.player_config['fuel_percent'] = int(round(self.fuel_percent))
 
     def _persist_lap_debug(self, lap_type, lap_time: float):
         bucket = getattr(self, 'current_lap_debug', None)

@@ -2,6 +2,7 @@
 import time
 import random
 import threading
+from typing import Optional
 from config import circuit_sectors, SESSION_DURATION
 
 # Lock per sincronizzare accessi alle variabili globali
@@ -24,6 +25,9 @@ from python_backend.models import RaceCar
 
 race_cars = []
 car_index = 0
+player_team_id = None
+player_driver_numbers = set()
+DEFAULT_PLAYER_TEAM_SIGLA = "FER"
 
 for team in TEAMS:
     for pilot in team.piloti_titolari:
@@ -113,6 +117,61 @@ def reset_cars_for_session(start_time):
         car.stint_laps_remaining = car.stint_target_laps
         car.sector3_start_time = None
         car_index += 1
+
+
+def get_car_by_driver_number(driver_number: int) -> Optional[RaceCar]:
+    return next((car for car in race_cars if car.driver_number == driver_number), None)
+
+
+def set_player_team(team_id: int):
+    global player_team_id, player_driver_numbers
+    player_team_id = team_id
+    player_driver_numbers = set()
+    for car in race_cars:
+        is_player_car = getattr(car.team, "team_id", None) == team_id
+        car.is_player_controlled = is_player_car
+        if is_player_car:
+            player_driver_numbers.add(car.driver_number)
+            car.box_time_until = float("inf")
+
+
+def get_player_team_id() -> Optional[int]:
+    return player_team_id
+
+
+def get_player_driver_numbers():
+    return set(player_driver_numbers)
+
+
+def initialize_default_player_team():
+    for team in TEAMS:
+        if getattr(team, "sigla_scuderia", "").upper() == DEFAULT_PLAYER_TEAM_SIGLA:
+            team_id = getattr(team, "team_id", None)
+            if team_id is not None:
+                set_player_team(team_id)
+            break
+
+
+initialize_default_player_team()
+
+
+def get_player_team_info():
+    if player_team_id is None:
+        return None
+    for team in TEAMS:
+        if getattr(team, "team_id", None) == player_team_id:
+            return {
+                "team_id": player_team_id,
+                "team_name": team.nome_scuderia,
+                "team_code": team.sigla_scuderia,
+                "driver_numbers": list(player_driver_numbers),
+            }
+    return {
+        "team_id": player_team_id,
+        "team_name": "Unknown",
+        "team_code": DEFAULT_PLAYER_TEAM_SIGLA,
+        "driver_numbers": list(player_driver_numbers),
+    }
 
 def get_session_time_remaining():
     """Restituisce il tempo rimanente della sessione (aggiustato per velocità gioco e pause)"""

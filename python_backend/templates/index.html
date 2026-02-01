@@ -13,6 +13,162 @@
             padding: 0;
             box-sizing: border-box;
         }
+
+        .layout-columns {
+            display: flex;
+            gap: 16px;
+            height: calc(100% - 160px);
+            align-items: stretch;
+        }
+
+        .timing-wrapper {
+            flex: 1;
+            min-width: 0;
+            overflow-y: auto;
+        }
+
+        .garage-toggle {
+            align-self: flex-end;
+            margin: 6px 0 12px;
+            background: #222;
+            color: #ddd;
+            border: 1px solid #444;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+        }
+
+        .player-panel {
+            flex: 0 0 320px;
+            min-width: 260px;
+            background: #141414;
+            border: 1px solid #2b2b2b;
+            border-radius: 14px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 100%;
+            transition: width 0.25s ease, padding 0.25s ease, opacity 0.25s ease;
+        }
+
+        .player-panel.collapsed {
+            display: none;
+        }
+
+        .player-panel h3 {
+            margin: 0;
+            font-size: 15px;
+            letter-spacing: 0.08em;
+            color: #cfb53b;
+        }
+
+        .player-team-label {
+            font-size: 12px;
+            color: #ddd;
+        }
+
+        .player-msg {
+            font-size: 11px;
+            color: #8bdcb8;
+            min-height: 16px;
+        }
+
+        #player-car-cards {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .car-card {
+            border: 1px solid #2e2e2e;
+            border-radius: 10px;
+            padding: 12px;
+            background: #1b1b1b;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .car-card header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .driver-tag {
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .state-pill {
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 10px;
+            background: #2f2f2f;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .control-grid label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #a5a5a5;
+            margin-bottom: 2px;
+        }
+
+        .control-grid select,
+        .control-grid input[type="number"],
+        .control-grid input[type="range"] {
+            width: 100%;
+            background: #101010;
+            color: #fff;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 4px 6px;
+        }
+
+        .control-grid input[type="range"] {
+            accent-color: #e10600;
+            padding: 0;
+        }
+
+        .value-display {
+            font-size: 10px;
+            text-align: right;
+            color: #777;
+        }
+
+        .car-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .car-actions button {
+            flex: 1;
+            border: none;
+            border-radius: 6px;
+            padding: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-send { background: #cfb53b; color: #1a1a1a; }
+        .btn-box  { background: #d13b30; color: #fff; }
+
+        .car-actions button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -482,12 +638,26 @@
                 </div>
                 <div class="current-speed" id="current-speed">Speed: 1x</div>
             </div>
-            <div id="timing-table"></div>
+
+            <div class="layout-columns">
+                <div class="timing-wrapper">
+                    <div id="timing-table"></div>
+                </div>
+                <div class="player-panel" id="player-panel">
+                    <div class="player-header" style="display:flex;justify-content:space-between;align-items:center;">
+                        <h3>PLAYER GARAGE</h3>
+                        <div class="player-team-label" id="player-team-label">Loading...</div>
+                    </div>
+                    <div class="player-msg" id="player-status-msg">Fetching factory instructions...</div>
+                    <div id="player-car-cards"></div>
+                </div>
+            </div>
+            <button class="garage-toggle" id="garage-toggle" aria-expanded="true">Hide Garage</button>
         </div>
     </div>
 
     <script>
-        // Inizializzazione mappa con controlli disabilitati
+        // --- Map setup ---
         const map = L.map('circuit-map', {
             center: [45.6216, 45.6216],
             zoom: 15,
@@ -503,7 +673,7 @@
         
         // Tile layer dark theme
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap contributors © CARTO',
+            attribution: ' OpenStreetMap contributors  CARTO',
             subdomains: 'abcd',
             maxZoom: 19
         }).addTo(map);
@@ -566,14 +736,15 @@
         const socket = io();
         const carMarkers = {};
         const timingTable = document.getElementById('timing-table');
-        
-        // Session best times
-        let sessionBests = {
-            best_lap: null,
-            best_sectors: { sector1: null, sector2: null, sector3: null }
-        };
-        
-        // Formatta tempo
+        const playerPanel = document.getElementById('player-panel');
+        const garageToggle = document.getElementById('garage-toggle');
+        const playerTeamLabel = document.getElementById('player-team-label');
+        const playerStatusMsg = document.getElementById('player-status-msg');
+        const playerCarCards = document.getElementById('player-car-cards');
+        const pauseBtn = document.getElementById('pause-btn');
+        const speedButtons = document.querySelectorAll('.speed-btn');
+
+        // Missing functions - add these back
         function formatLapTime(seconds) {
             const mins = Math.floor(seconds / 60);
             const secs = (seconds % 60).toFixed(3);
@@ -586,34 +757,27 @@
             const sign = delta >= 0 ? '+' : '-';
             return `${sign}${Math.abs(delta).toFixed(3)}`;
         }
-        
-        // Timing color helper functions
+
+        let sessionBests = {
+            best_lap: null,
+            best_sectors: { sector1: null, sector2: null, sector3: null }
+        };
+
         function getLapTimeColorClass(lapTime, personalBest, sessionBest) {
             if (!lapTime) return '';
-            if (sessionBest && Math.abs(lapTime - sessionBest) < 0.001) {
-                return 'time-session-best';
-            }
-            if (personalBest && Math.abs(lapTime - personalBest) < 0.001) {
-                return 'time-personal-best';
-            }
-            if (sessionBest && lapTime > sessionBest * 1.07) {
-                return 'time-slow';
-            }
-            return 'time-normal';
-        }
-        
-        function getSectorTimeColorClass(sectorTime, personalBest, sessionBest) {
-            if (!sectorTime) return '';
-            if (sessionBest && Math.abs(sectorTime - sessionBest) < 0.001) {
-                return 'time-session-best';
-            }
-            if (personalBest && Math.abs(sectorTime - personalBest) < 0.001) {
-                return 'time-personal-best';
-            }
+            if (sessionBest && Math.abs(lapTime - sessionBest) < 0.001) return 'time-session-best';
+            if (personalBest && Math.abs(lapTime - personalBest) < 0.001) return 'time-personal-best';
+            if (sessionBest && lapTime > sessionBest * 1.07) return 'time-slow';
             return 'time-normal';
         }
 
-        // Crea marker per auto
+        function getSectorTimeColorClass(sectorTime, personalBest, sessionBest) {
+            if (!sectorTime) return '';
+            if (sessionBest && Math.abs(sectorTime - sessionBest) < 0.001) return 'time-session-best';
+            if (personalBest && Math.abs(sectorTime - personalBest) < 0.001) return 'time-personal-best';
+            return 'time-normal';
+        }
+
         function createCarMarker(car) {
             const icon = L.divIcon({
                 className: 'car-marker',
@@ -634,9 +798,294 @@
                 iconSize: [20, 20],
                 iconAnchor: [10, 10]
             });
-            
             return L.marker([car.position[1], car.position[0]], { icon });
         }
+
+        // Player garage functions
+        let playerTeamId = null;
+        const playerCarData = new Map();
+
+        const TYRE_OPTIONS = [
+            { value: 'soft', label: 'Soft' },
+            { value: 'medium', label: 'Medium' },
+            { value: 'hard', label: 'Hard' }
+        ];
+        const ICE_OPTIONS = ['Save', 'Standard', 'Push'];
+        const ERS_OPTIONS = ['Harvest', 'Neutral', 'Deploy', 'Overtake'];
+
+        function setPlayerStatus(message, tone = 'info') {
+            playerStatusMsg.textContent = message;
+            playerStatusMsg.style.color = tone === 'error' ? '#ff7b72' : tone === 'success' ? '#8bdcb8' : '#8bdcb8';
+        }
+
+        async function loadPlayerTeamInfo() {
+            try {
+                const res = await fetch('/api/player/team');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || data.message || 'Player team unavailable');
+                playerTeamId = data.team_id;
+                playerTeamLabel.textContent = `${data.team_name} (${data.team_code})`;
+                setPlayerStatus(`${data.team_name} garage ready.`);
+            } catch (err) {
+                console.error(err);
+                playerTeamLabel.textContent = 'No team configured';
+                setPlayerStatus('Player team missing!', 'error');
+            }
+        }
+
+        function buildPlayerCarCard(car) {
+            const tyreChoice = car.player_config?.tyre_compound || car.current_tire || 'medium';
+            const fuelPercent = car.player_config?.fuel_percent ?? car.fuel_percent ?? 100;
+            const stintTarget = car.player_config?.stint_target_laps ?? car.stint_target_laps ?? 5;
+            const paceLevel = car.player_config?.pace_level ?? car.pace_level ?? 5;
+            const iceMode = car.player_config?.ice_mode ?? car.ice_mode ?? 'Standard';
+            const ersMode = car.player_config?.ers_mode ?? car.ers_mode ?? 'Neutral';
+            const maxStint = car.max_stint_laps ?? stintTarget;
+            const isBox = car.state === 'BOX';
+            return `
+                <div class="car-card" data-driver="${car.driver_number}" data-state="${car.state}">
+                    <header>
+                        <div>
+                            <div class="driver-tag">${car.driver_name || 'Driver'} • #${car.driver_number}</div>
+                            <small style="color:#888;">Fuel ${Math.round(car.fuel_percent ?? 100)}% • Tyre ${car.current_tire?.toUpperCase() || 'MED'}</small>
+                        </div>
+                        <span class="state-pill">${car.state || 'BOX'}</span>
+                    </header>
+                    <div class="control-grid">
+                        <div>
+                            <label>Tyre compound</label>
+                            <select data-field="tyre_compound" ${isBox ? '' : 'disabled'}>
+                                ${TYRE_OPTIONS.map(opt => `<option value="${opt.value}" ${opt.value === tyreChoice ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label>Fuel %</label>
+                            <input type="number" data-field="fuel_percent" min="1" max="100" value="${fuelPercent}" ${isBox ? '' : 'disabled'}>
+                        </div>
+                        <div>
+                            <label>Stint laps</label>
+                            <input type="number" data-field="stint_target_laps" min="1" max="${maxStint}" value="${stintTarget}" ${isBox ? '' : 'disabled'}>
+                            <div class="value-display">max ${maxStint}</div>
+                        </div>
+                        <div>
+                            <label>Pace (${paceLevel})</label>
+                            <input type="range" data-field="pace_level" min="1" max="10" value="${paceLevel}">
+                        </div>
+                        <div>
+                            <label>ICE map</label>
+                            <select data-field="ice_mode">
+                                ${ICE_OPTIONS.map(mode => `<option value="${mode}" ${mode === iceMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label>ERS mode</label>
+                            <select data-field="ers_mode">
+                                ${ERS_OPTIONS.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="car-actions">
+                        <button class="btn-send" data-action="send" ${isBox ? '' : 'disabled'}>Send Out</button>
+                        <button class="btn-box" data-action="box" ${isBox ? 'disabled' : ''}>Box</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPlayerCars(force = false) {
+            if (!force && playerCarCards.contains(document.activeElement)) {
+                return; // evita di distruggere gli input mentre l'utente digita
+            }
+            if (!playerTeamId) {
+                playerCarCards.innerHTML = '<p style="color:#777;">No player team configured.</p>';
+                return;
+            }
+            if (playerCarData.size === 0) {
+                playerCarCards.innerHTML = '<p style="color:#777;">Waiting for garage data...</p>';
+                return;
+            }
+            playerCarCards.innerHTML = [...playerCarData.values()]
+                .sort((a, b) => a.driver_number - b.driver_number)
+                .map(buildPlayerCarCard)
+                .join('');
+        }
+
+        function collectCardPayload(card) {
+            const payload = {};
+            card.querySelectorAll('[data-field]').forEach(el => {
+                if (el.disabled) return;
+                const field = el.dataset.field;
+                payload[field] = el.type === 'range' || el.type === 'number' ? Number(el.value) : el.value;
+            });
+            return payload;
+        }
+
+        function applyLocalPlayerUpdates(driverNumber, payload = {}) {
+            const car = playerCarData.get(driverNumber);
+            if (!car) return;
+            car.player_config = { ...(car.player_config || {}), ...payload };
+            Object.entries(payload).forEach(([key, value]) => {
+                if (key === 'tyre_compound') {
+                    car.current_tire = value;
+                } else if (key === 'fuel_percent') {
+                    car.fuel_percent = value;
+                } else if (key === 'pace_level') {
+                    car.pace_level = value;
+                } else if (key === 'ice_mode') {
+                    car.ice_mode = value;
+                } else if (key === 'ers_mode') {
+                    car.ers_mode = value;
+                } else if (key === 'stint_target_laps') {
+                    car.stint_target_laps = value;
+                }
+            });
+            playerCarData.set(driverNumber, car);
+        }
+
+        function applyLocalCarState(driverNumber, carPayload) {
+            if (!carPayload) return;
+            playerCarData.set(driverNumber, {
+                ...(playerCarData.get(driverNumber) || {}),
+                ...carPayload,
+            });
+        }
+
+        async function sendPlayerConfig(driverNumber, payload, state) {
+            const allowedPayload = { ...payload };
+            if (state !== 'BOX') {
+                delete allowedPayload.tyre_compound;
+                delete allowedPayload.fuel_percent;
+                delete allowedPayload.stint_target_laps;
+            }
+            if (Object.keys(allowedPayload).length === 0) {
+                setPlayerStatus('No configurable fields available right now.', 'error');
+                return false;
+            }
+            try {
+                const res = await fetch(`/api/player/car/${driverNumber}/configure`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(allowedPayload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Configuration failed');
+                setPlayerStatus(`Setup stored for #${driverNumber}.`, 'success');
+                applyLocalPlayerUpdates(driverNumber, allowedPayload);
+                renderPlayerCars(true);
+                return true;
+            } catch (err) {
+                console.error(err);
+                setPlayerStatus(err.message || 'Configuration failed', 'error');
+                return false;
+            }
+        }
+
+        async function sendPlayerCarOut(driverNumber) {
+            try {
+                const res = await fetch(`/api/player/car/${driverNumber}/send_out`, { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Send out failed');
+                setPlayerStatus(`Car #${driverNumber} released.`, 'success');
+                applyLocalCarState(driverNumber, data.car);
+                renderPlayerCars(true);
+                return true;
+            } catch (err) {
+                console.error(err);
+                setPlayerStatus(err.message || 'Send out failed', 'error');
+                return false;
+            }
+        }
+
+        async function requestPlayerBox(driverNumber) {
+            try {
+                const res = await fetch(`/api/player/car/${driverNumber}/box`, { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Box call failed');
+                setPlayerStatus(`Box request for #${driverNumber} acknowledged.`, 'success');
+                applyLocalCarState(driverNumber, data.car);
+                renderPlayerCars(true);
+                return true;
+            } catch (err) {
+                console.error(err);
+                setPlayerStatus(err.message || 'Box call failed', 'error');
+                return false;
+            }
+        }
+
+        // Player garage events
+        playerCarCards.addEventListener('click', async (event) => {
+            const actionBtn = event.target.closest('button[data-action]');
+            if (!actionBtn) return;
+            const card = actionBtn.closest('.car-card');
+            const driverNumber = Number(card?.dataset.driver);
+            if (!driverNumber) return;
+            const state = card.dataset.state;
+            const action = actionBtn.dataset.action;
+
+            if (action === 'send') {
+                if (state !== 'BOX') {
+                    setPlayerStatus('Car already on track. Box first to change tyres/fuel.', 'error');
+                    return;
+                }
+                const payload = collectCardPayload(card);
+                const configured = await sendPlayerConfig(driverNumber, payload, state);
+                if (configured) {
+                    await sendPlayerCarOut(driverNumber);
+                }
+            } else if (action === 'box') {
+                if (state === 'BOX') {
+                    setPlayerStatus('Car already in the garage.', 'error');
+                    return;
+                }
+                await requestPlayerBox(driverNumber);
+            }
+        });
+
+        garageToggle.addEventListener('click', () => {
+            const collapsed = playerPanel.classList.toggle('collapsed');
+            garageToggle.textContent = collapsed ? 'Show Garage' : 'Hide Garage';
+            garageToggle.setAttribute('aria-expanded', (!collapsed).toString());
+        });
+
+        const BOX_ONLY_FIELDS = new Set(['tyre_compound', 'fuel_percent', 'stint_target_laps']);
+
+        function shouldBlockFieldUpdate(state, field) {
+            return state !== 'BOX' && BOX_ONLY_FIELDS.has(field);
+        }
+
+        playerCarCards.addEventListener('change', (event) => {
+            const target = event.target;
+            const field = target.dataset.field;
+            if (!field) return;
+            const card = target.closest('.car-card');
+            if (!card) return;
+            const driverNumber = Number(card.dataset.driver);
+            const state = card.dataset.state;
+            if (!driverNumber) return;
+
+            if (shouldBlockFieldUpdate(state, field)) {
+                setPlayerStatus('Bring the car into the garage to change tyres, fuel, or stint laps.', 'error');
+                // revert UI to previous known value when disallowed
+                const carData = playerCarData.get(driverNumber);
+                if (carData && carData.player_config) {
+                    const revertValue = carData.player_config[field] ?? carData[field];
+                    if (revertValue !== undefined) {
+                        target.value = typeof revertValue === 'number' ? revertValue : revertValue;
+                    }
+                }
+                return;
+            }
+
+            const payload = {};
+            payload[field] = target.type === 'range' || target.type === 'number' ? Number(target.value) : target.value;
+            sendPlayerConfig(driverNumber, payload, state);
+        });
+
+        playerCarCards.addEventListener('focusout', (event) => {
+            if (!playerCarCards.contains(event.relatedTarget)) {
+                requestAnimationFrame(() => renderPlayerCars(true));
+            }
+        });
         
         // Aggiorna tabella tempi
         function updateTimingTable(cars) {
@@ -733,15 +1182,23 @@
                 sessionBests = data.session_bests;
             }
             
+            // Track seen player drivers for cleanup
+            const seenPlayerDrivers = new Set();
+            
             data.cars.forEach(car => {
+                // Track player cars
+                if (car.is_player_controlled) {
+                    playerCarData.set(car.driver_number, car);
+                    seenPlayerDrivers.add(car.driver_number);
+                }
+                
                 // Nascondi le auto ai box dalla mappa
                 if (car.state === 'BOX') {
                     if (carMarkers[car.driver_number]) {
-                        // Rimuovi il marker dalla mappa
                         map.removeLayer(carMarkers[car.driver_number]);
                         delete carMarkers[car.driver_number];
                     }
-                    return; // Skip processing BOX cars
+                    return;
                 }
                 
                 if (!carMarkers[car.driver_number]) {
@@ -752,7 +1209,15 @@
                 }
             });
             
+            // Clean up player cars that are no longer in data
+            for (const driverNum of playerCarData.keys()) {
+                if (!seenPlayerDrivers.has(driverNum)) {
+                    playerCarData.delete(driverNum);
+                }
+            }
+            
             updateTimingTable(data.cars);
+            renderPlayerCars();
             updateSessionTimer(data.session_time_remaining, data.session_time_formatted);
             updateSpeedIndicator(data.game_speed);
             updatePauseButton(data.is_paused);
@@ -861,14 +1326,20 @@
         }
         
         // Carica stato iniziale
+        loadPlayerTeamInfo();
+        
         fetch('/api/cars')
             .then(response => response.json())
             .then(cars => {
                 cars.forEach(car => {
+                    if (car.is_player_controlled) {
+                        playerCarData.set(car.driver_number, car);
+                    }
                     carMarkers[car.driver_number] = createCarMarker(car);
                     carMarkers[car.driver_number].addTo(map);
                 });
                 updateTimingTable(cars);
+                renderPlayerCars();
             });
     </script>
 </body>

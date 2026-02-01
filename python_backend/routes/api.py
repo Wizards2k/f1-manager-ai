@@ -1,7 +1,17 @@
 # API Routes F1 Manager AI
 import logging
-from flask import Flask, render_template, jsonify, send_from_directory
-from utils import start_session_for_circuit
+import time
+from flask import Flask, render_template, jsonify, send_from_directory, request
+
+from data.teams import TEAMS
+from python_backend.models import CarState, TireCompound
+from utils import (
+    start_session_for_circuit,
+    get_car_by_driver_number,
+    set_player_team,
+    race_cars,
+    get_player_team_info
+)
 
 
 circuit_logger = logging.getLogger('circuit_api')
@@ -12,6 +22,17 @@ if not circuit_logger.handlers:
     circuit_logger.addHandler(handler)
     circuit_logger.propagate = False
 circuit_logger.setLevel(logging.INFO)
+
+
+def _find_team_by_id(team_id: int):
+    for team in TEAMS:
+        if getattr(team, "team_id", None) == team_id:
+            return team
+    return None
+
+
+def _error_response(message: str, status: int = 400):
+    return jsonify({'error': message}), status
 
 def register_routes(app):
     """Registra tutte le route API"""
@@ -113,9 +134,52 @@ def register_routes(app):
                 'total_laps': car.total_laps,
                 'current_tire': car.current_tire.value,
                 'tire_age': car.tire_age,
-                'tire_wear': car.tire_wear
+                'tire_wear': car.tire_wear,
+                'is_player_controlled': car.is_player_controlled,
+                'player_config': car.player_config if car.is_player_controlled else None,
             })
         return jsonify(cars_data)
+
+    @app.route('/api/teams')
+    def list_teams():
+        payload = []
+        for team in TEAMS:
+            payload.append({
+                'team_id': getattr(team, 'team_id', None),
+                'team_name': team.nome_scuderia,
+                'team_code': team.sigla_scuderia,
+                'team_color': team.colore_team,
+                'drivers': [
+                    {
+                        'number': pilot.numero_di_gara,
+                        'name': pilot.nome_completo,
+                        'abbrev': pilot.abbreviazione,
+                    }
+                    for pilot in team.piloti_titolari
+                ]
+            })
+        return jsonify(payload)
+
+    @app.route('/api/player/team')
+    def get_player_team():
+        info = get_player_team_info()
+        if not info:
+            return jsonify({'message': 'No player team configured'}), 404
+        # Include resolved driver names for convenience
+        driver_details = []
+        for team in TEAMS:
+            if getattr(team, "team_id", None) == info['team_id']:
+                driver_details = [
+                    {
+                        'number': pilot.numero_di_gara,
+                        'name': pilot.nome_completo,
+                        'abbrev': pilot.abbreviazione,
+                    }
+                    for pilot in team.piloti_titolari
+                ]
+                break
+        info['drivers'] = driver_details
+        return jsonify(info)
 
     @app.route('/api/toggle_pause', methods=['POST'])
     def toggle_pause_route():
@@ -130,7 +194,6 @@ def register_routes(app):
     @app.route('/api/set_speed', methods=['POST'])
     def set_speed():
         """Imposta la velocità di gioco"""
-        from flask import request
         from utils.game_logic import set_game_speed
         
         speed = float(request.json.get('speed', 1.0))
@@ -144,4 +207,189 @@ def register_routes(app):
             'speed': speed
         })
     
+    @app.route('/api/player/team/select', methods=['POST'])
+    def select_player_team():
+        payload = request.get_json(silent=True) or {}
+        team_id = payload.get('team_id')
+        if not isinstance(team_id, int):
+            return _error_response('team_id must be an integer')
+        team = _find_team_by_id(team_id)
+        if not team:
+            return _error_response('Team not found', 404)
+
+        set_player_team(team_id)
+        driver_numbers = [car.driver_number for car in race_cars if car.is_player_controlled]
+        return jsonify({
+            'team_id': team_id,
+            'team_name': team.nome_scuderia,
+            'driver_numbers': driver_numbers,
+        })
+
+    ICE_MODES = {'Save', 'Standard', 'Push'}
+    ERS_MODES = {'Harvest', 'Neutral', 'Deploy', 'Overtake'}
+    TYRE_MAP = {compound.value: compound for compound in (TireCompound.SOFT, TireCompound.MEDIUM, TireCompound.HARD)}
+
+    def _get_player_car(driver_number: int):
+        car = get_car_by_driver_number(driver_number)
+        if not car:
+            return None, _error_response('Car not found', 404)
+        if not car.is_player_controlled:
+            return None, _error_response('Car is not player controlled', 400)
+        return car, None
+
+    def _serialize_player_car(car):
+        return {
+            'driver_number': car.driver_number,
+            'state': car.state.value if isinstance(car.state, CarState) else str(car.state),
+            'player_config': car.player_config,
+            'fuel_percent': car.fuel_percent,
+            'pace_level': car.pace_level,
+            'ice_mode': car.ice_mode,
+            'ers_mode': car.ers_mode,
+            'stint_target_laps': car.stint_target_laps,
+            'stint_laps_remaining': car.stint_laps_remaining,
+            'max_stint_laps': car.compute_max_stint_laps(car.player_config.get('fuel_percent', car.fuel_percent)),
+        }
+
+    @app.route('/api/player/car/<int:driver_number>/configure', methods=['POST'])
+    def configure_player_car(driver_number):
+        payload = request.get_json(silent=True) or {}
+        if not payload:
+            return _error_response('Missing configuration payload')
+
+        car, error = _get_player_car(driver_number)
+        if error:
+            return error
+
+        is_in_box = car.state == CarState.BOX
+        allowed_fields = {'pace_level', 'ice_mode', 'ers_mode'}
+        if is_in_box:
+            allowed_fields |= {'tyre_compound', 'fuel_percent', 'stint_target_laps'}
+
+        invalid_fields = [key for key in payload.keys() if key not in allowed_fields]
+        if invalid_fields:
+            return _error_response(f'Fields not allowed in current state: {", ".join(invalid_fields)}')
+
+        updates_applied = {}
+
+        def clamp(value, low, high):
+            return max(low, min(high, value))
+
+        if 'pace_level' in payload:
+            try:
+                pace = int(payload['pace_level'])
+            except (TypeError, ValueError):
+                return _error_response('pace_level must be an integer')
+            pace = clamp(pace, 1, 10)
+            car.pace_level = pace
+            car.player_config['pace_level'] = pace
+            updates_applied['pace_level'] = pace
+
+        if 'ice_mode' in payload:
+            ice_mode = str(payload['ice_mode']).title()
+            if ice_mode not in ICE_MODES:
+                return _error_response(f'ice_mode must be one of: {", ".join(sorted(ICE_MODES))}')
+            car.ice_mode = ice_mode
+            car.player_config['ice_mode'] = ice_mode
+            updates_applied['ice_mode'] = ice_mode
+
+        if 'ers_mode' in payload:
+            ers_mode = str(payload['ers_mode']).title()
+            if ers_mode not in ERS_MODES:
+                return _error_response(f'ers_mode must be one of: {", ".join(sorted(ERS_MODES))}')
+            car.ers_mode = ers_mode
+            car.player_config['ers_mode'] = ers_mode
+            updates_applied['ers_mode'] = ers_mode
+
+        if 'tyre_compound' in payload:
+            compound_key = str(payload['tyre_compound']).lower()
+            compound = TYRE_MAP.get(compound_key)
+            if not compound:
+                return _error_response('tyre_compound must be one of: soft, medium, hard')
+            car.player_config['tyre_compound'] = compound.value
+            updates_applied['tyre_compound'] = compound.value
+
+        effective_fuel = car.player_config.get('fuel_percent', car.fuel_percent)
+        if 'fuel_percent' in payload:
+            try:
+                fuel_percent = int(payload['fuel_percent'])
+            except (TypeError, ValueError):
+                return _error_response('fuel_percent must be an integer')
+            fuel_percent = clamp(fuel_percent, 1, 100)
+            car.fuel_percent = fuel_percent
+            car.player_config['fuel_percent'] = fuel_percent
+            effective_fuel = fuel_percent
+            updates_applied['fuel_percent'] = fuel_percent
+
+        max_stint_laps = car.compute_max_stint_laps(effective_fuel)
+        if 'stint_target_laps' in payload:
+            try:
+                stint_target = int(payload['stint_target_laps'])
+            except (TypeError, ValueError):
+                return _error_response('stint_target_laps must be an integer')
+            if stint_target < 1 or stint_target > max_stint_laps:
+                return _error_response(f'stint_target_laps must be between 1 and {max_stint_laps}')
+            car.player_config['stint_target_laps'] = stint_target
+            updates_applied['stint_target_laps'] = stint_target
+
+        if not updates_applied:
+            return _error_response('No valid fields provided for current state')
+
+        return jsonify({
+            'message': 'Configuration updated',
+            'car': _serialize_player_car(car),
+            'updated_fields': updates_applied,
+        })
+
+    @app.route('/api/player/car/<int:driver_number>/send_out', methods=['POST'])
+    def send_player_car_out(driver_number):
+        car, error = _get_player_car(driver_number)
+        if error:
+            return error
+        if car.state != CarState.BOX:
+            return _error_response('Car must be in BOX to send out', 409)
+
+        config = car.player_config
+        compound = TYRE_MAP.get(str(config.get('tyre_compound', car.current_tire.value)).lower())
+        if not compound:
+            return _error_response('Invalid tyre_compound in player config')
+
+        fuel_percent = config.get('fuel_percent', car.fuel_percent)
+        max_stint_laps = car.compute_max_stint_laps(fuel_percent)
+        target_laps = config.get('stint_target_laps', car.stint_target_laps)
+        target_laps = max(1, min(max_stint_laps, target_laps))
+
+        car.set_tire_compound(compound)
+        car.fuel_percent = fuel_percent
+        car.pace_level = config.get('pace_level', car.pace_level)
+        car.ice_mode = config.get('ice_mode', car.ice_mode)
+        car.ers_mode = config.get('ers_mode', car.ers_mode)
+        car.stint_target_laps = target_laps
+        car.stint_laps_remaining = target_laps
+        car.state = CarState.BOX
+        car.box_time_until = car.session_start_time or time.time()
+        car.exit_box()
+
+        return jsonify({
+            'message': 'Car sent out',
+            'car': _serialize_player_car(car)
+        })
+
+    @app.route('/api/player/car/<int:driver_number>/box', methods=['POST'])
+    def request_box(driver_number):
+        car, error = _get_player_car(driver_number)
+        if error:
+            return error
+
+        if car.state == CarState.BOX:
+            return jsonify({'message': 'Car already in BOX', 'car': _serialize_player_car(car)})
+
+        car.state = CarState.IN_LAP
+        car.stint_laps_remaining = 0
+
+        return jsonify({
+            'message': 'Box request acknowledged',
+            'car': _serialize_player_car(car)
+        })
+
     return app

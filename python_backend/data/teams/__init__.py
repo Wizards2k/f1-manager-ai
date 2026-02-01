@@ -96,4 +96,7 @@ TEAMS = [
     ),
 ]
 
+for idx, team in enumerate(TEAMS, start=1):
+    setattr(team, "team_id", idx)
+
 __all__ = ["TEAMS"]
