@@ -107,7 +107,11 @@ def check_car_sector_crossing(car, old_distance, new_distance):
                 'sectors': [],
             }
         sector_time = calculate_simulated_sector_time(car, sector_distance, car.state)
-        
+
+        # Penalità aggiuntiva per il primo settore dell'out lap (pit delta)
+        if car.state == CarState.OUT_LAP:
+            sector_time += 30.0
+
         car.current_lap_sectors['sector1'] = sector_time
         car.last_sector_times['sector1'] = sector_time
         

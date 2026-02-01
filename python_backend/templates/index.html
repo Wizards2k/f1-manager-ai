@@ -993,19 +993,72 @@
             playerStatusMsg.style.color = tone === 'error' ? '#ff7b72' : tone === 'success' ? '#8bdcb8' : '#8bdcb8';
         }
 
-        async function loadPlayerTeamInfo() {
+        async function loadPlayerTeamInfo(retryCount = 0) {
             try {
                 const res = await fetch('/api/player/team');
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error || data.message || 'Player team unavailable');
+                if (!res.ok || !data?.team_id) {
+                    throw new Error(data?.error || data?.message || 'Player team unavailable');
+                }
                 playerTeamId = data.team_id;
                 playerTeamLabel.textContent = `${data.team_name} (${data.team_code})`;
                 setPlayerStatus(`${data.team_name} garage ready.`);
+                renderPlayerCars(true);
             } catch (err) {
-                console.error(err);
-                playerTeamLabel.textContent = 'No team configured';
-                setPlayerStatus('Player team missing!', 'error');
+                console.error('loadPlayerTeamInfo error:', err);
+                if (retryCount < 3) {
+                    setPlayerStatus('Loading player garage...', 'info');
+                    setTimeout(() => loadPlayerTeamInfo(retryCount + 1), 800);
+                } else {
+                    playerTeamLabel.textContent = 'No team configured';
+                    setPlayerStatus('Player team missing!', 'error');
+                }
             }
+        }
+
+        const STATE_DISPLAY = {
+            'BOX': 'BOX',
+            'OUT_LAP': 'OUT LAP',
+            'HOT_LAP': 'HOT LAP',
+            'FLYING_LAP': 'FLYING LAP',
+            'IN_LAP': 'IN LAP',
+            'ON_TRACK': 'ON TRACK'
+        };
+
+        function normalizeStateValue(state) {
+            if (!state) return null;
+            if (typeof state === 'object' && 'value' in state) {
+                state = state.value;
+            }
+            if (typeof state === 'string') {
+                return state.trim().toUpperCase().replace(/\s+/g, '_');
+            }
+            return state;
+        }
+
+        function getCarState(car) {
+            let baseState = normalizeStateValue(car.state);
+            if (!baseState) {
+                baseState = car.is_on_track ? 'ON_TRACK' : 'BOX';
+            }
+
+            const lapsRemaining = typeof car.stint_laps_remaining === 'number'
+                ? car.stint_laps_remaining
+                : (typeof car.stint_target_laps === 'number' ? car.stint_target_laps : null);
+
+            if ((baseState === 'OUT_LAP' || baseState === 'HOT_LAP' || baseState === 'ON_TRACK') && lapsRemaining !== null && lapsRemaining <= 0) {
+                return 'IN_LAP';
+            }
+
+            if (baseState === 'FLYING_LAP') {
+                return 'HOT_LAP';
+            }
+
+            return baseState;
+        }
+
+        function getStateDisplay(state) {
+            return STATE_DISPLAY[state] || state?.replace(/_/g, ' ') || 'BOX';
         }
 
         function buildPlayerCarCard(car) {
@@ -1018,14 +1071,15 @@
             const maxStint = car.max_stint_laps ?? stintTarget;
             const tireWear = Math.max(0, Math.min(1, car.tire_wear ?? 0));
             const tireHealthPct = Math.round((1 - tireWear) * 100);
-            const currentState = car.state || (car.is_on_track ? 'ON TRACK' : 'BOX');
+            const currentState = getCarState(car);
             const lapInfo = typeof car.total_laps === 'number' && car.total_laps > 0 ? `· Lap ${car.total_laps}` : '';
+            const stateDisplay = getStateDisplay(currentState);
             const driverStatus = currentState === 'BOX'
                 ? 'Ready in BOX'
-                : `${currentState}${lapInfo ? ` ${lapInfo}` : ''}`;
-            const isBox = car.state === 'BOX';
+                : `${stateDisplay}${lapInfo ? ` ${lapInfo}` : ''}`;
+            const isBox = currentState === 'BOX';
             return `
-                <div class="car-card" data-driver="${car.driver_number}" data-state="${car.state}">
+                <div class="car-card" data-driver="${car.driver_number}" data-state="${currentState}">
                     <header>
                         <div>
                             <div class="driver-topline">
@@ -1037,7 +1091,7 @@
                                 </div>
                             </div>
                         </div>
-                        <span class="state-pill">${car.state || 'BOX'}</span>
+                        <span class="state-pill">${stateDisplay}</span>
                     </header>
                     <div class="control-grid">
                         <div class="field-span-2">
@@ -1129,15 +1183,18 @@
                     car.stint_target_laps = value;
                 }
             });
+            car.state = getCarState(car);
             playerCarData.set(driverNumber, car);
         }
 
         function applyLocalCarState(driverNumber, carPayload) {
             if (!carPayload) return;
-            playerCarData.set(driverNumber, {
+            const updated = {
                 ...(playerCarData.get(driverNumber) || {}),
                 ...carPayload,
-            });
+            };
+            updated.state = getCarState(updated);
+            playerCarData.set(driverNumber, updated);
         }
 
         async function sendPlayerConfig(driverNumber, payload, state) {
@@ -1373,7 +1430,7 @@
             data.cars.forEach(car => {
                 // Track player cars
                 if (car.is_player_controlled) {
-                    playerCarData.set(car.driver_number, car);
+                    applyLocalCarState(car.driver_number, car);
                     seenPlayerDrivers.add(car.driver_number);
                 }
                 
@@ -1403,6 +1460,11 @@
             
             // Aggiorna tabella tempi
             updateTimingTable(data.cars);
+
+            // Aggiorna garage player
+            if (seenPlayerDrivers.size > 0) {
+                renderPlayerCars();
+            }
             
             // Aggiorna stato sessione
             const timerElement = document.getElementById('session-timer');

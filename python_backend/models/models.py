@@ -455,6 +455,7 @@ class RaceCar:
         if lap_type == CarState.OUT_LAP:
             # Out lap più lento
             realistic_lap_time = 85.0 + random.uniform(-2.0, 2.0)
+            realistic_lap_time += 30.0  # delta pit lane per il primo settore
         elif lap_type == CarState.HOT_LAP:
             # Hot lap con tempi migliori
             # Se abbiamo i 3 settori, rendi il lap time coerente con la somma dei settori
