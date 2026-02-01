@@ -16,6 +16,7 @@ last_speed_change_time = time.time()  # Tempo dell'ultimo cambio velocità
 total_paused_time = 0.0  # Tempo totale passato in pausa
 pause_start_time = None  # Quando è iniziata la pausa corrente
 is_paused = False  # Stato di pausa corrente
+simulation_ready = False  # Parte solo dopo la selezione del circuito
 
 # Inizializza 20 auto (2 per team) con posizioni sfalsate
 from data.teams import TEAMS
@@ -42,6 +43,50 @@ def reset_session_bests():
     global session_best_lap, session_best_sectors
     session_best_lap = None
     session_best_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
+
+
+def is_simulation_ready():
+    """Indica se la simulazione può avanzare (circuito selezionato)."""
+    with state_lock:
+        return simulation_ready
+
+
+def start_session_for_circuit():
+    """Resetta lo stato partendo dal circuito appena caricato e avvia la sessione."""
+    global session_start_time, session_start_real_time, accumulated_game_time
+    global last_speed_change_time, pause_start_time, is_paused, simulation_ready
+
+    start_time = time.time()
+    with state_lock:
+        session_start_time = start_time
+        session_start_real_time = start_time
+        accumulated_game_time = 0.0
+        last_speed_change_time = start_time
+        pause_start_time = None
+        is_paused = False
+        simulation_ready = True
+
+    reset_cars_for_session(start_time)
+    return start_time
+
+
+def mark_simulation_pending(reset_cars=False):
+    """Segna la simulazione come in attesa di selezione circuito."""
+    global simulation_ready, session_start_time, session_start_real_time
+    global accumulated_game_time, last_speed_change_time, pause_start_time, is_paused
+
+    start_time = time.time()
+    with state_lock:
+        simulation_ready = False
+        session_start_time = start_time
+        session_start_real_time = start_time
+        accumulated_game_time = 0.0
+        last_speed_change_time = start_time
+        pause_start_time = None
+        is_paused = False
+
+    if reset_cars:
+        reset_cars_for_session(start_time)
 
 def reset_cars_for_session(start_time):
     """Rimette tutte le auto ai box con uscite scaglionate."""

@@ -34,14 +34,22 @@ pilot_contribution = pilot_bonus_seconds * 0.10   # peso 10%
   - Grip < 0.5 → malus: `(0.5 - grip) * MALUS_COEFF[mescola]` (Soft 2.2, Medium 1.8, Hard 1.4).
 - Uso nel modello: `tire_contribution = gomma.impatto_su_laptime() * 0.30` (peso 30%).
 
-### 2.3 Team (`models.Team`)
+### 2.3 Circuiti (`config.circuit_info.json`)
+- Ogni circuito dispone di un profilo JSON (generato via `scripts/build_circuit_info.py`) con:
+  - `base_lap_seconds`: tempo di riferimento reale (es. Suzuka 88.197s, Monza 79.662s).
+  - `sector_times`: tempi medi dei tre settori per ricostruire la geometria.
+  - Parametri di superficie (grip, bumpiness) usati per futuri moltiplicatori.
+- Il backend carica il profilo del circuito corrente tramite `config.set_current_circuit` e lo espone con `config.get_current_circuit_profile()`.
+- La funzione `_current_base_lap_time()` in `utils.performance` legge sempre `base_lap_seconds`; il fallback 80.0s è usato solo se manca il profilo.
+
+### 2.4 Team (`models.Team`)
 - Campi principali: nome, sigla, nazionalità, colore, power unit, `forza_auto` (0–100) e lista di piloti.
 - `bonus_prestazione = forza_auto * 0.1`.
 - Contributo nel lap time: `car_contribution = bonus_prestazione * 0.60`.
 - Dataset 2025 in `python_backend/data/teams/__init__.py`:
   - McLaren 95, Red Bull 91, Ferrari 87, Mercedes 85, Aston Martin 82, Alpine 79, RB 77, Williams 76, Sauber 73, Haas 71.
 
-### 2.4 Associazione RaceCar
+### 2.5 Associazione RaceCar
 Ogni `RaceCar` deve riferirsi a:
 - `team` (per colore, forza e power unit)
 - `pilota` (per skill bonus e dati UI)
@@ -51,14 +59,14 @@ Ogni `RaceCar` deve riferirsi a:
 Per ogni giro (o settore) il tempo simulato deriva da:
 
 ```
-LapTime = TempoBaseCircuito
+LapTime = base_lap_seconds(circuito)
           - car_contribution      # 60%
           - pilot_contribution    # 10%
           + tire_contribution     # 30% (può essere negativo o positivo)
           + altri fattori (futuro: meteo, traffico, errori)
 ```
 
-- **Tempo base**: definito per circuito (es. Monza 80.0 s) e sarà modulato da condizioni pista.
+- **Tempo base**: letto da `config.get_current_circuit_profile()['base_lap_seconds']` (es. Suzuka 88.197 s). Solo in assenza del profilo si usa il fallback 80.0 s.
 - **Car contribution**: `0.6 * team.bonus_prestazione` (es. forza 95 ⇒ 0.6 * 9.5 = 5.7 s sottratti).
 - **Pilot contribution**: `0.1 * (skill_score * coeff)`.
 - **Tire contribution**: `0.3 * gomma.impatto_su_laptime()`.
@@ -82,3 +90,8 @@ LapTime = TempoBaseCircuito
 - Temperature gomme, finestre operative, crossover intermedie/wet.
 
 Questo documento funge da riferimento ufficiale per l’implementazione del nuovo motore di calcolo tempi sul giro nel branch `feature/lap-time-model`.
+
+## 7. Telemetria di debug (opzionale)
+- Il logging JSONL dei giri (`python_backend/telemetry/lap_debug.jsonl`) è controllato dalla variabile d’ambiente `LAP_DEBUG_ENABLED`.
+- Per abilitare la telemetria: `LAP_DEBUG_ENABLED=1 python python_backend/f1_manager_ai.py` (o configurazione equivalente in Electron).
+- Con il flag disattivo (default) il file non viene creato né scritto, evitando overhead.

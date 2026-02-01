@@ -4,6 +4,11 @@ import random
 from enum import Enum, auto
 from typing import Any, Dict, List, Optional
 
+try:
+    import config
+except ImportError:  # pragma: no cover - fallback per contesti non standard
+    config = None
+
 print("MODELS: Caricate classi base (senza logica posizione)")
 
 
@@ -484,6 +489,13 @@ class RaceCar:
         except Exception:  # pragma: no cover
             model_debug = {}
 
+        circuit_id = getattr(config, 'current_circuit', None) if config else None
+        try:
+            circuit_profile = config.get_current_circuit_profile() if config else None
+        except Exception:  # pragma: no cover - se config non disponibile
+            circuit_profile = None
+        circuit_name = circuit_profile.get('name') if circuit_profile else None
+
         bucket.update({
             'pilot': self.driver_name,
             'team': self.team_name,
@@ -499,6 +511,8 @@ class RaceCar:
             'stint_laps_remaining': self.stint_laps_remaining,
             'stint_target_laps': self.stint_target_laps,
             'sector_snapshot': self.current_lap_sectors.copy(),
+            'circuit_id': circuit_id,
+            'circuit_name': circuit_name,
             **model_debug,
         })
 

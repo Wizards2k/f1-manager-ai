@@ -18,8 +18,11 @@ def _resolve_circuit_file(circuit_id):
     return None
 
 def set_current_circuit(circuit_id):
-    """Imposta circuito corrente e settori, con fallback Monza."""
+    """Imposta circuito corrente solo quando richiesto esplicitamente."""
     global current_circuit, circuit_data, circuit_sectors
+
+    if not circuit_id:
+        raise ValueError('Circuit ID is required')
 
     circuit_file = _resolve_circuit_file(circuit_id)
     if not circuit_file:
@@ -28,7 +31,8 @@ def set_current_circuit(circuit_id):
     with open(circuit_file, 'r') as f:
         circuit_data = json.load(f)
 
-    current_circuit = circuit_id if circuit_id else 'monza'
+    current_circuit = circuit_id
+
     if current_circuit in sectors_config:
         circuit_sectors = sectors_config[current_circuit]['sectors']
     else:
@@ -36,11 +40,7 @@ def set_current_circuit(circuit_id):
 
     return circuit_data
 
-# Inizializza circuito di default solo se disponibile
-default_circuit = 'it-1922_monza'
-if _resolve_circuit_file(default_circuit):
-    set_current_circuit(default_circuit)
-
+# Nota: il circuito verrà impostato solo quando richiesto dal client
 # Configurazione team e piloti F1 2025 con numeri reali ufficiali
 F1_TEAMS = {
     'Red Bull Racing': {

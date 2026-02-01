@@ -4,6 +4,11 @@ import random
 from enum import Enum, auto
 from typing import Any, Dict, List, Optional
 
+try:
+    import config
+except ImportError:  # pragma: no cover - fallback per contesti standalone
+    config = None
+
 print("MODELS: Caricate classi base (senza logica posizione)")
 
 
@@ -484,6 +489,13 @@ class RaceCar:
         except Exception:  # pragma: no cover
             model_debug = {}
 
+        circuit_id = getattr(config, "current_circuit", None) if config else None
+        try:
+            circuit_profile = config.get_current_circuit_profile() if config else None
+        except Exception:  # pragma: no cover
+            circuit_profile = None
+        circuit_name = circuit_profile.get("name") if circuit_profile else None
+
         bucket.update({
             'pilot': self.driver_name,
             'team': self.team_name,
@@ -499,14 +511,17 @@ class RaceCar:
             'stint_laps_remaining': self.stint_laps_remaining,
             'stint_target_laps': self.stint_target_laps,
             'sector_snapshot': self.current_lap_sectors.copy(),
+            'circuit_id': circuit_id,
+            'circuit_name': circuit_name,
             **model_debug,
         })
 
         try:
-            from utils.lap_telemetry import log_lap_debug
+            from utils.lap_telemetry import log_lap_debug, is_lap_debug_enabled
 
-            log_lap_debug(bucket)
-        except Exception as exc:  # pragma: no cover - telemetry failures shouldn't break sim
-            print(f"[Telemetry] Failed to log lap debug: {exc}")
+            if is_lap_debug_enabled():
+                log_lap_debug(bucket)
+        except Exception:
+            pass
         finally:
             self.current_lap_debug = None

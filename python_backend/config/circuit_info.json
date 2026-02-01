@@ -1,0 +1,1052 @@
+{
+  "au-1953_melbourne": {
+    "name": "Albert Park Grand Prix Circuit",
+    "total_length": 5231.8,
+    "sectors": {
+      "sector1": {
+        "distance": 1741.6,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3140.6,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5231.8,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 26.262,
+      "s2": 17.315,
+      "s3": 32.338
+    },
+    "base_lap_seconds": 75.915,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 1.126,
+      "grip_multiplier": 1.126,
+      "base_grip_coefficient": 0.732,
+      "corner_speed_multiplier": 0.992,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.086,
+      "circuit_smoothness": 89.4,
+      "circuit_bumpiness": 10.6,
+      "downforce_importance": 1.8,
+      "aerodynamic_drag": 88.7,
+      "time_multiplier": 0.855
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "at-1969_spielberg": {
+    "name": "Red Bull Ring",
+    "total_length": 4297.7,
+    "sectors": {
+      "sector1": {
+        "distance": 1213.4,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 2898.9,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4297.7,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 16.254,
+      "s2": 28.791,
+      "s3": 19.269
+    },
+    "base_lap_seconds": 64.314,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 1.016,
+      "grip_multiplier": 1.016,
+      "base_grip_coefficient": 0.66,
+      "corner_speed_multiplier": 0.975,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.068,
+      "circuit_smoothness": 89.2,
+      "circuit_bumpiness": 10.8,
+      "downforce_importance": 1.8,
+      "aerodynamic_drag": 94.2,
+      "time_multiplier": 0.725
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "az-2016_baku": {
+    "name": "Baku City Circuit",
+    "total_length": 5934.7,
+    "sectors": {
+      "sector1": {
+        "distance": 1995.4,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3986.4,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5934.7,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 35.948,
+      "s2": 41.149,
+      "s3": 24.926
+    },
+    "base_lap_seconds": 102.023,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 1.034,
+      "grip_multiplier": 1.034,
+      "base_grip_coefficient": 0.672,
+      "corner_speed_multiplier": 0.964,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.042,
+      "circuit_smoothness": 89.3,
+      "circuit_bumpiness": 10.7,
+      "downforce_importance": 4.2,
+      "aerodynamic_drag": 89.0,
+      "time_multiplier": 1.127
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "bh-2002_sakhir": {
+    "name": "Bahrain International Circuit",
+    "total_length": 5366.3,
+    "sectors": {
+      "sector1": {
+        "distance": 1772.2,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3959.5,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5366.3,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 28.535,
+      "s2": 38.269,
+      "s3": 22.375
+    },
+    "base_lap_seconds": 89.179,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 1.028,
+      "grip_multiplier": 1.028,
+      "base_grip_coefficient": 0.668,
+      "corner_speed_multiplier": 0.979,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.059,
+      "circuit_smoothness": 89.2,
+      "circuit_bumpiness": 10.8,
+      "downforce_importance": 2.8,
+      "aerodynamic_drag": 96.3,
+      "time_multiplier": 0.992
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "be-1925_spa_francorchamps": {
+    "name": "Circuit de Spa-Francorchamps",
+    "total_length": 6958.7,
+    "sectors": {
+      "sector1": {
+        "distance": 2242.0,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 5038.2,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 6958.7,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 31.998,
+      "s2": 50.837,
+      "s3": 30.324
+    },
+    "base_lap_seconds": 113.159,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 1.274,
+      "grip_multiplier": 1.274,
+      "base_grip_coefficient": 0.828,
+      "corner_speed_multiplier": 0.986,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.077,
+      "circuit_smoothness": 89.4,
+      "circuit_bumpiness": 10.6,
+      "downforce_importance": 1.8,
+      "aerodynamic_drag": 90.9,
+      "time_multiplier": 1.121
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "br-1940_sao_paulo": {
+    "name": "Interlagos",
+    "total_length": 4250.9,
+    "sectors": {
+      "sector1": {
+        "distance": 1224.8,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3129.1,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4250.9,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 22.587,
+      "s2": 46.218,
+      "s3": 18.966
+    },
+    "base_lap_seconds": 87.771,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 0.863,
+      "grip_multiplier": 0.863,
+      "base_grip_coefficient": 0.561,
+      "corner_speed_multiplier": 0.964,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.018,
+      "circuit_smoothness": 89.5,
+      "circuit_bumpiness": 10.5,
+      "downforce_importance": 4.2,
+      "aerodynamic_drag": 93.2,
+      "time_multiplier": 0.862
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "gb-1948_silverstone": {
+    "name": "Silverstone Circuit",
+    "total_length": 5835.9,
+    "sectors": {
+      "sector1": {
+        "distance": 1809.0,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 4253.3,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5835.9,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 28.136,
+      "s2": 34.587,
+      "s3": 23.48
+    },
+    "base_lap_seconds": 86.203,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 1.3,
+      "grip_multiplier": 1.3,
+      "base_grip_coefficient": 0.845,
+      "corner_speed_multiplier": 0.99,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.086,
+      "circuit_smoothness": 82,
+      "circuit_bumpiness": 18,
+      "downforce_importance": 3.0,
+      "aerodynamic_drag": 94.5,
+      "time_multiplier": 0.946
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "ca-1978_montreal": {
+    "name": "Circuit Gilles-Villeneuve",
+    "total_length": 4323.8,
+    "sectors": {
+      "sector1": {
+        "distance": 1076.2,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 2470.6,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4323.8,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 19.987,
+      "s2": 22.915,
+      "s3": 29.098
+    },
+    "base_lap_seconds": 72.0,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 0.936,
+      "grip_multiplier": 0.936,
+      "base_grip_coefficient": 0.608,
+      "corner_speed_multiplier": 0.972,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.048,
+      "circuit_smoothness": 89.0,
+      "circuit_bumpiness": 11.0,
+      "downforce_importance": 2.8,
+      "aerodynamic_drag": 86.1,
+      "time_multiplier": 0.802
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "cn-2004_shanghai": {
+    "name": "Shanghai International Circuit",
+    "total_length": 5398.4,
+    "sectors": {
+      "sector1": {
+        "distance": 1420.5,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 2956.8,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5398.4,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 24.981,
+      "s2": 28.168,
+      "s3": 40.511
+    },
+    "base_lap_seconds": 93.66,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 0.97,
+      "grip_multiplier": 0.97,
+      "base_grip_coefficient": 0.631,
+      "corner_speed_multiplier": 0.959,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.033,
+      "circuit_smoothness": 89.4,
+      "circuit_bumpiness": 10.6,
+      "downforce_importance": 2.8,
+      "aerodynamic_drag": 86.8,
+      "time_multiplier": 1.048
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "it-1953_imola": {
+    "name": "Autodromo Enzo e Dino Ferrari",
+    "total_length": 4877.5,
+    "sectors": {
+      "sector1": {
+        "distance": 1769.0,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3366.3,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4877.5,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 23.408,
+      "s2": 25.922,
+      "s3": 25.416
+    },
+    "base_lap_seconds": 74.746,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 1.049,
+      "grip_multiplier": 1.049,
+      "base_grip_coefficient": 0.682,
+      "corner_speed_multiplier": 1.003,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.071,
+      "circuit_smoothness": 78,
+      "circuit_bumpiness": 22,
+      "downforce_importance": 1.8,
+      "aerodynamic_drag": 93.9,
+      "time_multiplier": 0.842
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "hu-1986_budapest": {
+    "name": "Hungaroring",
+    "total_length": 4336.4,
+    "sectors": {
+      "sector1": {
+        "distance": 1725.1,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3249.3,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4336.4,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 27.461,
+      "s2": 26.524,
+      "s3": 21.288
+    },
+    "base_lap_seconds": 75.273,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 0.899,
+      "grip_multiplier": 0.899,
+      "base_grip_coefficient": 0.584,
+      "corner_speed_multiplier": 0.998,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.037,
+      "circuit_smoothness": 89.2,
+      "circuit_bumpiness": 10.8,
+      "downforce_importance": 1.8,
+      "aerodynamic_drag": 97.6,
+      "time_multiplier": 0.86
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "it-1922_monza": {
+    "name": "Autodromo Nazionale di Monza",
+    "total_length": 5750.8,
+    "sectors": {
+      "sector1": {
+        "distance": 1890.4,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3715.9,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5750.8,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 26.389,
+      "s2": 26.656,
+      "s3": 26.617
+    },
+    "base_lap_seconds": 79.662,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 1.283,
+      "grip_multiplier": 1.283,
+      "base_grip_coefficient": 0.834,
+      "corner_speed_multiplier": 1.0,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.08,
+      "circuit_smoothness": 85,
+      "circuit_bumpiness": 15,
+      "downforce_importance": 1.5,
+      "aerodynamic_drag": 85.5,
+      "time_multiplier": 0.872
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "jp-1962_suzuka": {
+    "name": "Suzuka International Racing Course",
+    "total_length": 5767.6,
+    "sectors": {
+      "sector1": {
+        "distance": 2165.8,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 4682.2,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5767.6,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 30.777,
+      "s2": 39.85,
+      "s3": 17.57
+    },
+    "base_lap_seconds": 88.197,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 1.108,
+      "grip_multiplier": 1.108,
+      "base_grip_coefficient": 0.72,
+      "corner_speed_multiplier": 0.988,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.06,
+      "circuit_smoothness": 89.5,
+      "circuit_bumpiness": 10.5,
+      "downforce_importance": 1.8,
+      "aerodynamic_drag": 90.1,
+      "time_multiplier": 1.004
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "mx-1962_mexico_city": {
+    "name": "Autódromo Hermanos Rodríguez",
+    "total_length": 4239.0,
+    "sectors": {
+      "sector1": {
+        "distance": 1901.7,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3372.2,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4239.0,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 27.222,
+      "s2": 29.318,
+      "s3": 19.631
+    },
+    "base_lap_seconds": 76.171,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 0.899,
+      "grip_multiplier": 0.899,
+      "base_grip_coefficient": 0.584,
+      "corner_speed_multiplier": 0.956,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.043,
+      "circuit_smoothness": 89.2,
+      "circuit_bumpiness": 10.8,
+      "downforce_importance": 4.2,
+      "aerodynamic_drag": 87.1,
+      "time_multiplier": 0.839
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "us-2022_miami": {
+    "name": "Miami International Autodrome",
+    "total_length": 5343.2,
+    "sectors": {
+      "sector1": {
+        "distance": 1796.2,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3649.4,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5343.2,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 28.867,
+      "s2": 33.499,
+      "s3": 24.875
+    },
+    "base_lap_seconds": 87.241,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 0.961,
+      "grip_multiplier": 0.961,
+      "base_grip_coefficient": 0.625,
+      "corner_speed_multiplier": 0.962,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.042,
+      "circuit_smoothness": 86,
+      "circuit_bumpiness": 14,
+      "downforce_importance": 4.2,
+      "aerodynamic_drag": 90.3,
+      "time_multiplier": 0.971
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "mc-1929_monaco": {
+    "name": "Circuit de Monaco",
+    "total_length": 3286.4,
+    "sectors": {
+      "sector1": {
+        "distance": 1040.2,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 2437.6,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 3286.4,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 18.255,
+      "s2": 33.424,
+      "s3": 18.888
+    },
+    "base_lap_seconds": 70.567,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 0.7,
+      "grip_multiplier": 0.7,
+      "base_grip_coefficient": 0.455,
+      "corner_speed_multiplier": 0.85,
+      "braking_multiplier": 1.085,
+      "acceleration_multiplier": 1.006,
+      "circuit_smoothness": 95,
+      "circuit_bumpiness": 5,
+      "downforce_importance": 1.0,
+      "aerodynamic_drag": 100.7,
+      "time_multiplier": 0.794
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "nl-1948_zandvoort": {
+    "name": "Circuit Zandvoort",
+    "total_length": 4239.8,
+    "sectors": {
+      "sector1": {
+        "distance": 1485.5,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 2932.0,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4239.8,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 24.073,
+      "s2": 24.731,
+      "s3": 21.225
+    },
+    "base_lap_seconds": 70.029,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 0.931,
+      "grip_multiplier": 0.931,
+      "base_grip_coefficient": 0.605,
+      "corner_speed_multiplier": 0.989,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.045,
+      "circuit_smoothness": 87,
+      "circuit_bumpiness": 13,
+      "downforce_importance": 2.8,
+      "aerodynamic_drag": 93.5,
+      "time_multiplier": 0.791
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "sa-2021_jeddah": {
+    "name": "Jeddah Corniche Circuit",
+    "total_length": 6108.4,
+    "sectors": {
+      "sector1": {
+        "distance": 2075.0,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 4111.2,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 6108.4,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 31.763,
+      "s2": 27.8,
+      "s3": 27.909
+    },
+    "base_lap_seconds": 87.472,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": null,
+      "grip_multiplier": null,
+      "base_grip_coefficient": null,
+      "corner_speed_multiplier": null,
+      "braking_multiplier": null,
+      "acceleration_multiplier": null,
+      "circuit_smoothness": null,
+      "circuit_bumpiness": null,
+      "downforce_importance": null,
+      "aerodynamic_drag": null,
+      "time_multiplier": null
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "sg-2008_singapore": {
+    "name": "Marina Bay Street Circuit",
+    "total_length": 4885.2,
+    "sectors": {
+      "sector1": {
+        "distance": 1627.8,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3424.6,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4885.2,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 26.615,
+      "s2": 37.663,
+      "s3": 25.402
+    },
+    "base_lap_seconds": 89.68,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 0.917,
+      "grip_multiplier": 0.917,
+      "base_grip_coefficient": 0.596,
+      "corner_speed_multiplier": 0.982,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.048,
+      "circuit_smoothness": 89.0,
+      "circuit_bumpiness": 11.0,
+      "downforce_importance": 2.8,
+      "aerodynamic_drag": 99.0,
+      "time_multiplier": 1.012
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "es-1991_barcelona": {
+    "name": "Circuit de Barcelona-Catalunya",
+    "total_length": 4628.9,
+    "sectors": {
+      "sector1": {
+        "distance": 1603.3,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3366.1,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 4628.9,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 21.369,
+      "s2": 28.541,
+      "s3": 21.493
+    },
+    "base_lap_seconds": 71.403,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": 0.997,
+      "grip_multiplier": 0.997,
+      "base_grip_coefficient": 0.648,
+      "corner_speed_multiplier": 0.999,
+      "braking_multiplier": 1.0,
+      "acceleration_multiplier": 1.057,
+      "circuit_smoothness": 89.5,
+      "circuit_bumpiness": 10.5,
+      "downforce_importance": 1.8,
+      "aerodynamic_drag": 88.7,
+      "time_multiplier": 0.826
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  },
+  "us-2012_austin": {
+    "name": "Circuit of the Americas",
+    "total_length": 5453.9,
+    "sectors": {
+      "sector1": {
+        "distance": 1647.3,
+        "description": "Start to end of Sector 1",
+        "key_features": []
+      },
+      "sector2": {
+        "distance": 3885.7,
+        "description": "Sector 1 to end of Sector 2",
+        "key_features": []
+      },
+      "sector3": {
+        "distance": 5453.9,
+        "description": "Sector 2 to Finish Line",
+        "key_features": []
+      }
+    },
+    "sector_times": {
+      "s1": 24.868,
+      "s2": 36.986,
+      "s3": 30.507
+    },
+    "base_lap_seconds": 92.361,
+    "lap_reference": {
+      "session": "Q",
+      "year": 2024,
+      "driver": "VER"
+    },
+    "surface": {
+      "reference_grip": null,
+      "grip_multiplier": null,
+      "base_grip_coefficient": null,
+      "corner_speed_multiplier": null,
+      "braking_multiplier": null,
+      "acceleration_multiplier": null,
+      "circuit_smoothness": null,
+      "circuit_bumpiness": null,
+      "downforce_importance": null,
+      "aerodynamic_drag": null,
+      "time_multiplier": null
+    },
+    "tire_multipliers": {
+      "soft": null,
+      "medium": null,
+      "hard": null
+    }
+  }
+}

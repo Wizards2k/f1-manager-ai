@@ -526,7 +526,7 @@
         });
 
         // Select circuit and redirect to race
-        function selectCircuit(circuitId) {
+        async function selectCircuit(circuitId) {
             console.log('Selected circuit:', circuitId);
             
             // Store selected circuit in localStorage
@@ -539,6 +539,16 @@
                 localStorage.setItem('selectedCircuitData', JSON.stringify(circuit));
             }
             
+            try {
+                await fetch('/api/load_circuit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ circuit_id: circuitId })
+                });
+            } catch (err) {
+                console.error('Failed to set circuit on backend', err);
+            }
+
             // Redirect to race page with circuit parameter
             window.location.href = `/race?circuit=${circuitId}`;
         }

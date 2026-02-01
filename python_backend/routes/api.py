@@ -1,5 +1,17 @@
 # API Routes F1 Manager AI
+import logging
 from flask import Flask, render_template, jsonify, send_from_directory
+from utils import start_session_for_circuit
+
+
+circuit_logger = logging.getLogger('circuit_api')
+if not circuit_logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+    handler.setFormatter(formatter)
+    circuit_logger.addHandler(handler)
+    circuit_logger.propagate = False
+circuit_logger.setLevel(logging.INFO)
 
 def register_routes(app):
     """Registra tutte le route API"""
@@ -18,21 +30,41 @@ def register_routes(app):
 
     @app.route('/api/circuit')
     def get_circuit():
-        """Restituisce dati del circuito"""
+        """Restituisce dati del circuito richiesta senza modificare lo stato."""
         from flask import request
         import config
 
         circuit_id = request.args.get('circuit')
-        if circuit_id:
-            config.set_current_circuit(circuit_id)
-        return jsonify(config.circuit_data)
+        try:
+            if circuit_id:
+                data = config.load_circuit_data(circuit_id)
+            else:
+                data = config.circuit_data
+            circuit_logger.info(
+                "GET /api/circuit from %s (session=%s, requested=%s)",
+                request.remote_addr,
+                getattr(config, 'current_circuit', None),
+                circuit_id,
+            )
+        except FileNotFoundError:
+            return jsonify({'error': f'Circuit file not found: {circuit_id}'}), 404
+
+        return jsonify(data)
 
     @app.route('/api/circuit/<circuit_id>')
     def get_selected_circuit(circuit_id):
         """Carica i dati del circuito selezionato"""
+        from flask import request
         import config
 
         circuit_data = config.set_current_circuit(circuit_id)
+        start_session_for_circuit()
+        circuit_logger.info(
+            "GET /api/circuit/%s from %s (new circuit=%s)",
+            circuit_id,
+            request.remote_addr,
+            getattr(config, 'current_circuit', None),
+        )
         return jsonify(circuit_data)
 
     @app.route('/api/load_circuit', methods=['POST'])
@@ -47,6 +79,12 @@ def register_routes(app):
                 return jsonify({'error': 'Circuit ID required'}), 400
 
             circuit_data = config.set_current_circuit(circuit_id)
+            start_session_for_circuit()
+            circuit_logger.info(
+                "POST /api/load_circuit from %s (new circuit=%s)",
+                request.remote_addr,
+                getattr(config, 'current_circuit', None),
+            )
             return jsonify({
                 'message': f'Circuit {circuit_id} loaded successfully',
                 'circuit_id': circuit_id,

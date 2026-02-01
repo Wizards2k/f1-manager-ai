@@ -3,37 +3,30 @@ from flask import Flask
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 import time
+import logging
+
+# Configura logging per vedere INFO
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
 # Importa moduli specializzati
 from config import SECRET_KEY, SOCKETIO_CORS_ORIGINS
 from routes.api import register_routes
 from utils import (
     race_cars, get_session_time_remaining, format_session_time,
-    update_car_position, get_car_position
+    update_car_position, get_car_position, is_simulation_ready
 )
-from utils.game_logic import get_game_speed, get_pause_state, reset_cars_for_session, get_session_bests
-
-print("F1 Manager AI - Modular version starting...")
+from utils.game_logic import get_game_speed, get_pause_state, get_session_bests, mark_simulation_pending
 
 app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = SECRET_KEY
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins=SOCKETIO_CORS_ORIGINS)
 
-# Registra routes
 register_routes(app)
+mark_simulation_pending(reset_cars=True)
 
 @socketio.on('connect')
 def handle_connect():
-    print('Client connected')
-    # Resetta variabili di sessione per nuovo client
-    from utils.game_logic import accumulated_game_time, last_speed_change_time, session_start_time, session_start_real_time
-    accumulated_game_time = 0.0
-    last_speed_change_time = time.time()
-    session_start_time = time.time()
-    session_start_real_time = time.time()
-    reset_cars_for_session(session_start_time)
-    print('Session variables reset for new client')
     emit('connected', {'data': 'Connected to F1 Manager AI'})
 
 def race_simulation():
@@ -42,6 +35,9 @@ def race_simulation():
         dt = 0.1  # 100ms update rate
         time.sleep(dt)
         
+        if not is_simulation_ready():
+            continue
+
         # Aggiorna posizioni auto
         for car in race_cars:
             update_car_position(car, dt)

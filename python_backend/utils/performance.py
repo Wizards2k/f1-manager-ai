@@ -5,11 +5,12 @@ import random
 
 from typing import Dict, Optional, Tuple
 
+import config
 from models import CarState, RaceCar
 from utils.position import circuit_length
 
-# Base constants (can become circuit-specific later)
-BASE_LAP_TIME = 80.0  # seconds, reference Monza-like lap
+# Base constants
+DEFAULT_BASE_LAP_TIME = 80.0  # seconds, fallback when no circuit profile
 MIN_LAP_TIME = 60.0   # prevent unrealistic negative laps
 
 CAR_WEIGHT = 0.60
@@ -46,16 +47,28 @@ def compute_tire_delta_seconds(car: RaceCar) -> float:
     return 0.0
 
 
+def _current_base_lap_time() -> float:
+    profile = None
+    try:
+        profile = config.get_current_circuit_profile()
+    except Exception:
+        profile = None
+    if profile:
+        return profile.get('base_lap_seconds', DEFAULT_BASE_LAP_TIME) or DEFAULT_BASE_LAP_TIME
+    return DEFAULT_BASE_LAP_TIME
+
+
 def compute_projected_lap_time(car: RaceCar) -> Tuple[float, Dict[str, float]]:
     """Return lap time and debug info (in seconds) after applying contributions."""
     car_bonus = CAR_WEIGHT * compute_car_bonus_seconds(car.team)
     pilot_bonus = PILOT_WEIGHT * compute_pilot_bonus_seconds(car.pilot)
     tire_delta = TIRE_WEIGHT * compute_tire_delta_seconds(car)
 
-    lap_time = BASE_LAP_TIME - car_bonus - pilot_bonus + tire_delta
+    base_lap = _current_base_lap_time()
+    lap_time = base_lap - car_bonus - pilot_bonus + tire_delta
     clamped = max(lap_time, MIN_LAP_TIME)
     debug = {
-        "base_lap": BASE_LAP_TIME,
+        "base_lap": base_lap,
         "car_bonus": car_bonus,
         "pilot_bonus": pilot_bonus,
         "tire_delta": tire_delta,

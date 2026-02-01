@@ -515,9 +515,26 @@
         }
 
         // Carica circuito
-        const circuitQuery = selectedCircuit ? `?circuit=${encodeURIComponent(selectedCircuit)}` : '';
-        fetch(`/api/circuit${circuitQuery}`)
-            .then(response => response.json())
+        async function loadCircuitGeometry() {
+            const circuitQuery = selectedCircuit ? `?circuit=${encodeURIComponent(selectedCircuit)}` : '';
+
+            if (selectedCircuit) {
+                try {
+                    await fetch('/api/load_circuit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ circuit_id: selectedCircuit })
+                    });
+                } catch (err) {
+                    console.error('Failed to set circuit on backend', err);
+                }
+            }
+
+            return fetch(`/api/circuit${circuitQuery}`)
+                .then(response => response.json());
+        }
+
+        loadCircuitGeometry()
             .then(data => {
                 const geometry = data.type === 'FeatureCollection'
                     ? data.features?.[0]?.geometry

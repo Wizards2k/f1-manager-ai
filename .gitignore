@@ -25,6 +25,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+python_backend/telemetry/lap_debug*.jsonl
 
 # Build outputs
 dist/

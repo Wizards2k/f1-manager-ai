@@ -2,14 +2,22 @@
 import json
 import os
 
-# Carica configurazione settori
+# Carica configurazione settori legacy
 with open('sectors_config.json', 'r') as f:
     sectors_config = json.load(f)
+
+# Carica profili circuito estesi (tempi e parametri superficie)
+try:
+    with open(os.path.join('config', 'circuit_info.json'), 'r') as f:
+        circuit_profiles = json.load(f)
+except FileNotFoundError:
+    circuit_profiles = {}
 
 # Circuito corrente (default Monza)
 current_circuit = None
 circuit_data = None
 circuit_sectors = None
+current_circuit_profile = None
 
 def _resolve_circuit_file(circuit_id):
     circuits_path = os.path.join('circuits', f'{circuit_id}.json')
@@ -18,8 +26,11 @@ def _resolve_circuit_file(circuit_id):
     return None
 
 def set_current_circuit(circuit_id):
-    """Imposta circuito corrente e settori, con fallback Monza."""
-    global current_circuit, circuit_data, circuit_sectors
+    """Imposta circuito corrente e settori solo quando esplicitamente richiesto."""
+    global current_circuit, circuit_data, circuit_sectors, current_circuit_profile
+
+    if not circuit_id:
+        raise ValueError('Circuit ID is required')
 
     circuit_file = _resolve_circuit_file(circuit_id)
     if not circuit_file:
@@ -28,18 +39,32 @@ def set_current_circuit(circuit_id):
     with open(circuit_file, 'r') as f:
         circuit_data = json.load(f)
 
-    current_circuit = circuit_id if circuit_id else 'monza'
-    if current_circuit in sectors_config:
+    current_circuit = circuit_id
+    current_circuit_profile = circuit_profiles.get(current_circuit)
+
+    if current_circuit_profile and current_circuit_profile.get('sectors'):
+        circuit_sectors = current_circuit_profile['sectors']
+    elif current_circuit in sectors_config:
         circuit_sectors = sectors_config[current_circuit]['sectors']
     else:
         circuit_sectors = sectors_config['monza']['sectors']
 
     return circuit_data
 
-# Inizializza circuito di default solo se disponibile
-default_circuit = 'it-1922_monza'
-if _resolve_circuit_file(default_circuit):
-    set_current_circuit(default_circuit)
+
+def load_circuit_data(circuit_id):
+    """Restituisce i dati del circuito richiesto senza aggiornare lo stato globale."""
+    circuit_file = _resolve_circuit_file(circuit_id)
+    if not circuit_file:
+        raise FileNotFoundError(f'No circuit file found for {circuit_id}')
+
+    with open(circuit_file, 'r') as f:
+        return json.load(f)
+
+
+def get_current_circuit_profile():
+    """Restituisce il profilo esteso del circuito corrente (se disponibile)."""
+    return current_circuit_profile
 
 # Configurazione team e piloti F1 2025 con numeri reali ufficiali
 F1_TEAMS = {

@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
+_FLAG = os.getenv("LAP_DEBUG_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
 TELEMETRY_DIR = Path(__file__).resolve().parent.parent / "telemetry"
-TELEMETRY_DIR.mkdir(parents=True, exist_ok=True)
-
 LOG_FILE = TELEMETRY_DIR / "lap_debug.jsonl"
 
 
@@ -29,8 +29,16 @@ def _sanitize(entry: Dict[str, Any]) -> Dict[str, Any]:
     return {k: convert(v) for k, v in entry.items()}
 
 
+def is_lap_debug_enabled() -> bool:
+    return _FLAG
+
+
 def log_lap_debug(entry: Dict[str, Any]) -> None:
     """Append a JSONL record with lap debug information."""
+    if not _FLAG:
+        return
+
+    TELEMETRY_DIR.mkdir(parents=True, exist_ok=True)
     payload = _sanitize({
         "timestamp": datetime.utcnow().isoformat() + "Z",
         **entry,
@@ -39,4 +47,4 @@ def log_lap_debug(entry: Dict[str, Any]) -> None:
         fh.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
 
-__all__ = ["log_lap_debug", "LOG_FILE"]
+__all__ = ["log_lap_debug", "LOG_FILE", "is_lap_debug_enabled"]
