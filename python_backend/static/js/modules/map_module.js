@@ -143,7 +143,7 @@ export class MapModule {
         this.circuitContainer.style.setProperty('--dock-height', `${dockHeight}px`);
         this.mapContainer.style.height = `${nextHeight}px`;
         if (!this.mapReady || !this.map) return;
-        this.map.invalidateSize();
+        this.map.invalidateSize({ animate: false });
         if (allowRefit && this.lastBounds) {
             this.fitBoundsWithPadding(this.lastBounds);
         }
