@@ -90,6 +90,58 @@
             margin-top: 2px;
         }
 
+        .garage-notifications {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 160px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .garage-toast {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 11px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            background: rgba(15,15,15,0.8);
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+            backdrop-filter: blur(8px);
+            animation: garageToastIn 0.3s ease;
+        }
+
+        .garage-toast.hide {
+            animation: garageToastOut 0.25s ease forwards;
+        }
+
+        .garage-toast::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            box-shadow: 0 0 12px currentColor;
+        }
+
+        .garage-toast.success { color: #7ce2b5; }
+        .garage-toast.error { color: #ff8c8c; }
+        .garage-toast.info { color: #7fb4ff; }
+
+        @keyframes garageToastIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes garageToastOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(8px); }
+        }
+
         #player-car-cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
@@ -182,15 +234,20 @@
 
         .setup-panel {
             width: 100%;
-            border-radius: 16px;
-            border: 1px solid #3a3a3a;
-            padding: 24px;
-            background: linear-gradient(135deg, rgba(35,35,35,0.95), rgba(10,10,10,0.96));
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 28px;
+            background: linear-gradient(135deg, rgba(10,10,10,0.78), rgba(15,15,15,0.65));
             display: flex;
             flex-direction: column;
             gap: 18px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.45);
-            animation: setupPanelEnter 0.25s ease;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.55);
+            backdrop-filter: blur(14px) saturate(140%);
+            animation: setupPanelEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .setup-panel.closing {
+            animation: setupPanelExit 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
 
         .setup-panel header,
@@ -227,9 +284,10 @@
 
         .setup-feedback {
             font-size: 11px;
-            padding: 8px 10px;
-            border-radius: 8px;
+            padding: 10px 12px;
+            border-radius: 10px;
             line-height: 1.4;
+            backdrop-filter: blur(8px);
         }
 
         .setup-feedback.info { background: rgba(32, 98, 184, 0.18); color: #7fb4ff; border: 1px solid rgba(127,180,255,0.3); }
@@ -259,19 +317,25 @@
         }
 
         .setup-control {
-            background: rgba(18,18,18,0.95);
-            border: 1px solid #3f3f3f;
-            border-radius: 12px;
-            padding: 16px;
+            background: rgba(12,12,12,0.7);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 14px;
+            padding: 18px;
             display: flex;
             flex-direction: column;
             gap: 10px;
             --setup-accent: #cfb53b;
+            backdrop-filter: blur(6px);
         }
 
         @keyframes setupPanelEnter {
-            from { opacity: 0; transform: translateY(18px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(32px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes setupPanelExit {
+            from { opacity: 1; transform: translateY(0) scale(1); }
+            to { opacity: 0; transform: translateY(18px) scale(0.96); }
         }
 
         .setup-control-header {
@@ -296,11 +360,30 @@
             width: 100%;
             accent-color: var(--setup-accent);
             background: linear-gradient(90deg,
-                color-mix(in sRGB, var(--setup-accent) 30%, #1a1a1a) 0%,
-                color-mix(in sRGB, var(--setup-accent) 55%, #1a1a1a) 35%,
-                color-mix(in sRGB, var(--setup-accent) 85%, #111) 100%);
+                color-mix(in sRGB, var(--setup-accent) 25%, rgba(255,255,255,0.05)) 0%,
+                color-mix(in sRGB, var(--setup-accent) 65%, rgba(255,255,255,0.08)) 45%,
+                var(--setup-accent) 100%);
             border-radius: 999px;
             height: 6px;
+            box-shadow: 0 0 8px color-mix(in sRGB, var(--setup-accent) 30%, transparent);
+        }
+
+        .setup-control input[type="range"]::-webkit-slider-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #0a0a0a;
+            border: 2px solid var(--setup-accent);
+            box-shadow: 0 0 0 4px rgba(0,0,0,0.35);
+        }
+
+        .setup-control input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #0a0a0a;
+            border: 2px solid var(--setup-accent);
+            box-shadow: 0 0 0 4px rgba(0,0,0,0.35);
         }
 
         .setup-control-footer {
@@ -339,13 +422,14 @@
         .setup-footer button {
             flex: 1;
             border-radius: 6px;
-            border: 1px solid #404040;
-            background: #1a1a1a;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(20,20,20,0.75);
             color: #f5f5f5;
-            padding: 8px;
+            padding: 9px;
             cursor: pointer;
             font-weight: 600;
             letter-spacing: 0.04em;
+            backdrop-filter: blur(4px);
         }
 
         .setup-footer button.apply {
@@ -617,6 +701,7 @@
             background: #0a0a0a;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
         
         #circuit-map {

@@ -1,11 +1,12 @@
 export class PlayerGarage {
-    constructor(state, { teamLabel, statusMsg, cardsContainer, overlayContainer, dockElement }) {
+    constructor(state, { teamLabel, statusMsg, cardsContainer, overlayContainer, dockElement, notificationsContainer }) {
         this.state = state;
         this.teamLabel = teamLabel;
         this.statusMsg = statusMsg;
         this.cardsContainer = cardsContainer;
         this.overlayContainer = overlayContainer;
         this.dockElement = dockElement;
+        this.notificationsContainer = notificationsContainer;
         this.tyreOptions = [
             { value: 'soft', label: 'Soft' },
             { value: 'medium', label: 'Medium' },
@@ -40,6 +41,7 @@ export class PlayerGarage {
         };
         this.setupOpenDrivers = new Set();
         this.setupDrafts = new Map();
+        this.notificationTimers = new WeakMap();
         this.bindEvents();
     }
 
@@ -70,9 +72,31 @@ export class PlayerGarage {
     }
 
     setStatus(message, tone = 'info') {
-        if (!this.statusMsg) return;
-        this.statusMsg.textContent = message;
-        this.statusMsg.style.color = tone === 'error' ? '#ff7b72' : tone === 'success' ? '#8bdcb8' : '#8bdcb8';
+        if (this.statusMsg) {
+            this.statusMsg.textContent = message;
+            this.statusMsg.style.color = tone === 'error' ? '#ff7b72' : tone === 'success' ? '#8bdcb8' : '#8bdcb8';
+        }
+        this.pushNotification(message, tone);
+    }
+
+    pushNotification(message, tone = 'info') {
+        if (!this.notificationsContainer || !message) return;
+        const toast = document.createElement('div');
+        toast.className = `garage-toast ${tone}`;
+        toast.textContent = message;
+        this.notificationsContainer.appendChild(toast);
+
+        const toasts = this.notificationsContainer.querySelectorAll('.garage-toast');
+        if (toasts.length > 3) {
+            toasts[0].classList.add('hide');
+            setTimeout(() => toasts[0].remove(), 220);
+        }
+
+        const timer = setTimeout(() => {
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 220);
+        }, 4500);
+        this.notificationTimers.set(toast, timer);
     }
 
     normalizeStateValue(state) {
@@ -250,7 +274,8 @@ export class PlayerGarage {
         const score = typeof recommendation?.score === 'number' ? recommendation.score.toFixed(2) : null;
 
         this.overlayContainer.dataset.driver = driverNumber;
-        this.overlayContainer.classList.toggle('is-visible', true);
+        this.overlayContainer.classList.add('is-visible');
+        this.overlayContainer.classList.remove('is-hiding');
         if (this.dockElement) {
             this.dockElement.classList.add('setup-open');
         }
@@ -322,16 +347,30 @@ export class PlayerGarage {
             this.setupOpenDrivers.add(driverNumber);
             const car = this.state.getPlayerCar(driverNumber);
             if (car) {
+                this.overlayContainer.classList.add('is-visible');
+                this.overlayContainer.classList.remove('is-hiding');
                 this.buildSetupOverlay(car, car?.state === 'BOX');
             }
         } else {
             this.setupOpenDrivers.delete(driverNumber);
-            this.overlayContainer.classList.remove('is-visible');
-            this.overlayContainer.removeAttribute('data-driver');
-            this.overlayContainer.innerHTML = '';
-            if (this.dockElement) {
-                this.dockElement.classList.remove('setup-open');
+            const panel = this.overlayContainer.querySelector('.setup-panel');
+            if (panel) {
+                this.overlayContainer.classList.add('is-hiding');
+                panel.classList.add('closing');
+                panel.addEventListener('animationend', () => this.resetSetupOverlayState(), { once: true });
+            } else {
+                this.resetSetupOverlayState();
             }
+        }
+    }
+
+    resetSetupOverlayState() {
+        if (!this.overlayContainer) return;
+        this.overlayContainer.classList.remove('is-visible', 'is-hiding');
+        this.overlayContainer.removeAttribute('data-driver');
+        this.overlayContainer.innerHTML = '';
+        if (this.dockElement) {
+            this.dockElement.classList.remove('setup-open');
         }
     }
 
