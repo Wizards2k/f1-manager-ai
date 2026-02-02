@@ -4,7 +4,7 @@
   "description": "F1 Manager AI - Desktop Edition",
   "main": "electron/main.js",
   "scripts": {
-    "dev": "electron .",
+    "dev": "node scripts/dev-electron.js",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
     "build:mac": "electron-builder --mac",

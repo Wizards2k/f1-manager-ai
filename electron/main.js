@@ -1,21 +1,37 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
 
 // Python process reference
 let pythonProcess = null;
 let mainWindow = null;
 
+function commandExists(command) {
+    try {
+        const whichCmd = process.platform === 'win32' ? 'where' : 'which';
+        const result = spawnSync(whichCmd, [command], { stdio: 'ignore' });
+        return result.status === 0;
+    } catch (error) {
+        return false;
+    }
+}
+
 // Find Python executable
 function getPythonExecutable() {
-    const isDev = !app.isPackaged;
+    const customPython = process.env.PYTHON_EXECUTABLE || process.env.PYTHON;
+    if (customPython) {
+        return customPython;
+    }
     
     if (process.platform === 'win32') {
         // Windows - use bundled Python or system Python
         const bundledPython = path.join(process.resourcesPath, 'python', 'python.exe');
         if (fs.existsSync(bundledPython)) {
             return bundledPython;
+        }
+        if (commandExists('py')) {
+            return 'py';
         }
         return 'python'; // Fallback to system Python
     } else {
@@ -24,7 +40,10 @@ function getPythonExecutable() {
         if (fs.existsSync(bundledPython)) {
             return bundledPython;
         }
-        return 'python3'; // Fallback to system Python
+        if (commandExists('python3')) {
+            return 'python3';
+        }
+        return 'python'; // Fallback to python
     }
 }
 

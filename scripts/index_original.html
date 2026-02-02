@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Manager AI - Circuit</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .leaflet-control-attribution {
+            display: none !important;
+        }
+
+        .player-dock {
+            background: #0f0f0f;
+            border-top: 1px solid #1f1f1f;
+            padding: 10px 14px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: inset 0 8px 14px rgba(0,0,0,0.35);
+            font-family: 'Formula1 Display', 'Segoe UI', sans-serif;
+        }
+
+        .player-dock.collapsed {
+            display: none;
+        }
+
+        .player-dock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .team-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .team-badge .badge-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid #2a2a2a;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .player-team-label {
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            color: #e3e3e3;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .player-status-banner {
+            font-size: 11px;
+            color: #8bdcb8;
+            margin-top: 2px;
+        }
+
+        #player-car-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 16px;
+            align-items: stretch;
+        }
+
+        #player-car-cards .car-card {
+            min-width: 0;
+        }
+
+        .player-mini-grid {
+            display: none;
+        }
+
+        .mini-card {
+            background: #161616;
+            border: 1px solid #2f2f2f;
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .mini-card header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            letter-spacing: 0.06em;
+        }
+
+        .mini-state {
+            font-size: 10px;
+            color: #bbb;
+        }
+
+        .mini-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .mini-actions button {
+            flex: 1;
+            font-size: 11px;
+            padding: 6px;
+        }
+
+        .car-card {
+            border: 1px solid #2e2e2e;
+            border-radius: 10px;
+            padding: 8px 10px;
+            background: #1b1b1b;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            height: 100%;
+        }
+
+        @media (max-width: 1100px) {
+            #player-car-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .car-card header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .driver-topline {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .driver-subline {
+            font-size: 10px;
+            color: #9a9a9a;
+            margin-top: 1px;
+        }
+
+        .driver-status-line {
+            font-size: 10px;
+            color: #c0c0c0;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .team-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.3);
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .driver-tag {
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 11px;
+        }
+
+        .state-pill {
+            font-size: 10px;
+            letter-spacing: 0.06em;
+            border-radius: 999px;
+            padding: 2px 6px;
+            background: #2a2a2a;
+            text-transform: uppercase;
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(110px, 1fr));
+            gap: 8px 10px;
+            align-items: end;
+        }
+
+        .field-span-2 {
+            grid-column: span 2;
+        }
+
+        .field-span-3 {
+            grid-column: span 3;
+        }
+
+        @media (max-width: 1400px) {
+            .control-grid {
+                grid-template-columns: repeat(3, minmax(120px, 1fr));
+            }
+        }
+
+        @media (max-width: 900px) {
+            .control-grid {
+                grid-template-columns: repeat(2, minmax(140px, 1fr));
+            }
+        }
+
+        .control-grid label {
+            display: block;
+            font-size: 9px;
+            color: #bbb;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 2px;
+        }
+
+        .label-hint {
+            font-size: 9px;
+            color: #888;
+            margin-left: 4px;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .tyre-row,
+        .numeric-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tyre-row select,
+        .numeric-row input {
+            flex: 1;
+        }
+
+        .tyre-row select,
+        .select-compact {
+            flex: 0 0 110px;
+            max-width: 110px;
+        }
+
+        .input-compact {
+            width: 46px;
+            min-width: 46px;
+            flex: 0 0 46px;
+            text-align: left;
+            padding-right: 0;
+        }
+
+        .offset-left {
+            margin-left: -50px;
+        }
+
+        .offset-left-small {
+            margin-left: -75px;
+        }
+
+        .control-dual {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .control-dual .inline-control {
+            flex: 0 0 auto;
+        }
+
+        .slider-inline {
+            margin-left: -160px;
+            width: 120px;
+            max-width: 120px;
+            flex: 0 0 120px;
+        }
+
+        .slider-inline .compact-range,
+        .slider-inline input[type="range"] {
+            width: 100%;
+            min-width: 0;
+            display: block;
+        }
+
+        .control-dual.shift-left {
+            margin-left: -55px;
+        }
+
+        .wear-indicator,
+        .numeric-hint {
+            font-size: 9px;
+            color: #dcdcdc;
+            border: 1px solid #2f2f2f;
+            border-radius: 4px;
+            padding: 2px 6px;
+            min-width: 46px;
+            text-align: center;
+        }
+
+        .numeric-hint {
+            color: #a3a3a3;
+        }
+
+        .control-grid select,
+        .control-grid input[type="number"],
+        .control-grid input[type="range"] {
+            width: 100%;
+            padding: 4px 6px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            background: #101010;
+            color: #fff;
+            font-size: 11px;
+        }
+
+        .control-grid input[type="number"] {
+            height: 28px;
+            width: 100%;
+            max-width: 110px;
+        }
+
+        .control-grid input[type="number"].input-compact {
+            width: 46px;
+            min-width: 46px;
+        }
+
+        .control-grid select {
+            height: 28px;
+        }
+
+        .field-wide {
+            grid-column: span 2;
+        }
+
+        .car-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .car-actions button {
+            flex: 1;
+            border: none;
+            border-radius: 6px;
+            padding: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .btn-send { background: #cfb53b; color: #1a1a1a; }
+        .btn-box  { background: #d13b30; color: #fff; }
+
+        .car-actions button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .circuit-container {
+            width: 65%;
+            position: relative;
+            background: #0a0a0a;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #circuit-map {
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+        }
+        
+        .timing-container {
+            width: 35%;
+            background: #0f0f0f;
+            border-left: 2px solid #333;
+            padding: 14px;
+            overflow-y: auto;
+        }
+        
+        .timing-toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            background: rgba(15, 15, 15, 0.92);
+            backdrop-filter: blur(6px);
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 0 0 12px 0;
+        }
+
+        .toolbar-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .timing-header {
+            background: linear-gradient(135deg, #e10600 0%, #ff6b35 100%);
+            color: white;
+            padding: 12px 16px;
+            font-weight: bold;
+            font-size: 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 10px rgba(225, 6, 0, 0.3);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .session-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .session-timer {
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: 800;
+            color: #ffffff;
+            text-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+            text-align: right;
+        }
+
+        .session-timer.warning {
+            color: #ffaa00;
+        }
+
+        .session-timer.danger {
+            color: #ff4444;
+        }
+
+        /* F1 Timing Colors */
+        .time-session-best {
+            color: #ff00ff !important; /* Magenta/Purple - Session best */
+            text-shadow: 0 0 8px rgba(255, 0, 255, 0.6);
+        }
+        
+        .time-personal-best {
+            color: #00ff00 !important; /* Green - Personal best */
+        }
+        
+        .time-normal {
+            color: #ffffff !important; /* White - Normal */
+        }
+        
+        .time-slow {
+            color: #ffaa00 !important; /* Yellow - Outside 107% */
+        }
+        
+        .time-invalid {
+            color: #ff4444 !important; /* Red - Invalid */
+            text-decoration: line-through;
+        }
+
+        .speed-buttons {
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+        
+        .speed-btn {
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 7px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            min-width: 44px;
+            height: 34px;
+        }
+        
+        .speed-btn:hover {
+            background: #555;
+            transform: translateY(-2px);
+        }
+        
+        .speed-btn.active {
+            background: #e10600;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(225, 6, 0, 0.5);
+        }
+        
+        .pause-btn {
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 7px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            min-width: 40px;
+            height: 34px;
+            font-size: 14px;
+        }
+        
+        .pause-btn:hover {
+            background: #555;
+            transform: translateY(-1px);
+        }
+        
+        .pause-btn.paused {
+            background: #ff6600;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(255, 102, 0, 0.5);
+        }
+        
+        .current-speed {
+            font-size: 11px;
+            color: #888;
+            margin-top: 6px;
+            text-align: right;
+        }
+        
+        .position {
+            width: 20px;
+            font-weight: bold;
+            font-size: 13px;
+            color: #e10600;
+            margin-right: 6px;
+        }
+        
+        .driver-row {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            margin-bottom: 6px;
+            background: #1a1a1a;
+            border-radius: 6px;
+            border-left: 3px solid;
+            gap: 8px;
+        }
+        
+        .position {
+            width: 30px;
+            min-width: 30px;
+            font-weight: bold;
+            font-size: 14px;
+            color: #fff;
+            text-align: center;
+        }
+        
+        .driver-row:hover {
+            background: #252525;
+        }
+        
+        .driver-number {
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
+            min-height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 11px;
+            border: 2px solid white;
+            flex-shrink: 0;
+        }
+        
+        .driver-info {
+            flex: 1;
+            min-width: 80px;
+            overflow: hidden;
+        }
+        
+        .driver-name-team {
+            min-width: 0;
+        }
+        
+        .driver-name {
+            font-weight: bold;
+            font-size: 13px;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .driver-team {
+            font-size: 11px;
+            color: #888;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .driver-laps {
+            font-size: 10px;
+            color: #777;
+            margin-top: 2px;
+            white-space: nowrap;
+        }
+        
+        .tire-icon {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        
+        .lap-times {
+            display: flex;
+            flex-direction: column;
+            width: 160px;
+            min-width: 160px;
+            flex-shrink: 0;
+        }
+        
+        .sector-times {
+            display: flex;
+            flex-direction: column;
+            margin: 4px 0;
+            background: rgba(255,255,255,0.05);
+            border-radius: 3px;
+            padding: 4px;
+        }
+        
+        .sector-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            margin: 2px 0;
+        }
+        
+        .sector-row span:first-child {
+            color: #888;
+            font-weight: bold;
+            min-width: 18px;
+        }
+        
+        .sector-time {
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            font-weight: bold;
+            min-width: 52px;
+            text-align: right;
+            font-size: 11px;
+        }
+        
+        .sector-best {
+            font-family: 'Courier New', monospace;
+            color: #e10600;
+            font-size: 10px;
+            margin-left: 2px;
+            min-width: 56px;
+            text-align: right;
+        }
+
+        .sector-delta {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            margin-left: 0px;
+            min-width: 46px;
+            text-align: right;
+            color: #888;
+        }
+
+        .sector-delta.positive {
+            color: #ffffff;
+        }
+
+        .sector-delta.negative {
+            color: #00ff00;
+        }
+        
+        .best-lap {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 13px;
+            color: #e10600;
+            margin-bottom: 2px;
+        }
+        
+        .last-lap {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #00ff00;
+        }
+        
+        .lap-times small {
+            font-size: 10px;
+            color: #888;
+            margin-left: 2px;
+        }
+        
+        .lap-time {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 14px;
+            color: #00ff00;
+        }
+        
+        .state-indicator {
+            width: 60px;
+            min-width: 60px;
+            flex-shrink: 0;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 3px;
+            text-align: center;
+        }
+        
+        .state-indicator.box {
+            background: #333;
+            color: #fff;
+        }
+        
+        .state-indicator.out-lap {
+            background: #ffaa00;
+            color: #000;
+        }
+        
+        .state-indicator.hot-lap {
+            background: #00ff00;
+            color: #000;
+        }
+        
+        .state-indicator.in-lap {
+            background: #ff6600;
+            color: #fff;
+        }
+        
+        .lap-count {
+            width: 20px;
+            min-width: 20px;
+            flex-shrink: 0;
+        }
+        
+        .session-laps {
+            font-size: 10px;
+            color: #888;
+            margin-left: 2px;
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            min-width: 8px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            background: #00ff00;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .circuit-info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+        
+        .circuit-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #e10600;
+        }
+        
+        .circuit-details {
+            font-size: 12px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="circuit-container">
+            <div id="circuit-map"></div>
+            <div class="circuit-info">
+                <div class="circuit-title">Autodromo Nazionale Monza</div>
+                <div class="circuit-details">5.793 km ‘«Û Temple of Speed</div>
+            </div>
+            <div class="player-dock" id="player-dock">
+                <div class="player-dock-header">
+                    <div class="team-badge">
+                        <div class="badge-icon" id="player-team-badge">F1</div>
+                        <div>
+                            <div class="player-team-label" id="player-team-label">Loading...</div>
+                            <div class="player-status-banner" id="player-status-msg">Fetching factory instructions...</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="player-car-cards"></div>
+            </div>
+        </div>
+        
+        <div class="timing-container">
+            <div class="timing-header">
+                <div class="header-content">
+                    <span class="session-title"> FREE PRACTICE - LIVE TIMING</span>
+                    <div class="session-timer" id="session-timer">60:00</div>
+                </div>
+            </div>
+            <div class="timing-toolbar">
+                <div class="toolbar-row">
+                    <div class="speed-buttons">
+                        <button class="pause-btn" id="pause-btn" title="Pause/Resume">‘≈©</button>
+                        <button class="speed-btn active" data-speed="1">1x</button>
+                        <button class="speed-btn" data-speed="2">2x</button>
+                        <button class="speed-btn" data-speed="4">4x</button>
+                        <button class="speed-btn" data-speed="6">6x</button>
+                    </div>
+                </div>
+                <div class="current-speed" id="current-speed">Speed: 1x</div>
+            </div>
+
+            <div class="timing-wrapper">
+                <div id="timing-table"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Map setup ---
+        const map = L.map('circuit-map', {
+            center: [45.6216, 45.6216],
+            zoom: 15,
+            zoomControl: false,
+            dragging: false,
+            touchZoom: false,
+            doubleClickZoom: false,
+            scrollWheelZoom: false,
+            boxZoom: false,
+            keyboard: false,
+            tap: false
+        });
+        
+        // Tile layer dark theme
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: ' OpenStreetMap contributors  CARTO',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+        
+        const params = new URLSearchParams(window.location.search);
+        const selectedCircuit = params.get('circuit');
+        if (selectedCircuit) {
+            document.title = `F1 Manager AI - ${selectedCircuit}`;
+        }
+
+        // Carica circuito
+        async function loadCircuitGeometry() {
+            const circuitQuery = selectedCircuit ? `?circuit=${encodeURIComponent(selectedCircuit)}` : '';
+
+            if (selectedCircuit) {
+                try {
+                    await fetch('/api/load_circuit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ circuit_id: selectedCircuit })
+                    });
+                } catch (err) {
+                    console.error('Failed to set circuit on backend', err);
+                }
+            }
+
+            return fetch(`/api/circuit${circuitQuery}`)
+                .then(response => response.json());
+        }
+
+        loadCircuitGeometry()
+            .then(data => {
+                const geometry = data.type === 'FeatureCollection'
+                    ? data.features?.[0]?.geometry
+                    : data.geometry;
+                if (!geometry || !geometry.coordinates) {
+                    throw new Error('Circuit geometry not available');
+                }
+                const coordinates = geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                
+                // Disegna tracciato
+                const circuitLine = L.polyline(coordinates, {
+                    color: '#ffffff',
+                    weight: 4,
+                    opacity: 0.8
+                }).addTo(map);
+                
+                // Adatta view al circuito
+                map.fitBounds(circuitLine.getBounds(), { padding: [20, 20] });
+                
+                // Disegna bordo tracciato
+                L.polyline(coordinates, {
+                    color: '#e10600',
+                    weight: 6,
+                    opacity: 0.3
+                }).addTo(map);
+            });
+        // Missing functions - add these back
+        const timingTable = document.getElementById('timing-table');
+        const playerTeamLabel = document.getElementById('player-team-label');
+        const playerStatusMsg = document.getElementById('player-status-msg');
+        const playerCarCards = document.getElementById('player-car-cards');
+        const socket = io();
+        const carMarkers = {};
+
+        function formatLapTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = (seconds % 60).toFixed(3);
+            return `${mins}:${secs.padStart(6, '0')}`;
+        }
+
+        function formatSectorDelta(current, best) {
+            if (current == null || best == null) return null;
+            const delta = current - best;
+            const sign = delta >= 0 ? '+' : '-';
+            return `${sign}${Math.abs(delta).toFixed(3)}`;
+        }
+
+        let sessionBests = {
+            best_lap: null,
+            best_sectors: { sector1: null, sector2: null, sector3: null }
+        };
+
+        function getLapTimeColorClass(lapTime, personalBest, sessionBest) {
+            if (!lapTime) return '';
+            if (sessionBest && Math.abs(lapTime - sessionBest) < 0.001) return 'time-session-best';
+            if (personalBest && Math.abs(lapTime - personalBest) < 0.001) return 'time-personal-best';
+            if (sessionBest && lapTime > sessionBest * 1.07) return 'time-slow';
+            return 'time-normal';
+        }
+
+        function getSectorTimeColorClass(sectorTime, personalBest, sessionBest) {
+            if (!sectorTime) return '';
+            if (sessionBest && Math.abs(sectorTime - sessionBest) < 0.001) return 'time-session-best';
+            if (personalBest && Math.abs(sectorTime - personalBest) < 0.001) return 'time-personal-best';
+            return 'time-normal';
+        }
+
+        function createCarMarker(car) {
+            const icon = L.divIcon({
+                className: 'car-marker',
+                html: `<div style="
+                    background: ${car.team_color};
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 50%;
+                    border: 2px solid white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    font-size: 10px;
+                    color: white;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+                ">${car.driver_number}</div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            return L.marker([car.position[1], car.position[0]], { icon });
+        }
+
+        // Player garage functions
+        let playerTeamId = null;
+        const playerCarData = new Map();
+
+        const TYRE_OPTIONS = [
+            { value: 'soft', label: 'Soft' },
+            { value: 'medium', label: 'Medium' },
+            { value: 'hard', label: 'Hard' }
+        ];
+        const ICE_OPTIONS = ['Save', 'Standard', 'Push'];
+        const ERS_OPTIONS = ['Harvest', 'Neutral', 'Deploy', 'Overtake'];
+
+        function setPlayerStatus(message, tone = 'info') {
+            playerStatusMsg.textContent = message;
+            playerStatusMsg.style.color = tone === 'error' ? '#ff7b72' : tone === 'success' ? '#8bdcb8' : '#8bdcb8';
+        }
+
+        async function loadPlayerTeamInfo(retryCount = 0) {
+            try {
+                const res = await fetch('/api/player/team');
+                const data = await res.json();
+                if (!res.ok || !data?.team_id) {
+                    throw new Error(data?.error || data?.message || 'Player team unavailable');
+                }
+                playerTeamId = data.team_id;
+                playerTeamLabel.textContent = `${data.team_name} (${data.team_code})`;
+                setPlayerStatus(`${data.team_name} garage ready.`);
+                renderPlayerCars(true);
+            } catch (err) {
+                console.error('loadPlayerTeamInfo error:', err);
+                if (retryCount < 3) {
+                    setPlayerStatus('Loading player garage...', 'info');
+                    setTimeout(() => loadPlayerTeamInfo(retryCount + 1), 800);
+                } else {
+                    playerTeamLabel.textContent = 'No team configured';
+                    setPlayerStatus('Player team missing!', 'error');
+                }
+            }
+        }
+
+        const STATE_DISPLAY = {
+            'BOX': 'BOX',
+            'OUT_LAP': 'OUT LAP',
+            'HOT_LAP': 'HOT LAP',
+            'FLYING_LAP': 'FLYING LAP',
+            'IN_LAP': 'IN LAP',
+            'ON_TRACK': 'ON TRACK'
+        };
+
+        function normalizeStateValue(state) {
+            if (!state) return null;
+            if (typeof state === 'object' && 'value' in state) {
+                state = state.value;
+            }
+            if (typeof state === 'string') {
+                return state.trim().toUpperCase().replace(/\s+/g, '_');
+            }
+            return state;
+        }
+
+        function getCarState(car) {
+            let baseState = normalizeStateValue(car.state);
+            if (!baseState) {
+                baseState = car.is_on_track ? 'ON_TRACK' : 'BOX';
+            }
+
+            const lapsRemaining = typeof car.stint_laps_remaining === 'number'
+                ? car.stint_laps_remaining
+                : (typeof car.stint_target_laps === 'number' ? car.stint_target_laps : null);
+
+            if ((baseState === 'OUT_LAP' || baseState === 'HOT_LAP' || baseState === 'ON_TRACK') && lapsRemaining !== null && lapsRemaining <= 0) {
+                return 'IN_LAP';
+            }
+
+            if (baseState === 'FLYING_LAP') {
+                return 'HOT_LAP';
+            }
+
+            return baseState;
+        }
+
+        function getStateDisplay(state) {
+            return STATE_DISPLAY[state] || state?.replace(/_/g, ' ') || 'BOX';
+        }
+
+        function buildPlayerCarCard(car) {
+            const tyreChoice = car.player_config?.tyre_compound || car.current_tire || 'medium';
+            const fuelPercent = car.player_config?.fuel_percent ?? car.fuel_percent ?? 100;
+            const stintTarget = car.player_config?.stint_target_laps ?? car.stint_target_laps ?? 5;
+            const paceLevel = car.player_config?.pace_level ?? car.pace_level ?? 5;
+            const iceMode = car.player_config?.ice_mode ?? car.ice_mode ?? 'Standard';
+            const ersMode = car.player_config?.ers_mode ?? car.ers_mode ?? 'Neutral';
+            const maxStint = car.max_stint_laps ?? stintTarget;
+            const tireWear = Math.max(0, Math.min(1, car.tire_wear ?? 0));
+            const tireHealthPct = Math.round((1 - tireWear) * 100);
+            const currentState = getCarState(car);
+            const lapInfo = typeof car.total_laps === 'number' && car.total_laps > 0 ? `-¿ Lap ${car.total_laps}` : '';
+            const stateDisplay = getStateDisplay(currentState);
+            const driverStatus = currentState === 'BOX'
+                ? 'Ready in BOX'
+                : `${stateDisplay}${lapInfo ? ` ${lapInfo}` : ''}`;
+            const isBox = currentState === 'BOX';
+            return `
+                <div class="car-card" data-driver="${car.driver_number}" data-state="${currentState}">
+                    <header>
+                        <div>
+                            <div class="driver-topline">
+                                <div class="team-dot" style="background:${car.team_color};">${car.driver_number}</div>
+                                <div>
+                                    <div class="driver-tag">${car.driver_name || 'Driver'}</div>
+                                    <div class="driver-subline">Fuel ${Math.round(car.fuel_percent ?? 100)}% ‘«Û Tyre ${car.current_tire?.toUpperCase() || 'MED'}</div>
+                                    <div class="driver-status-line">${driverStatus}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="state-pill">${stateDisplay}</span>
+                    </header>
+                    <div class="control-grid">
+                        <div class="field-span-2">
+                            <label>Tyre compound</label>
+                            <div class="tyre-row">
+                                <select class="select-compact" data-field="tyre_compound" ${isBox ? '' : 'disabled'}>
+                                    ${TYRE_OPTIONS.map(opt => `<option value="${opt.value}" ${opt.value === tyreChoice ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                                </select>
+                                <span class="wear-indicator">${tireHealthPct}%</span>
+                            </div>
+                        </div>
+                        <div class="offset-left">
+                            <label>Fuel %</label>
+                            <input class="input-compact" type="number" data-field="fuel_percent" min="1" max="100" value="${fuelPercent}" ${isBox ? '' : 'disabled'}>
+                        </div>
+                        <div class="offset-left">
+                            <label>Stint laps <span class="numeric-hint">max ${maxStint}</span></label>
+                            <input class="input-compact" type="number" data-field="stint_target_laps" min="1" max="${maxStint}" value="${stintTarget}" ${isBox ? '' : 'disabled'}>
+                        </div>
+                        <div class="field-span-2">
+                            <label>ICE map</label>
+                            <select class="select-compact" data-field="ice_mode">
+                                ${ICE_OPTIONS.map(mode => `<option value="${mode}" ${mode === iceMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="field-span-2 control-dual shift-left">
+                            <div class="inline-control offset-left-small" style="margin-right:-6px;">
+                                <label>ERS mode</label>
+                                <select class="select-compact" data-field="ers_mode">
+                                    ${ERS_OPTIONS.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="inline-control slider-inline" style="flex:0 0 auto;margin-left:10px;">
+                                <label>Driver push (${paceLevel})</label>
+                                <input class="compact-range" type="range" data-field="pace_level" min="1" max="10" value="${paceLevel}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="car-actions">
+                        <button class="btn-send" data-action="send" ${isBox ? '' : 'disabled'}>Send Out</button>
+                        <button class="btn-box" data-action="box" ${isBox ? 'disabled' : ''}>Box</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPlayerCars(force = false) {
+            if (!force && playerCarCards.contains(document.activeElement)) {
+                return; // evita di distruggere gli input mentre l'utente digita
+            }
+            if (!playerTeamId) {
+                playerCarCards.innerHTML = '<p style="color:#777;">No player team configured.</p>';
+                return;
+            }
+            if (playerCarData.size === 0) {
+                playerCarCards.innerHTML = '<p style="color:#777;">Waiting for garage data...</p>';
+                return;
+            }
+            playerCarCards.innerHTML = [...playerCarData.values()]
+                .sort((a, b) => a.driver_number - b.driver_number)
+                .map(buildPlayerCarCard)
+                .join('');
+        }
+
+        function collectCardPayload(card) {
+            const payload = {};
+            card.querySelectorAll('[data-field]').forEach(el => {
+                if (el.disabled) return;
+                const field = el.dataset.field;
+                payload[field] = el.type === 'range' || el.type === 'number' ? Number(el.value) : el.value;
+            });
+            return payload;
+        }
+
+        function applyLocalPlayerUpdates(driverNumber, payload = {}) {
+            const car = playerCarData.get(driverNumber);
+            if (!car) return;
+            car.player_config = { ...(car.player_config || {}), ...payload };
+            Object.entries(payload).forEach(([key, value]) => {
+                if (key === 'tyre_compound') {
+                    car.current_tire = value;
+                } else if (key === 'fuel_percent') {
+                    car.fuel_percent = value;
+                } else if (key === 'pace_level') {
+                    car.pace_level = value;
+                } else if (key === 'ice_mode') {
+                    car.ice_mode = value;
+                } else if (key === 'ers_mode') {
+                    car.ers_mode = value;
+                } else if (key === 'stint_target_laps') {
+                    car.stint_target_laps = value;
+                }
+            });
+            car.state = getCarState(car);
+            playerCarData.set(driverNumber, car);
+        }
+
+        function applyLocalCarState(driverNumber, carPayload) {
+            if (!carPayload) return;
+            const updated = {
+                ...(playerCarData.get(driverNumber) || {}),
+                ...carPayload,
+            };
+            updated.state = getCarState(updated);
+            playerCarData.set(driverNumber, updated);
+        }
+
+        async function sendPlayerConfig(driverNumber, payload, state) {
+            const allowedPayload = { ...payload };
+            if (state !== 'BOX') {
+                delete allowedPayload.tyre_compound;
+                delete allowedPayload.fuel_percent;
+                delete allowedPayload.stint_target_laps;
+            }
+            if (Object.keys(allowedPayload).length === 0) {
+                setPlayerStatus('No configurable fields available right now.', 'error');
+                return false;
+            }
+            try {
+                const res = await fetch(`/api/player/car/${driverNumber}/configure`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(allowedPayload)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Configuration failed');
+                setPlayerStatus(`Setup stored for #${driverNumber}.`, 'success');
+                applyLocalPlayerUpdates(driverNumber, allowedPayload);
+                renderPlayerCars(true);
+                return true;
+            } catch (err) {
+                console.error(err);
+                setPlayerStatus(err.message || 'Configuration failed', 'error');
+                return false;
+            }
+        }
+
+        async function sendPlayerCarOut(driverNumber) {
+            try {
+                const res = await fetch(`/api/player/car/${driverNumber}/send_out`, { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Send out failed');
+                setPlayerStatus(`Car #${driverNumber} released.`, 'success');
+                applyLocalCarState(driverNumber, data.car);
+                renderPlayerCars(true);
+                return true;
+            } catch (err) {
+                console.error(err);
+                setPlayerStatus(err.message || 'Send out failed', 'error');
+                return false;
+            }
+        }
+
+        async function requestPlayerBox(driverNumber) {
+            try {
+                const res = await fetch(`/api/player/car/${driverNumber}/box`, { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Box call failed');
+                setPlayerStatus(`Box request for #${driverNumber} acknowledged.`, 'success');
+                applyLocalCarState(driverNumber, data.car);
+                renderPlayerCars(true);
+                return true;
+            } catch (err) {
+                console.error(err);
+                setPlayerStatus(err.message || 'Box call failed', 'error');
+                return false;
+            }
+        }
+
+        // Player garage events
+        playerCarCards.addEventListener('click', async (event) => {
+            const actionBtn = event.target.closest('button[data-action]');
+            if (!actionBtn) return;
+            const card = actionBtn.closest('.car-card');
+            const driverNumber = Number(card?.dataset.driver);
+            if (!driverNumber) return;
+            const state = card.dataset.state;
+            const action = actionBtn.dataset.action;
+
+            if (action === 'send') {
+                if (state !== 'BOX') {
+                    setPlayerStatus('Car already on track. Box first to change tyres/fuel.', 'error');
+                    return;
+                }
+                const payload = collectCardPayload(card);
+                const configured = await sendPlayerConfig(driverNumber, payload, state);
+                if (configured) {
+                    await sendPlayerCarOut(driverNumber);
+                }
+            } else if (action === 'box') {
+                if (state === 'BOX') {
+                    setPlayerStatus('Car already in the garage.', 'error');
+                    return;
+                }
+                await requestPlayerBox(driverNumber);
+            }
+        });
+
+
+        const BOX_ONLY_FIELDS = new Set(['tyre_compound', 'fuel_percent', 'stint_target_laps']);
+
+        function shouldBlockFieldUpdate(state, field) {
+            return state !== 'BOX' && BOX_ONLY_FIELDS.has(field);
+        }
+
+        playerCarCards.addEventListener('change', (event) => {
+            const target = event.target;
+            const field = target.dataset.field;
+            if (!field) return;
+            const card = target.closest('.car-card');
+            if (!card) return;
+            const driverNumber = Number(card.dataset.driver);
+            const state = card.dataset.state;
+            if (!driverNumber) return;
+
+            if (shouldBlockFieldUpdate(state, field)) {
+                setPlayerStatus('Bring the car into the garage to change tyres, fuel, or stint laps.', 'error');
+                // revert UI to previous known value when disallowed
+                const carData = playerCarData.get(driverNumber);
+                if (carData && carData.player_config) {
+                    const revertValue = carData.player_config[field] ?? carData[field];
+                    if (revertValue !== undefined) {
+                        target.value = typeof revertValue === 'number' ? revertValue : revertValue;
+                    }
+                }
+                return;
+            }
+
+            const payload = {};
+            payload[field] = target.type === 'range' || target.type === 'number' ? Number(target.value) : target.value;
+            sendPlayerConfig(driverNumber, payload, state);
+        });
+
+        playerCarCards.addEventListener('focusout', (event) => {
+            if (!playerCarCards.contains(event.relatedTarget)) {
+                requestAnimationFrame(() => renderPlayerCars(true));
+            }
+        });
+        
+        // Aggiorna tabella tempi
+        function updateTimingTable(cars) {
+            // Ordina per miglior tempo in sessione (best_lap_time)
+            const sortedCars = [...cars].sort((a, b) => {
+                if (!a.best_lap_time) return 1;
+                if (!b.best_lap_time) return -1;
+                return a.best_lap_time - b.best_lap_time;
+            });
+            
+            timingTable.innerHTML = sortedCars.map((car, index) => {
+                const isInBox = car.state === 'BOX';
+                const stateClass = car.state ? car.state.toLowerCase().replace('_', '-') : 'box';
+                
+                return `
+                    <div class="driver-row ${isInBox ? 'in-box' : 'on-track'}" style="border-left-color: ${car.team_color}">
+                        <div class="position">${index + 1}</div>
+                        <div class="driver-number" style="background: ${car.team_color}">
+                            ${car.driver_number}
+                        </div>
+                        <div class="driver-info">
+                            <div class="driver-name-team">
+                                <div class="driver-name">${car.driver_name ? car.driver_name.split(' ').pop() : ''}</div>
+                                <div class="driver-team">${car.team_name}</div>
+                                <div class="driver-laps">Lap ${car.total_laps} (${car.session_laps} total)</div>
+                            </div>
+                        </div>
+                        <img src="/static/tires/${car.current_tire || 'medium'}.svg" class="tire-icon" alt="${car.current_tire || 'MEDIUM'} tire">
+                        <div class="lap-times">
+                            <div class="best-lap ${getLapTimeColorClass(car.best_lap_time, car.best_lap_time, sessionBests.best_lap)}">
+                                ${car.best_lap_time ? formatLapTime(car.best_lap_time) : '--:--.---'}
+                                <small>BEST</small>
+                            </div>
+                            <div class="sector-times">
+                                <div class="sector-row">
+                                    <span>S1:</span>
+                                    <span class="sector-time ${getSectorTimeColorClass(car.current_lap_sectors?.sector1, car.best_sectors?.sector1, sessionBests.best_sectors?.sector1)}">${car.current_lap_sectors?.sector1 ? formatSectorTime(car.current_lap_sectors.sector1) : '--:--'}</span>
+                                    ${(() => {
+                                        const ref = car.best_lap_sectors?.sector1;
+                                        const cur = car.current_lap_sectors?.sector1;
+                                        const delta = formatSectorDelta(cur, ref);
+                                        if (!delta) return '<span class="sector-delta"></span>';
+                                        const cls = (cur - ref) >= 0 ? 'positive' : 'negative';
+                                        return `<span class="sector-delta ${cls}">(${delta})</span>`;
+                                    })()}
+                                </div>
+                                <div class="sector-row">
+                                    <span>S2:</span>
+                                    <span class="sector-time ${getSectorTimeColorClass(car.current_lap_sectors?.sector2, car.best_sectors?.sector2, sessionBests.best_sectors?.sector2)}">${car.current_lap_sectors?.sector2 ? formatSectorTime(car.current_lap_sectors.sector2) : '--:--'}</span>
+                                    ${(() => {
+                                        const ref = car.best_lap_sectors?.sector2;
+                                        const cur = car.current_lap_sectors?.sector2;
+                                        const delta = formatSectorDelta(cur, ref);
+                                        if (!delta) return '<span class="sector-delta"></span>';
+                                        const cls = (cur - ref) >= 0 ? 'positive' : 'negative';
+                                        return `<span class="sector-delta ${cls}">(${delta})</span>`;
+                                    })()}
+                                </div>
+                                <div class="sector-row">
+                                    <span>S3:</span>
+                                    <span class="sector-time ${getSectorTimeColorClass(car.current_lap_sectors?.sector3, car.best_sectors?.sector3, sessionBests.best_sectors?.sector3)}">${car.current_lap_sectors?.sector3 ? formatSectorTime(car.current_lap_sectors.sector3) : '--:--'}</span>
+                                    ${(() => {
+                                        const ref = car.best_lap_sectors?.sector3;
+                                        const cur = car.current_lap_sectors?.sector3;
+                                        const delta = formatSectorDelta(cur, ref);
+                                        if (!delta) return '<span class="sector-delta"></span>';
+                                        const cls = (cur - ref) >= 0 ? 'positive' : 'negative';
+                                        return `<span class="sector-delta ${cls}">(${delta})</span>`;
+                                    })()}
+                                </div>
+                            </div>
+                            <div class="last-lap ${getLapTimeColorClass(car.last_lap_time, car.best_lap_time, sessionBests.best_lap)}">
+                                ${car.last_lap_time ? formatLapTime(car.last_lap_time) : '--:--.---'}
+                                <small>LAST</small>
+                                ${car.last_lap_type && car.last_lap_type !== 'HOT_LAP' ? `<small style="color: #888;">(${car.last_lap_type})</small>` : ''}
+                            </div>
+                        </div>
+                        <div class="lap-count">
+                            
+                        </div>
+                        <div class="state-indicator ${stateClass}">
+                            ${car.state || 'BOX'}
+                        </div>
+                        <div class="status-indicator"></div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Ricevi aggiornamenti
+        socket.on('race_update', function(data) {
+            // Update session bests
+            if (data.session_bests) {
+                sessionBests = data.session_bests;
+            }
+            
+            // Track seen player drivers for cleanup
+            const seenPlayerDrivers = new Set();
+            
+            data.cars.forEach(car => {
+                // Track player cars
+                if (car.is_player_controlled) {
+                    applyLocalCarState(car.driver_number, car);
+                    seenPlayerDrivers.add(car.driver_number);
+                }
+                
+                // Nascondi le auto ai box dalla mappa
+                if (car.state === 'BOX') {
+                    if (carMarkers[car.driver_number]) {
+                        map.removeLayer(carMarkers[car.driver_number]);
+                        delete carMarkers[car.driver_number];
+                    }
+                    return;
+                }
+                
+                if (!carMarkers[car.driver_number]) {
+                    carMarkers[car.driver_number] = createCarMarker(car);
+                    carMarkers[car.driver_number].addTo(map);
+                } else {
+                    carMarkers[car.driver_number].setLatLng([car.position[1], car.position[0]]);
+                }
+            });
+            
+            // Clean up player cars that are no longer in data
+            for (const driverNum of playerCarData.keys()) {
+                if (!seenPlayerDrivers.has(driverNum)) {
+                    playerCarData.delete(driverNum);
+                }
+            }
+            
+            // Aggiorna tabella tempi
+            updateTimingTable(data.cars);
+
+            // Aggiorna garage player
+            if (seenPlayerDrivers.size > 0) {
+                renderPlayerCars();
+            }
+            
+            // Aggiorna stato sessione
+            const timerElement = document.getElementById('session-timer');
+            if (data.session_time_remaining) {
+                const mins = Math.floor(data.session_time_remaining / 60);
+                const secs = (data.session_time_remaining % 60).toFixed(0).padStart(2, '0');
+                timerElement.textContent = `${mins}:${secs}`;
+                if (data.session_time_remaining < 300) {
+                    timerElement.classList.add('warning');
+                } else {
+                    timerElement.classList.remove('warning');
+                }
+                if (data.session_time_remaining < 60) {
+                    timerElement.classList.add('danger');
+                } else {
+                    timerElement.classList.remove('danger');
+                }
+            } else {
+                timerElement.textContent = '00:00';
+                timerElement.classList.remove('warning', 'danger');
+            }
+        });
+        
+        // Aggiorna indicatore velocit+·
+        function updateSpeedIndicator(speed) {
+            document.getElementById('current-speed').textContent = `Speed: ${speed}x`;
+            
+            // Aggiorna stato pulsanti
+            document.querySelectorAll('.speed-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (parseFloat(btn.dataset.speed) === speed) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+        
+        // Aggiorna pulsante pausa
+        function updatePauseButton(isPaused) {
+            const pauseBtn = document.getElementById('pause-btn');
+            
+            if (isPaused) {
+                pauseBtn.textContent = '‘˚¬';
+                pauseBtn.classList.add('paused');
+                pauseBtn.title = 'Resume';
+            } else {
+                pauseBtn.textContent = '‘≈©';
+                pauseBtn.classList.remove('paused');
+                pauseBtn.title = 'Pause';
+            }
+        }
+        
+        // Pulsante pausa
+        document.getElementById('pause-btn').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/api/toggle_pause', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                updatePauseButton(data.is_paused);
+                console.log(data.message);
+                
+            } catch (error) {
+                console.error('Error toggling pause:', error);
+            }
+        });
+        
+        // Controlli velocit+·
+        document.querySelectorAll('.speed-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const speed = parseFloat(this.dataset.speed);
+                console.log('Setting speed to:', speed);
+                
+                try {
+                    const response = await fetch('/api/set_speed', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ speed: speed })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    updateSpeedIndicator(speed);
+                    console.log('Speed changed successfully:', data.message);
+                    
+                } catch (error) {
+                    console.error('Network error setting speed:', error);
+                }
+            });
+        });
+        
+        // Funzione per formattare tempi settoriali
+        function formatSectorTime(seconds) {
+            if (!seconds) return '--:--';
+            const mins = Math.floor(seconds / 60);
+            const secs = (seconds % 60).toFixed(3);
+            return mins > 0 ? `${mins}:${secs.padStart(6, '0')}` : secs;
+        }
+        
+        // Carica stato iniziale
+        loadPlayerTeamInfo();
+        
+        fetch('/api/cars')
+            .then(response => response.json())
+            .then(cars => {
+                cars.forEach(car => {
+                    if (car.is_player_controlled) {
+                        playerCarData.set(car.driver_number, car);
+                    }
+                    carMarkers[car.driver_number] = createCarMarker(car);
+                    carMarkers[car.driver_number].addTo(map);
+                });
+                updateTimingTable(cars);
+                renderPlayerCars();
+            });
+    </script>
+</body>
+</html>
