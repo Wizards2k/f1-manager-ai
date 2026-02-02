@@ -758,7 +758,6 @@
             flex: 0 0 auto;
             height: calc(100% - var(--dock-height));
             min-height: 320px;
-            transition: height 0.2s ease;
         }
         
         .timing-container {

@@ -38,9 +38,9 @@ export class MapModule {
             maxZoom: 19
         }).addTo(this.map);
 
-        window.addEventListener('resize', this.updateMapHeight);
+        window.addEventListener('resize', () => this.updateMapHeight(true));
         if (window.ResizeObserver && this.dockElement) {
-            this.dockObserver = new ResizeObserver(this.updateMapHeight);
+            this.dockObserver = new ResizeObserver(() => this.updateMapHeight(false));
             this.dockObserver.observe(this.dockElement);
         }
         this.mapReady = true;
