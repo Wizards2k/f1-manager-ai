@@ -279,6 +279,38 @@
             margin-left: -50px;
         }
 
+        .offset-left-small {
+            margin-left: -75px;
+        }
+
+        .control-dual {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .control-dual .inline-control {
+            flex: 0 0 auto;
+        }
+
+        .slider-inline {
+            margin-left: -160px;
+            width: 120px;
+            max-width: 120px;
+            flex: 0 0 120px;
+        }
+
+        .slider-inline .compact-range,
+        .slider-inline input[type="range"] {
+            width: 100%;
+            min-width: 0;
+            display: block;
+        }
+
+        .control-dual.shift-left {
+            margin-left: -55px;
+        }
+
         .wear-indicator,
         .numeric-hint {
             font-size: 9px;
@@ -1111,21 +1143,23 @@
                             <label>Stint laps <span class="numeric-hint">max ${maxStint}</span></label>
                             <input class="input-compact" type="number" data-field="stint_target_laps" min="1" max="${maxStint}" value="${stintTarget}" ${isBox ? '' : 'disabled'}>
                         </div>
-                        <div>
-                            <label>Pace (${paceLevel})</label>
-                            <input type="range" data-field="pace_level" min="1" max="10" value="${paceLevel}">
-                        </div>
                         <div class="field-span-2">
                             <label>ICE map</label>
                             <select class="select-compact" data-field="ice_mode">
                                 ${ICE_OPTIONS.map(mode => `<option value="${mode}" ${mode === iceMode ? 'selected' : ''}>${mode}</option>`).join('')}
                             </select>
                         </div>
-                        <div class="field-span-2 offset-left">
-                            <label>ERS mode</label>
-                            <select class="select-compact" data-field="ers_mode">
-                                ${ERS_OPTIONS.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
-                            </select>
+                        <div class="field-span-2 control-dual shift-left">
+                            <div class="inline-control offset-left-small" style="margin-right:-6px;">
+                                <label>ERS mode</label>
+                                <select class="select-compact" data-field="ers_mode">
+                                    ${ERS_OPTIONS.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="inline-control slider-inline" style="flex:0 0 auto;margin-left:10px;">
+                                <label>Driver push (${paceLevel})</label>
+                                <input class="compact-range" type="range" data-field="pace_level" min="1" max="10" value="${paceLevel}">
+                            </div>
                         </div>
                     </div>
                     <div class="car-actions">
