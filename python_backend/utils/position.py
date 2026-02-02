@@ -76,7 +76,7 @@ def get_position_by_distance(distance):
 
 def get_car_position(car):
     """Restituisce coordinate attuali dell'auto lungo il circuito"""
-    from python_backend.models import CarState
+    from models import CarState
     _ensure_cache()
     if not coordinates:
         return [0, 0]

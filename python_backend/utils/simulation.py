@@ -2,7 +2,7 @@
 import time
 import random
 import config
-from python_backend.models import CarState
+from models import CarState
 from utils.position import circuit_length
 from utils.game_logic import update_session_bests
 from utils.performance import project_sector_time

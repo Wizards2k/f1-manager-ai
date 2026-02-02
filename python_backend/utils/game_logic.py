@@ -21,7 +21,7 @@ simulation_ready = False  # Parte solo dopo la selezione del circuito
 
 # Inizializza 20 auto (2 per team) con posizioni sfalsate
 from data.teams import TEAMS
-from python_backend.models import RaceCar
+from models import RaceCar
 
 race_cars = []
 car_index = 0

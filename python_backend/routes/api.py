@@ -4,7 +4,7 @@ import time
 from flask import Flask, render_template, jsonify, send_from_directory, request
 
 from data.teams import TEAMS
-from python_backend.models import CarState, TireCompound, DEFAULT_SETUP_CONFIG
+from models import CarState, TireCompound, DEFAULT_SETUP_CONFIG
 from utils import (
     start_session_for_circuit,
     get_car_by_driver_number,
