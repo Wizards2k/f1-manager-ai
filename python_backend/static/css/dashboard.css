@@ -57,39 +57,6 @@
             gap: 8px;
         }
 
-        .team-badge {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .team-badge .badge-icon {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            border: 2px solid #2a2a2a;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .player-team-label {
-            font-size: 12px;
-            letter-spacing: 0.08em;
-            color: #e3e3e3;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        .player-status-banner {
-            font-size: 11px;
-            color: #8bdcb8;
-            margin-top: 2px;
-        }
-
         .garage-notifications {
             display: flex;
             flex-direction: column;
@@ -97,6 +64,10 @@
             max-height: 160px;
             overflow: hidden;
             position: relative;
+        }
+
+        .garage-notifications:empty {
+            display: none;
         }
 
         .garage-toast {
@@ -200,6 +171,83 @@
             gap: 8px;
             height: 100%;
             overflow: visible;
+        }
+
+        .telemetry-strip {
+            border: 1px solid #2d2d2d;
+            border-radius: 8px;
+            padding: 4px 8px;
+            background: #151515;
+            display: grid;
+            grid-template-columns: 100px 1fr 140px;
+            gap: 8px;
+            align-items: center;
+            font-size: 10px;
+        }
+
+        .telemetry-lap {
+            display: flex;
+            flex-direction: column;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #cfcfcf;
+        }
+
+        .telemetry-delta {
+            font-weight: 600;
+            color: #f5d56a;
+        }
+
+        .telemetry-sectors {
+            display: flex;
+            gap: 4px;
+        }
+
+        .telemetry-sector {
+            border-radius: 4px;
+            padding: 3px 4px;
+            text-align: center;
+            background: #202020;
+            color: #bdbdbd;
+        }
+
+        .telemetry-sector.purple { background: #3b1f4f; color: #f59dff; }
+        .telemetry-sector.green { background: #1e3727; color: #88f0b5; }
+        .telemetry-sector.yellow { background: #3c3419; color: #f7d76b; }
+        .telemetry-sector.idle { background: #222; color: #777; }
+
+        .telemetry-bars {
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+
+        .telemetry-bar {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            color: #d0d0d0;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .telemetry-bar .bar-track {
+            position: relative;
+            width: 85px;
+            height: 7px;
+            border-radius: 999px;
+            background: #2a2a2a;
+            overflow: hidden;
+        }
+
+        .telemetry-bar .bar-track span {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, #373f8c, #d1b43b);
+            border-radius: 999px;
         }
 
         .car-actions.with-setup {
@@ -702,12 +750,15 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            --dock-height: 320px;
         }
-        
+
         #circuit-map {
             width: 100%;
-            flex: 1;
-            min-height: 0;
+            flex: 0 0 auto;
+            height: calc(100% - var(--dock-height));
+            min-height: 320px;
+            transition: height 0.2s ease;
         }
         
         .timing-container {
@@ -1100,27 +1151,4 @@
             0% { opacity: 1; }
             50% { opacity: 0.5; }
             100% { opacity: 1; }
-        }
-        
-        .circuit-info {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 15px;
-            border-radius: 10px;
-            z-index: 1000;
-            backdrop-filter: blur(10px);
-        }
-        
-        .circuit-title {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #e10600;
-        }
-        
-        .circuit-details {
-            font-size: 12px;
-            color: #ccc;
         }

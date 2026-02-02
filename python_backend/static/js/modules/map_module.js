@@ -7,6 +7,18 @@ export class MapModule {
             document.title = `F1 Manager AI - ${this.selectedCircuit}`;
         }
 
+        this.mapContainer = document.getElementById('circuit-map');
+        this.dockElement = document.getElementById('player-dock');
+        this.circuitContainer = this.mapContainer ? this.mapContainer.parentElement : null;
+        this.currentMapHeight = 0;
+        this.currentDockHeight = 0;
+        this.lastBounds = null;
+        this.mapReady = false;
+
+        this.updateMapHeight = this.updateMapHeight.bind(this);
+        this.circuitContainer?.style.setProperty('--dock-height', '340px');
+        this.updateMapHeight(false);
+
         this.map = L.map('circuit-map', {
             center: [45.6216, 45.6216],
             zoom: 15,
@@ -25,6 +37,14 @@ export class MapModule {
             subdomains: 'abcd',
             maxZoom: 19
         }).addTo(this.map);
+
+        window.addEventListener('resize', this.updateMapHeight);
+        if (window.ResizeObserver && this.dockElement) {
+            this.dockObserver = new ResizeObserver(this.updateMapHeight);
+            this.dockObserver.observe(this.dockElement);
+        }
+        this.mapReady = true;
+        requestAnimationFrame(this.updateMapHeight);
     }
 
     async loadCircuitGeometry() {
@@ -57,7 +77,7 @@ export class MapModule {
             opacity: 0.8
         }).addTo(this.map);
 
-        this.map.fitBounds(circuitLine.getBounds(), { padding: [20, 20] });
+        this.fitBoundsWithPadding(circuitLine.getBounds());
 
         L.polyline(coordinates, {
             color: '#e10600',
@@ -102,6 +122,30 @@ export class MapModule {
             this.state.setCarMarker(car.driver_number, marker);
         } else {
             marker.setLatLng([car.position[1], car.position[0]]);
+        }
+    }
+
+    fitBoundsWithPadding(bounds) {
+        if (!this.map) return;
+        this.lastBounds = bounds;
+        // Use uniform padding that works for both horizontal and vertical circuits
+        this.map.fitBounds(bounds, { padding: [40, 40] });
+    }
+
+    updateMapHeight(allowRefit = true) {
+        if (!this.mapContainer || !this.circuitContainer) return;
+        const containerHeight = this.circuitContainer.getBoundingClientRect().height;
+        const dockHeight = this.dockElement ? this.dockElement.getBoundingClientRect().height : 0;
+        const nextHeight = Math.max(320, containerHeight - dockHeight);
+        if (Math.abs(nextHeight - this.currentMapHeight) < 1) return;
+        this.currentMapHeight = nextHeight;
+        this.currentDockHeight = dockHeight;
+        this.circuitContainer.style.setProperty('--dock-height', `${dockHeight}px`);
+        this.mapContainer.style.height = `${nextHeight}px`;
+        if (!this.mapReady || !this.map) return;
+        this.map.invalidateSize();
+        if (allowRefit && this.lastBounds) {
+            this.fitBoundsWithPadding(this.lastBounds);
         }
     }
 }

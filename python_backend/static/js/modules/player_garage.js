@@ -152,6 +152,7 @@ export class PlayerGarage {
             ? 'Ready in BOX'
             : `${stateDisplay}${lapInfo ? ` ${lapInfo}` : ''}`;
         const isBox = currentState === 'BOX';
+        const telemetry = this.buildTelemetryStrip(car);
 
         return `
             <div class="car-card" data-driver="${car.driver_number}" data-state="${currentState}">
@@ -161,13 +162,13 @@ export class PlayerGarage {
                             <div class="team-dot" style="background:${car.team_color};">${car.driver_number}</div>
                             <div>
                                 <div class="driver-tag">${car.driver_name || 'Driver'}</div>
-                                <div class="driver-subline">Fuel ${Math.round(car.fuel_percent ?? 100)}%  Tyre ${car.current_tire?.toUpperCase() || 'MED'}</div>
                                 <div class="driver-status-line">${driverStatus}</div>
                             </div>
                         </div>
                     </div>
                     <span class="state-pill">${stateDisplay}</span>
                 </header>
+                ${telemetry}
                 <div class="control-grid">
                     <div class="field-span-2">
                         <label>Tyre compound</label>
@@ -211,6 +212,52 @@ export class PlayerGarage {
                         <button class="btn-box" data-action="box" ${isBox ? 'disabled' : ''}>Box</button>
                     </div>
                     <button class="btn-setup" data-action="setup" ${isBox ? '' : 'disabled'}>Setup</button>
+                </div>
+            </div>
+        `;
+    }
+
+    buildTelemetryStrip(car) {
+        const bestLap = typeof car.best_lap_time === 'number' ? car.best_lap_time : null;
+        const lastLap = Array.isArray(car.lap_times) && car.lap_times.length ? car.lap_times[car.lap_times.length - 1] : null;
+        const delta = bestLap && lastLap ? lastLap - bestLap : null;
+        const deltaLabel = delta === null
+            ? (bestLap ? `${bestLap.toFixed(3)}s best` : 'No lap yet')
+            : `${delta >= 0 ? '+' : '-'}${Math.abs(delta).toFixed(3)}s vs best`;
+
+        const sectors = ['sector1', 'sector2', 'sector3'].map(key => {
+            const current = car.current_lap_sectors?.[key];
+            const best = car.best_sectors?.[key];
+            const status = !current
+                ? 'idle'
+                : !best || current < best - 0.02 ? 'purple'
+                : current <= best + 0.1 ? 'green'
+                : 'yellow';
+            return `<span class="telemetry-sector ${status}" aria-label="${key}">${current ? current.toFixed(2) : '--'}</span>`;
+        }).join('');
+
+        const tireWear = typeof car.tire_wear === 'number' ? Math.max(0, Math.min(1, car.tire_wear)) : 0;
+        const tireHealthPct = Math.round((1 - tireWear) * 100);
+        const fuel = Math.round(car.fuel_percent ?? car.player_config?.fuel_percent ?? 100);
+
+        return `
+            <div class="telemetry-strip">
+                <div class="telemetry-lap" title="Lap delta">
+                    <span class="telemetry-label">Lap</span>
+                    <span class="telemetry-delta">${deltaLabel}</span>
+                </div>
+                <div class="telemetry-sectors">
+                    ${sectors}
+                </div>
+                <div class="telemetry-bars">
+                    <div class="telemetry-bar" title="Fuel ${fuel}%">
+                        <span>Fuel</span>
+                        <div class="bar-track"><span style="width:${fuel}%"></span></div>
+                    </div>
+                    <div class="telemetry-bar" title="Tires ${tireHealthPct}%">
+                        <span>Tires</span>
+                        <div class="bar-track"><span style="width:${tireHealthPct}%"></span></div>
+                    </div>
                 </div>
             </div>
         `;

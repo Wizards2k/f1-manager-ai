@@ -34,11 +34,11 @@ export class SessionControls {
     updatePauseButton(isPaused) {
         if (!this.pauseButton) return;
         if (isPaused) {
-            this.pauseButton.textContent = '';
+            this.pauseButton.textContent = '▶';
             this.pauseButton.classList.add('paused');
             this.pauseButton.title = 'Resume';
         } else {
-            this.pauseButton.textContent = 'ũ';
+            this.pauseButton.textContent = '⏸';
             this.pauseButton.classList.remove('paused');
             this.pauseButton.title = 'Pause';
         }
