@@ -6,6 +6,7 @@ from .models import (
     Nazionalita,
     Gomma,
     Team,
+    DEFAULT_SETUP_CONFIG,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     'Nazionalita',
     'Gomma',
     'Team',
+    'DEFAULT_SETUP_CONFIG',
 ]

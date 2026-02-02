@@ -335,6 +335,16 @@ class Team:
         return self.forza_auto * 0.1
 
 
+DEFAULT_SETUP_CONFIG = {
+    'front_wing': 50,
+    'rear_wing': 50,
+    'ride_height_front': 50,
+    'ride_height_rear': 50,
+    'suspension_front': 50,
+    'suspension_rear': 50,
+}
+
+
 class RaceCar:
     def __init__(self, pilot: Pilota, team: Team, initial_compound: TireCompound = TireCompound.MEDIUM):
         self.pilot = pilot
@@ -392,8 +402,17 @@ class RaceCar:
             "ice_mode": self.ice_mode,
             "ers_mode": self.ers_mode,
             "stint_target_laps": self.stint_target_laps,
+            "setup": {**DEFAULT_SETUP_CONFIG},
         }
-        self.setup_feedback: Optional[Dict[str, Any]] = None
+        self.setup_feedback: Optional[Dict[str, Any]] = {
+            'message': 'Baseline setup ready.',
+            'tone': 'info',
+            'fields': {key: {
+                'status': 'missing',
+                'delta_label': 'Awaiting evaluation',
+                'range': None,
+            } for key in DEFAULT_SETUP_CONFIG.keys()}
+        }
 
     def set_tire_compound(self, compound, percentuale_vita: float = 1.0):
         """Imposta il compound di gomme"""

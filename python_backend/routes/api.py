@@ -4,13 +4,14 @@ import time
 from flask import Flask, render_template, jsonify, send_from_directory, request
 
 from data.teams import TEAMS
-from python_backend.models import CarState, TireCompound
+from python_backend.models import CarState, TireCompound, DEFAULT_SETUP_CONFIG
 from utils import (
     start_session_for_circuit,
     get_car_by_driver_number,
     set_player_team,
     race_cars,
-    get_player_team_info
+    get_player_team_info,
+    evaluate_setup,
 )
 
 
@@ -137,6 +138,7 @@ def register_routes(app):
                 'tire_wear': car.tire_wear,
                 'is_player_controlled': car.is_player_controlled,
                 'player_config': car.player_config if car.is_player_controlled else None,
+                'setup_recommendation': car.setup_feedback if car.is_player_controlled else None,
             })
         return jsonify(cars_data)
 
@@ -249,7 +251,30 @@ def register_routes(app):
             'stint_target_laps': car.stint_target_laps,
             'stint_laps_remaining': car.stint_laps_remaining,
             'max_stint_laps': car.compute_max_stint_laps(car.player_config.get('fuel_percent', car.fuel_percent)),
+            'stint_laps_target': car.player_config.get('stint_target_laps', car.stint_target_laps),
+            'setup': car.player_config.get('setup', {**DEFAULT_SETUP_CONFIG}),
+            'setup_recommendation': car.setup_feedback or {},
         }
+
+    def _validate_setup_payload(setup_payload):
+        if not isinstance(setup_payload, dict):
+            return None, 'setup payload must be an object'
+        extra_fields = set(setup_payload.keys()) - set(DEFAULT_SETUP_CONFIG.keys())
+        if extra_fields:
+            return None, f"Unknown setup fields: {', '.join(sorted(extra_fields))}"
+        sanitized = {}
+        for field, default_value in DEFAULT_SETUP_CONFIG.items():
+            if field not in setup_payload:
+                continue
+            try:
+                value = int(setup_payload[field])
+            except (TypeError, ValueError):
+                return None, f"{field} must be an integer"
+            value = max(1, min(100, value))
+            sanitized[field] = value
+        if not sanitized:
+            return None, 'Provide at least one setup field to update'
+        return sanitized, None
 
     @app.route('/api/player/car/<int:driver_number>/configure', methods=['POST'])
     def configure_player_car(driver_number):
@@ -339,6 +364,32 @@ def register_routes(app):
             'message': 'Configuration updated',
             'car': _serialize_player_car(car),
             'updated_fields': updates_applied,
+        })
+
+    @app.route('/api/player/car/<int:driver_number>/setup', methods=['POST'])
+    def update_player_setup(driver_number):
+        payload = request.get_json(silent=True) or {}
+        setup_payload = payload.get('setup')
+        sanitized, error_msg = _validate_setup_payload(setup_payload)
+        if error_msg:
+            return _error_response(error_msg)
+
+        car, error = _get_player_car(driver_number)
+        if error:
+            return error
+
+        if car.state != CarState.BOX:
+            return _error_response('Car must be in BOX to edit setup', 409)
+
+        current_setup = car.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
+        current_setup.update(sanitized)
+        recommendation = evaluate_setup(current_setup)
+        car.setup_feedback = recommendation
+
+        return jsonify({
+            'message': 'Setup updated',
+            'car': _serialize_player_car(car),
+            'recommendation': recommendation,
         })
 
     @app.route('/api/player/car/<int:driver_number>/send_out', methods=['POST'])

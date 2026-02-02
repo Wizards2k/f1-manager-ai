@@ -1,9 +1,11 @@
 export class PlayerGarage {
-    constructor(state, { teamLabel, statusMsg, cardsContainer }) {
+    constructor(state, { teamLabel, statusMsg, cardsContainer, overlayContainer, dockElement }) {
         this.state = state;
         this.teamLabel = teamLabel;
         this.statusMsg = statusMsg;
         this.cardsContainer = cardsContainer;
+        this.overlayContainer = overlayContainer;
+        this.dockElement = dockElement;
         this.tyreOptions = [
             { value: 'soft', label: 'Soft' },
             { value: 'medium', label: 'Medium' },
@@ -20,6 +22,24 @@ export class PlayerGarage {
             ON_TRACK: 'ON TRACK'
         };
         this.BOX_ONLY_FIELDS = new Set(['tyre_compound', 'fuel_percent', 'stint_target_laps']);
+        this.SETUP_FIELDS = [
+            'front_wing',
+            'rear_wing',
+            'ride_height_front',
+            'ride_height_rear',
+            'suspension_front',
+            'suspension_rear'
+        ];
+        this.setupDefaults = {
+            front_wing: 50,
+            rear_wing: 50,
+            ride_height_front: 50,
+            ride_height_rear: 50,
+            suspension_front: 50,
+            suspension_rear: 50
+        };
+        this.setupOpenDrivers = new Set();
+        this.setupDrafts = new Map();
         this.bindEvents();
     }
 
@@ -27,7 +47,26 @@ export class PlayerGarage {
         if (!this.cardsContainer) return;
         this.cardsContainer.addEventListener('click', (event) => this.handleCardClick(event));
         this.cardsContainer.addEventListener('change', (event) => this.handleFieldChange(event));
+        this.cardsContainer.addEventListener('input', (event) => this.handleSetupInput(event));
         this.cardsContainer.addEventListener('focusout', (event) => this.handleFocusOut(event));
+        if (this.overlayContainer) {
+            this.overlayContainer.addEventListener('click', (event) => {
+                const actionBtn = event.target.closest('[data-action]');
+                if (actionBtn) {
+                    const driver = Number(this.overlayContainer.dataset.driver);
+                    if (driver) {
+                        this.handleOverlayAction(driver, actionBtn.dataset.action);
+                    }
+                }
+            });
+            this.overlayContainer.addEventListener('input', (event) => {
+                if (!event.target.dataset.setupField) return;
+                const driver = Number(this.overlayContainer.dataset.driver);
+                if (driver) {
+                    this.handleSetupInput(event, driver, this.overlayContainer);
+                }
+            });
+        }
     }
 
     setStatus(message, tone = 'info') {
@@ -142,9 +181,116 @@ export class PlayerGarage {
                         </div>
                     </div>
                 </div>
-                <div class="car-actions">
-                    <button class="btn-send" data-action="send" ${isBox ? '' : 'disabled'}>Send Out</button>
-                    <button class="btn-box" data-action="box" ${isBox ? 'disabled' : ''}>Box</button>
+                <div class="car-actions with-setup">
+                    <div class="drive-actions">
+                        <button class="btn-send" data-action="send" ${isBox ? '' : 'disabled'}>Send Out</button>
+                        <button class="btn-box" data-action="box" ${isBox ? 'disabled' : ''}>Box</button>
+                    </div>
+                    <button class="btn-setup" data-action="setup" ${isBox ? '' : 'disabled'}>Setup</button>
+                </div>
+            </div>
+        `;
+    }
+
+    getSetupPayload(car) {
+        const baseConfig = car.player_config?.setup || {};
+        const draftKey = car.driver_number;
+        const draft = this.setupDrafts.get(draftKey) || {};
+        const values = {};
+        this.SETUP_FIELDS.forEach(field => {
+            const carValue = baseConfig[field] ?? car[field] ?? this.setupDefaults[field];
+            values[field] = draft[field] ?? carValue ?? this.setupDefaults[field];
+        });
+        const recommendation = car.setup_recommendation || {};
+        return { values, recommendation };
+    }
+
+    buildSetupOverlay(car, isBox) {
+        if (!this.overlayContainer) return;
+        const driverNumber = car.driver_number;
+        const setupState = this.getSetupPayload(car);
+        const { values, recommendation } = setupState;
+        const fieldFeedback = recommendation?.fields || {};
+
+        const groupings = [
+            {
+                title: 'Aerodynamics',
+                pairs: [
+                    { field: 'front_wing', label: 'Front wing' },
+                    { field: 'rear_wing', label: 'Rear wing' }
+                ]
+            },
+            {
+                title: 'Ride height',
+                pairs: [
+                    { field: 'ride_height_front', label: 'Front ride height' },
+                    { field: 'ride_height_rear', label: 'Rear ride height' }
+                ]
+            },
+            {
+                title: 'Suspension',
+                pairs: [
+                    { field: 'suspension_front', label: 'Front suspension' },
+                    { field: 'suspension_rear', label: 'Rear suspension' }
+                ]
+            }
+        ];
+
+        const controls = groupings.map(group => `
+            <section class="setup-group">
+                <div class="setup-group-title">${group.title}</div>
+                <div class="setup-pair">
+                    ${group.pairs.map(cfg => this.buildSetupControl(driverNumber, cfg.field, cfg.label, values[cfg.field], fieldFeedback[cfg.field])).join('')}
+                </div>
+            </section>
+        `).join('');
+
+        const recommendationMsg = recommendation?.message || 'Adjust the sliders to explore balance. Recommendations coming soon.';
+        const recommendationTone = recommendation?.tone || 'info';
+        const score = typeof recommendation?.score === 'number' ? recommendation.score.toFixed(2) : null;
+
+        this.overlayContainer.dataset.driver = driverNumber;
+        this.overlayContainer.classList.toggle('is-visible', true);
+        if (this.dockElement) {
+            this.dockElement.classList.add('setup-open');
+        }
+        this.overlayContainer.innerHTML = `
+            <div class="setup-panel">
+                <div class="setup-header">
+                    <div>
+                        <h4>Setup - #${driverNumber}</h4>
+                        <div class="setup-status-pill">${isBox ? 'In garage' : 'On track'}${score ? ` • Score ${score}` : ''}</div>
+                    </div>
+                    <button class="setup-close" data-action="close-setup" aria-label="Close setup">×</button>
+                </div>
+                <div class="setup-feedback ${recommendationTone}">${recommendationMsg}</div>
+                <div class="setup-groups">
+                    ${controls}
+                </div>
+                <div class="setup-footer">
+                    <button class="reset" data-action="reset-setup">Reset</button>
+                    <button class="apply" data-action="apply-setup">Apply</button>
+                </div>
+            </div>
+        `;
+    }
+
+    buildSetupControl(driverNumber, field, label, value, feedback = {}) {
+        const range = feedback?.range;
+        const rangeLabel = range ? `${range.min}-${range.max}` : 'No range yet';
+        const statusClass = feedback?.status ? `status-${feedback.status}` : 'status-missing';
+        const deltaLabel = feedback?.delta_label || 'Pending data';
+        const displayValue = typeof feedback?.value === 'number' ? feedback.value : value;
+        return `
+            <div class="setup-control ${statusClass}" data-field="${field}" data-driver="${driverNumber}">
+                <div class="setup-control-header">
+                    <span>${label}</span>
+                    <span class="setup-range-badge">${rangeLabel}</span>
+                </div>
+                <input type="range" min="1" max="100" value="${displayValue}" data-setup-field="${field}" />
+                <div class="setup-control-footer">
+                    <span class="setup-value">${displayValue}</span>
+                    <span class="setup-delta ${statusClass}">${deltaLabel}</span>
                 </div>
             </div>
         `;
@@ -168,6 +314,45 @@ export class PlayerGarage {
         }
 
         this.cardsContainer.innerHTML = cars.map(car => this.buildCarCard(car)).join('');
+    }
+
+    toggleSetupOverlay(driverNumber, open = true) {
+        if (!this.overlayContainer) return;
+        if (open) {
+            this.setupOpenDrivers.add(driverNumber);
+            const car = this.state.getPlayerCar(driverNumber);
+            if (car) {
+                this.buildSetupOverlay(car, car?.state === 'BOX');
+            }
+        } else {
+            this.setupOpenDrivers.delete(driverNumber);
+            this.overlayContainer.classList.remove('is-visible');
+            this.overlayContainer.removeAttribute('data-driver');
+            this.overlayContainer.innerHTML = '';
+            if (this.dockElement) {
+                this.dockElement.classList.remove('setup-open');
+            }
+        }
+    }
+
+    getSetupDraft(driverNumber) {
+        if (!this.setupDrafts.has(driverNumber)) {
+            this.setupDrafts.set(driverNumber, {});
+        }
+        return this.setupDrafts.get(driverNumber);
+    }
+
+    resetSetupDraft(driverNumber) {
+        this.setupDrafts.delete(driverNumber);
+    }
+
+    buildSetupPayloadFromDraft(driverNumber, car) {
+        const draft = this.setupDrafts.get(driverNumber) || {};
+        const payload = {};
+        this.SETUP_FIELDS.forEach(field => {
+            payload[field] = draft[field] ?? car.player_config?.setup?.[field] ?? car[field] ?? this.setupDefaults[field];
+        });
+        return payload;
     }
 
     collectCardPayload(card) {
@@ -237,6 +422,27 @@ export class PlayerGarage {
         }
     }
 
+    handleOverlayAction(driverNumber, action) {
+        if (action === 'close-setup') {
+            this.toggleSetupOverlay(driverNumber, false);
+        } else if (action === 'reset-setup') {
+            this.resetSetupDraft(driverNumber);
+            const carData = this.state.getPlayerCar(driverNumber);
+            if (carData) {
+                this.buildSetupOverlay(carData, this.getCarState(carData) === 'BOX');
+            }
+        } else if (action === 'apply-setup') {
+            const carData = this.state.getPlayerCar(driverNumber);
+            if (!carData) {
+                this.setStatus('Player car unavailable.', 'error');
+                return;
+            }
+            const state = this.getCarState(carData);
+            const payload = this.buildSetupPayloadFromDraft(driverNumber, carData);
+            this.submitSetupConfig(driverNumber, payload, state);
+        }
+    }
+
     async sendPlayerCarOut(driverNumber) {
         try {
             const res = await fetch(`/api/player/car/${driverNumber}/send_out`, { method: 'POST' });
@@ -295,6 +501,21 @@ export class PlayerGarage {
                 return;
             }
             this.requestPlayerBox(driverNumber);
+        } else if (action === 'setup') {
+            this.toggleSetupOverlay(driverNumber, true);
+        } else if (action === 'close-setup') {
+            this.toggleSetupOverlay(driverNumber, false);
+        } else if (action === 'reset-setup') {
+            this.resetSetupDraft(driverNumber);
+            this.toggleSetupOverlay(driverNumber, true);
+        } else if (action === 'apply-setup') {
+            const carData = this.state.getPlayerCar(driverNumber);
+            if (!carData) {
+                this.setStatus('Player car unavailable.', 'error');
+                return;
+            }
+            const payload = this.buildSetupPayloadFromDraft(driverNumber, carData);
+            this.submitSetupConfig(driverNumber, payload, state);
         }
     }
 
@@ -325,6 +546,58 @@ export class PlayerGarage {
             ? Number(target.value)
             : target.value;
         this.sendPlayerConfig(driverNumber, payload, state);
+    }
+
+    handleSetupInput(event, forcedDriverNumber, forcedContainer) {
+        const setupField = event.target.dataset.setupField;
+        if (!setupField) return;
+        const container = forcedContainer || event.target.closest('.car-card');
+        if (!container) return;
+        const driverNumber = forcedDriverNumber || Number(container.dataset.driver);
+        if (!driverNumber) return;
+        const value = Number(event.target.value);
+        const draft = this.getSetupDraft(driverNumber);
+        draft[setupField] = value;
+        const control = event.target.closest('.setup-control');
+        if (control) {
+            const valueLabel = control.querySelector('.setup-value');
+            if (valueLabel) valueLabel.textContent = value;
+        }
+    }
+
+    async submitSetupConfig(driverNumber, setupPayload, state) {
+        if (state !== 'BOX') {
+            this.setStatus('Bring the car into the garage to edit the setup.', 'error');
+            return;
+        }
+        try {
+            const res = await fetch(`/api/player/car/${driverNumber}/setup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ setup: setupPayload })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Setup update failed');
+            this.setStatus(`Setup stored for #${driverNumber}.`, 'success');
+            this.applySetupLocally(driverNumber, setupPayload, data.recommendation);
+            this.resetSetupDraft(driverNumber);
+            this.toggleSetupOverlay(driverNumber, false);
+        } catch (err) {
+            console.error(err);
+            this.setStatus(err.message || 'Setup update failed', 'error');
+        }
+    }
+
+    applySetupLocally(driverNumber, setupPayload, recommendation) {
+        const car = { ...(this.state.getPlayerCar(driverNumber) || {}) };
+        if (!car.driver_number) return;
+        car.player_config = car.player_config || {};
+        car.player_config.setup = { ...(car.player_config.setup || {}), ...setupPayload };
+        if (recommendation) {
+            car.setup_recommendation = recommendation;
+        }
+        this.state.setPlayerCar(car);
+        this.render(true);
     }
 
     handleFocusOut(event) {

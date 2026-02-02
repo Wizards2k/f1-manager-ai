@@ -20,7 +20,9 @@ import { SocketBridge } from './modules/socket_bridge.js';
     const playerGarage = new PlayerGarage(appState, {
         teamLabel: document.getElementById('player-team-label'),
         statusMsg: document.getElementById('player-status-msg'),
-        cardsContainer: document.getElementById('player-car-cards')
+        cardsContainer: document.getElementById('player-car-cards'),
+        overlayContainer: document.getElementById('player-setup-overlay'),
+        dockElement: document.getElementById('player-dock')
     });
 
     const sessionControls = new SessionControls({
