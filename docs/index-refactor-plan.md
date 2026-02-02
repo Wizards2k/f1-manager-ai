@@ -41,3 +41,17 @@ This plan outlines how to decompose the monolithic index.html frontend into mana
 6. **Future-ready Hooks**
    - Evaluate whether a frontend framework or component library is warranted for dynamic sections.
    - Add hooks for localization/multi-session support as needed once structure is modular.
+
+## Progress & Notes (Feb 2026)
+
+- **Template + Assets**: `base.html` now owns the common `<head>`; `index.html` includes circuit/timing partials and loads styles from `static/css/dashboard.css`.
+- **Script modularization**: the former monolithic `dashboard.js` has been decomposed into ES modules under `python_backend/static/js/modules/`:
+  1. `app_state.js` → shared race/session state store.
+  2. `map_module.js` → Leaflet setup + marker lifecycle.
+  3. `timing_panel.js` → timing table + session timer rendering helpers.
+  4. `player_garage.js` → garage UI + API interactions.
+  5. `session_controls.js` → pause/speed controls with server sync hook `applyServerState`.
+  6. `socket_bridge.js` → centralizes Socket.IO events, bootstrap fetches, and cross-module wiring.
+- **Entry point**: `static/js/dashboard.js` is now a thin initializer that imports the modules, instantiates them, and starts `SocketBridge`. `index.html` loads it via `<script type="module">`.
+- **Legacy snapshot**: `static/js/dashboard.legacy.js` retains the pre-module script for future investigations/diffs. Keep it until the refactor is fully signed off.
+- **Testing**: `cmd /c npm run dev` smoke tests performed after each step (Steps 1–3 and modular split) to ensure Electron + Flask startup and live updates keep working.
