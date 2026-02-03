@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Dict, Any
 
-from models import DEFAULT_SETUP_CONFIG
+from python_backend.models.models import DEFAULT_SETUP_CONFIG
 import config
 
 BASE_FIELD_PARAMS: Dict[str, Dict[str, Any]] = {
