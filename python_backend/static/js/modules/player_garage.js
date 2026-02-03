@@ -326,6 +326,19 @@ export class PlayerGarage {
         if (this.dockElement) {
             this.dockElement.classList.add('setup-open');
         }
+        // Add setup-active class to circuit-container for CSS control
+        const circuitContainer = this.dockElement?.closest('.circuit-container');
+        if (circuitContainer) {
+            circuitContainer.classList.add('setup-active');
+        }
+        // Force-hide notifications to avoid overlay gap
+        if (this.notificationsContainer) {
+            this.notificationsContainer.dataset.prevDisplay = this.notificationsContainer.style.display;
+            this.notificationsContainer.style.display = 'none';
+        }
+        document.body.classList.add('setup-active');
+        // Trigger layout recalculation (map height) after setup open
+        window.dispatchEvent(new Event('resize'));
         this.overlayContainer.innerHTML = `
             <div class="setup-panel">
                 <div class="setup-header">
@@ -419,6 +432,18 @@ export class PlayerGarage {
         if (this.dockElement) {
             this.dockElement.classList.remove('setup-open');
         }
+        const circuitContainer = this.dockElement?.closest('.circuit-container');
+        if (circuitContainer) {
+            circuitContainer.classList.remove('setup-active');
+        }
+        if (this.notificationsContainer) {
+            const prev = this.notificationsContainer.dataset.prevDisplay ?? '';
+            this.notificationsContainer.style.display = prev;
+            delete this.notificationsContainer.dataset.prevDisplay;
+        }
+        document.body.classList.remove('setup-active');
+        // Trigger layout recalculation (map height) after setup close
+        window.dispatchEvent(new Event('resize'));
     }
 
     getSetupDraft(driverNumber) {

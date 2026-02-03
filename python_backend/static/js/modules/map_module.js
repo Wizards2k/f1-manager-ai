@@ -136,11 +136,12 @@ export class MapModule {
         if (!this.mapContainer || !this.circuitContainer) return;
         const containerHeight = this.circuitContainer.getBoundingClientRect().height;
         const dockHeight = this.dockElement ? this.dockElement.getBoundingClientRect().height : 0;
-        const nextHeight = Math.max(320, containerHeight - dockHeight);
+        const effectiveDock = dockHeight;
+        const nextHeight = Math.max(320, containerHeight - effectiveDock);
         if (Math.abs(nextHeight - this.currentMapHeight) < 1) return;
         this.currentMapHeight = nextHeight;
-        this.currentDockHeight = dockHeight;
-        this.circuitContainer.style.setProperty('--dock-height', `${dockHeight}px`);
+        this.currentDockHeight = effectiveDock;
+        this.circuitContainer.style.setProperty('--dock-height', `${effectiveDock}px`);
         this.mapContainer.style.height = `${nextHeight}px`;
         if (!this.mapReady || !this.map) return;
         this.map.invalidateSize({ animate: false });

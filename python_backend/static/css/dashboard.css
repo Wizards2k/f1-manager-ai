@@ -33,17 +33,36 @@
         }
 
         .player-dock.setup-open #player-car-cards {
+            display: none;
+            height: 0;
             opacity: 0;
             pointer-events: none;
         }
 
         .player-setup-overlay {
             display: none;
-            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 0 0 8px;
+            overflow-y: auto;
+            z-index: 100;
         }
 
         .player-dock.setup-open .player-setup-overlay {
             display: block;
+        }
+
+        .player-dock.setup-open {
+            position: relative;
+            padding: 8px 12px 8px;
+            min-height: 640px;
+        }
+
+        .player-dock.setup-open .setup-panel {
+            margin-top: -30px;
         }
 
         .player-dock.collapsed {
@@ -59,19 +78,23 @@
 
         .garage-notifications {
             position: absolute;
-            bottom: calc(var(--dock-height, 320px) + 10px);
+            bottom: calc(var(--dock-height, 320px) - 8px);
             left: 0;
             right: 0;
             z-index: 1000;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 2px;
             max-height: 160px;
             overflow: hidden;
             padding: 0 10px;
         }
 
         .garage-notifications:empty {
+            display: none;
+        }
+
+        .circuit-container.setup-active .garage-notifications {
             display: none;
         }
 
@@ -233,9 +256,6 @@
             flex-direction: column;
             gap: 1px;
             color: #d0d0d0;
-            font-size: 9px;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
         }
 
         .telemetry-bar .bar-track {
