@@ -6,6 +6,7 @@ from models import CarState
 from utils.position import circuit_length
 from utils.game_logic import update_session_bests
 from utils.performance import project_sector_time
+from utils.driver_feedback import get_driver_feedback, should_trigger_feedback
 
 def update_car_position(car, dt):
     """Aggiorna posizione dell'auto basandosi sulla distanza e stato"""
@@ -124,6 +125,13 @@ def check_car_sector_crossing(car, old_distance, new_distance):
             car.best_sectors['sector1'] = sector_time
             # Aggiorna anche session best
             update_session_bests(car)
+        
+        # Driver feedback for Sector 1 (often has heavy braking)
+        if car.is_player_controlled and should_trigger_feedback(car, 'braking_zone'):
+            circuit_profile = config.get_current_circuit_profile() if hasattr(config, 'get_current_circuit_profile') else None
+            feedback = get_driver_feedback(car, circuit_profile, 'sector1')
+            if feedback:
+                car.last_driver_feedback = feedback
             
     # Controlla attraversamento Sector 2
     sector2_distance = config.circuit_sectors['sector2']['distance']
@@ -143,6 +151,13 @@ def check_car_sector_crossing(car, old_distance, new_distance):
             car.best_sectors['sector2'] = sector_time
             # Aggiorna anche session best
             update_session_bests(car)
+        
+        # Driver feedback for Sector 2 (cornering focus)
+        if car.is_player_controlled and should_trigger_feedback(car, 'sector_entry'):
+            circuit_profile = config.get_current_circuit_profile() if hasattr(config, 'get_current_circuit_profile') else None
+            feedback = get_driver_feedback(car, circuit_profile, 'sector2')
+            if feedback:
+                car.last_driver_feedback = feedback
             
     # Controlla attraversamento Sector 3 (fine giro)
     sector3_distance = config.circuit_sectors['sector3']['distance']
@@ -159,6 +174,13 @@ def check_car_sector_crossing(car, old_distance, new_distance):
             car.best_sectors['sector3'] = sector_time
             # Aggiorna anche session best
             update_session_bests(car)
+        
+        # Driver feedback for Sector 3 (traction out of final corners)
+        if car.is_player_controlled and should_trigger_feedback(car, 'corner_exit'):
+            circuit_profile = config.get_current_circuit_profile() if hasattr(config, 'get_current_circuit_profile') else None
+            feedback = get_driver_feedback(car, circuit_profile, 'sector3')
+            if feedback:
+                car.last_driver_feedback = feedback
 
 def calculate_simulated_sector_time(car, sector_distance, lap_type):
     """Calcola il tempo del settore usando il modello prestazionale."""

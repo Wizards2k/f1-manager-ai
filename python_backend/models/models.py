@@ -411,8 +411,13 @@ class RaceCar:
                 'status': 'missing',
                 'delta_label': 'Awaiting evaluation',
                 'range': None,
-            } for key in DEFAULT_SETUP_CONFIG.keys()}
+            } for key in DEFAULT_SETUP_CONFIG.keys()},
+            'categories': None,  # Populated by evaluate_setup_categories
         }
+        # Driver live feedback state
+        self.last_driver_feedback: Optional[str] = None
+        self.driver_feedback_timestamp: float = 0.0
+        self.driver_feedback_cooldown: float = 5.0  # Seconds between messages
 
     def set_tire_compound(self, compound, percentuale_vita: float = 1.0):
         """Imposta il compound di gomme"""
@@ -423,15 +428,23 @@ class RaceCar:
         self.player_config["tyre_compound"] = self.current_tire.value
 
     def update_tire_wear(self):
-        """Aggiorna l'usura delle gomme"""
+        """Aggiorna l'usura delle gomme con factor pace_level."""
         if self.state == CarState.HOT_LAP:
             self.tire_age += 1
+            # Pace factor: 1-10 scale -> 0.5 to 1.5 multiplier
+            # pace_level 5 = neutral (1.0), 1 = conservative (0.6), 10 = aggressive (1.4)
+            pace_factor = 0.6 + (self.pace_level - 1) * 0.088  # 0.6 to ~1.4
+            
             if self.current_tire in (TireCompound.SOFT, TireCompound.MEDIUM, TireCompound.HARD):
-                self.current_gomma.aggiorna_degrado()
+                # Apply pace factor to base degradation
+                base_degradation = self.current_gomma.DEGRADO_BASE[self.current_tire]
+                adjusted_degradation = base_degradation * pace_factor
+                self.current_gomma.aggiorna_degrado(adjusted_degradation)
                 self.tire_wear = 1.0 - self.current_gomma.percentuale_vita
             else:
-                # Mantieni logica semplice per intermedie/wet finché non modellate
+                # Mantieni logica semplice per intermedie/wet
                 wear_increment = 0.04 if self.current_tire == TireCompound.INTERMEDIATE else 0.02
+                wear_increment *= pace_factor
                 self.tire_wear = min(1.0, self.tire_wear + wear_increment)
 
     def get_position(self):
@@ -525,13 +538,21 @@ class RaceCar:
         if not self.is_player_controlled:
             return
         base_burn = 100.0 / max(1, self.max_fuel_laps_at_100)
+        
+        # Lap type factor
         if lap_type == CarState.HOT_LAP:
-            factor = 1.0
+            lap_factor = 1.0
         elif lap_type == CarState.OUT_LAP or lap_type == CarState.IN_LAP:
-            factor = 0.8
+            lap_factor = 0.8
         else:
-            factor = 0.5
-        self.fuel_percent = max(1.0, self.fuel_percent - base_burn * factor)
+            lap_factor = 0.5
+        
+        # Pace factor: 1-10 scale -> 0.8 to 1.25 multiplier
+        # pace_level 5 = neutral (1.0), 1 = efficient (0.8), 10 = thirsty (1.25)
+        pace_factor = 0.8 + (self.pace_level - 1) * 0.05  # 0.8 to 1.25
+        
+        total_burn = base_burn * lap_factor * pace_factor
+        self.fuel_percent = max(1.0, self.fuel_percent - total_burn)
         self.player_config['fuel_percent'] = int(round(self.fuel_percent))
 
     def _persist_lap_debug(self, lap_type, lap_time: float):

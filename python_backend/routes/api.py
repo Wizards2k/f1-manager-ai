@@ -12,6 +12,7 @@ from utils import (
     race_cars,
     get_player_team_info,
     evaluate_setup,
+    evaluate_setup_categories,
 )
 
 
@@ -384,12 +385,15 @@ def register_routes(app):
         current_setup = car.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
         current_setup.update(sanitized)
         recommendation = evaluate_setup(current_setup)
+        categories = evaluate_setup_categories(current_setup)
         car.setup_feedback = recommendation
+        car.setup_feedback['categories'] = categories
 
         return jsonify({
             'message': 'Setup updated',
             'car': _serialize_player_car(car),
             'recommendation': recommendation,
+            'categories': categories,
         })
 
     @app.route('/api/player/car/<int:driver_number>/send_out', methods=['POST'])

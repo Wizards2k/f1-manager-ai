@@ -73,6 +73,8 @@ def race_simulation():
                 'is_player_controlled': car.is_player_controlled,
                 'player_config': car.player_config if car.is_player_controlled else None,
                 'setup_recommendation': car.setup_feedback if car.is_player_controlled else None,
+                'setup_categories': car.setup_feedback.get('categories') if car.is_player_controlled and car.setup_feedback else None,
+                'driver_feedback': car.last_driver_feedback if car.is_player_controlled else None,
                 'fuel_percent': getattr(car, 'fuel_percent', None),
                 'pace_level': getattr(car, 'pace_level', None),
                 'ice_mode': getattr(car, 'ice_mode', None),

@@ -8,7 +8,7 @@ from .game_logic import (
     get_player_driver_numbers, get_player_team_info
 )
 from .simulation import update_car_position, check_car_sector_crossing, calculate_simulated_sector_time
-from .setup_engine import evaluate_setup
+from .setup_engine import evaluate_setup, evaluate_setup_categories
 
 __all__ = [
     'get_car_position', 'get_position_by_distance', 'circuit_length',
@@ -18,5 +18,5 @@ __all__ = [
     'get_car_by_driver_number', 'set_player_team', 'get_player_team_id',
     'get_player_driver_numbers', 'get_player_team_info',
     'update_car_position', 'check_car_sector_crossing', 'calculate_simulated_sector_time',
-    'evaluate_setup'
+    'evaluate_setup', 'evaluate_setup_categories'
 ]
