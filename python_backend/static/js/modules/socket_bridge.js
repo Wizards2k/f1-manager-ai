@@ -26,6 +26,7 @@ export class SocketBridge {
                 this.playerGarage.applyLocalCarState(car.driver_number, car);
                 seenPlayerDrivers.add(car.driver_number);
                 this.state.setPlayerCar(car);
+                this.playerGarage.handleDriverFeedback(car);
             }
             this.mapModule.updateCarMarker(car);
         });

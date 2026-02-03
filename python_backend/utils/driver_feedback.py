@@ -18,6 +18,8 @@ import random
 import time
 from typing import Dict, Any, Optional, List, Tuple
 
+from models.models import CarState
+
 # Feedback configuration by ricerca_assetto rating
 FEEDBACK_CONFIG: Dict[str, Dict[str, Any]] = {
     'none': {
@@ -203,6 +205,10 @@ def get_driver_feedback(
     
     pilot = car.pilot
     if not pilot:
+        return None
+
+    # Require car to be in a Hot Lap (no feedback on OUT/IN laps or in garage)
+    if getattr(car, 'state', None) != CarState.HOT_LAP and getattr(car, 'last_lap_type', None) != CarState.HOT_LAP:
         return None
     
     # Get driver feedback configuration based on rating

@@ -42,6 +42,7 @@ export class PlayerGarage {
         this.setupOpenDrivers = new Set();
         this.setupDrafts = new Map();
         this.notificationTimers = new WeakMap();
+        this.lastDriverFeedback = new Map();
         this.bindEvents();
     }
 
@@ -97,6 +98,17 @@ export class PlayerGarage {
             setTimeout(() => toast.remove(), 220);
         }, 4500);
         this.notificationTimers.set(toast, timer);
+    }
+
+    handleDriverFeedback(car) {
+        if (!car || !car.is_player_controlled) return;
+        const msg = car.driver_feedback;
+        if (!msg) return;
+        const last = this.lastDriverFeedback.get(car.driver_number);
+        if (last === msg) return;
+        this.lastDriverFeedback.set(car.driver_number, msg);
+        const name = car.driver_name || `Driver #${car.driver_number}`;
+        this.pushNotification(`${name}: ${msg}`, 'info');
     }
 
     normalizeStateValue(state) {

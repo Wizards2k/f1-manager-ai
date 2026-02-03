@@ -384,17 +384,35 @@ def register_routes(app):
 
         current_setup = car.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
         current_setup.update(sanitized)
-        recommendation = evaluate_setup(current_setup)
-        categories = evaluate_setup_categories(current_setup)
-        car.setup_feedback = recommendation
-        car.setup_feedback['categories'] = categories
+        # Provide setup feedback only after the car has completed a HOT_LAP
+        if car.last_lap_type == CarState.HOT_LAP:
+            recommendation = evaluate_setup(current_setup)
+            categories = evaluate_setup_categories(current_setup)
+            car.setup_feedback = recommendation
+            car.setup_feedback['categories'] = categories
+        else:
+            # Keep existing feedback; add placeholder message
+            placeholder_msg = 'Awaiting on-track data: complete a hot lap for feedback.'
+            if not car.setup_feedback:
+                car.setup_feedback = {
+                    'message': placeholder_msg,
+                    'tone': 'info',
+                    'fields': {},
+                    'categories': None,
+                }
+            else:
+                car.setup_feedback['message'] = placeholder_msg
+                car.setup_feedback['tone'] = 'info'
+                car.setup_feedback['categories'] = car.setup_feedback.get('categories')
+            recommendation = car.setup_feedback
+            categories = car.setup_feedback.get('categories')
 
         return jsonify({
-            'message': 'Setup updated',
-            'car': _serialize_player_car(car),
+            'driver_number': driver_number,
+            'setup': current_setup,
             'recommendation': recommendation,
             'categories': categories,
-        })
+        }), 200
 
     @app.route('/api/player/car/<int:driver_number>/send_out', methods=['POST'])
     def send_player_car_out(driver_number):

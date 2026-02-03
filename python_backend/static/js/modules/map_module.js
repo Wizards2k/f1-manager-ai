@@ -132,6 +132,20 @@ export class MapModule {
         this.map.fitBounds(bounds, { padding: [40, 40] });
     }
 
+    setZoom(zoom) {
+        if (!this.map) return;
+        this.map.setZoom(zoom);
+    }
+
+    onSetupOverlayToggled(isOpen) {
+        // When the setup overlay opens/closes, the map container size changes.
+        // Force Leaflet to recalc size to avoid shrink/shift issues.
+        if (this.map) {
+            setTimeout(() => this.map.invalidateSize(), 50);
+            setTimeout(() => this.map.invalidateSize(), 200);
+        }
+    }
+
     updateMapHeight(allowRefit = true) {
         if (!this.mapContainer || !this.circuitContainer) return;
         const containerHeight = this.circuitContainer.getBoundingClientRect().height;

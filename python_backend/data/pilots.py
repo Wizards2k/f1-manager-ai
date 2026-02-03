@@ -16,6 +16,9 @@ def _pilot(
     gara: int,
     aggressivita: int,
     gestione_carburante: int,
+    ricerca_assetto: Optional[int] = None,
+    stile_sottosterzo: Optional[int] = None,
+    stile_sovrasterzo: Optional[int] = None,
     costanza: Optional[int] = None,
 ):
     return Pilota(
@@ -31,11 +34,14 @@ def _pilot(
         costanza=costanza if costanza is not None else gara,
         aggressivita=aggressivita,
         gestione_carburante=gestione_carburante,
+        ricerca_assetto=ricerca_assetto if ricerca_assetto is not None else 50,
+        stile_sottosterzo=stile_sottosterzo if stile_sottosterzo is not None else 50,
+        stile_sovrasterzo=stile_sovrasterzo if stile_sovrasterzo is not None else 50,
     )
 
 
 PILOTS = {
-    "LECLERC": _pilot("Charles", "Leclerc", Nazionalita.MONACO, 27, 16, 92, 78, 94, 90, 70, 70),
+    "LECLERC": _pilot("Charles", "Leclerc", Nazionalita.MONACO, 27, 16, 92, 78, 94, 90, 70, 70, ricerca_assetto=85),
     "SAINZ": _pilot("Carlos", "Sainz", Nazionalita.SPAGNA, 30, 55, 90, 80, 88, 85, 72, 72),
     "VERSTAPPEN": _pilot("Max", "Verstappen", Nazionalita.PAESI_BASSI, 27, 1, 98, 82, 99, 97, 68, 68),
     "PEREZ": _pilot("Sergio", "Perez", Nazionalita.MESSICO, 35, 11, 88, 84, 86, 80, 77, 77),
