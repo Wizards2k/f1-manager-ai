@@ -418,6 +418,9 @@ class RaceCar:
         self.last_driver_feedback: Optional[str] = None
         self.driver_feedback_timestamp: float = 0.0
         self.driver_feedback_cooldown: float = 5.0  # Seconds between messages
+        self.feedback_count_this_lap: int = 0
+        self.feedback_zones_used_this_lap: set = set()
+        self.current_lap_for_feedback: int = 0
 
     def set_tire_compound(self, compound, percentuale_vita: float = 1.0):
         """Imposta il compound di gomme"""

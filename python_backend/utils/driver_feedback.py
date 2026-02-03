@@ -3,15 +3,70 @@
 Generates real-time driver messages based on:
 - Setup characteristics (understeer/oversteer, stability)
 - Circuit profile (corner types, braking zones)
-- Driver style (ricerca_assetto affects frequency, stile_sottosterzo/sovrasterzo affects messages)
+- Driver style (ricerca_assetto affects max feedback/giro, cooldown, quality)
+
+Feedback limits by ricerca_assetto rating:
+- 0-40: No feedback (driver too inexperienced)
+- 41-60: Max 1/giro, 20s cooldown, vague quality
+- 61-75: Max 2/giro, 15s cooldown, zone-specific
+- 76-90: Max 2/giro, 12s cooldown, problem-specific
+- 91-100: Max 3/giro, 10s cooldown, detailed + suggestion
 """
 from __future__ import annotations
 
 import random
 import time
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 
-# Message templates by category
+# Feedback configuration by ricerca_assetto rating
+FEEDBACK_CONFIG: Dict[str, Dict[str, Any]] = {
+    'none': {
+        'min_rating': 0,
+        'max_rating': 40,
+        'max_per_lap': 0,
+        'cooldown': 0,
+        'quality': 'none',
+    },
+    'poor': {
+        'min_rating': 41,
+        'max_rating': 60,
+        'max_per_lap': 1,
+        'cooldown': 20,
+        'quality': 'vague',
+    },
+    'good': {
+        'min_rating': 61,
+        'max_rating': 75,
+        'max_per_lap': 2,
+        'cooldown': 15,
+        'quality': 'zone_specific',
+    },
+    'very_good': {
+        'min_rating': 76,
+        'max_rating': 90,
+        'max_per_lap': 2,
+        'cooldown': 12,
+        'quality': 'problem_specific',
+    },
+    'excellent': {
+        'min_rating': 91,
+        'max_rating': 100,
+        'max_per_lap': 3,
+        'cooldown': 10,
+        'quality': 'detailed',
+    },
+}
+
+
+def get_feedback_config(ricerca_assetto: int) -> Tuple[str, Dict[str, Any]]:
+    """Get feedback configuration based on driver rating."""
+    for level, config in FEEDBACK_CONFIG.items():
+        if config['min_rating'] <= ricerca_assetto <= config['max_rating']:
+            return level, config
+    return 'none', FEEDBACK_CONFIG['none']
+
+
+# Message templates by category and quality level
 CORNERING_MESSAGES = {
     'understeer': [
         "Understeer in high-speed corners",
@@ -84,6 +139,14 @@ SPEED_MESSAGES = {
     ],
 }
 
+# Vague messages for poor drivers (quality: 'poor')
+VAGUE_MESSAGES = [
+    "Car feels unbalanced",
+    "Something feels off",
+    "Not happy with the handling",
+    "Car could be better",
+]
+
 
 def calculate_setup_balance_scores(setup: Dict[str, int]) -> Dict[str, float]:
     """Calculate balance scores from setup values."""
@@ -118,6 +181,15 @@ def get_driver_feedback(
     """
     Generate driver feedback message based on car state and circuit.
     
+    Feedback limits by ricerca_assetto:
+    - 0-40: No feedback
+    - 41-60: Max 1/giro, 20s cooldown, vague messages
+    - 61-75: Max 2/giro, 15s cooldown, zone-specific
+    - 76-90: Max 2/giro, 12s cooldown, problem-specific  
+    - 91-100: Max 3/giro, 10s cooldown, detailed
+    
+    Max 1 feedback per zone per lap.
+    
     Args:
         car: RaceCar instance
         circuit_profile: Circuit configuration dict
@@ -133,104 +205,107 @@ def get_driver_feedback(
     if not pilot:
         return None
     
-    # Check cooldown
+    # Get driver feedback configuration based on rating
+    level, config = get_feedback_config(pilot.ricerca_assetto)
+    
+    # No feedback for poor drivers (0-40)
+    if config['max_per_lap'] == 0:
+        return None
+    
+    # Update lap tracking if needed
+    current_lap = car.total_session_laps
+    if current_lap != car.current_lap_for_feedback:
+        car.current_lap_for_feedback = current_lap
+        car.feedback_count_this_lap = 0
+        car.feedback_zones_used_this_lap.clear()
+    
+    # Check per-lap limit
+    if car.feedback_count_this_lap >= config['max_per_lap']:
+        return None
+    
+    # Check per-zone limit (max 1 per zone per lap)
+    zone_key = sector or 'general'
+    if zone_key in car.feedback_zones_used_this_lap:
+        return None
+    
+    # Check cooldown (rating-based)
     current_time = time.time()
-    if current_time - car.driver_feedback_timestamp < car.driver_feedback_cooldown:
+    cooldown = config['cooldown']
+    if current_time - car.driver_feedback_timestamp < cooldown:
         return None
     
-    # Check ricerca_assetto - higher = more frequent feedback
-    # Base probability: 20%, +1% per point of ricerca_assetto
-    feedback_chance = 0.20 + (pilot.ricerca_assetto / 100.0) * 0.30
-    if random.random() > feedback_chance:
+    # Probability check (rating-based, 15-30% chance)
+    base_chance = 0.15 + (pilot.ricerca_assetto / 100.0) * 0.15
+    if random.random() > base_chance:
         return None
     
-    # Get setup values
-    setup = car.player_config.get('setup', {})
-    scores = calculate_setup_balance_scores(setup)
+    # Generate message based on quality level
+    quality = config['quality']
     
-    # Get circuit characteristics
-    surface = circuit_profile.get('surface', {}) if circuit_profile else {}
-    corner_speed_mult = surface.get('corner_speed_multiplier', 1.0)
-    braking_mult = surface.get('braking_multiplier', 1.0)
-    
-    # Determine context based on sector and circuit
-    messages = []
-    
-    # Sector 1: Often has heavy braking zones (T1)
-    if sector == 'sector1' or braking_mult < 0.98:
-        # Check braking stability
-        susp_balance = scores['susp_balance']
-        if susp_balance > 12:
-            messages.extend(BRAKING_MESSAGES['front_lock'])
-        elif susp_balance < -12:
-            messages.extend(BRAKING_MESSAGES['rear_instability'])
-        elif susp_balance > 6:
-            messages.extend(BRAKING_MESSAGES['front_lock'])
-        elif susp_balance < -6:
-            messages.extend(BRAKING_MESSAGES['rear_instability'])
-        else:
-            messages.extend(BRAKING_MESSAGES['good'])
-    
-    # Sector 2 & 3: Cornering and traction
-    if sector in ('sector2', 'sector3') or corner_speed_mult < 1.0:
-        wing_balance = scores['wing_balance']
+    if quality == 'vague':
+        # Poor drivers give vague feedback
+        message = random.choice(VAGUE_MESSAGES)
+    else:
+        # Get setup values for specific feedback
+        setup = car.player_config.get('setup', {})
+        scores = calculate_setup_balance_scores(setup)
+        surface = circuit_profile.get('surface', {}) if circuit_profile else {}
+        corner_speed_mult = surface.get('corner_speed_multiplier', 1.0)
+        braking_mult = surface.get('braking_multiplier', 1.0)
         
-        # Adjust for driver style
-        understeer_tolerance = pilot.stile_sottosterzo / 100.0  # 0-1
-        oversteer_tolerance = pilot.stile_sovrasterzo / 100.0   # 0-1
+        messages = []
         
-        # Understeer detection
-        if wing_balance > 8:
-            if understeer_tolerance < 0.6:  # Driver doesn't like understeer
+        # Zone-specific feedback
+        if sector == 'sector1' or braking_mult < 0.98:
+            # Braking zone feedback
+            susp_balance = scores['susp_balance']
+            if susp_balance > 10:
+                messages.extend(BRAKING_MESSAGES['front_lock'])
+            elif susp_balance < -10:
+                messages.extend(BRAKING_MESSAGES['rear_instability'])
+            elif abs(susp_balance) <= 6:
+                messages.extend(BRAKING_MESSAGES['good'])
+        
+        if sector in ('sector2', 'sector3') or corner_speed_mult < 1.0:
+            # Cornering feedback
+            wing_balance = scores['wing_balance']
+            understeer_tolerance = pilot.stile_sottosterzo / 100.0
+            oversteer_tolerance = pilot.stile_sovrasterzo / 100.0
+            
+            # Understeer detection with driver tolerance
+            if wing_balance > 8 and understeer_tolerance < 0.5:
                 messages.extend(CORNERING_MESSAGES['understeer'])
-        elif wing_balance > 4:
-            if understeer_tolerance < 0.4:
-                messages.extend(CORNERING_MESSAGES['understeer'])
-        
-        # Oversteer detection
-        if wing_balance < -8:
-            if oversteer_tolerance < 0.6:  # Driver doesn't like oversteer
+            elif wing_balance < -8 and oversteer_tolerance < 0.5:
                 messages.extend(CORNERING_MESSAGES['oversteer'])
-        elif wing_balance < -4:
-            if oversteer_tolerance < 0.4:
-                messages.extend(CORNERING_MESSAGES['oversteer'])
-        
-        # If no issues, add positive feedback
-        if abs(wing_balance) <= 4:
-            messages.extend(CORNERING_MESSAGES['balanced'])
-        
-        # Traction in slow corners
-        traction_indicator = scores['traction_indicator']
-        if traction_indicator > 10:
-            messages.extend(TRACTION_MESSAGES['wheelspin'])
-        elif traction_indicator > 5:
-            if random.random() < 0.5:
+            elif abs(wing_balance) <= 4:
+                messages.extend(CORNERING_MESSAGES['balanced'])
+            
+            # Traction feedback
+            traction_indicator = scores['traction_indicator']
+            if traction_indicator > 12:
                 messages.extend(TRACTION_MESSAGES['wheelspin'])
-        else:
-            messages.extend(TRACTION_MESSAGES['good'])
-    
-    # Straight-line speed check (any sector)
-    rear_wing = scores['rear_wing']
-    drag_indicator = surface.get('aerodynamic_drag', 90)
-    if rear_wing > 60 and drag_indicator > 85:
-        messages.extend(SPEED_MESSAGES['too_much_drag'])
-    elif rear_wing < 50 and drag_indicator > 85:
-        messages.extend(SPEED_MESSAGES['good'])
-    
-    if not messages:
-        return None
-    
-    # Select message (avoid repeats if possible)
-    message = random.choice(messages)
-    if message == car.last_driver_feedback and len(messages) > 1:
-        # Try to pick different message
-        alternatives = [m for m in messages if m != message]
-        if alternatives:
-            message = random.choice(alternatives)
+            elif traction_indicator <= 5:
+                messages.extend(TRACTION_MESSAGES['good'])
+        
+        # Speed feedback (any sector, low probability)
+        if random.random() < 0.3:
+            rear_wing = scores['rear_wing']
+            drag_indicator = surface.get('aerodynamic_drag', 90)
+            if rear_wing > 60 and drag_indicator > 85:
+                messages.extend(SPEED_MESSAGES['too_much_drag'])
+            elif rear_wing < 45:
+                messages.extend(SPEED_MESSAGES['good'])
+        
+        if not messages:
+            return None
+        
+        message = random.choice(messages)
     
     # Update car state
     car.last_driver_feedback = message
     car.driver_feedback_timestamp = current_time
+    car.feedback_count_this_lap += 1
+    car.feedback_zones_used_this_lap.add(zone_key)
     
     return message
 
@@ -244,15 +319,30 @@ def should_trigger_feedback(car, event_type: str) -> bool:
     if not pilot:
         return False
     
-    # Different events have different probabilities
-    event_probabilities = {
-        'sector_entry': 0.25,
-        'braking_zone': 0.35,
-        'corner_exit': 0.20,
+    # Get config to check if driver can give feedback at all
+    level, config = get_feedback_config(pilot.ricerca_assetto)
+    if config['max_per_lap'] == 0:
+        return False
+    
+    # Update lap tracking
+    current_lap = car.total_session_laps
+    if current_lap != car.current_lap_for_feedback:
+        car.current_lap_for_feedback = current_lap
+        car.feedback_count_this_lap = 0
+        car.feedback_zones_used_this_lap.clear()
+    
+    # Check per-lap limit
+    if car.feedback_count_this_lap >= config['max_per_lap']:
+        return False
+    
+    # Simple probability based on event type and rating
+    event_probs = {
+        'braking_zone': 0.40,
+        'sector_entry': 0.30,
+        'corner_exit': 0.25,
         'straight': 0.15,
     }
+    base_prob = event_probs.get(event_type, 0.25)
+    rating_bonus = (pilot.ricerca_assetto - 40) / 100.0 * 0.20  # 0 to ~0.12
     
-    base_prob = event_probabilities.get(event_type, 0.20)
-    ricerca_bonus = (pilot.ricerca_assetto / 100.0) * 0.25
-    
-    return random.random() < (base_prob + ricerca_bonus)
+    return random.random() < (base_prob + rating_bonus)
