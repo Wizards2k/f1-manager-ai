@@ -1,14 +1,6 @@
 export class PlayerGarageV3 {
-    constructor({ teamLabel, statusMsg, cardsContainer, overlayContainer, dockElement, notificationsContainer }) {
-        this.state = {
-            playerTeam: null,
-            playerCars: new Map(),
-            getPlayerTeam: () => this.state.playerTeam,
-            getPlayerCarsSorted: () => Array.from(this.state.playerCars.values()).sort((a, b) => a.driver_number - b.driver_number),
-            getPlayerCar: (num) => this.state.playerCars.get(num),
-            setPlayerTeam: (id) => { this.state.playerTeam = id; },
-            setPlayerCar: (car) => { this.state.playerCars.set(car.driver_number, car); }
-        };
+    constructor(state, { teamLabel, statusMsg, cardsContainer, overlayContainer, dockElement, notificationsContainer }) {
+        this.state = state;
         this.teamLabel = teamLabel;
         this.statusMsg = statusMsg;
         this.cardsContainer = cardsContainer;
@@ -52,7 +44,6 @@ export class PlayerGarageV3 {
         this.notificationTimers = new WeakMap();
         this.lastDriverFeedback = new Map();
         this.bindEvents();
-        this.loadPlayerTeamInfo();
     }
 
     bindEvents() {
@@ -486,7 +477,6 @@ export class PlayerGarageV3 {
     }
 
     applyLocalCarState(driverNumber, carPayload) {
-        console.log('[GarageV3] applyLocalCarState:', driverNumber, carPayload);
         if (!carPayload || typeof carPayload !== 'object') {
             console.warn('[GarageV3] Invalid car payload');
             return;
@@ -495,7 +485,6 @@ export class PlayerGarageV3 {
         const updated = { ...existing, ...carPayload };
         updated.state = this.getCarState(updated);
         this.state.setPlayerCar(updated);
-        console.log('[GarageV3] Car state updated:', updated);
     }
 
     async sendPlayerConfig(driverNumber, payload, state) {

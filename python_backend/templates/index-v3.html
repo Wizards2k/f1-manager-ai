@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Manager AI - Circuit V3</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-v1.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-v3.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/timing-panel-v3.css') }}">
 </head>
 <body>
     <div class="dashboard-v3">
@@ -20,35 +20,35 @@
                 <div id="player-car-cards-v3"></div>
             </div>
         </div>
-        <!-- Timing Panel (V1 structure) -->
-        <div class="timing-panel-v3 timing-container" id="timing-panel">
-            <div class="timing-header">
-                <div class="header-content">
-                    <span class="session-title">FREE PRACTICE - LIVE TIMING</span>
-                    <div class="session-timer" id="session-timer">60:00</div>
-                </div>
-            </div>
-            <div class="timing-toolbar">
-                <div class="toolbar-row">
-                    <div class="speed-buttons">
-                        <button class="pause-btn" id="pause-btn" title="Pause/Resume">⏸</button>
-                        <button class="speed-btn active" data-speed="1">1x</button>
-                        <button class="speed-btn" data-speed="2">2x</button>
-                        <button class="speed-btn" data-speed="4">4x</button>
-                        <button class="speed-btn" data-speed="6">6x</button>
+        <!-- Timing Panel (Scoped legacy styles) -->
+        <div class="timing-panel-v3" id="timing-panel">
+            <div class="timing-panel-shell">
+                <div class="timing-header">
+                    <div class="header-content">
+                        <span class="session-title">FREE PRACTICE - LIVE TIMING</span>
+                        <div class="session-timer" id="session-timer">60:00</div>
                     </div>
                 </div>
-                <div class="current-speed" id="current-speed">Speed: 1x</div>
-            </div>
+                <div class="timing-toolbar">
+                    <div class="toolbar-row">
+                        <div class="speed-buttons">
+                            <button class="pause-btn" id="pause-btn" title="Pause/Resume">⏸</button>
+                            <button class="speed-btn active" data-speed="1">1x</button>
+                            <button class="speed-btn" data-speed="2">2x</button>
+                            <button class="speed-btn" data-speed="4">4x</button>
+                            <button class="speed-btn" data-speed="6">6x</button>
+                        </div>
+                    </div>
+                    <div class="current-speed" id="current-speed">Speed: 1x</div>
+                </div>
 
-            <div class="timing-wrapper">
-                <div id="timing-table"></div>
+                <div class="timing-wrapper">
+                    <div id="timing-table"></div>
+                </div>
             </div>
         </div>
+        <div class="garage-notifications-v3" id="garage-notifications"></div>
     </div>
-
-    <!-- Notifications -->
-    <div class="garage-notifications-v3" id="garage-notifications"></div>
 
     <!-- Setup Modal Overlay -->
     <div class="player-setup-overlay-v3" id="player-setup-overlay"></div>

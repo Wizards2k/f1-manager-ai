@@ -20,8 +20,14 @@ export class SocketBridge {
             this.state.updateSessionBests(data.session_bests);
         }
 
+        const cars = data.cars || [];
+        const playerCars = cars.filter(car => car.is_player_controlled);
+        if (playerCars.length === 0) {
+            console.warn('[SocketBridge] race_update received with no player cars. team=', this.state.getPlayerTeam?.());
+        }
+
         const seenPlayerDrivers = new Set();
-        (data.cars || []).forEach(car => {
+        cars.forEach(car => {
             if (car.is_player_controlled) {
                 this.playerGarage.applyLocalCarState(car.driver_number, car);
                 seenPlayerDrivers.add(car.driver_number);
@@ -32,7 +38,7 @@ export class SocketBridge {
         });
 
         this.state.prunePlayerCars(seenPlayerDrivers);
-        this.timingPanel.render(data.cars || []);
+        this.timingPanel.render(cars);
 
         if (seenPlayerDrivers.size > 0) {
             this.playerGarage.render();
@@ -53,14 +59,19 @@ export class SocketBridge {
 
         try {
             const cars = await fetch('/api/cars').then(response => response.json());
+            const playerCars = [];
             (cars || []).forEach(car => {
                 if (car.is_player_controlled) {
+                    this.playerGarage.applyLocalCarState(car.driver_number, car);
                     this.state.setPlayerCar(car);
+                    playerCars.push(car);
                 }
                 this.mapModule.updateCarMarker(car);
             });
             this.timingPanel.render(cars || []);
-            this.playerGarage.render();
+            if (playerCars.length > 0) {
+                this.playerGarage.render(true);
+            }
         } catch (err) {
             console.error('Failed to load initial cars:', err);
         }
