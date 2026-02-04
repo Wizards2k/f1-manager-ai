@@ -8,18 +8,45 @@ The V3 UI must function independently without loading or referencing any V1 styl
 
 ## Migration Steps (Sequential)
 
-### Step 1: Map Module V3
-**Goal**: Fixed-size map without dynamic resize logic
+### Recap (Feb 4)
 
-**Files to create/modify**:
-- `python_backend/static/js/modules/map_module_v3.js` - New module
-- `python_backend/static/css/dashboard-v3.css` - Map section
+**What we changed today**
+- Created standalone V3 assets: `dashboard-v3.css`, `map_module_v3.js`, `player_garage_v3.js`, `timing_panel_v3.js`, `index-v3.html`.
+- Dock now mirrors V1 styling (full-width, notifications fixed, setup overlay fullscreen).
+- Timing panel visible with V3 markup/styles; temporary polling implemented to unblock UI tests.
+- Docs updated with autonomy rules and pending timing tasks.
+
+**Backend-facing differences vs V1 (need revert/alignment tomorrow)**
+- Timing panel now fetches `/api/cars` every second instead of receiving socket bridge updates.
+- Session timer counts down locally rather than using backend-provided remaining time.
+- Garage polling for `/api/cars` introduced to keep cards populated (verify if V1 relied on socket state instead).
+- Endpoints hit during Send Out/Setup remain identical, but local state handling diverges (no shared `AppState`).
+
+**Todo (blocking for backend parity)**
+1. Reintroduce socket bridge/state manager (or equivalent) so timing + garage consume backend push events exactly like V1.
+2. Remove custom polling once bridge restored to avoid API spam.
+3. Mirror V1 session timer logic (uses backend remaining time + warnings).
+4. Double-check Send Out flow with backend after state manager restored.
+
+### Current Status
+
+- Map V3: ✅ migrated, fixed layout
+- Dock V3: ✅ visually aligned with V1, notifications capped, modal overlay full screen
+- Timing V3: 🚧 basic table visible with V3 modules (map_module_v3.js, player_garage_v3.js, timing_panel_v3.js)
+- Timing V3 polling: 🚨 currently uses new fetch/setInterval logic; backend expects socket bridge (V1 logic). Need to revert to V1 methods (state-driven updates, no additional polling) to avoid API overload.
+
+## Remaining Gaps
+
+1. **Timing table parity**
 - `python_backend/templates/index-v3.html` - Map container
 
 **Requirements**:
 - Map height fixed via CSS grid/flex (no JS calculations)
-- Remove all `invalidateSize()` calls triggered by UI changes
-- No `ResizeObserver` or `window.resize` listeners for map sizing
+   - Remove temporary `console.log` debug statements once layout confirmed.
+   - TODO (blocking): revert `TimingPanelV3` methods to match `TimingPanel` (V1) behavior exactly (no custom polling) and ensure backend socket bridge (or equivalent) feeds data, as current implementation causes backend issues.
+
+2. **Send Out button**
+   - Verify `PlayerGarageV3` handles `/send_out` response, applies state updates, and UI reflects car leaving pit.
 - Map fills its container via CSS only
 
 **Layout approach**:
