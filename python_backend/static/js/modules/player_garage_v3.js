@@ -53,25 +53,6 @@ export class PlayerGarageV3 {
         this.lastDriverFeedback = new Map();
         this.bindEvents();
         this.loadPlayerTeamInfo();
-        this.startPolling();
-    }
-
-    startPolling() {
-        // Poll for car data every second
-        setInterval(() => this.pollCars(), 1000);
-    }
-
-    async pollCars() {
-        if (!this.state.getPlayerTeam()) return;
-        try {
-            const res = await fetch('/api/cars');
-            const cars = await res.json();
-            const playerCars = cars.filter(c => c.is_player_controlled);
-            playerCars.forEach(car => this.state.setPlayerCar(car));
-            this.render();
-        } catch (err) {
-            console.error('[GarageV3] Poll failed:', err);
-        }
     }
 
     bindEvents() {

@@ -24,7 +24,7 @@ body {
    =============================== */
 .dashboard-v3 {
     display: grid;
-    grid-template-columns: 1fr 420px;
+    grid-template-columns: minmax(0, 65%) minmax(420px, 35%);
     height: 100vh;
     width: 100vw;
     background: #1a1a1a;
@@ -740,15 +740,19 @@ body {
    Timing Panel (V3)
    =============================== */
 .timing-panel-v3 {
-    width: 35%;
     min-width: 420px;
+    width: 100%;
     background: #0f0f0f;
     border-left: 2px solid #333;
     padding: 14px;
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 12px;
+}
+
+.timing-panel-v3.timing-container {
+    font-family: 'Formula1 Display', 'Segoe UI', sans-serif;
+    font-size: 12px;
 }
 
 .timing-header-v3 {

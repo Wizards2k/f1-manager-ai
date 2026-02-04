@@ -4,7 +4,8 @@
  */
 
 export class MapModuleV3 {
-    constructor() {
+    constructor(state = null) {
+        this.state = state;
         const params = new URLSearchParams(window.location.search);
         this.selectedCircuit = params.get('circuit');
         if (this.selectedCircuit) {
