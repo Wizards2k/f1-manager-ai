@@ -746,13 +746,14 @@ body {
     width: 100%;
     background: #0f0f0f;
     border-left: 2px solid #333;
-    padding: 14px;
+    padding: 0;
     display: flex;
     flex-direction: column;
     gap: 12px;
     height: 100vh;
     min-height: 0;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
 .timing-panel-v3.timing-container {
