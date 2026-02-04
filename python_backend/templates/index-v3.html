@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Manager AI - Circuit V3</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-v3.css') }}">
+</head>
+<body>
+    <div class="dashboard-v3">
+        <!-- Game Area: Map + Dock -->
+        <div class="game-area">
+            <div class="map-area">
+                <div id="circuit-map"></div>
+            </div>
+            <!-- Dock -->
+            <div class="player-dock-v3" id="player-dock">
+                <div id="player-car-cards-v3"></div>
+            </div>
+        </div>
+        <!-- Timing Panel -->
+        <div class="timing-panel-v3" id="timing-panel">
+            <div class="timing-header-v3">
+                <div class="header-content-v3">
+                    <span class="session-title-v3">Live Timing</span>
+                    <span class="session-timer-v3" id="session-timer">--:--</span>
+                </div>
+            </div>
+            <div class="timing-toolbar-v3">
+                <div class="toolbar-row-v3">
+                    <button class="pause-btn-v3" id="pause-btn">⏸</button>
+                    <div class="speed-buttons-v3">
+                        <button class="speed-btn-v3" data-speed="1">1x</button>
+                        <button class="speed-btn-v3" data-speed="2">2x</button>
+                        <button class="speed-btn-v3" data-speed="4">4x</button>
+                    </div>
+                </div>
+            </div>
+            <div id="timing-table"></div>
+        </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="garage-notifications-v3" id="garage-notifications"></div>
+
+    <!-- Setup Modal Overlay -->
+    <div class="player-setup-overlay-v3" id="player-setup-overlay"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script type="module">
+        import { MapModuleV3 } from '{{ url_for("static", filename="js/modules/map_module_v3.js") }}';
+        import { PlayerGarageV3 } from '{{ url_for("static", filename="js/modules/player_garage_v3.js") }}';
+        import { TimingPanelV3 } from '{{ url_for("static", filename="js/modules/timing_panel_v3.js") }}';
+        
+        const mapModule = new MapModuleV3();
+        mapModule.loadCircuitGeometry().catch(err => console.error('[MapV3] Circuit load failed', err));
+        
+        const playerGarage = new PlayerGarageV3({
+            cardsContainer: document.getElementById('player-car-cards-v3'),
+            overlayContainer: document.getElementById('player-setup-overlay'),
+            dockElement: document.getElementById('player-dock'),
+            notificationsContainer: document.getElementById('garage-notifications')
+        });
+        
+        const timingPanel = new TimingPanelV3({
+            tableContainer: document.getElementById('timing-table'),
+            timerElement: document.getElementById('session-timer'),
+            pauseButton: document.getElementById('pause-btn'),
+            speedButtons: document.querySelectorAll('.speed-btn-v3')
+        });
+    </script>
+</body>
+</html>

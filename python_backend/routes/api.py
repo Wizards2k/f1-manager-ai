@@ -47,6 +47,10 @@ def register_routes(app):
     def index():
         return render_template('index.html')
 
+    @app.route('/circuit')
+    def circuit_v3():
+        return render_template('index-v3.html')
+
     @app.route('/circuits/<path:filename>')
     def serve_circuit_files(filename):
         return send_from_directory('python_backend/circuits', filename)
