@@ -13,6 +13,7 @@ from utils import (
     get_player_team_info,
     evaluate_setup,
     evaluate_setup_categories,
+    mark_simulation_pending,
 )
 from utils.debug_log import log_debug_event
 
@@ -122,6 +123,12 @@ def register_routes(app):
             return jsonify({'error': f'Circuit file not found: {circuit_id}'}), 404
         except Exception as e:
             return jsonify({'error': f'Failed to load circuit: {str(e)}'}), 500
+
+    @app.route('/api/session/reset', methods=['POST'])
+    def reset_session_state():
+        """Resetta la sessione corrente e riporta le auto allo stato iniziale."""
+        mark_simulation_pending(reset_cars=True)
+        return jsonify({'message': 'Session reset; select a circuit to start again.'})
 
     @app.route('/api/cars')
     def get_cars():

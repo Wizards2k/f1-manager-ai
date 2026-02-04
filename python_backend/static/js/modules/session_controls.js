@@ -1,8 +1,9 @@
 export class SessionControls {
-    constructor({ pauseButton, speedButtons, speedIndicator }) {
+    constructor({ pauseButton, speedButtons, speedIndicator, selectCircuitButton } = {}) {
         this.pauseButton = pauseButton;
         this.speedButtons = Array.from(speedButtons || []);
         this.speedIndicator = speedIndicator;
+        this.selectCircuitButton = selectCircuitButton || document.getElementById('select-circuit-btn');
         this.currentSpeed = 1;
         this.isPaused = false;
         this.bindEvents();
@@ -20,6 +21,9 @@ export class SessionControls {
                 this.changeSpeed(speed);
             });
         });
+        if (this.selectCircuitButton) {
+            this.selectCircuitButton.addEventListener('click', () => this.returnToCircuitSelection());
+        }
     }
 
     updateSpeedIndicator(speed) {
@@ -84,6 +88,19 @@ export class SessionControls {
         if (typeof gameSpeed === 'number' && !Number.isNaN(gameSpeed)) {
             this.currentSpeed = gameSpeed;
             this.updateSpeedIndicator(this.currentSpeed);
+        }
+    }
+
+    async returnToCircuitSelection() {
+        try {
+            const response = await fetch('/api/session/reset', { method: 'POST' });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error resetting session:', error);
+        } finally {
+            window.location.href = '/';
         }
     }
 }

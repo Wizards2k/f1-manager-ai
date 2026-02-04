@@ -27,7 +27,9 @@ export class MapModuleV3 {
             scrollWheelZoom: false,
             boxZoom: false,
             keyboard: false,
-            tap: false
+            tap: false,
+            zoomSnap: 0,
+            zoomDelta: 0.25,
         });
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -136,9 +138,23 @@ export class MapModuleV3 {
     }
 
     fitBoundsWithPadding(bounds) {
-        if (!this.map) return;
+        if (!this.map || !bounds) return;
         this.lastBounds = bounds;
-        this.map.fitBounds(bounds, { padding: [20, 20] });
+        // Slightly tighten bounds so the circuit line occupies more of the canvas
+        const tightenedBounds = bounds.pad(-0.08);
+        this.map.fitBounds(tightenedBounds, { padding: [6, 6] });
+        const currentZoom = this.map.getZoom();
+        if (typeof currentZoom === 'number') {
+            console.debug('[MapV3] fitBounds zoom', currentZoom);
+        }
+        // Apply a deterministic zoom-out on the next frame to guarantee it runs after fitBounds
+        requestAnimationFrame(() => {
+            const latestZoom = this.map.getZoom();
+            if (typeof latestZoom !== 'number') return;
+            const adjustedZoom = latestZoom - 0.30;
+            this.map.setZoom(adjustedZoom);
+            console.debug('[MapV3] applied zoom offset', { previous: latestZoom, adjusted: adjustedZoom });
+        });
     }
 
     setZoom(zoom) {
