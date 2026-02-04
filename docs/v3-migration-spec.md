@@ -11,22 +11,20 @@ The V3 UI must function independently without loading or referencing any V1 styl
 ### Recap (Feb 4)
 
 **What we changed today**
-- Created standalone V3 assets: `dashboard-v3.css`, `map_module_v3.js`, `player_garage_v3.js`, `timing_panel_v3.js`, `index-v3.html`.
-- Dock now mirrors V1 styling (full-width, notifications fixed, setup overlay fullscreen).
-- Timing panel visible with V3 markup/styles; temporary polling implemented to unblock UI tests.
-- Docs updated with autonomy rules and pending timing tasks.
+- `dashboard-v3.js` is now the single entrypoint that instantiates a shared `AppState` and wires Map, Timing Panel, Garage, Session Controls, and Socket Bridge exactly like V1.
+- Socket-driven updates are restored (no polling); `SocketBridge` pushes session + car data into `AppState`, and UI modules render off the shared state.
+- Timing panel regained purple/green sector coloring via session-best wiring, and the session controls now use V1 button classes, active states, and pause iconography.
+- Player dock layout remains scoped to V3 CSS with fixed notifications overlay and fullscreen setup modal, matching the legacy visual treatment without loading V1 assets.
 
-**Backend-facing differences vs V1 (need revert/alignment tomorrow)**
-- Timing panel now fetches `/api/cars` every second instead of receiving socket bridge updates.
-- Session timer counts down locally rather than using backend-provided remaining time.
-- Garage polling for `/api/cars` introduced to keep cards populated (verify if V1 relied on socket state instead).
-- Endpoints hit during Send Out/Setup remain identical, but local state handling diverges (no shared `AppState`).
+**Backend-facing differences vs V1 (still under review)**
+- Session bootstrap currently replays the last-known cache; we need an explicit reset/clear so stale driver data is not shown when a new session starts.
+- Setup overlay drafts are not persisted when the driver returns to box (state reset or missing apply hook) and need to mirror V1 behavior.
+- Driver feedback colors/sliders now render, but we still have to validate the notification pipeline after the setup persistence fix.
 
-**Todo (blocking for backend parity)**
-1. Reintroduce socket bridge/state manager (or equivalent) so timing + garage consume backend push events exactly like V1.
-2. Remove custom polling once bridge restored to avoid API spam.
-3. Mirror V1 session timer logic (uses backend remaining time + warnings).
-4. Double-check Send Out flow with backend after state manager restored.
+**Todo (parity blockers)**
+1. Add a session-reset hook to `AppState`/`SocketBridge` so cached car + session values clear before new data arrives.
+2. Persist setup overlay adjustments (drafts + applied values) across send-out/box cycles using the shared state store.
+3. Verify driver feedback events (notifications + slider statuses) once setup persistence is fixed.
 
 ### Current Status
 

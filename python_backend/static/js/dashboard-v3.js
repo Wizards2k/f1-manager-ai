@@ -12,11 +12,12 @@ import { SocketBridge } from './modules/socket_bridge.js';
     mapModule.loadCircuitGeometry().catch(err => console.error('[MapV3] Circuit load failed', err));
 
     const timingPanel = new TimingPanelV3({
+        state: appState,
         tableContainer: document.getElementById('timing-table'),
         timerElement: document.getElementById('session-timer')
     });
 
-    const playerGarage = new PlayerGarageV3({
+    const playerGarage = new PlayerGarageV3(appState, {
         cardsContainer: document.getElementById('player-car-cards-v3'),
         overlayContainer: document.getElementById('player-setup-overlay'),
         dockElement: document.getElementById('player-dock'),
@@ -25,8 +26,8 @@ import { SocketBridge } from './modules/socket_bridge.js';
 
     const sessionControls = new SessionControls({
         pauseButton: document.getElementById('pause-btn'),
-        speedButtons: document.querySelectorAll('.speed-btn-v3'),
-        speedIndicator: null
+        speedButtons: document.querySelectorAll('.speed-btn'),
+        speedIndicator: document.getElementById('current-speed')
     });
 
     new SocketBridge({
