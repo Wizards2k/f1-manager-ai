@@ -10,6 +10,8 @@ try:
 except ImportError:  # pragma: no cover - fallback per contesti standalone
     config = None
 
+from debug_log import log_debug_event
+
 print("MODELS: Caricate classi base (senza logica posizione)")
 
 
@@ -366,6 +368,7 @@ class RaceCar:
         self.total_laps = 0
         self.total_session_laps = 0
         self.last_lap_type = None
+        self.has_completed_hot_lap = False
         
         # Tempi e performance
         self.lap_times = []
@@ -461,6 +464,7 @@ class RaceCar:
         self.stint_laps_remaining = self.stint_target_laps
         self.current_lap_start = time.time()
         self.distance_traveled = 0
+        self.has_completed_hot_lap = False
         
         # Resetta settori per nuovo stint
         self.current_lap_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
@@ -511,6 +515,17 @@ class RaceCar:
         self.total_laps += 1
         self.total_session_laps += 1
         self.last_lap_type = lap_type
+        if lap_type == CarState.HOT_LAP:
+            self.has_completed_hot_lap = True
+        if self.is_player_controlled:
+            log_debug_event(
+                'lap_complete',
+                driver=self.driver_number,
+                lap_type=lap_type.value if isinstance(lap_type, CarState) else str(lap_type),
+                total_laps=self.total_laps,
+                stint_laps_remaining=self.stint_laps_remaining,
+                state=str(self.state),
+            )
         
         # Aggiorna usura gomme
         self.update_tire_wear()

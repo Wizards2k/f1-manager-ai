@@ -22,6 +22,7 @@ simulation_ready = False  # Parte solo dopo la selezione del circuito
 # Inizializza 20 auto (2 per team) con posizioni sfalsate
 from data.teams import TEAMS
 from models import RaceCar
+from utils.debug_log import log_debug_event
 
 race_cars = []
 car_index = 0
@@ -110,12 +111,15 @@ def reset_cars_for_session(start_time):
         car.total_laps = 0
         car.total_session_laps = 0
         car.last_lap_type = None
+        car.has_completed_hot_lap = False
         car.current_lap_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
         car.last_sector_times = {'sector1': None, 'sector2': None, 'sector3': None}
         car.best_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
         car.best_lap_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
         car.stint_laps_remaining = car.stint_target_laps
         car.sector3_start_time = None
+        if car.is_player_controlled:
+            log_debug_event('car_reset', driver=car.driver_number, team=getattr(car.team, 'nome_scuderia', None))
         car_index += 1
 
 

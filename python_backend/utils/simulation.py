@@ -7,6 +7,7 @@ from utils.position import circuit_length
 from utils.game_logic import update_session_bests
 from utils.performance import project_sector_time
 from utils.driver_feedback import get_driver_feedback, should_trigger_feedback
+from utils.debug_log import log_debug_event
 
 def update_car_position(car, dt):
     """Aggiorna posizione dell'auto basandosi sulla distanza e stato"""
@@ -48,6 +49,8 @@ def update_car_position(car, dt):
             car.complete_lap(CarState.OUT_LAP)
             car.state = CarState.HOT_LAP
             car.current_lap_start = current_time
+            if car.is_player_controlled:
+                log_debug_event('lap_transition', driver=car.driver_number, transition='OUT_TO_HOT')
                 
     elif car.state == CarState.HOT_LAP:
         # Hot lap a velocità massima - velocità base
@@ -64,11 +67,20 @@ def update_car_position(car, dt):
             car.distance_traveled = car.distance_traveled % current_circuit_length
             car.complete_lap(CarState.HOT_LAP)
             car.stint_laps_remaining -= 1
+            if car.is_player_controlled:
+                log_debug_event(
+                    'lap_transition',
+                    driver=car.driver_number,
+                    transition='HOT_COMPLETE',
+                    stint_laps_remaining=car.stint_laps_remaining,
+                )
                 
             # Se ha finito i giri della stint, inizia rientro
             if car.stint_laps_remaining <= 0:
                 car.state = CarState.IN_LAP
                 car.current_lap_start = current_time
+                if car.is_player_controlled:
+                    log_debug_event('lap_transition', driver=car.driver_number, transition='BEGIN_IN_LAP')
                     
     elif car.state == CarState.IN_LAP:
         # In lap più lento (raffreddamento) - velocità base
@@ -85,6 +97,8 @@ def update_car_position(car, dt):
             car.distance_traveled = car.distance_traveled % current_circuit_length
             car.complete_lap(CarState.IN_LAP)
             car.enter_box()
+            if car.is_player_controlled:
+                log_debug_event('lap_transition', driver=car.driver_number, transition='IN_COMPLETE_BOX')
 
 def check_car_sector_crossing(car, old_distance, new_distance):
     """Controlla se l'auto ha attraversato un settore e registra il tempo"""

@@ -14,6 +14,7 @@ from utils import (
     evaluate_setup,
     evaluate_setup_categories,
 )
+from utils.debug_log import log_debug_event
 
 
 circuit_logger = logging.getLogger('circuit_api')
@@ -388,35 +389,53 @@ def register_routes(app):
 
         current_setup = car.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
         current_setup.update(sanitized)
-        # Provide setup feedback only after the car has completed a HOT_LAP
-        if car.last_lap_type == CarState.HOT_LAP:
+        log_debug_event(
+            'setup_request',
+            driver=driver_number,
+            state=str(car.state),
+            last_lap_type=car.last_lap_type.value if isinstance(car.last_lap_type, CarState) else car.last_lap_type,
+            fields=list(sanitized.keys()),
+            total_laps=car.total_laps,
+        )
+        # Provide setup feedback only after la vettura ha completato almeno un HOT_LAP
+        if car.has_completed_hot_lap:
             recommendation = evaluate_setup(current_setup)
             categories = evaluate_setup_categories(current_setup)
             car.setup_feedback = recommendation
             car.setup_feedback['categories'] = categories
+            log_debug_event(
+                'setup_feedback_sent',
+                driver=driver_number,
+                state=str(car.state),
+                last_lap_type=car.last_lap_type.value if isinstance(car.last_lap_type, CarState) else car.last_lap_type,
+                has_completed_hot_lap=car.has_completed_hot_lap,
+                fields=len(recommendation.get('fields', {})),
+            )
         else:
             # Keep existing feedback; add placeholder message
             placeholder_msg = 'Awaiting on-track data: complete a hot lap for feedback.'
             if not car.setup_feedback:
                 car.setup_feedback = {
+                    'status': 'missing',
                     'message': placeholder_msg,
-                    'tone': 'info',
-                    'fields': {},
-                    'categories': None,
+                    'tone': 'neutral',
+                    'fields': {key: {'status': 'missing', 'range': None} for key in DEFAULT_SETUP_CONFIG.keys()}
                 }
             else:
-                car.setup_feedback['message'] = placeholder_msg
-                car.setup_feedback['tone'] = 'info'
-                car.setup_feedback['categories'] = car.setup_feedback.get('categories')
-            recommendation = car.setup_feedback
-            categories = car.setup_feedback.get('categories')
+                car.setup_feedback.setdefault('status', 'pending')
+                car.setup_feedback.setdefault('message', placeholder_msg)
+            log_debug_event(
+                'setup_feedback_placeholder',
+                driver=driver_number,
+                state=str(car.state),
+                last_lap_type=car.last_lap_type.value if isinstance(car.last_lap_type, CarState) else car.last_lap_type,
+                has_completed_hot_lap=car.has_completed_hot_lap,
+            )
 
         return jsonify({
-            'driver_number': driver_number,
-            'setup': current_setup,
-            'recommendation': recommendation,
-            'categories': categories,
-        }), 200
+            'message': 'Setup updated',
+            'car': _serialize_player_car(car)
+        })
 
     @app.route('/api/player/car/<int:driver_number>/send_out', methods=['POST'])
     def send_player_car_out(driver_number):
