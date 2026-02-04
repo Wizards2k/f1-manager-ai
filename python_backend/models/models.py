@@ -485,7 +485,9 @@ class RaceCar:
             # Tempo ai box per la prossima uscita (5-20 minuti)
             self.box_time_until = time.time() - self.session_start_time + random.uniform(300, 1200)
         self.distance_traveled = 0
-        
+        if self.is_player_controlled and self.has_completed_hot_lap:
+            self._generate_setup_feedback(trigger='box_entry')
+
     def complete_lap(self, lap_type):
         """Registra tempo sul giro in base al tipo (tempi reali non influenzati da velocità gioco)"""
         lap_time = time.time() - self.current_lap_start
@@ -545,6 +547,44 @@ class RaceCar:
             update_session_bests(self)
 
         self._persist_lap_debug(lap_type, realistic_lap_time)
+
+    def _generate_setup_feedback(self, trigger='manual'):
+        """Calcola e salva il feedback setup corrente"""
+        if not self.is_player_controlled:
+            return
+        current_setup = self.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
+        try:
+            from utils.setup_engine import evaluate_setup, evaluate_setup_categories
+        except Exception:  # pragma: no cover
+            log_debug_event(
+                'setup_feedback_error',
+                driver=self.driver_number,
+                trigger=trigger,
+                reason='import_error',
+            )
+            return
+
+        try:
+            recommendation = evaluate_setup(current_setup)
+            categories = evaluate_setup_categories(current_setup)
+        except Exception as exc:  # pragma: no cover
+            log_debug_event(
+                'setup_feedback_error',
+                driver=self.driver_number,
+                trigger=trigger,
+                reason=str(exc),
+            )
+            return
+
+        recommendation['categories'] = categories
+        self.setup_feedback = recommendation
+        log_debug_event(
+            'setup_feedback_generated',
+            driver=self.driver_number,
+            trigger=trigger,
+            has_completed_hot_lap=self.has_completed_hot_lap,
+            total_laps=self.total_laps,
+        )
 
     def compute_max_stint_laps(self, fuel_percent: int) -> int:
         """Calcola il numero massimo di giri consentiti dal fuel percentuale."""

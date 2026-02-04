@@ -372,6 +372,37 @@ def register_routes(app):
             'updated_fields': updates_applied,
         })
 
+    @app.route('/api/player/car/<int:driver_number>/setup/save', methods=['POST'])
+    def save_player_setup(driver_number):
+        payload = request.get_json(silent=True) or {}
+        setup_payload = payload.get('setup')
+        sanitized, error_msg = _validate_setup_payload(setup_payload)
+        if error_msg:
+            return _error_response(error_msg)
+
+        car, error = _get_player_car(driver_number)
+        if error:
+            return error
+
+        if car.state != CarState.BOX:
+            return _error_response('Car must be in BOX to edit setup', 409)
+
+        current_setup = car.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
+        current_setup.update(sanitized)
+        log_debug_event(
+            'setup_saved',
+            driver=driver_number,
+            state=str(car.state),
+            fields=list(sanitized.keys()),
+            total_laps=car.total_laps,
+        )
+
+        return jsonify({
+            'message': 'Setup stored',
+            'car': _serialize_player_car(car),
+            'updated_fields': sanitized,
+        })
+
     @app.route('/api/player/car/<int:driver_number>/setup', methods=['POST'])
     def update_player_setup(driver_number):
         payload = request.get_json(silent=True) or {}

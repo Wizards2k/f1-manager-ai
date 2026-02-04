@@ -362,7 +362,11 @@ export class PlayerGarageV3 {
         const rangeLabel = range ? `${range.min}-${range.max}` : 'No range yet';
         const statusClass = feedback?.status ? `status-${feedback.status}` : 'status-missing';
         const deltaLabel = feedback?.delta_label || 'Pending data';
-        const displayValue = typeof feedback?.value === 'number' ? feedback.value : value;
+        const recommendedValue = typeof feedback?.value === 'number' ? feedback.value : null;
+        const displayValue = value;
+        const recommendationBadge = recommendedValue !== null
+            ? `<span class="setup-recommendation-v3">Recommended ${recommendedValue}</span>`
+            : '';
         return `
             <div class="setup-control-v3 ${statusClass}" data-field="${field}" data-driver="${driverNumber}">
                 <div class="setup-control-header-v3">
@@ -374,6 +378,7 @@ export class PlayerGarageV3 {
                     <span class="setup-value-v3">${displayValue}</span>
                     <span class="setup-delta-v3 ${statusClass}">${deltaLabel}</span>
                 </div>
+                ${recommendationBadge}
             </div>
         `;
     }
@@ -688,17 +693,27 @@ export class PlayerGarageV3 {
             return;
         }
         try {
-            const res = await fetch(`/api/player/car/${driverNumber}/setup`, {
+            const res = await fetch(`/api/player/car/${driverNumber}/setup/save`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ setup: setupPayload })
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Setup update failed');
-            this.setStatus(`Setup stored for #${driverNumber}.`, 'success');
-            this.applySetupLocally(driverNumber, setupPayload, data.recommendation);
+            this.setStatus(`Setup saved for #${driverNumber}.`, 'success');
+            if (data.car) {
+                this.applyLocalCarState(driverNumber, data.car);
+            } else {
+                this.applySetupLocally(driverNumber, setupPayload);
+            }
             this.resetSetupDraft(driverNumber);
-            this.toggleSetupOverlay(driverNumber, false);
+            const latestCar = data.car || this.state.getPlayerCar(driverNumber);
+            const currentState = latestCar ? this.getCarState(latestCar) : state;
+            if (currentState === 'BOX') {
+                this.toggleSetupOverlay(driverNumber, false);
+            } else {
+                this.buildSetupOverlay(latestCar, currentState === 'BOX');
+            }
         } catch (err) {
             console.error(err);
             this.setStatus(err.message || 'Setup update failed', 'error');

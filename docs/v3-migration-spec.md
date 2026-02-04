@@ -112,6 +112,31 @@ Row 3: [Send Out] [Box] [Setup]
 - All timing colors (session best, personal best, etc.) in V3 CSS
 - No dependency on V1 `.timing-container` styles
 
+### Feb 5 Updates – Setup Feedback & Apply Flow
+
+**Summary**
+
+- Restored V1 behavior where setup feedback is generated only after a completed hot lap followed by box entry, and ensured Apply simply stores slider values without triggering feedback.
+- Added per-car hot-lap tracking and backend logging so both player cars remain independent and debuggable.
+
+**Backend Changes**
+
+1. `RaceCar` now exposes `_generate_setup_feedback(trigger)` and calls it automatically in `enter_box()` whenever a player-controlled car with `has_completed_hot_lap` returns to the garage. This mirrors the real-world workflow (feedback arrives when telemetry from the stint is available) and removes any UI coupling.
+2. Introduced `/api/player/car/<driver>/setup/save` which only validates + persists `player_config.setup` while the car is in BOX. The response returns the serialized car so the frontend can refresh its state. Legacy `/setup` remains the telemetry-driven feedback endpoint, triggered internally.
+3. Added structured debug logs (`setup_saved`, `setup_feedback_generated`, etc.) into `/tmp/f1_setup_debug.log` to trace each phase (Apply, hot lap, box entry) per driver.
+
+**Frontend Changes (`player_garage_v3.js`)**
+
+1. The Apply button now invokes `/setup/save` and overlays update by applying the car payload returned by the server, preventing race-update events from overwriting drafts.
+2. Setup sliders display the actual stored values (from `player_config.setup`) instead of overwriting them with `setup_feedback.value`. Feedback still colors the control and can optionally show a "Recommended X" badge for clarity.
+3. After saving, the overlay either closes (if the car stays in BOX) or re-renders using the refreshed car state, so both cars keep their independent drafts/feedback.
+
+**Testing Notes**
+
+1. Perform a full stint: out-lap → 3× hot lap → in-lap → box entry. Upon reopening Setup, sliders remain at the saved values while the feedback colors reflect the latest telemetry.
+2. Modify sliders, press Apply, reopen immediately (without send-out): values persist thanks to `/setup/save` response syncing the local AppState.
+3. Repeat with both drivers to confirm `has_completed_hot_lap` and feedback storage are scoped per car.
+
 ---
 
 ## Architecture Rules
