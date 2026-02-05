@@ -11,7 +11,7 @@ TEAMS = [
         colore_team="#0600EF",
         forza_auto=91,
         power_unit="Honda RBPT",
-        piloti_titolari=[PILOTS["VERSTAPPEN"], PILOTS["PEREZ"]],
+        piloti_titolari=[PILOTS["VERSTAPPEN"], PILOTS["TSUNODA"]],
     ),
     Team(
         nome_scuderia="Scuderia Ferrari",
@@ -20,7 +20,7 @@ TEAMS = [
         colore_team="#DC0000",
         forza_auto=87,
         power_unit="Ferrari 066/10",
-        piloti_titolari=[PILOTS["LECLERC"], PILOTS["SAINZ"]],
+        piloti_titolari=[PILOTS["LECLERC"], PILOTS["HAMILTON"]],
     ),
     Team(
         nome_scuderia="Mercedes-AMG PETRONAS",
@@ -29,7 +29,7 @@ TEAMS = [
         colore_team="#00A19C",
         forza_auto=85,
         power_unit="Mercedes-AMG F1 M14",
-        piloti_titolari=[PILOTS["HAMILTON"], PILOTS["RUSSELL"]],
+        piloti_titolari=[PILOTS["RUSSELL"], PILOTS["ANTONELLI"]],
     ),
     Team(
         nome_scuderia="McLaren F1 Team",
@@ -56,7 +56,7 @@ TEAMS = [
         colore_team="#0090FF",
         forza_auto=79,
         power_unit="Renault E-Tech",
-        piloti_titolari=[PILOTS["OCON"], PILOTS["GASLY"]],
+        piloti_titolari=[PILOTS["GASLY"], PILOTS["COLAPINTO"]],
     ),
     Team(
         nome_scuderia="Williams Racing",
@@ -65,7 +65,7 @@ TEAMS = [
         colore_team="#00A0DE",
         forza_auto=76,
         power_unit="Mercedes-AMG",
-        piloti_titolari=[PILOTS["ALBON"], PILOTS["SARGEANT"]],
+        piloti_titolari=[PILOTS["ALBON"], PILOTS["SAINZ"]],
     ),
     Team(
         nome_scuderia="Visa Cash App RB",
@@ -74,7 +74,7 @@ TEAMS = [
         colore_team="#1E2C5C",
         forza_auto=77,
         power_unit="Honda RBPT",
-        piloti_titolari=[PILOTS["TSUNODA"], PILOTS["RICCIARDO"]],
+        piloti_titolari=[PILOTS["LAWSON"], PILOTS["HADJAR"]],
     ),
     Team(
         nome_scuderia="Stake F1 Team Kick Sauber",
@@ -83,7 +83,7 @@ TEAMS = [
         colore_team="#00FF87",
         forza_auto=73,
         power_unit="Ferrari 066/10",
-        piloti_titolari=[PILOTS["BOTTAS"], PILOTS["ZHOU"]],
+        piloti_titolari=[PILOTS["HULKENBERG"], PILOTS["BORTOLETO"]],
     ),
     Team(
         nome_scuderia="MoneyGram Haas F1 Team",
@@ -92,7 +92,7 @@ TEAMS = [
         colore_team="#B6BABD",
         forza_auto=71,
         power_unit="Ferrari 066/10",
-        piloti_titolari=[PILOTS["HULKENBERG"], PILOTS["MAGNUSSEN"]],
+        piloti_titolari=[PILOTS["OCON"], PILOTS["BEARMAN"]],
     ),
 ]
 

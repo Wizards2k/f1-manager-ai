@@ -49,6 +49,8 @@ class Nazionalita(Enum):
     CINA = "CHN"
     AUSTRIA = "AUT"
     SVIZZERA = "CHE"
+    ARGENTINA = "ARG"
+    NUOVA_ZELANDA = "NZL"
 
 
 class TireCompound(Enum):
@@ -86,6 +88,11 @@ class Pilota:
         "Nyck de Vries": "DEV",
         "Antonio Giovinazzi": "GIO",
         "Robert Kubica": "KUB",
+        "Andrea Kimi Antonelli": "ANT",
+        "Oliver Bearman": "BEA",
+        "Gabriel Bortoleto": "BOR",
+        "Franco Colapinto": "COL",
+        "Isack Hadjar": "HAD",
     }
 
     def __init__(

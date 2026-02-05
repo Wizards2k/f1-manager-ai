@@ -61,6 +61,12 @@ PILOTS = {
     "ZHOU": _pilot("Zhou", "Guanyu", Nazionalita.CINA, 26, 24, 78, 76, 76, 70, 75, 75),
     "HULKENBERG": _pilot("Nico", "Hülkenberg", Nazionalita.GERMANIA, 38, 27, 81, 78, 80, 74, 78, 78),
     "MAGNUSSEN": _pilot("Kevin", "Magnussen", Nazionalita.DANIMARCA, 32, 20, 80, 75, 79, 78, 72, 72),
+    "LAWSON": _pilot("Liam", "Lawson", Nazionalita.NUOVA_ZELANDA, 23, 30, 83, 76, 82, 79, 72, 72),
+    "ANTONELLI": _pilot("Andrea Kimi", "Antonelli", Nazionalita.ITALIA, 19, 12, 88, 76, 85, 80, 70, 70),
+    "BEARMAN": _pilot("Oliver", "Bearman", Nazionalita.REGNO_UNITO, 20, 87, 82, 77, 80, 78, 68, 68),
+    "BORTOLETO": _pilot("Gabriel", "Bortoleto", Nazionalita.BRASILE, 21, 5, 79, 75, 78, 76, 69, 69),
+    "COLAPINTO": _pilot("Franco", "Colapinto", Nazionalita.ARGENTINA, 22, 43, 81, 76, 80, 78, 70, 70),
+    "HADJAR": _pilot("Isack", "Hadjar", Nazionalita.FRANCIA, 21, 6, 80, 75, 79, 77, 71, 71),
 }
 
 __all__ = ["PILOTS"]
