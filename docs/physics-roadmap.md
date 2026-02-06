@@ -69,7 +69,9 @@ Questo piano definisce come usare FastF1 come fonte dati reale per calibrare un 
   - Per dataset: esportare JSON/JSONL, non DataFrame pickled (più portabile, versionabile).
   - Per runtime: mettere un micro-cache applicativo (in-memory LRU o su disco) per query frequenti (es. stessa session/lap).
 
-## 5) Mapping dati FastF1 → tuoi concetti
+## 5) Mapping dati FastF1 → tuoi concetti (regola: tutto offline)
+
+> **Project rule:** la simulazione deve funzionare al 100% offline. Tutti i dati FastF1 vengono acquisiti e trasformati in asset statici (JSON/JSONL) prima dell’esecuzione del gioco; nessuna dipendenza da feed live.
 - **Driver**: FastF1 usa driver number come string (coerente col tuo `driver_number`).
 - **Lap types**: nel tuo modello hai `OUT_LAP/HOT_LAP/IN_LAP/BOX`; FastF1 ha flags in laps (da verificare nel dettaglio nei campi di `Session.laps`) → mappatura da definire.
 - **Settori**: FastF1 può fornire `Sector1Time/Sector2Time/Sector3Time` nei laps (da confermare nella Data Reference) e/o derivabili.
