@@ -178,6 +178,41 @@ class PowerUnit:
 - Il DF effettivo verrà limitato da `grip_available = f(temperatura, vita, compound)`.
 - Output richiesto: `tire_grip_multiplier` e `wear_rate` da applicare ai segmenti.
 
+#### 7.3.1 Dati e input necessarie
+1. **Catalogo Pirelli**: per ogni compound slick C1–C5 (più INT/WET) memorizziamo grip baseline, finestra termica ottimale, coefficiente di warm-up e slope di degrado.
+2. **Profilo GP**: ogni circuito deve dichiarare le tre nomination Pirelli (Soft/Medium/Hard reali), i delta tempo stimati tra le mescole e le note di degrado/stint length. I mapping esistenti (es. `Raw_2024/italy_mapping.json`) forniscono i `*_tire_multiplier` e parametri di smoothness/bumpiness.
+3. **Assetto qualità**: uno scalare derivato da setup (ali, ride height, sospensioni, antiroll, balance) e skill pilota `consumo_gomme`; questo valore modula degrado e controllo termico.
+
+#### 7.3.2 Stato per ogni gomma
+Ogni istanza `Tyre` (per ruota oppure per asse) conserva almeno i seguenti attributi:
+- **Identità**: `compound`, `pirelli_label` (Soft/Medium/Hard/INT/WET), `stint_id`, `wheel_position`.
+- **Lifecycle**: `life_percent`, `lap_age`, `wear_rate_base`, `wear_rate_dynamic`, `heat_cycle_count`, `graining_level`, `blistering_level`.
+- **Termica**: `temp_surface`, `temp_core`, `temp_window_min/max`, `thermal_mass`, accumulatori `heat_generation` e `heat_dissipation`.
+- **Grip & performance**: `base_grip`, `thermal_grip_factor`, `wear_grip_factor`, `pressure_offset`, `effective_grip`, `lap_time_delta_hint`.
+- **Setup/balance input**: `aero_balance_error`, `suspension_stiffness`, `ride_height_offset`, `antiroll_setting`, `mechanical_grip_score`, `pace_factor`, `track_bumpiness_factor`.
+- **Environment hooks**: `air_temp`, `track_temp`, `track_rubber_level`, `weather_state`, `water_film_level` (per INT/WET), `drs_active`, `last_section_kind`.
+- **Health flags**: `overheat_warning`, `cold_warning`, `puncture_risk`, `flatspot_severity`, `safety_crossover_ready`.
+
+#### 7.3.3 Modello termico e grip
+1. **Due strati**: `temp_surface` reagisce rapidamente a attrito/frenata, `temp_core` ha inerzia maggiore e accumula calore dalla superficie.
+2. **Bilancio energetico**: `dT/dt = (Heat_Gen - Heat_Loss) / Thermal_Mass` con contributi di curve (slip & lateral G), frenata (anteriore), convezione (velocità/aria) e conduzione (temperatura pista).
+3. **Thermal factor**: curva gaussiana centrata sulla finestra termica ottimale della mescola, clampata per evitare valori >1.1/<0.7.
+4. **Grip effettivo**: `effective_grip = base_grip * thermal_factor * wear_factor * setup_bonus`, dove `setup_bonus` deriva da bilanciamento aero, sospensioni e antiroll.
+5. **Degrado**: `wear_rate_dynamic = wear_rate_base * pace_factor * handling_penalty * track_bumpiness_factor`, aggiornato per singolo segmento e usato per scalare `life_percent`.
+
+#### 7.3.4 Integrazione dei multiplier Pirelli
+1. **Estrazione**: leggere da ciascun mapping circuito i campi `soft_tire_multiplier`, `medium_tire_multiplier`, `hard_tire_multiplier` e renderli disponibili via `circuit_profile['tyre_package']`.
+2. **Base grip**: `base_grip_compound = reference_grip * multiplier` dove `reference_grip` proviene dagli stessi file legacy.
+3. **Wear baseline**: `wear_rate_compound = wear_ref * (1 + k_wear * (multiplier - 1))`, con `wear_ref` definito dal circuito o da default globali.
+4. **Delta tempo attesi**: `delta_time_SM = (mult_soft - mult_medium) * lap_time_ref`, idem per SH/MH; salvati nel profilo circuito per AI/strategie.
+5. **Bootstrap TyreModel**: quando `RaceCar.set_tire_compound` crea una gomma, inizializza `base_grip`, `wear_rate_base`, `lap_time_delta_hint` usando il pacchetto circuito corrente.
+6. **Override/validazione**: confrontare i delta teorici con la telemetria reale; se lo scostamento supera soglia, permettere override manuali nel file circuito (`tyre_overrides`).
+
+#### 7.3.5 Hook di simulazione
+1. `TyreModel.update(delta_time, section, car_state, environment)` osserva il tipo di sezione (`Straight`, `SlowCorner`, ecc.), la velocità e i comandi (throttle/brake) per aggiornare temperature e usura.
+2. I rettilinei incrementano la convezione (raffreddamento, soprattutto con DRS attivo); le curve assegnano più calore alla ruota esterna basandosi su `wheel_position` e direzione curva.
+3. Il metodo restituisce `effective_grip` per ogni asse/ruota e i delta usura da applicare al calcolo tempi settore.
+
 ### 7.4 Pilota (v0.4)
 - Riuso skill esistenti (`velocita`, `qualifica`, `gara`, `costanza`, `stile_sottosterzo/sovrasterzo`).
 - Effetti:

@@ -1,0 +1,131 @@
+{
+  "season": 2025,
+  "tire_provider": "Pirelli",
+  "total_rounds": 24,
+  "compounds_info": {
+    "standard_deltas": { "C1_C2": 0.65, "C2_C3": 0.55, "C3_C4": 0.50, "C4_C5": 0.60, "C5_C6": 0.45 },
+    "global_wear_base": { "C1": 0.05, "C2": 0.08, "C3": 0.12, "C4": 0.18, "C5": 0.25, "C6": 0.35 }
+  },
+  "calendar": [
+    {
+      "round": 1, "gp": "Australia", "track": "Melbourne",
+      "nomination": {"hard": "C3", "medium": "C4", "soft": "C5"},
+      "lap_time_delta_hint": 0.55, "wear_rate_base": "Medio", "notes": "Evoluzione pista rapida."
+    },
+    {
+      "round": 2, "gp": "China", "track": "Shanghai",
+      "nomination": {"hard": "C2", "medium": "C3", "soft": "C4"},
+      "lap_time_delta_hint": 0.52, "wear_rate_base": "Medio-Alto", "notes": "Forte stress sull'anteriore sinistro."
+    },
+    {
+      "round": 3, "gp": "Japan", "track": "Suzuka",
+      "nomination": {"hard": "C1", "medium": "C2", "soft": "C3"},
+      "lap_time_delta_hint": 0.65, "wear_rate_base": "Elevato", "notes": "Carichi laterali estremi (Esses/130R)."
+    },
+    {
+      "round": 4, "gp": "Bahrain", "track": "Sakhir",
+      "nomination": {"hard": "C1", "medium": "C2", "soft": "C3"},
+      "lap_time_delta_hint": 0.60, "wear_rate_base": "Critico", "notes": "Asfalto molto abrasivo, degrado termico alto."
+    },
+    {
+      "round": 5, "gp": "Saudi Arabia", "track": "Jeddah",
+      "nomination": {"hard": "C3", "medium": "C4", "soft": "C5"},
+      "lap_time_delta_hint": 0.50, "wear_rate_base": "Basso", "notes": "Pista cittadina veloce, poco degrado."
+    },
+    {
+      "round": 6, "gp": "Miami", "track": "Miami",
+      "nomination": {"hard": "C3", "medium": "C4", "soft": "C5"},
+      "lap_time_delta_hint": 0.55, "wear_rate_base": "Medio", "notes": "Rischio graining elevato."
+    },
+    {
+      "round": 7, "gp": "Emilia-Romagna", "track": "Imola",
+      "nomination": {"hard": "C4", "medium": "C5", "soft": "C6"},
+      "lap_time_delta_hint": 0.48, "wear_rate_base": "Basso", "notes": "Debutto C6. Sottosterzo frequente."
+    },
+    {
+      "round": 8, "gp": "Monaco", "track": "Monte Carlo",
+      "nomination": {"hard": "C4", "medium": "C5", "soft": "C6"},
+      "lap_time_delta_hint": 0.40, "wear_rate_base": "Minimo", "notes": "Focus su trazione e warm-up."
+    },
+    {
+      "round": 9, "gp": "Spain", "track": "Barcelona",
+      "nomination": {"hard": "C1", "medium": "C2", "soft": "C3"},
+      "lap_time_delta_hint": 0.70, "wear_rate_base": "Molto Alto", "notes": "Pista benchmark per l'usura gomme."
+    },
+    {
+      "round": 10, "gp": "Canada", "track": "Montreal",
+      "nomination": {"hard": "C4", "medium": "C5", "soft": "C6"},
+      "lap_time_delta_hint": 0.45, "wear_rate_base": "Basso", "notes": "Trazione in uscita dai tornantini."
+    },
+    {
+      "round": 11, "gp": "Austria", "track": "Spielberg",
+      "nomination": {"hard": "C3", "medium": "C4", "soft": "C5"},
+      "lap_time_delta_hint": 0.50, "wear_rate_base": "Medio", "notes": "Pista corta, gap ridotti."
+    },
+    {
+      "round": 12, "gp": "Great Britain", "track": "Silverstone",
+      "nomination": {"hard": "C1", "medium": "C2", "soft": "C3"},
+      "lap_time_delta_hint": 0.75, "wear_rate_base": "Estremo", "notes": "Magnotts/Becketts caricano le gomme oltre 5G."
+    },
+    {
+      "round": 13, "gp": "Belgium", "track": "Spa",
+      "nomination": {"hard": "C1", "medium": "C3", "soft": "C4"},
+      "lap_time_delta_hint": 0.95, "wear_rate_base": "Alto", "notes": "SKIP C2: Salto di mescola per forzare 2 soste."
+    },
+    {
+      "round": 14, "gp": "Hungary", "track": "Hungaroring",
+      "nomination": {"hard": "C3", "medium": "C4", "soft": "C5"},
+      "lap_time_delta_hint": 0.55, "wear_rate_base": "Medio-Alto", "notes": "Alte temperature asfalto (spesso >50°C)."
+    },
+    {
+      "round": 15, "gp": "Netherlands", "track": "Zandvoort",
+      "nomination": {"hard": "C2", "medium": "C3", "soft": "C4"},
+      "lap_time_delta_hint": 0.58, "wear_rate_base": "Medio-Alto", "notes": "Curve sopraelevate (banking) aumentano il carico."
+    },
+    {
+      "round": 16, "gp": "Italy", "track": "Monza",
+      "nomination": {"hard": "C3", "medium": "C4", "soft": "C5"},
+      "lap_time_delta_hint": 0.45, "wear_rate_base": "Medio", "notes": "Asfalto nuovo (2024) riduce il degrado."
+    },
+    {
+      "round": 17, "gp": "Azerbaijan", "track": "Baku",
+      "nomination": {"hard": "C4", "medium": "C5", "soft": "C6"},
+      "lap_time_delta_hint": 0.48, "wear_rate_base": "Basso", "notes": "Lungo rettilineo raffredda eccessivamente le gomme."
+    },
+    {
+      "round": 18, "gp": "Singapore", "track": "Marina Bay",
+      "nomination": {"hard": "C3", "medium": "C4", "soft": "C5"},
+      "lap_time_delta_hint": 0.52, "wear_rate_base": "Basso-Medio", "notes": "Umidità e calore favoriscono degrado termico."
+    },
+    {
+      "round": 19, "gp": "USA", "track": "Austin",
+      "nomination": {"hard": "C1", "medium": "C3", "soft": "C4"},
+      "lap_time_delta_hint": 1.10, "wear_rate_base": "Elevato", "notes": "SKIP C2: Gap enorme tra Hard e Medium."
+    },
+    {
+      "round": 20, "gp": "Mexico City", "track": "Hermanos Rodriguez",
+      "nomination": {"hard": "C2", "medium": "C4", "soft": "C5"},
+      "lap_time_delta_hint": 0.90, "wear_rate_base": "Medio", "notes": "SKIP C3: Aria rarefatta riduce il raffreddamento freni/gomme."
+    },
+    {
+      "round": 21, "gp": "Brazil", "track": "Interlagos",
+      "nomination": {"hard": "C2", "medium": "C3", "soft": "C4"},
+      "lap_time_delta_hint": 0.55, "wear_rate_base": "Medio-Alto", "notes": "Trazione critica in salita."
+    },
+    {
+      "round": 22, "gp": "Las Vegas", "track": "Las Vegas",
+      "nomination": {"hard": "C3", "medium": "C4", "soft": "C5"},
+      "lap_time_delta_hint": 0.42, "wear_rate_base": "Molto Basso", "notes": "Temperature notturne gelide, rischio graining estremo."
+    },
+    {
+      "round": 23, "gp": "Qatar", "track": "Lusail",
+      "nomination": {"hard": "C1", "medium": "C2", "soft": "C3"},
+      "lap_time_delta_hint": 0.65, "wear_rate_base": "Critico", "notes": "Cordoli aggressivi, vita gomma limitata per sicurezza."
+    },
+    {
+      "round": 24, "gp": "Abu Dhabi", "track": "Yas Marina",
+      "nomination": {"hard": "C3", "medium": "C4", "soft": "C5"},
+      "lap_time_delta_hint": 0.50, "wear_rate_base": "Medio", "notes": "Degrado posteriore in trazione nel Settore 3."
+    }
+  ]
+}
