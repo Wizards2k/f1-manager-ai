@@ -1,0 +1,362 @@
+{
+  "season": 2025,
+  "tire_provider": "Pirelli",
+  "data_version": "1.2_Full_Specs",
+  "technical_regulations": {
+    "fuel_capacity_limit_kg": 110,
+    "max_fuel_flow_kg_h": 100,
+    "ers_max_deploy_per_lap_mj": 4.0,
+    "ers_max_harvest_per_lap_mj": 2.0,
+    "mgu_k_power_limit_kw": 120
+  },
+  "calendar": [
+    {
+      "round": 1,
+      "gp": "Australia",
+      "circuit": "Albert Park",
+      "track_category": "Street / High Speed Flow",
+      "corner_distribution": {"low": "25%", "medium": "45%", "high": "30%"},
+      "nomination": {"H": "C3", "M": "C4", "S": "C5"},
+      "wear_rate_base": 0.14,
+      "lap_time_delta_hint": 0.55,
+      "track_features": {"bumps": 3, "kerbs": 3, "avg_speed_rating": 4},
+      "notes": "Circuito molto veloce per essere un cittadino; richiede avantreno preciso."
+    },
+    {
+      "round": 2,
+      "gp": "China",
+      "circuit": "Shanghai",
+      "track_category": "Front-Limited / Technical",
+      "corner_distribution": {"low": "35%", "medium": "40%", "high": "25%"},
+      "nomination": {"H": "C2", "M": "C3", "S": "C4"},
+      "wear_rate_base": 0.20,
+      "lap_time_delta_hint": 0.52,
+      "track_features": {"bumps": 2, "kerbs": 2, "avg_speed_rating": 3},
+      "notes": "Curve a raggio infinito (T1, T13) che distruggono la gomma anteriore."
+    },
+    {
+      "round": 3,
+      "gp": "Japan",
+      "circuit": "Suzuka",
+      "track_category": "High Downforce / Technical",
+      "corner_distribution": {"low": "15%", "medium": "35%", "high": "50%"},
+      "nomination": {"H": "C1", "M": "C2", "S": "C3"},
+      "wear_rate_base": 0.28,
+      "lap_time_delta_hint": 0.65,
+      "track_features": {"bumps": 2, "kerbs": 2, "avg_speed_rating": 5},
+      "notes": "Figura a otto. Carico laterale costante, richiede massimo grip aerodinamico."
+    },
+    {
+      "round": 4,
+      "gp": "Bahrain",
+      "circuit": "Sakhir",
+      "track_category": "Rear-Limited / Stop & Go",
+      "corner_distribution": {"low": "45%", "medium": "35%", "high": "20%"},
+      "nomination": {"H": "C1", "M": "C2", "S": "C3"},
+      "wear_rate_base": 0.32,
+      "lap_time_delta_hint": 0.60,
+      "track_features": {"bumps": 3, "kerbs": 3, "avg_speed_rating": 3},
+      "notes": "Trazione e frenata sono tutto. L'asfalto 'mangia' le gomme posteriori.",
+      "pirelli_prescriptions": {
+        "min_pressure_front_psi": 22.0,
+        "min_pressure_rear_psi": 19.0,
+        "max_camber_front": -3.25,
+        "max_camber_rear": -1.75
+      },
+      "energy_management": {
+        "fuel_burn_intensity": "High",
+        "ers_deployment_style": "Traction-Focused",
+        "brake_energy_recovery_kj": 850
+      },
+      "gear_profile": {
+        "max_gear": 8,
+        "min_gear_usage": "2nd (T1, T10)",
+        "shift_intensity": "High"
+      },
+      "weather_impact": {
+        "avg_track_temp_change_race": -8.0,
+        "brake_duct_requirement": "Maximum (Heat Dissipation)"
+      }
+    },
+    {
+      "round": 5,
+      "gp": "Saudi Arabia",
+      "circuit": "Jeddah",
+      "track_category": "Ultra High Speed Street",
+      "corner_distribution": {"low": "10%", "medium": "40%", "high": "50%"},
+      "nomination": {"H": "C3", "M": "C4", "S": "C5"},
+      "wear_rate_base": 0.10,
+      "lap_time_delta_hint": 0.50,
+      "track_features": {"bumps": 2, "kerbs": 2, "avg_speed_rating": 5},
+      "notes": "Muri vicini e velocità folli. Poco degrado ma altissimo rischio errore."
+    },
+    {
+      "round": 6,
+      "gp": "Miami",
+      "circuit": "Miami",
+      "track_category": "Hybrid / Tactical",
+      "corner_distribution": {"low": "40%", "medium": "35%", "high": "25%"},
+      "nomination": {"H": "C3", "M": "C4", "S": "C5"},
+      "wear_rate_base": 0.16,
+      "lap_time_delta_hint": 0.55,
+      "track_features": {"bumps": 2, "kerbs": 4, "avg_speed_rating": 3},
+      "notes": "Settore 2 molto lento e tortuoso, Settori 1 e 3 molto veloci."
+    },
+    {
+      "round": 7,
+      "gp": "Emilia-Romagna",
+      "circuit": "Imola",
+      "track_category": "Old School / Medium-High Downforce",
+      "corner_distribution": {"low": "20%", "medium": "50%", "high": "30%"},
+      "nomination": {"H": "C4", "M": "C5", "S": "C6"},
+      "wear_rate_base": 0.12,
+      "lap_time_delta_hint": 0.45,
+      "track_features": {"bumps": 3, "kerbs": 5, "avg_speed_rating": 4},
+      "notes": "Fiducia nei cordoli e velocità di inserimento. Debutto C6."
+    },
+    {
+      "round": 8,
+      "gp": "Monaco",
+      "circuit": "Monte Carlo",
+      "track_category": "Low Speed Street",
+      "corner_distribution": {"low": "80%", "medium": "20%", "high": "0%"},
+      "nomination": {"H": "C4", "M": "C5", "S": "C6"},
+      "wear_rate_base": 0.05,
+      "lap_time_delta_hint": 0.40,
+      "track_features": {"bumps": 5, "kerbs": 3, "avg_speed_rating": 1},
+      "notes": "Si corre con massimo carico ma velocità medie ridicole."
+    },
+    {
+      "round": 9,
+      "gp": "Spain",
+      "circuit": "Barcelona",
+      "track_category": "Aero Benchmark / High Speed",
+      "corner_distribution": {"low": "20%", "medium": "35%", "high": "45%"},
+      "nomination": {"H": "C1", "M": "C2", "S": "C3"},
+      "wear_rate_base": 0.25,
+      "lap_time_delta_hint": 0.70,
+      "track_features": {"bumps": 2, "kerbs": 3, "avg_speed_rating": 4},
+      "notes": "Se l'auto è veloce qui, è veloce ovunque. Stress termico alto."
+    },
+    {
+      "round": 10,
+      "gp": "Canada",
+      "circuit": "Montreal",
+      "track_category": "Stop & Go / Kerb Rider",
+      "corner_distribution": {"low": "50%", "medium": "30%", "high": "20%"},
+      "nomination": {"H": "C4", "M": "C5", "S": "C6"},
+      "wear_rate_base": 0.15,
+      "lap_time_delta_hint": 0.48,
+      "track_features": {"bumps": 4, "kerbs": 5, "avg_speed_rating": 3},
+      "notes": "Importante la stabilità in frenata e la trazione."
+    },
+    {
+      "round": 11,
+      "gp": "Austria",
+      "circuit": "Spielberg",
+      "track_category": "Power / Short Lap",
+      "corner_distribution": {"low": "25%", "medium": "40%", "high": "35%"},
+      "nomination": {"H": "C3", "M": "C4", "S": "C5"},
+      "wear_rate_base": 0.18,
+      "lap_time_delta_hint": 0.50,
+      "track_features": {"bumps": 2, "kerbs": 4, "avg_speed_rating": 4},
+      "notes": "Tre rettilinei e curve veloci in pendenza."
+    },
+    {
+      "round": 12,
+      "gp": "Great Britain",
+      "circuit": "Silverstone",
+      "track_category": "Ultra High Speed / Aero",
+      "corner_distribution": {"low": "10%", "medium": "25%", "high": "65%"},
+      "nomination": {"H": "C1", "M": "C2", "S": "C3"},
+      "wear_rate_base": 0.30,
+      "lap_time_delta_hint": 0.75,
+      "track_features": {"bumps": 3, "kerbs": 2, "avg_speed_rating": 5},
+      "notes": "Il tempio della velocità. Gomme anteriori sotto stress estremo.",
+      "pirelli_prescriptions": {
+        "min_pressure_front_psi": 26.5,
+        "min_pressure_rear_psi": 23.0,
+        "max_camber_front": -2.75,
+        "max_camber_rear": -1.50
+      },
+      "energy_management": {
+        "fuel_burn_intensity": "Medium",
+        "ers_deployment_style": "High-Speed-Flow",
+        "brake_energy_recovery_kj": 450
+      },
+      "gear_profile": {
+        "max_gear": 8,
+        "min_gear_usage": "3rd (Village, Luffield)",
+        "shift_intensity": "Low"
+      },
+      "weather_impact": {
+        "avg_track_temp_change_race": 2.0,
+        "brake_duct_requirement": "Minimum (Aero Efficiency)"
+      }
+    },
+    {
+      "round": 13,
+      "gp": "Belgium",
+      "circuit": "Spa-Francorchamps",
+      "track_category": "Power & Aero / Long Lap",
+      "corner_distribution": {"low": "20%", "medium": "30%", "high": "50%"},
+      "nomination": {"H": "C1", "M": "C3", "S": "C4"},
+      "wear_rate_base": 0.22,
+      "lap_time_delta_hint": 1.05,
+      "track_features": {"bumps": 3, "kerbs": 3, "avg_speed_rating": 5},
+      "notes": "SKIP C2. Carichi verticali massimi all'Eau Rouge."
+    },
+    {
+      "round": 14,
+      "gp": "Hungary",
+      "circuit": "Hungaroring",
+      "track_category": "High Downforce / Twist-y",
+      "corner_distribution": {"low": "40%", "medium": "50%", "high": "10%"},
+      "nomination": {"H": "C3", "M": "C4", "S": "C5"},
+      "wear_rate_base": 0.24,
+      "lap_time_delta_hint": 0.55,
+      "track_features": {"bumps": 2, "kerbs": 3, "avg_speed_rating": 2},
+      "notes": "Un 'Monaco senza muri'. Raffreddamento difficile."
+    },
+    {
+      "round": 15,
+      "gp": "Netherlands",
+      "circuit": "Zandvoort",
+      "track_category": "High Downforce / Banking",
+      "corner_distribution": {"low": "25%", "medium": "45%", "high": "30%"},
+      "nomination": {"H": "C1", "M": "C2", "S": "C3"},
+      "wear_rate_base": 0.22,
+      "lap_time_delta_hint": 0.60,
+      "track_features": {"bumps": 3, "kerbs": 2, "avg_speed_rating": 4},
+      "notes": "Banking unico al mondo. Carico asimmetrico sulle gomme."
+    },
+    {
+      "round": 16,
+      "gp": "Italy",
+      "circuit": "Monza",
+      "track_category": "Ultra Low Downforce / Power",
+      "corner_distribution": {"low": "30%", "medium": "30%", "high": "40%"},
+      "nomination": {"H": "C3", "M": "C4", "S": "C5"},
+      "wear_rate_base": 0.18,
+      "lap_time_delta_hint": 0.45,
+      "track_features": {"bumps": 2, "kerbs": 4, "avg_speed_rating": 5},
+      "notes": "Massima velocità di punta. Frenate violente da 350 km/h.",
+      "pirelli_prescriptions": {
+        "min_pressure_front_psi": 24.5,
+        "min_pressure_rear_psi": 21.5,
+        "max_camber_front": -3.00,
+        "max_camber_rear": -1.75
+      },
+      "energy_management": {
+        "fuel_burn_intensity": "Very High",
+        "ers_deployment_style": "Top-Speed-End-of-Straight",
+        "brake_energy_recovery_kj": 1100
+      },
+      "gear_profile": {
+        "max_gear": 8,
+        "min_gear_usage": "2nd (Rettifilo, Roggia)",
+        "shift_intensity": "Medium"
+      },
+      "weather_impact": {
+        "avg_track_temp_change_race": 5.0,
+        "brake_duct_requirement": "Medium (High Peak / Low Frequency)"
+      }
+    },
+    {
+      "round": 17,
+      "gp": "Azerbaijan",
+      "circuit": "Baku",
+      "track_category": "Low Drag Street / Hybrid",
+      "corner_distribution": {"low": "60%", "medium": "10%", "high": "30%"},
+      "nomination": {"H": "C4", "M": "C5", "S": "C6"},
+      "wear_rate_base": 0.08,
+      "lap_time_delta_hint": 0.48,
+      "track_features": {"bumps": 4, "kerbs": 2, "avg_speed_rating": 4},
+      "notes": "Rettilineo infinito ma curve a 90 gradi nel castello."
+    },
+    {
+      "round": 18,
+      "gp": "Singapore",
+      "circuit": "Marina Bay",
+      "track_category": "Street / Physical & Thermal",
+      "corner_distribution": {"low": "65%", "medium": "25%", "high": "10%"},
+      "nomination": {"H": "C3", "M": "C4", "S": "C5"},
+      "wear_rate_base": 0.14,
+      "lap_time_delta_hint": 0.52,
+      "track_features": {"bumps": 5, "kerbs": 3, "avg_speed_rating": 2},
+      "notes": "Stress termico immenso per mancanza di rettilinei."
+    },
+    {
+      "round": 19,
+      "gp": "USA",
+      "circuit": "COTA (Austin)",
+      "track_category": "Mixed / Technical",
+      "corner_distribution": {"low": "30%", "medium": "30%", "high": "40%"},
+      "nomination": {"H": "C1", "M": "C3", "S": "C4"},
+      "wear_rate_base": 0.26,
+      "lap_time_delta_hint": 1.15,
+      "track_features": {"bumps": 5, "kerbs": 3, "avg_speed_rating": 4},
+      "notes": "SKIP C2. Sconnessioni del suolo (bumps) critiche per l'assetto."
+    },
+    {
+      "round": 20,
+      "gp": "Mexico",
+      "circuit": "Hermanos Rodriguez",
+      "track_category": "High Altitude / Low Air Density",
+      "corner_distribution": {"low": "45%", "medium": "35%", "high": "20%"},
+      "nomination": {"H": "C2", "M": "C4", "S": "C5"},
+      "wear_rate_base": 0.16,
+      "lap_time_delta_hint": 0.95,
+      "track_features": {"bumps": 3, "kerbs": 3, "avg_speed_rating": 3},
+      "notes": "SKIP C3. Raffreddamento impossibile causa aria rarefatta."
+    },
+    {
+      "round": 21,
+      "gp": "Brazil",
+      "circuit": "Interlagos",
+      "track_category": "Old School / Short & Flowy",
+      "corner_distribution": {"low": "30%", "medium": "45%", "high": "25%"},
+      "nomination": {"H": "C2", "M": "C3", "S": "C4"},
+      "wear_rate_base": 0.24,
+      "lap_time_delta_hint": 0.55,
+      "track_features": {"bumps": 4, "kerbs": 4, "avg_speed_rating": 3},
+      "notes": "Trazione in salita e meteo imprevedibile."
+    },
+    {
+      "round": 22,
+      "gp": "Las Vegas",
+      "circuit": "Las Vegas",
+      "track_category": "Street / Low Temperature",
+      "corner_distribution": {"low": "55%", "medium": "25%", "high": "20%"},
+      "nomination": {"H": "C3", "M": "C4", "S": "C5"},
+      "wear_rate_base": 0.06,
+      "lap_time_delta_hint": 0.42,
+      "track_features": {"bumps": 3, "kerbs": 2, "avg_speed_rating": 4},
+      "notes": "Graining da freddo. Rettilinei lunghi che congelano le gomme."
+    },
+    {
+      "round": 23,
+      "gp": "Qatar",
+      "circuit": "Lusail",
+      "track_category": "Ultra High Speed / Constant Load",
+      "corner_distribution": {"low": "5%", "medium": "35%", "high": "60%"},
+      "nomination": {"H": "C1", "M": "C2", "S": "C3"},
+      "wear_rate_base": 0.35,
+      "lap_time_delta_hint": 0.65,
+      "track_features": {"bumps": 2, "kerbs": 5, "avg_speed_rating": 5},
+      "notes": "Non ci sono curve lente. Gomme sotto sforzo 100% del tempo."
+    },
+    {
+      "round": 24,
+      "gp": "Abu Dhabi",
+      "circuit": "Yas Marina",
+      "track_category": "Modern Hybrid",
+      "corner_distribution": {"low": "35%", "medium": "40%", "high": "25%"},
+      "nomination": {"H": "C3", "M": "C4", "S": "C5"},
+      "wear_rate_base": 0.16,
+      "lap_time_delta_hint": 0.50,
+      "track_features": {"bumps": 2, "kerbs": 3, "avg_speed_rating": 3},
+      "notes": "Settore 3 tecnico, Settori 1 e 2 veloci."
+    }
+  ]
+}

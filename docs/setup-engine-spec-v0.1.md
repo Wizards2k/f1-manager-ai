@@ -45,11 +45,22 @@ SetupEngineService
 | `suspension_rear`   | 0-100    | idem                                |                                     | -
 | `antiroll_front`    | 0-100    | `rigidity`                          |                                     | Influenza handling penalty
 | `antiroll_rear`     | 0-100    | `rigidity`                          |                                     | -
+| `brake_balance`     | 0-100    | `bias_front_pct` (es. 52-58%)       | `bias = bias_min + slider * step`   | Range definito dal circuito
 | `brake_duct`        | 0-100    | `duct_opening` (0-1)                | `opening = slider / 100`            | Usato da BrakeSystem
 | `engine_map`        | discrete | `PowerUnit.set_maps(engine_map, ...)` | scegli `EngineMapConfig`            | Sempre deciso dal giocatore
 | `ers_mode`          | discrete | `active_ers_mode`                   |                                     | -
 
 > Tutti i driver sono definiti nei file `config/setup_mapping.json` per circuito/stato upgrade (permette override).
+
+### 3.1 Campi UI esposti (garage)
+- **Front Wing / Rear Wing / Beam Wing** – slider 0‑100 mappati su angoli reali (rispettivamente 0°‑25°, 0°‑35°, 0°‑20°). Aggiornano i componenti `FrontWing`, `RearWing`, `BeamWing` e influenzano direttamente DF/drag e l’aero balance calcolato dal LapSimulator.
+- **Ride Height Front / Rear** – slider 0‑100 con range circuito (front 25‑60 mm, rear 35‑70 mm). Alimentano rake, rischio bottoming/porpoising e il coupling con il diffusore.
+- **Suspension Front / Rear** – slider logaritmici che modificano `rigidity`+`efficiency`, utilizzati dal blocco Mechanical Grip (gestione bump/kerb e grip meccanico).
+- **Antiroll Front / Rear** – slider rigidità barre antirolla (soft→hard). Regolano la stabilità in curva e l’handling penalty nello `update_section()`.
+- **Brake Balance** – slider 0‑100 che mappa la percentuale di frenata sull’anteriore (es. 52‑58%), limitata dalla `bias_range` del circuito. Entra nella `BrakeSystem` per calcolare ripartizione di energia e termica freni.
+- **Brake Duct Opening** – slider 0‑100 → apertura 0.0‑1.0, passato alla `BrakeSystem` per calcolare temperature, fade e cooling_penalty.
+
+> **Esclusioni**: comandi `engine_map`, `ers_mode`, fuel load e pace level rimangono nel pannello gara (non fanno parte del Setup Engine). Il cooling bias front/rear non viene esposto nella maschera iniziale.
 
 ## 4. Motore di punteggio `evaluate_setup`
 
