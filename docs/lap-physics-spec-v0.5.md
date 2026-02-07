@@ -1,7 +1,6 @@
----
-title: Motore fisico lap time – v0.4 (Auto/Aero/PowerUnit/Tyre/Driver)
-version: 0.4
-last_updated: 2026-02-06
+title: Motore fisico lap time – v0.5 (Auto/Aero/PowerUnit/Tyre/Driver/Battle)
+version: 0.5
+last_updated: 2026-02-07
 scope: "Definizione del modello fisico per il contributo Auto (aerodinamica, Power Unit, TyreModel e DriverModel) al tempo sul giro"
 ---
 
@@ -85,6 +84,178 @@ Stabilire le regole del motore fisico per calcolare il tempo sul giro utilizzand
 
 ### Componenti fisici
 Ogni componente dell’elenco precedente è rappresentato da un oggetto dedicato (`FrontWing`, `RearWing`, `Sidepods`, `FrontFloor`, `RearFloor`, `EngineCover`, `BWing`, `SuspensionFront`, `SuspensionRear`, `RideHeightFront`, `RideHeightRear`, `AntirollFront`, `AntirollRear`, `PowerUnit`, `BrakeSystem`). I valori 1‑100 vengono convertiti in attributi fisici (`downforce`, `drag`, `cooling`, `efficiency`, `rigidity`, ecc.).
+
+Nel codice la `Car` mantiene un registro `aero_components: Dict[str, AeroComponent]` che contiene tutte le istanze attive (es. `front_wing`, `rear_wing`, `front_floor`, `rear_floor`, `sidepods`, `engine_cover`, `beam_wing`). Ogni elemento deriva dall’archetipo seguente e viene aggiornato da `recalculate_aero()` prima di calcolare il Passo 3.
+
+> **Setup Engine 2.0**: la gestione completa dei valori di setup lato UI, scoring e mapping slider→parametri fisici è documentata in `docs/setup-engine-spec-v0.1.md`. Questo documento si concentra sugli effetti fisici; ogni riferimento a slider/setup assume che le conversioni siano gestite dal Setup Engine.
+
+#### 3.1.1 Archetipo `AeroComponent`
+Per standardizzare il Punto 2 definiamo un archetipo comune usato da tutti i componenti aerodinamici.
+
+- `component_name` (es. "FW-24 Alpha")
+- `version_id` (incrementale, es. FW24-V3)
+- `introduced_at` (data/pacchetto aero in cui il pezzo è stato omologato)
+- `base_downforce` (N @ 200 km/h)
+- `base_drag`
+- `angle` (°) – input setup 0‑25
+- `angle_sensitivity` (ΔDF/Δ°)
+- `drag_sensitivity` (Δdrag/Δ°)
+- `profile_curve` – moltiplicatori per profili (high-load, low-drag, rain)
+- `damage_factor` (0‑1) – riduzione se l’elemento è danneggiato
+- `coupling`: percentuali che influenzano cooling o bilanciamento (es. `cooling_penalty_coeff`)
+
+```python
+class AeroComponent:
+    def compute_downforce(self, airspeed):
+        dyn_pressure = 0.5 * air_density * (airspeed**2)
+        angle_term = 1 + angle_sensitivity * (self.angle - angle_ref)
+        profile_term = profile_curve.get(active_profile, 1.0)
+        return base_downforce * dyn_pressure * angle_term * profile_term * damage_factor
+
+    def compute_drag(self, airspeed):
+        angle_term = 1 + drag_sensitivity * (self.angle - angle_ref)
+        return base_drag * angle_term * profile_term * damage_factor
+
+    def cooling_penalty(self):
+        if self.angle > cutoff_angle:
+            return cooling_penalty_coeff * (self.angle - cutoff_angle)
+        return 0
+```
+
+Gli output `df_contribution`, `drag_contribution`, `cooling_penalty` alimentano l’AeroPackage (Passo 3).
+
+##### Front Wing (istanza)
+- `component_name = "FW-24 Alpha"`
+- `version_id = "FW24-V1"`
+- `introduced_at = GP Monza 2025`
+- `base_downforce = 1200 N`
+- `base_drag = 95 N`
+- `angle_sensitivity = 0.018/°`
+- `drag_sensitivity = 0.012/°`
+- `profile_curve`: {`standard`:1.0, `high_load`:1.08, `low_drag`:0.92}
+- `cooling_penalty_coeff = 0.015` (ostruzione brake ducts)
+- `cutoff_angle = 20°`
+- `damage_factor` derivato da `damage_flags['front_wing']`
+
+Formule specifiche:
+```python
+df_front_wing = base_downforce * dyn_pressure * (1 + 0.018 * (angle-15)) * profile_term * damage_factor
+drag_front_wing = base_drag * (1 + 0.012 * (angle-15)) * profile_term * damage_factor
+cooling_penalty = max(0, angle-20) * 0.015
+```
+Questo contributo va in `df_front` / `drag_total` e il `cooling_penalty` riduce la capacità dei sidepods.
+
+##### Rear Wing (istanza)
+- `component_name = "RW-24 Delta"`
+- `version_id = "RW24-V2"`
+- `introduced_at = GP Silverstone 2025`
+- `base_downforce = 2100 N`
+- `base_drag = 160 N`
+- `angle_sensitivity = 0.022/°`
+- `drag_sensitivity = 0.018/°`
+- `profile_curve`: {`standard`:1.0, `high_load`:1.12, `low_drag`:0.88, `rain`:1.05}
+- `damage_factor = damage_flags['rear_wing']`
+- `coupling`: `drs_gain = 0.25`, `aero_balance_weight = 0.6`
+
+```
+df_rear_wing = base_downforce * dyn_pressure * (1 + 0.022 * (angle-12)) * profile_term * damage_factor
+drag_rear_wing = base_drag * (1 + 0.018 * (angle-12)) * profile_term * damage_factor
+if DRS_active:
+    drag_rear_wing *= (1 - drs_gain)
+```
+Il suo contributo guida `df_rear`, il drag totale e le chance di DRS in Passo 6.
+
+##### Beam Wing (istanza)
+- `component_name = "BW-24 Echo"`
+- `version_id = "BW24-V1"`
+- `introduced_at = GP Singapore 2025`
+- `base_downforce = 600 N`
+- `base_drag = 40 N`
+- `angle_sensitivity = 0.015/°`
+- `drag_sensitivity = 0.010/°`
+- `profile_curve`: {`standard`:1.0, `high_rake`:1.10}
+- `coupling`: `diffuser_boost = 0.05` (moltiplica il rear floor), `engine_cover_flow = 0.03`
+
+```
+df_beam_wing = base_downforce * dyn_pressure * (1 + 0.015 * (angle-8)) * profile_term * damage_factor
+rear_floor.df_bonus += df_beam_wing * diffuser_boost
+```
+
+##### Front Floor (istanza)
+- `component_name = "FF-24 Delta"`
+- `version_id = "FF24-V2"`
+- `introduced_at = GP Suzuka 2025`
+- `base_downforce = 1800 N`
+- `base_drag = 35 N`
+- `angle_sensitivity = 0.0` (driver = ride height)
+- `rake_sensitivity = 0.02 / mm`
+- `porpoising_threshold = 42 mm`
+- `porpoising_coeff = 0.015`
+- `damage_factor = damage_flags['front_floor']`
+
+```
+rh_eff = ride_height_front - susp_compliance_front * df_front
+rh_term = clamp(1 + rake_sensitivity * (ride_height_opt_front - rh_eff), 0.6, 1.2)
+porpoising = max(0, porpoising_threshold - rh_eff) * porpoising_coeff
+df_front_floor = base_downforce * dyn_pressure * rh_term * (1 - porpoising) * damage_factor
+drag_front_floor = base_drag * (1 + 0.002 * (rh_eff - ride_height_opt_front))
+```
+
+##### Rear Floor / Diffuser (istanza)
+- `component_name = "RF-24 Sigma"`
+- `version_id = "RF24-V3"`
+- `introduced_at = GP Austin 2025`
+- `base_downforce = 2400 N`
+- `base_drag = 50 N`
+- `rake_sensitivity = 0.028 / mm` (usa ride_height_rear)
+- `stall_threshold = 55 mm`
+- `stall_drop = 0.25` (riduzione DF se stall)
+- `diffuser_coupling = beam_wing.df_contribution * 0.05`
+- `damage_factor = damage_flags['rear_floor']`
+
+```
+rh_eff_rear = ride_height_rear - susp_compliance_rear * df_rear
+rh_term = clamp(1 + rake_sensitivity * (ride_height_opt_rear - rh_eff_rear), 0.5, 1.3)
+stall = 1 - (rh_eff_rear > stall_threshold) * stall_drop
+df_rear_floor = base_downforce * dyn_pressure * rh_term * stall * (1 + diffuser_coupling) * damage_factor
+```
+
+##### Sidepods (istanza)
+- `component_name = "SP-24 Gamma"`
+- `version_id = "SP24-V1"`
+- `introduced_at = GP Miami 2025`
+- `base_downforce = 400 N`
+- `base_drag = 60 N`
+- `cooling_capacity_base = 1.0`
+- `cooling_slider` (setup 0-1) → `cooling_gain = 0.03`, `df_penalty = 0.01`, `drag_penalty = 0.015`
+- `damage_factor = damage_flags['sidepods']`
+
+```
+cooling_mult = 1 + cooling_slider * cooling_gain
+df_sidepods = base_downforce * dyn_pressure * (1 - cooling_slider * df_penalty) * damage_factor
+drag_sidepods = base_drag * (1 + cooling_slider * drag_penalty)
+cooling_capacity_contrib = cooling_capacity_base * cooling_mult
+```
+
+##### Engine Cover (istanza)
+- `component_name = "EC-24 Beta"`
+- `version_id = "EC24-V1"`
+- `introduced_at = GP Baku 2025`
+- `base_downforce = 250 N`
+- `base_drag = 45 N`
+- `cooling_slider` (0-1) → `cooling_gain = 0.02`, `drag_penalty = 0.01`
+- `diffuser_flow_coeff = 0.04` (moltiplica il rear floor se slider basso)
+- `damage_factor = damage_flags['engine_cover']`
+
+```
+cooling_mult = 1 + cooling_slider * 0.02
+df_engine_cover = base_downforce * dyn_pressure * (1 - cooling_slider * 0.005) * damage_factor
+drag_engine_cover = base_drag * (1 + cooling_slider * 0.01)
+cooling_capacity_contrib = cooling_base * cooling_mult
+rear_floor.df_bonus += clamp(0.04 - cooling_slider * diffuser_flow_coeff, 0, 0.04)
+```
+
+Queste istanze completano il Punto 2: ogni componente aero deriva dallo stesso archetipo e fornisce contributi coerenti a `Car.update_section()`.
 
 #### BrakeSystem
 - `disc_material_front/rear` (1‑100): capacità termica e risposta.
@@ -416,14 +587,72 @@ Calcola l’effettiva deportanza/drag del pacchetto aero e fornisce segnali per 
 - `bump_penalty`, `kerb_impact`, `kerb_severity`: incrementano vibrazioni/usura gomme e rischio damage sospensioni
 
 #### Passo 4 – Potenza motore (`PowerUnit.generate_output`)
-Calcola la potenza disponibile per la sezione e gli impatti su fuel/ERS.
+Prima di entrare nelle formule del passo definisci l’aggregato `PowerUnit` e i due sottosistemi `InternalCombustionEngine` ed `EnergyRecoverySystem`, ognuno con metadata tecnici (nome pezzo, versione, data di introduzione) e gestione dell’usura.
 
-1. **Mappa ICE attiva**
+```python
+@dataclass
+class InternalCombustionEngine:
+    component_name: str      # es. "PU106C EVO"
+    version_id: str          # "ICE25-V2"
+    introduced_at: str       # GP / data omologazione
+    torque_curve: Dict[int, float]   # rpm → Nm
+    fuel_flow_limit: float          # kg/h
+    thermal_capacity: float         # MJ/°C
+    wear_rate: float                # % per MJ dissipata
+    maps: Dict[str, EngineMapConfig]
+    temp: float
+    wear: float                     # 0-100%
+    rpm_target: int
+
+@dataclass
+class EnergyRecoverySystem:
+    component_name: str      # es. "ERS-H/K Gen3"
+    version_id: str
+    introduced_at: str
+    soc_capacity: float      # MJ
+    deploy_limit_kw: float
+    harvest_limit_kw: float
+    thermal_capacity: float
+    wear_rate: float         # % per MJ caricata/scaricata
+    maps: Dict[str, ErsMapConfig]
+    temp: float
+    wear: float
+    soc: float
+    mguk_state: str
+    mguh_state: str
+
+@dataclass
+class PowerUnit:
+    ice: InternalCombustionEngine
+    ers: EnergyRecoverySystem
+    engine_maps: Dict[str, EngineMapConfig]
+    ers_maps: Dict[str, ErsMapConfig]
+    active_engine_map: str
+    active_ers_mode: str
+
+    def set_maps(self, engine_map: str, ers_mode: str): ...
+    def generate_output(self, driver_intent, car_state, env_ctx): ...
+```
+
+- **EngineMapConfig**: contiene `power_percent`, `consumption_rate`, `torque_ramp`, `heat_load` e vincoli (`min_temp`, `max_temp`).
+- **ErsMapConfig**: definisce `output_kw`, `consumption_rate` (MJ/s), `recovery_rate`, `heat_coeff`, `efficiency`.
+
+L’utente può creare nuove mappe mappa ICE/ERS (UI “Engine Map”, “ERS Mode”): basta instanziare nuovi `EngineMapConfig` / `ErsMapConfig`. Il metodo `set_maps()` aggiorna `active_engine_map` e `active_ers_mode`, che vengono letti dai sottosistemi nel passo seguente.
+
+Calcola ora la potenza disponibile per la sezione e gli impatti su fuel/ERS.
+
+1. **Mappa ICE attiva + coppia**
    ```python
    map = power_unit.ice.active_map
-   power_ice = ice.power_rating * map.power_percent
-   fuel_burn_rate = map.consumption_rate / clamp(ice.fuel_efficiency, 1, 100)
+   torque_ice = torque_curve[rpm] * map.power_percent * (1 - ice.wear * 0.002)
+   power_ice = torque_ice * rpm / 9549   # kW
+   fuel_burn_rate = min(fuel_flow_limit, map.consumption_rate) / clamp(ice.fuel_efficiency, 1, 100)
    torque_ramp = map.torque_ramp  # 0 (dolce) → 1 (brusca)
+   ```
+
+   Usura ICE aggiornata proporzionalmente all’energia generata:
+   ```python
+   ice.wear += ice.wear_rate * power_ice * dt
    ```
 
 2. **Derating termico / affidabilità**
@@ -437,7 +666,7 @@ Calcola la potenza disponibile per la sezione e gli impatti su fuel/ERS.
    power_ice_eff = power_ice * derating_factor * wear_factor
    ```
 
-3. **ERS**
+3. **ERS (deploy + usura)**
    ```python
    mode = power_unit.ers.modes[power_unit.ers.active_mode]
    if driver_intent.ers_mode == 'deploy':
@@ -452,6 +681,12 @@ Calcola la potenza disponibile per la sezione e gli impatti su fuel/ERS.
    ```
 
    Se `ers_battery` < soglia → forza modalità hold e riduce `ers_output`.
+
+   Aggiorna usura ERS in base a energia scambiata:
+   ```python
+   energy_moved = abs(ers_output) * dt
+   ers.wear += ers.wear_rate * energy_moved
+   ```
 
 4. **Potenza complessiva e limite FIA**
    ```python
@@ -655,6 +890,57 @@ Restituisce `SectionResult(dt, v_exit, events)` e stato interno aggiornato.
 
 ---
 
+### 3.3.1 LapSimulator runtime loop (single lap)
+
+Il motore LAP in-game orchestra più auto mantenendo la fisica pura di `Car.update_section()` separata dalla logica d’interazione. Il loop di un giro è composto da quattro blocchi principali.
+
+```
+SessionController
+    │
+    ├─► InputMixer ──► Car.update_section()  × N (in parallelo)
+    │                     │
+    │                     └─► SectionResult + segnali (df, drag, power, section_progress)
+    │
+    ├─► BattleResolver (pacchetti auto vicine, cooldown/lock)
+    │
+    ├─► StateCommit (swap ordine, gap, penalty, eventi)
+    │
+    └─► OutputBus (HUD, DegradationManager, Strategia AI, Replay)
+```
+
+1. **InputMixer**
+   - Aggrega informazioni statiche e dinamiche: `section_ctx`, `env_ctx`, comandi giocatore (push level, ERS map), stato auto precedente.
+   - Prepara pacchetti dati batteria/cooling condivisi per uso in `Car.update_section()`.
+
+2. **Fase fisica parallela**
+   - Ogni auto invoca `update_section()` sulla sezione corrente. Output arricchito con segnali aggiuntivi esposti al resolver:
+     - `section_progress` = `distance_in_section / section_length`.
+     - `overtake_window` (0-1) = disponibilità attacco (derivato da pace_factor, delta_vel, driver intent `target_line`).
+     - `attack_cooldown`, `defense_reset`: contatori decrementati internamente e restituiti per sincronizzazione.
+     - `srs_flags`: abilità attive (DRS, Boost ERS, Frenata Perfetta), `braking_efficiency_event`, `late_brake_tag`.
+     - `traffic_constraints`: velocità massima consentita dalla presenza di auto davanti (usata anche in Passo 6).
+
+3. **BattleResolver**
+   - Riceve la lista di auto raggruppata per sezione (`section_id`). Per ogni pacchetto ordina per `section_progress` e valuta coppie adiacenti.
+   - Calcola `attack_score`/`defense_score` usando segnali fisici (delta `v_exit`, `power_kw`, `effective_grip`, `handling_penalty`), skill pilota, stato mentale, e bonus delle abilità speciali.
+   - Stati gestiti:
+     - `side_by_side`: true quando `attack_score` supera soglia di tentativo → penalità comune (aria sporca, consumo ERS ulteriore) e evento "Side-by-side".
+     - `attack_cooldown`: attivato se tentativo fallisce; BattleResolver forza `overtake_window = 0` finché il timer (in sezioni) non scade.
+     - `defense_reset`: per l'auto sorpassata; finché attivo riduce `attack_score` e impedisce controsorpasso immediato.
+   - Esiti possibili:
+     1. **Sorpasso riuscito** → scambia l'ordine, assegna offset sicuro (`section_progress += 0.02`), aggiorna confidence e registra evento "Overtake success".
+     2. **Tentativo fallito** → mantiene ordine, applica cooldown all'attaccante, aumenta usura/temperatura a seconda di `side_by_side` e logga "Attempt blocked".
+     3. **Contatto / errore** → genera penalità tempo o damage, invia evento a `OutputBus`, può inserire un ritardo (delta tempo) nella sezione successiva.
+
+4. **StateCommit & OutputBus**
+   - Aggiorna `section_progress` globale, `lap_time_accumulator`, classifiche e gap virtuali.
+   - Scrive gli eventi nel `OutputBus` consumato da HUD/telemetria/radio e da `DegradationManager` (che userà i segnali `understeer_level`, `bump_penalty`, `attack_cooldown` ecc. per calcolare degradi a lungo termine).
+   - Reimmette i cooldown aggiornati nello stato auto per la sezione successiva.
+
+> **Nota implementativa**: la fase fisica gira in thread separati (uno per auto o batch) con barrier alla fine della sezione; BattleResolver gira nel thread principale per garantire determinismo. Questo consente di scalare a 20+ auto senza toccare il motore fisico di base.
+
+Con questa struttura il motore LAP fornisce una sequenza coerente di eventi “pallino su rotaia”: il sorpasso emerge dal gioco di `section_progress`+BattleResolver, mentre la complessità percepita deriva dai cooldown, dalle penalità e dai feedback che alimentano l’esperienza utente.
+
 ## 3.4 Architettura multi-auto: RaceSimulator e BattleResolver
 
 Il metodo `update_section()` definito sopra calcola la fisica di una singola auto isolata (time-trial). Per simulare una gara multi-auto con sorpassi e interazioni, introduciamo un'architettura a **due livelli**.
@@ -727,6 +1013,61 @@ se p_success < 0.3 → Tentativo fallito, rimane dietro
 2. **Testabilità**: si può testare una singola auto senza RaceSimulator
 3. **Scalabilità**: aggiungere auto non complica la fisica base
 4. **Eleganza**: nessuna logica gap-based complicata nella fisica
+
+## 3.5 Calibrazione & Validazione (Punto 5)
+
+Per garantire che ogni blocco del motore fisico resti coerente con la realtà costruiamo una pipeline a due livelli: **verifica dei componenti** e **verifica integrata**. Ogni step dispone di dataset di riferimento, metriche e tool dedicati.
+
+### 3.5.1 Component Verification Suite
+
+| Modulo | Dataset reale | Script/tool | Metriche accettazione |
+|--------|---------------|-------------|-----------------------|
+| AeroPackage | CFD/galleria 2025 + telemetria FastF1 (DF/drag) | `notebooks/calibration/aero_fit.ipynb` | errore DF/drag < 3% | 
+| TyreModel | Delta Pirelli, stint reali | `tyre_fit.py` + `pytest physics/tests/test_tyre_fit.py` | Δtemp < 5°C, wear trend <10% |
+| PowerUnit (ICE/ERS) | dati FIA fuel/ERS, run telemetry | `powerunit_fit.py` | consumo ≤0.1 kg/giro, ΔERS ≤0.2 MJ |
+| BrakeSystem | log frenate (energia vs temp) | `brake_calibration.ipynb` | temp error < 20°C, fade curve sovrapponibile |
+| DriverModel | dataset simulazioni AI/umana | `driver_skill_validation.py` | varianza tempi coerente (+/−5%) |
+
+Flusso:
+1. Aggiorna i file `config/calibration/<module>.json` con i parametri fittati.
+2. Esegui `pytest physics/tests/test_<module>_fit.py` per assicurarti che i modelli singoli generino output consistenti.
+3. Solo dopo i “component badge” verdi è consentito promuovere le modifiche al LapSimulator.
+
+### 3.5.2 Single-Car Lap Validation
+
+- **Input**: setup reali, tempi settore referenziati (FastF1 / telemetria interna).
+- **Tool**: `scripts/simulate_lap.py --circuit <ID> --setup <JSON>`.
+- **Ottimizzazione**: fitting automatico dei coefficienti globali (`k_power`, `k_drag`, `curve_factor`, `thermal_coeff`) via least squares.
+- **Metriche**:
+  - RMSE tempi settore < 0.15 s.
+  - Lap time totale entro ±0.30 s rispetto alla telemetria.
+  - Trend degrado gomme coerente (errore < 5% sulla pendenza wear vs giro).
+- **Test regression**: `pytest tests/lap_regression/test_<circuit>.py` esegue 3 circuiti (alto carico, medio, low drag) ad ogni PR; se l’errore supera soglia fallisce la pipeline.
+
+### 3.5.3 RaceSimulator & BattleResolver Validation
+
+- **Input**: log gara reali (gap, sorpassi, safety car) + dataset interno di scenari sintetici (2-car fight, DRS train, wet stint).
+- **Tool**: `scripts/run_race_validation.py --scenario <name> --seed <n>` che avvia il RaceSimulator completo e BattleResolver con i componenti calibrati.
+- **Metriche**:
+  - # sorpassi per gara entro ±10% rispetto al riferimento.
+  - Rapporto tentativi riusciti/falliti (0.45–0.55 range target).
+  - Distribuzione tempo in aria sporca e consumo ERS combacia con dati reali (<8% di errore).
+  - Penalità/eventi coerenti (nessun contatto non giustificato).
+- **Outcome**: genera report JSON + grafici (gap vs giro, timeline eventi) usati da game design e QA.
+
+### 3.5.4 Automation & Release Gate
+
+1. **Pipeline CI** (`make calibrate` oppure workflow gha `calibration.yml`):
+   - Step A: Component Verification Suite (pytest + notebook convertiti in script) → badge.
+   - Step B: Single-Car Lap Validation su 2 circuiti.
+   - Step C: RaceSimulator smoke test (scenario breve 5 giri) per garantire che BattleResolver + cooldown funzionino.
+2. **Manual QA**: build “Engineer Mode” permette di loggare durante playtest; i log vengono confrontati con baseline tramite `notebooks/validation/report.ipynb`.
+3. **Release checklist**:
+   - Rifare la calibrazione completa su 3 circuiti (high DF, bilanciato, low drag).
+   - Salvare i risultati in `docs/calibration_runs/<date>.md` con metriche.
+   - Aggiornare `config/calibration/manifest.json` con checksum dei parametri promossi.
+
+Con questa pipeline ogni componente simulato è verificato individualmente prima dell’integrazione, e il sistema completo viene ricontrollato tramite LapSimulator e RaceSimulator. Qualsiasi regressione sui test blocca il merge, garantendo che l’esperienza “pallino su rotaia” resti fisicamente plausibile e consistente.
 
 ## 4. Aggregati aerodinamici
 Calcolati ogni tick o quando cambia il setup:
