@@ -827,7 +827,8 @@ Integra la termica condivisa gomme/freni, gli effetti del brake bias e genera fe
 #### Passo 6 – Velocità effettiva e dt
 1. **Curva: velocità teorica da DF, pilota e freni**
    ```python
-   v_curve = v_base * (1 + curve_factor * k_df * (df_available - df_ref)/df_ref)
+   curvature_factor = section.curve_profile.curvature_factor  # calcolato da radius effettivo (1/r) e banking
+   v_curve = v_base * (1 + curvature_factor * k_df * (df_available - df_ref)/df_ref)
    v_curve *= (1 - handling_penalty)
    v_curve *= 1 + (driver_intent.pace_factor - 1) * driver_intent.aggression_curve_bonus
 
@@ -837,7 +838,8 @@ Integra la termica condivisa gomme/freni, gli effetti del brake bias e genera fe
    driver_brake_skill = (driver.race_craft + driver.aggression)/200
    braking_efficiency = clamp(1 + brake_quality * driver_brake_skill * brake_health - temp_delta * 0.4, 0.9, 1.15)
 
-   v_curve *= braking_efficiency  # freni sani + pilota bravo = staccata più tardiva
+   drag_curve_penalty = k_drag_curve * (drag_eff - drag_ref)
+   v_curve = (v_curve * braking_efficiency) - drag_curve_penalty
    ```
 
 2. **Limite grip**
@@ -867,6 +869,8 @@ Integra la termica condivisa gomme/freni, gli effetti del brake bias e genera fe
    else:
        v_effettiva = max(v_min, v_straight)
    ```
+
+> **Nota sul profilo curva**: ogni `section.curve_profile` contiene `radius_m`, `banking_deg`, `curvature_factor` e un flag `complex_corner`. Questo permette di distinguere Parabolica, Lesmo, Variante Ascari pur condividendo la stessa classe `FastCorner`. Il coefficiente `k_drag_curve` introduce l’effetto aerodinamico del drag anche nelle staccate/curve complesse.
 
 6. **Penalità eventi**
    - Se `tyre_events` contiene `overheat`, moltiplica `v_effettiva` per `0.98`.

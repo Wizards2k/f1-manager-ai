@@ -1,0 +1,223 @@
+{
+  "circuit_info": {
+    "code": "azerbaijan",
+    "location": "Baku",
+    "name": "Azerbaijan Grand Prix"
+  },
+  "driver": "NOR",
+  "lap_time": "0 days 00:01:45.255000",
+  "circuit_length": 5938.0,
+  "sections": [
+    {
+      "start": 0,
+      "end": 83,
+      "type": "Straight",
+      "avg_speed": 280,
+      "name": "Main Straight Start-1",
+      "corner_number": 0
+    },
+    {
+      "start": 372,
+      "end": 704,
+      "type": "MediumCorner",
+      "avg_speed": 171,
+      "name": "Turn 1-2",
+      "corner_number": "1"
+    },
+    {
+      "start": 704,
+      "end": 1549,
+      "type": "Straight",
+      "avg_speed": 222,
+      "name": "Medium Straight 2-3",
+      "corner_number": 0
+    },
+    {
+      "start": 1549,
+      "end": 1777,
+      "type": "MediumCorner",
+      "avg_speed": 132,
+      "name": "Turn 3-4",
+      "corner_number": "3"
+    },
+    {
+      "start": 1777,
+      "end": 2108,
+      "type": "MediumCorner",
+      "avg_speed": 158,
+      "name": "Turn 4-5",
+      "corner_number": "4"
+    },
+    {
+      "start": 2108,
+      "end": 2163,
+      "type": "SlowCorner",
+      "avg_speed": 97,
+      "name": "Turn 5-6",
+      "corner_number": "5"
+    },
+    {
+      "start": 2163,
+      "end": 2546,
+      "type": "MediumCorner",
+      "avg_speed": 162,
+      "name": "Turn 6-7",
+      "corner_number": "6"
+    },
+    {
+      "start": 2546,
+      "end": 2733,
+      "type": "MediumCorner",
+      "avg_speed": 125,
+      "name": "Turn 7-8",
+      "corner_number": "7"
+    },
+    {
+      "start": 2733,
+      "end": 2765,
+      "type": "SlowCorner",
+      "avg_speed": 116,
+      "name": "Turn 8-9",
+      "corner_number": "8"
+    },
+    {
+      "start": 2765,
+      "end": 2794,
+      "type": "MediumCorner",
+      "avg_speed": 129,
+      "name": "Turn 9-10",
+      "corner_number": "9"
+    },
+    {
+      "start": 2794,
+      "end": 2839,
+      "type": "SlowCorner",
+      "avg_speed": 114,
+      "name": "Turn 10-11",
+      "corner_number": "10"
+    },
+    {
+      "start": 2839,
+      "end": 2896,
+      "type": "SlowCorner",
+      "avg_speed": 98,
+      "name": "Turn 11-12",
+      "corner_number": "11"
+    },
+    {
+      "start": 2896,
+      "end": 3283,
+      "type": "Straight",
+      "avg_speed": 200,
+      "name": "Medium Straight 12-13",
+      "corner_number": 0
+    },
+    {
+      "start": 3283,
+      "end": 3499,
+      "type": "Straight",
+      "avg_speed": 286,
+      "name": "Medium Straight 13-14",
+      "corner_number": 0
+    },
+    {
+      "start": 3499,
+      "end": 3728,
+      "type": "FastCorner",
+      "avg_speed": 208,
+      "name": "Turn 14-15",
+      "corner_number": "14"
+    },
+    {
+      "start": 3728,
+      "end": 4083,
+      "type": "MediumCorner",
+      "avg_speed": 164,
+      "name": "Turn 15-16",
+      "corner_number": "15"
+    },
+    {
+      "start": 4083,
+      "end": 4264,
+      "type": "MediumCorner",
+      "avg_speed": 176,
+      "name": "Turn 16-17",
+      "corner_number": "16"
+    },
+    {
+      "start": 4264,
+      "end": 4505,
+      "type": "Straight",
+      "avg_speed": 264,
+      "name": "Medium Straight 17-18",
+      "corner_number": 0
+    },
+    {
+      "start": 4505,
+      "end": 4653,
+      "type": "FastCorner",
+      "avg_speed": 290,
+      "name": "Turn 18-19",
+      "corner_number": "18"
+    },
+    {
+      "start": 4653,
+      "end": 4946,
+      "type": "Straight",
+      "avg_speed": 302,
+      "name": "Medium Straight 19-20",
+      "corner_number": 0
+    },
+    {
+      "start": 4946,
+      "end": 5938,
+      "type": "Straight",
+      "avg_speed": 250,
+      "name": "Final Straight Gap-Fill",
+      "corner_number": 0
+    }
+  ],
+  "corners_count": 20,
+  "session_type": "Race",
+  "legacy_parameters": {
+    "reference_grip": 1.034,
+    "grip_multiplier": 1.034,
+    "base_grip_coefficient": 0.672,
+    "corner_speed_multiplier": 0.964,
+    "braking_multiplier": 1.0,
+    "acceleration_multiplier": 1.042,
+    "circuit_smoothness": 89.3,
+    "circuit_bumpiness": 10.7,
+    "downforce_importance": 4.2,
+    "aerodynamic_drag": 89.0,
+    "low_speed_downforce_reduction": 0.4,
+    "soft_tire_multiplier": 1.15,
+    "medium_tire_multiplier": 1.05,
+    "hard_tire_multiplier": 0.941,
+    "time_multiplier": 1.127
+  },
+  "analysis_details": {
+    "speed_factor": 1.171,
+    "time_factor": 0.958,
+    "throttle_factor": 0.782,
+    "variance_factor": 1.2,
+    "avg_speed_kmh": 201.3,
+    "max_speed_kmh": 326.0,
+    "lap_time_seconds": 105.255,
+    "brake_usage_percent": 21.3,
+    "avg_throttle_percent": 64.1,
+    "circuit_length": 5938.0,
+    "speed_variance": 6434.0
+  },
+  "telemetry_stats": {
+    "avg_speed": 201.3,
+    "max_speed": 326.0,
+    "min_speed": 70.0,
+    "avg_throttle": 64.1,
+    "max_throttle": 100.0,
+    "brake_usage_percent": 21.3,
+    "gear_changes": 54,
+    "total_distance": 5939.0,
+    "data_points": 817
+  }
+}

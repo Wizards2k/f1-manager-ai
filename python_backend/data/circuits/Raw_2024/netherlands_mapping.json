@@ -1,0 +1,175 @@
+{
+  "circuit_info": {
+    "code": "netherlands",
+    "location": "Zandvoort",
+    "name": "Dutch Grand Prix"
+  },
+  "driver": "NOR",
+  "lap_time": "0 days 00:01:13.817000",
+  "circuit_length": 4229.0,
+  "sections": [
+    {
+      "start": 0,
+      "end": 82,
+      "type": "Straight",
+      "avg_speed": 280,
+      "name": "Main Straight Start-1",
+      "corner_number": 0
+    },
+    {
+      "start": 419,
+      "end": 734,
+      "type": "FastCorner",
+      "avg_speed": 182,
+      "name": "Turn 1-2",
+      "corner_number": "1"
+    },
+    {
+      "start": 734,
+      "end": 896,
+      "type": "MediumCorner",
+      "avg_speed": 171,
+      "name": "Turn 2-3",
+      "corner_number": "2"
+    },
+    {
+      "start": 896,
+      "end": 1108,
+      "type": "FastCorner",
+      "avg_speed": 185,
+      "name": "Turn 3-4",
+      "corner_number": "3"
+    },
+    {
+      "start": 1108,
+      "end": 1297,
+      "type": "FastCorner",
+      "avg_speed": 264,
+      "name": "Turn 4-5",
+      "corner_number": "4"
+    },
+    {
+      "start": 1297,
+      "end": 1446,
+      "type": "FastCorner",
+      "avg_speed": 283,
+      "name": "Turn 5-6",
+      "corner_number": "5"
+    },
+    {
+      "start": 1446,
+      "end": 1737,
+      "type": "FastCorner",
+      "avg_speed": 273,
+      "name": "Turn 6-7",
+      "corner_number": "6"
+    },
+    {
+      "start": 1737,
+      "end": 2052,
+      "type": "Straight",
+      "avg_speed": 246,
+      "name": "Medium Straight 7-8",
+      "corner_number": 0
+    },
+    {
+      "start": 2052,
+      "end": 2270,
+      "type": "FastCorner",
+      "avg_speed": 189,
+      "name": "Turn 8-9",
+      "corner_number": "8"
+    },
+    {
+      "start": 2270,
+      "end": 2527,
+      "type": "MediumCorner",
+      "avg_speed": 134,
+      "name": "Turn 9-10",
+      "corner_number": "9"
+    },
+    {
+      "start": 2527,
+      "end": 3083,
+      "type": "FastCorner",
+      "avg_speed": 198,
+      "name": "Turn 10-11",
+      "corner_number": "10"
+    },
+    {
+      "start": 3083,
+      "end": 3170,
+      "type": "SlowCorner",
+      "avg_speed": 109,
+      "name": "Turn 11-12",
+      "corner_number": "11"
+    },
+    {
+      "start": 3170,
+      "end": 3467,
+      "type": "MediumCorner",
+      "avg_speed": 178,
+      "name": "Turn 12-13",
+      "corner_number": "12"
+    },
+    {
+      "start": 3467,
+      "end": 3745,
+      "type": "Straight",
+      "avg_speed": 223,
+      "name": "Medium Straight 13-14",
+      "corner_number": 0
+    },
+    {
+      "start": 3745,
+      "end": 4229,
+      "type": "Straight",
+      "avg_speed": 250,
+      "name": "Final Straight Gap-Fill",
+      "corner_number": 0
+    }
+  ],
+  "corners_count": 14,
+  "session_type": "Race",
+  "legacy_parameters": {
+    "reference_grip": 0.931,
+    "grip_multiplier": 0.931,
+    "base_grip_coefficient": 0.605,
+    "corner_speed_multiplier": 0.989,
+    "braking_multiplier": 1.0,
+    "acceleration_multiplier": 1.045,
+    "circuit_smoothness": 87,
+    "circuit_bumpiness": 13,
+    "downforce_importance": 2.8,
+    "aerodynamic_drag": 93.5,
+    "low_speed_downforce_reduction": 0.4,
+    "soft_tire_multiplier": 1.15,
+    "medium_tire_multiplier": 1.05,
+    "hard_tire_multiplier": 0.939,
+    "time_multiplier": 0.791
+  },
+  "analysis_details": {
+    "speed_factor": 0.859,
+    "time_factor": 0.973,
+    "throttle_factor": 0.792,
+    "variance_factor": 1.2,
+    "avg_speed_kmh": 207.5,
+    "max_speed_kmh": 310.0,
+    "lap_time_seconds": 73.817,
+    "brake_usage_percent": 18.9,
+    "avg_throttle_percent": 65.0,
+    "circuit_length": 4229.0,
+    "speed_variance": 4113.5
+  },
+  "telemetry_stats": {
+    "avg_speed": 207.5,
+    "max_speed": 310.0,
+    "min_speed": 90.0,
+    "avg_throttle": 65.0,
+    "max_throttle": 100.0,
+    "brake_usage_percent": 18.9,
+    "gear_changes": 31,
+    "total_distance": 4229.4,
+    "data_points": 567
+  }
+}

@@ -1,0 +1,175 @@
+{
+  "circuit_info": {
+    "code": "australia",
+    "location": "Melbourne",
+    "name": "Australian Grand Prix"
+  },
+  "driver": "LEC",
+  "lap_time": "0 days 00:01:19.813000",
+  "circuit_length": 5222.0,
+  "sections": [
+    {
+      "start": 0,
+      "end": 96,
+      "type": "Straight",
+      "avg_speed": 280,
+      "name": "Main Straight Start-1",
+      "corner_number": 0
+    },
+    {
+      "start": 441,
+      "end": 521,
+      "type": "MediumCorner",
+      "avg_speed": 179,
+      "name": "Turn 1-2",
+      "corner_number": "1"
+    },
+    {
+      "start": 521,
+      "end": 1144,
+      "type": "Straight",
+      "avg_speed": 245,
+      "name": "Medium Straight 2-3",
+      "corner_number": 0
+    },
+    {
+      "start": 1144,
+      "end": 1293,
+      "type": "MediumCorner",
+      "avg_speed": 124,
+      "name": "Turn 3-4",
+      "corner_number": "3"
+    },
+    {
+      "start": 1293,
+      "end": 1489,
+      "type": "FastCorner",
+      "avg_speed": 199,
+      "name": "Turn 4-5",
+      "corner_number": "4"
+    },
+    {
+      "start": 1489,
+      "end": 1907,
+      "type": "Straight",
+      "avg_speed": 261,
+      "name": "Straight 5-6",
+      "corner_number": 0
+    },
+    {
+      "start": 1907,
+      "end": 2016,
+      "type": "FastCorner",
+      "avg_speed": 218,
+      "name": "Turn 6-7",
+      "corner_number": "6"
+    },
+    {
+      "start": 2016,
+      "end": 2209,
+      "type": "FastCorner",
+      "avg_speed": 261,
+      "name": "Turn 7-8",
+      "corner_number": "7"
+    },
+    {
+      "start": 2209,
+      "end": 3299,
+      "type": "Straight",
+      "avg_speed": 305,
+      "name": "Straight 8-9",
+      "corner_number": 0
+    },
+    {
+      "start": 3299,
+      "end": 3409,
+      "type": "FastCorner",
+      "avg_speed": 242,
+      "name": "Turn 9-10",
+      "corner_number": "9"
+    },
+    {
+      "start": 3409,
+      "end": 4097,
+      "type": "Straight",
+      "avg_speed": 258,
+      "name": "Straight 10-11",
+      "corner_number": 0
+    },
+    {
+      "start": 4097,
+      "end": 4351,
+      "type": "MediumCorner",
+      "avg_speed": 170,
+      "name": "Turn 11-12",
+      "corner_number": "11"
+    },
+    {
+      "start": 4351,
+      "end": 4596,
+      "type": "FastCorner",
+      "avg_speed": 199,
+      "name": "Turn 12-13",
+      "corner_number": "12"
+    },
+    {
+      "start": 4596,
+      "end": 4757,
+      "type": "MediumCorner",
+      "avg_speed": 129,
+      "name": "Turn 13-14",
+      "corner_number": "13"
+    },
+    {
+      "start": 4757,
+      "end": 5222,
+      "type": "Straight",
+      "avg_speed": 250,
+      "name": "Final Straight Gap-Fill",
+      "corner_number": 0
+    }
+  ],
+  "corners_count": 14,
+  "session_type": "Race",
+  "legacy_parameters": {
+    "reference_grip": 1.126,
+    "grip_multiplier": 1.126,
+    "base_grip_coefficient": 0.732,
+    "corner_speed_multiplier": 0.992,
+    "braking_multiplier": 1.0,
+    "acceleration_multiplier": 1.086,
+    "circuit_smoothness": 89.4,
+    "circuit_bumpiness": 10.6,
+    "downforce_importance": 1.8,
+    "aerodynamic_drag": 88.7,
+    "low_speed_downforce_reduction": 0.4,
+    "soft_tire_multiplier": 1.15,
+    "medium_tire_multiplier": 1.05,
+    "hard_tire_multiplier": 0.943,
+    "time_multiplier": 0.855
+  },
+  "analysis_details": {
+    "speed_factor": 1.202,
+    "time_factor": 1.111,
+    "throttle_factor": 0.961,
+    "variance_factor": 1.2,
+    "avg_speed_kmh": 235.1,
+    "max_speed_kmh": 327.0,
+    "lap_time_seconds": 79.813,
+    "brake_usage_percent": 14.4,
+    "avg_throttle_percent": 78.8,
+    "circuit_length": 5222.0,
+    "speed_variance": 4232.3
+  },
+  "telemetry_stats": {
+    "avg_speed": 235.1,
+    "max_speed": 327.0,
+    "min_speed": 93.0,
+    "avg_throttle": 78.8,
+    "max_throttle": 100.0,
+    "brake_usage_percent": 14.4,
+    "gear_changes": 35,
+    "total_distance": 5223.0,
+    "data_points": 598
+  }
+}

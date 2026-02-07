@@ -1,0 +1,183 @@
+{
+  "circuit_info": {
+    "code": "brazil",
+    "location": "S\u00e3o Paulo",
+    "name": "S\u00e3o Paulo Grand Prix"
+  },
+  "driver": "VER",
+  "lap_time": "0 days 00:01:20.472000",
+  "circuit_length": 4251.0,
+  "sections": [
+    {
+      "start": 0,
+      "end": 69,
+      "type": "Straight",
+      "avg_speed": 280,
+      "name": "Main Straight Start-1",
+      "corner_number": 0
+    },
+    {
+      "start": 416,
+      "end": 513,
+      "type": "SlowCorner",
+      "avg_speed": 107,
+      "name": "Turn 1-2",
+      "corner_number": "1"
+    },
+    {
+      "start": 513,
+      "end": 708,
+      "type": "MediumCorner",
+      "avg_speed": 175,
+      "name": "Turn 2-3",
+      "corner_number": "2"
+    },
+    {
+      "start": 708,
+      "end": 1435,
+      "type": "FastCorner",
+      "avg_speed": 252,
+      "name": "Turn 3-4",
+      "corner_number": "3"
+    },
+    {
+      "start": 1435,
+      "end": 1589,
+      "type": "MediumCorner",
+      "avg_speed": 154,
+      "name": "Turn 4-5",
+      "corner_number": "4"
+    },
+    {
+      "start": 1589,
+      "end": 2038,
+      "type": "Straight",
+      "avg_speed": 251,
+      "name": "Medium Straight 5-6",
+      "corner_number": 0
+    },
+    {
+      "start": 2038,
+      "end": 2173,
+      "type": "MediumCorner",
+      "avg_speed": 178,
+      "name": "Turn 6-7",
+      "corner_number": "6"
+    },
+    {
+      "start": 2173,
+      "end": 2327,
+      "type": "MediumCorner",
+      "avg_speed": 156,
+      "name": "Turn 7-8",
+      "corner_number": "7"
+    },
+    {
+      "start": 2327,
+      "end": 2454,
+      "type": "SlowCorner",
+      "avg_speed": 92,
+      "name": "Turn 8-9",
+      "corner_number": "8"
+    },
+    {
+      "start": 2454,
+      "end": 2740,
+      "type": "MediumCorner",
+      "avg_speed": 127,
+      "name": "Turn 9-10",
+      "corner_number": "9"
+    },
+    {
+      "start": 2740,
+      "end": 2949,
+      "type": "SlowCorner",
+      "avg_speed": 119,
+      "name": "Turn 10-11",
+      "corner_number": "10"
+    },
+    {
+      "start": 2949,
+      "end": 3233,
+      "type": "FastCorner",
+      "avg_speed": 185,
+      "name": "Turn 11-12",
+      "corner_number": "11"
+    },
+    {
+      "start": 3233,
+      "end": 3335,
+      "type": "MediumCorner",
+      "avg_speed": 123,
+      "name": "Turn 12-13",
+      "corner_number": "12"
+    },
+    {
+      "start": 3335,
+      "end": 3602,
+      "type": "Straight",
+      "avg_speed": 230,
+      "name": "Medium Straight 13-14",
+      "corner_number": 0
+    },
+    {
+      "start": 3602,
+      "end": 4008,
+      "type": "Straight",
+      "avg_speed": 288,
+      "name": "Straight 14-15",
+      "corner_number": 0
+    },
+    {
+      "start": 4008,
+      "end": 4251,
+      "type": "Straight",
+      "avg_speed": 250,
+      "name": "Final Straight Gap-Fill",
+      "corner_number": 0
+    }
+  ],
+  "corners_count": 15,
+  "session_type": "Race",
+  "legacy_parameters": {
+    "reference_grip": 0.863,
+    "grip_multiplier": 0.863,
+    "base_grip_coefficient": 0.561,
+    "corner_speed_multiplier": 0.964,
+    "braking_multiplier": 1.0,
+    "acceleration_multiplier": 1.018,
+    "circuit_smoothness": 89.5,
+    "circuit_bumpiness": 10.5,
+    "downforce_importance": 4.2,
+    "aerodynamic_drag": 93.2,
+    "low_speed_downforce_reduction": 0.4,
+    "soft_tire_multiplier": 1.15,
+    "medium_tire_multiplier": 1.05,
+    "hard_tire_multiplier": 0.937,
+    "time_multiplier": 0.862
+  },
+  "analysis_details": {
+    "speed_factor": 0.793,
+    "time_factor": 0.897,
+    "throttle_factor": 0.682,
+    "variance_factor": 1.2,
+    "avg_speed_kmh": 190.5,
+    "max_speed_kmh": 311.0,
+    "lap_time_seconds": 80.472,
+    "brake_usage_percent": 22.9,
+    "avg_throttle_percent": 55.9,
+    "circuit_length": 4251.0,
+    "speed_variance": 5617.6
+  },
+  "telemetry_stats": {
+    "avg_speed": 190.5,
+    "max_speed": 311.0,
+    "min_speed": 69.0,
+    "avg_throttle": 55.9,
+    "max_throttle": 100.0,
+    "brake_usage_percent": 22.9,
+    "gear_changes": 33,
+    "total_distance": 4251.5,
+    "data_points": 615
+  }
+}

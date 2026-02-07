@@ -1,0 +1,25 @@
+circuit_name,circuit_code,reference_grip,grip_multiplier,base_grip_coefficient,corner_speed_multiplier,braking_multiplier,acceleration_multiplier,circuit_smoothness,circuit_bumpiness,downforce_importance,aerodynamic_drag,time_multiplier
+Bahrain Grand Prix,bahrain,1.028,1.028,0.668,0.979,1.0,1.059,89.2,10.8,2.8,96.3,0.992
+Saudi Arabian Grand Prix,saudi_arabia,1.213,1.213,0.789,0.998,1.0,1.085,89.3,10.7,1.8,88.4,0.981
+Australian Grand Prix,australia,1.126,1.126,0.732,0.992,1.0,1.086,89.4,10.6,1.8,88.7,0.855
+Japanese Grand Prix,japan,1.108,1.108,0.72,0.988,1.0,1.06,89.5,10.5,1.8,90.1,1.004
+Chinese Grand Prix,china,0.97,0.97,0.631,0.959,1.0,1.033,89.4,10.6,2.8,86.8,1.048
+Miami Grand Prix,miami,0.961,0.961,0.625,0.962,1.0,1.042,86.0,14.0,4.2,90.3,0.971
+Emilia Romagna Grand Prix,italy_imola,1.049,1.049,0.682,1.003,1.0,1.071,78.0,22.0,1.8,93.9,0.842
+Monaco Grand Prix,monaco,0.7,0.7,0.455,0.85,1.085,1.006,95.0,5.0,1.0,100.7,0.794
+Canadian Grand Prix,canada,0.936,0.936,0.608,0.972,1.0,1.048,89.0,11.0,2.8,86.1,0.802
+Spanish Grand Prix,spain,0.997,0.997,0.648,0.999,1.0,1.057,89.5,10.5,1.8,88.7,0.826
+Austrian Grand Prix,austria,1.016,1.016,0.66,0.975,1.0,1.068,89.2,10.8,1.8,94.2,0.725
+British Grand Prix,great_britain,1.3,1.3,0.845,0.99,1.0,1.086,82.0,18.0,3.0,94.5,0.946
+Hungarian Grand Prix,hungary,0.899,0.899,0.584,0.998,1.0,1.037,89.2,10.8,1.8,97.6,0.86
+Belgian Grand Prix,belgium,1.274,1.274,0.828,0.986,1.0,1.077,89.4,10.6,1.8,90.9,1.121
+Dutch Grand Prix,netherlands,0.931,0.931,0.605,0.989,1.0,1.045,87.0,13.0,2.8,93.5,0.791
+Italian Grand Prix,italy,1.283,1.283,0.834,1.0,1.0,1.08,85.0,15.0,1.5,85.5,0.872
+Azerbaijan Grand Prix,azerbaijan,1.034,1.034,0.672,0.964,1.0,1.042,89.3,10.7,4.2,89.0,1.127
+Singapore Grand Prix,singapore,0.917,0.917,0.596,0.982,1.0,1.048,89.0,11.0,2.8,99.0,1.012
+United States Grand Prix,united_states,0.968,0.968,0.629,0.973,1.0,1.052,75.0,25.0,2.8,93.2,1.042
+Mexico City Grand Prix,mexico,0.899,0.899,0.584,0.956,1.0,1.043,89.2,10.8,4.2,87.1,0.839
+São Paulo Grand Prix,brazil,0.863,0.863,0.561,0.964,1.0,1.018,89.5,10.5,4.2,93.2,0.862
+Las Vegas Grand Prix,las_vegas,1.179,1.179,0.766,0.964,1.0,1.066,89.3,10.7,4.2,85.5,1.016
+Qatar Grand Prix,qatar,1.13,1.13,0.734,1.023,1.0,1.079,89.6,10.4,1.8,95.1,0.882
+Abu Dhabi Grand Prix,abu_dhabi,1.067,1.067,0.693,0.989,1.0,1.067,89.2,10.8,2.8,91.5,0.917

@@ -44,3 +44,61 @@ Il `TyreModel` deve "leggere" la `circuit_section` attuale:
 2. **Calcolo Grip**: `Effective_Grip = Base_Grip * Thermal_Factor(T_core) * Wear_Factor`.
 3. **Thermal Factor**: Usa una curva gaussiana centrata sulla Window Ottimale.
 4. **Offline Data Hook**: Se non ci sono dati meteo dinamici, usa di default `Air_Temp = 25.0` e `Track_Temp = 35.0`.
+
+## 6. Reference Table per Mescola (per singola ruota)
+
+| Compound | Surface Window (°C) | Core Window (°C) | Base Wear Rate (%/km) | Heat Capacity (kJ/°C) | Slip Sensitivity | Note |
+| :-- | :-- | :-- | :-- | :-- | :-- | :-- |
+| **C1** | 110‑140 | 90‑115 | 0.09 | 1.25 | 0.75 | Hard, lenta a scaldarsi, degrado minimo |
+| **C2** | 110‑135 | 88‑110 | 0.11 | 1.18 | 0.80 | Hard bilanciata |
+| **C3** | 105‑135 | 85‑108 | 0.13 | 1.10 | 1.00 | Baseline (media) |
+| **C4** | 90‑120 | 80‑100 | 0.16 | 0.98 | 1.15 | Soft, rapida a scaldarsi |
+| **C5** | 85‑115 | 75‑95 | 0.19 | 0.90 | 1.30 | Ultra-soft, degrado elevato |
+| **C6** | 80‑105 | 70‑90 | 0.22 | 0.82 | 1.45 | Hyper-soft (Imola/Monaco), soglia blistering bassa |
+
+Le temperature vengono valutate per ruota; i fattori di usura sono percentuali di gomma consumata per chilometro prima di applicare gli scaler circuito/mescola.
+
+### Heat/Cool factor per tipo di sezione
+
+| Section kind | Heat factor | Cool factor |
+| :-- | :-- | :-- |
+| Straight | 0.2 | 1.2 |
+| MediumStraight | 0.4 | 1.0 |
+| SlowCorner | 1.4 | 0.4 |
+| MediumCorner | 1.1 | 0.6 |
+| FastCorner | 0.9 | 0.7 |
+
+I valori vengono moltiplicati per `avg_speed`, durata della sezione e `downforce_importance` per calcolare l'energia che alimenta `ΔT_surface` e il consumo sezione.
+
+## 7. Mapping dai Pirelli Hints
+
+- `wear_rate_base` → scaler numerico: `Minimo/Basso = 0.8`, `Medio = 1.0`, `Medio-Alto = 1.15`, `Elevato/Critico = 1.35`.
+- `lap_time_delta_hint` → penalità grip: il valore in secondi viene convertito in `grip_drop_per_wear = lap_time_delta_hint / stint_laps_attesi`.
+- Le `notes` attivano flag: parole chiave "graining" aumentano la probabilità di graining quando le temperature sono sotto finestra; "abrasivo" incrementa `wear_rate`; "raffredda" riduce `heat_factor`.
+
+## 8. TyreState (per ciascuna ruota)
+
+```python
+class TyreState(BaseModel):
+    compound: str
+    surface_temp: float
+    core_temp: float
+    wear_pct: float
+    graining: bool
+    blistering: bool
+
+    def to_user_status(self) -> dict:
+        return {
+            "surface_temp": round(self.surface_temp, 1),
+            "core_temp": round(self.core_temp, 1),
+            "wear_pct": round(self.wear_pct, 1),
+            "surface_window": window_label(self.surface_temp, compound_surface_window),
+            "core_window": window_label(self.core_temp, compound_core_window),
+            "graining": self.graining,
+            "blistering": self.blistering,
+        }
+```
+
+- Ogni vettura mantiene quattro TyreState (LF/LR/RF/RR) aggiornati per sezione.
+- Il layer di presentazione mostra solo `surface_temp`, `core_temp`, `wear_pct` e i flag (più lo stato "IN/COLD/HOT" per ciascuna temperatura).
+- Trigger ingegnerizzati: graining se `surface_temp` < finestra e `slip > soglia` per N secondi; blistering se `surface_temp` o `core_temp` > finestra alta per N secondi con `heat_factor` elevato.

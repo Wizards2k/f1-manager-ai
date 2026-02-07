@@ -1,0 +1,199 @@
+{
+  "circuit_info": {
+    "code": "mexico",
+    "location": "Mexico City",
+    "name": "Mexico City Grand Prix"
+  },
+  "driver": "LEC",
+  "lap_time": "0 days 00:01:18.336000",
+  "circuit_length": 4244.0,
+  "sections": [
+    {
+      "start": 0,
+      "end": 119,
+      "type": "Straight",
+      "avg_speed": 280,
+      "name": "Main Straight Start-1",
+      "corner_number": 0
+    },
+    {
+      "start": 1277,
+      "end": 1350,
+      "type": "SlowCorner",
+      "avg_speed": 107,
+      "name": "Turn 1-2",
+      "corner_number": "1"
+    },
+    {
+      "start": 1350,
+      "end": 1410,
+      "type": "SlowCorner",
+      "avg_speed": 114,
+      "name": "Turn 2-3",
+      "corner_number": "2"
+    },
+    {
+      "start": 1410,
+      "end": 2085,
+      "type": "Straight",
+      "avg_speed": 222,
+      "name": "Medium Straight 3-4",
+      "corner_number": 0
+    },
+    {
+      "start": 2085,
+      "end": 2148,
+      "type": "SlowCorner",
+      "avg_speed": 84,
+      "name": "Turn 4-5",
+      "corner_number": "4"
+    },
+    {
+      "start": 2148,
+      "end": 2281,
+      "type": "SlowCorner",
+      "avg_speed": 101,
+      "name": "Turn 5-6",
+      "corner_number": "5"
+    },
+    {
+      "start": 2281,
+      "end": 2608,
+      "type": "MediumCorner",
+      "avg_speed": 168,
+      "name": "Turn 6-7",
+      "corner_number": "6"
+    },
+    {
+      "start": 2608,
+      "end": 2704,
+      "type": "FastCorner",
+      "avg_speed": 188,
+      "name": "Turn 7-8",
+      "corner_number": "7"
+    },
+    {
+      "start": 2704,
+      "end": 2813,
+      "type": "FastCorner",
+      "avg_speed": 221,
+      "name": "Turn 8-9",
+      "corner_number": "8"
+    },
+    {
+      "start": 2813,
+      "end": 2972,
+      "type": "FastCorner",
+      "avg_speed": 221,
+      "name": "Turn 9-10",
+      "corner_number": "9"
+    },
+    {
+      "start": 2972,
+      "end": 3074,
+      "type": "FastCorner",
+      "avg_speed": 182,
+      "name": "Turn 10-11",
+      "corner_number": "10"
+    },
+    {
+      "start": 3074,
+      "end": 3611,
+      "type": "Straight",
+      "avg_speed": 248,
+      "name": "Medium Straight 11-12",
+      "corner_number": 0
+    },
+    {
+      "start": 3611,
+      "end": 3776,
+      "type": "MediumCorner",
+      "avg_speed": 138,
+      "name": "Turn 12-13",
+      "corner_number": "12"
+    },
+    {
+      "start": 3776,
+      "end": 3835,
+      "type": "SlowCorner",
+      "avg_speed": 77,
+      "name": "Turn 13-14",
+      "corner_number": "13"
+    },
+    {
+      "start": 3835,
+      "end": 3889,
+      "type": "MediumCorner",
+      "avg_speed": 131,
+      "name": "Turn 14-15",
+      "corner_number": "14"
+    },
+    {
+      "start": 3889,
+      "end": 3954,
+      "type": "MediumCorner",
+      "avg_speed": 130,
+      "name": "Turn 15-16",
+      "corner_number": "15"
+    },
+    {
+      "start": 3954,
+      "end": 4080,
+      "type": "MediumCorner",
+      "avg_speed": 134,
+      "name": "Turn 16-17",
+      "corner_number": "16"
+    },
+    {
+      "start": 4080,
+      "end": 4244,
+      "type": "Straight",
+      "avg_speed": 250,
+      "name": "Final Straight Gap-Fill",
+      "corner_number": 0
+    }
+  ],
+  "corners_count": 17,
+  "session_type": "Race",
+  "legacy_parameters": {
+    "reference_grip": 0.899,
+    "grip_multiplier": 0.899,
+    "base_grip_coefficient": 0.584,
+    "corner_speed_multiplier": 0.956,
+    "braking_multiplier": 1.0,
+    "acceleration_multiplier": 1.043,
+    "circuit_smoothness": 89.2,
+    "circuit_bumpiness": 10.8,
+    "downforce_importance": 4.2,
+    "aerodynamic_drag": 87.1,
+    "low_speed_downforce_reduction": 0.4,
+    "soft_tire_multiplier": 1.15,
+    "medium_tire_multiplier": 1.05,
+    "hard_tire_multiplier": 0.938,
+    "time_multiplier": 0.839
+  },
+  "analysis_details": {
+    "speed_factor": 0.818,
+    "time_factor": 0.92,
+    "throttle_factor": 0.784,
+    "variance_factor": 1.2,
+    "avg_speed_kmh": 196.9,
+    "max_speed_kmh": 333.0,
+    "lap_time_seconds": 78.336,
+    "brake_usage_percent": 23.9,
+    "avg_throttle_percent": 64.3,
+    "circuit_length": 4244.0,
+    "speed_variance": 6832.4
+  },
+  "telemetry_stats": {
+    "avg_speed": 196.9,
+    "max_speed": 333.0,
+    "min_speed": 62.0,
+    "avg_throttle": 64.3,
+    "max_throttle": 100.0,
+    "brake_usage_percent": 23.9,
+    "gear_changes": 33,
+    "total_distance": 4244.6,
+    "data_points": 594
+  }
+}
