@@ -125,11 +125,18 @@ Nota: le finestre termiche ufficiali per compound (surface/core min-opt-max) son
   - Damage: shock_threshold medio e malus ridotti.
 Annotare i default in config quando saranno definiti; rimuovere i fallback appena i parametri sono tabellati.
 
+### 7. Flusso "derived per circuito" (offline)
+- Input: `*_global_default.json` (tyres/brakes/PU/damage), profilo circuito raw (telemetria) in `python_backend/data/circuits/`, setup bounds per circuito (`config/setup/setup_mapping_v2.json`).
+- Nota: il contesto Pirelli è già consolidato dentro `config/setup/setup_mapping_v2.json` (campo `pirelli_context`), quindi lo script non legge direttamente `config/tyres/pirelli_track_profile_2025.json`.
+- Processo offline (script `scripts/build_circuit_profiles.py`): combina global default + raw circuito + setup bounds → produce i profili derivati per circuito.
+- Output: `config/circuits/derived/<circuit_id>/` con i 4 JSON combinati usati a runtime. Runtime carica solo i derivati (niente calcolo on-the-fly); rigenerare se cambiano global_default o profilo raw.
+
 ### 7. Config JSON da produrre (fase analisi)
 - `config/tyres/tyre_params_global_default.json` — per compound S/M/H/Int/W: `temp_window`, `gaussian_sigma_surface/core`, `base_grip`, `wear_rate_base`, `thermal_mass_surface/core`, `conduction_coeff`, `cooling_coeff`.
 - `config/brakes/brake_params.json` — per classe impianto: `heat_capacity`, `thermal_mass`, `fade_threshold_front/rear`, `fade_sensitivity`, `heat_quality` curve.
 - `config/pu/pu_maps.json` — mappe ICE/ERS: `heat_load`, `torque_ramp`, `deployment_style`, `cooling_share`.
 - `config/pu/pu_reliability.json` — `wear_coeff` per ICE/ERS, soglie `temp_warning/critical`, fattori over-rev/shock.
 - `config/damage/damage_coeffs.json` — `shock_thresholds`, malus per componente (sospensioni, fondo/beam, cambio, sterzo), fattori pista bump/kerb.
+- `config/circuits/derived/<circuit_id>/` — profili combinati per circuito (tyres/brakes/PU/damage) generati dallo script offline.
 
 Nota: i valori seed possono provenire da `docs/TyreModel.md`, profili Pirelli (`config/tyres/pirelli_track_profile_2025.json`), telemetria FastF1 (per heat/cool), e fitting dei componenti (fase D, scripts `*_fit`).

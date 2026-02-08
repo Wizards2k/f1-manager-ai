@@ -23,6 +23,14 @@ BASE_FIELD_PARAMS: Dict[str, Dict[str, Any]] = {
         'range': (45, 75),
         'weight': 1.0,
     },
+    'beam_wing': {
+        'label': 'Beam wing',
+        'label_short': 'beam wing',
+        'optimal': 50,
+        'tolerance': 8,
+        'range': (35, 70),
+        'weight': 0.7,
+    },
     'ride_height_front': {
         'label': 'Front ride height',
         'label_short': 'front ride height',
@@ -54,6 +62,38 @@ BASE_FIELD_PARAMS: Dict[str, Dict[str, Any]] = {
         'tolerance': 10,
         'range': (20, 80),
         'weight': 0.6,
+    },
+    'antiroll_front': {
+        'label': 'Front anti-roll',
+        'label_short': 'front anti-roll',
+        'optimal': 50,
+        'tolerance': 10,
+        'range': (20, 80),
+        'weight': 0.5,
+    },
+    'antiroll_rear': {
+        'label': 'Rear anti-roll',
+        'label_short': 'rear anti-roll',
+        'optimal': 50,
+        'tolerance': 10,
+        'range': (20, 80),
+        'weight': 0.5,
+    },
+    'brake_balance': {
+        'label': 'Brake balance',
+        'label_short': 'brake balance',
+        'optimal': 50,
+        'tolerance': 6,
+        'range': (40, 60),
+        'weight': 0.4,
+    },
+    'brake_duct': {
+        'label': 'Brake duct',
+        'label_short': 'brake duct',
+        'optimal': 50,
+        'tolerance': 10,
+        'range': (30, 70),
+        'weight': 0.4,
     },
 }
 
@@ -97,6 +137,38 @@ def _status_from_delta(delta: float, tolerance: float) -> str:
     return 'out'
 
 
+def _clamp(value: float, min_value: float, max_value: float) -> float:
+    return max(min_value, min(max_value, value))
+
+
+def _compute_indices(setup_values: Dict[str, int]) -> Dict[str, float]:
+    front = setup_values.get('front_wing', 50)
+    rear = setup_values.get('rear_wing', 50)
+    beam = setup_values.get('beam_wing', 50)
+    ride_front = setup_values.get('ride_height_front', 50)
+    ride_rear = setup_values.get('ride_height_rear', 50)
+    susp_rear = setup_values.get('suspension_rear', 50)
+    antiroll_rear = setup_values.get('antiroll_rear', 50)
+
+    front_share = front / max(1.0, front + rear + beam * 0.5)
+    aero_balance = _clamp(front_share, 0.3, 0.7)
+
+    drag_load = (rear * 0.6 + beam * 0.4) / 100.0
+    ride_drag = (ride_front + ride_rear) / 200.0
+    drag_index = _clamp(drag_load + ride_drag * 0.4, 0.0, 1.0)
+
+    traction_height = (100 - ride_rear) / 100.0
+    traction_susp = susp_rear / 100.0
+    traction_antiroll = (100 - antiroll_rear) / 100.0
+    traction_index = _clamp(0.5 * traction_height + 0.35 * traction_susp + 0.15 * traction_antiroll, 0.0, 1.0)
+
+    return {
+        'aero_balance': round(aero_balance, 3),
+        'drag_index': round(drag_index, 3),
+        'traction_index': round(traction_index, 3),
+    }
+
+
 def evaluate_setup(setup_values: Dict[str, int]) -> Dict[str, Any]:
     """Return tone/message + per-field guidance for the given setup."""
     evaluated_fields = {}
@@ -104,6 +176,7 @@ def evaluate_setup(setup_values: Dict[str, int]) -> Dict[str, Any]:
     total_weight = 0.0
     issues = []
     warnings = []
+    recommended_ranges = {}
 
     for field in DEFAULT_SETUP_CONFIG.keys():
         params = _resolve_field_params(field)
@@ -141,6 +214,12 @@ def evaluate_setup(setup_values: Dict[str, int]) -> Dict[str, Any]:
             'delta_label': delta_label,
             'range': {'min': int(range_min), 'max': int(range_max)},
         }
+        recommended_ranges[field] = {
+            'min': int(range_min),
+            'max': int(range_max),
+            'target': int(optimal),
+            'tolerance': int(tolerance),
+        }
 
     avg_score = total_score / total_weight if total_weight else 0.0
     if issues:
@@ -155,11 +234,15 @@ def evaluate_setup(setup_values: Dict[str, int]) -> Dict[str, Any]:
         tone = 'success'
         message = 'Setup within optimal window.'
 
+    indices = _compute_indices(setup_values)
+
     return {
         'message': message,
         'tone': tone,
         'score': round(avg_score, 3),
         'fields': evaluated_fields,
+        'recommended_ranges': recommended_ranges,
+        **indices,
     }
 
 
@@ -187,9 +270,12 @@ def evaluate_setup_categories(setup_values: Dict[str, int]) -> Dict[str, Any]:
     - traction: Grip out of slow corners (ride height + suspension)
     - stability: Braking stability (suspension balance)
     """
-    # Get evaluated fields from base evaluation
+    # Get evaluated fields + indices from base evaluation
     base_eval = evaluate_setup(setup_values)
     fields = base_eval['fields']
+    aero_balance = base_eval.get('aero_balance', 0.5)
+    drag_index = base_eval.get('drag_index', 0.5)
+    traction_index = base_eval.get('traction_index', 0.5)
     
     def get_field_score(field: str) -> float:
         """Convert field evaluation to 0-100 score."""
@@ -202,83 +288,56 @@ def evaluate_setup_categories(setup_values: Dict[str, int]) -> Dict[str, Any]:
         score = max(0, 100 - (delta / tolerance) * 50)
         return score
     
-    # Category 1: Cornering Balance (front_wing vs rear_wing)
-    front_score = get_field_score('front_wing')
-    rear_score = get_field_score('rear_wing')
-    front_val = setup_values.get('front_wing', 50)
-    rear_val = setup_values.get('rear_wing', 50)
-    wing_balance = front_val - rear_val  # Positive = more front wing = understeer tendency
-    
-    cornering_score = (front_score + rear_score) / 2
-    # Penalize if balance is way off
-    balance_penalty = abs(wing_balance) * 2  # Max ~40 penalty
-    cornering_score = max(0, cornering_score - balance_penalty)
-    
+    # Category 1: Cornering Balance (aero_balance)
+    cornering_score = _clamp(100 - abs(aero_balance - 0.5) * 200, 0, 100)
     if cornering_score >= 90:
-        cornering_msg = "Neutral balance, good rotation"
-    elif wing_balance > 8:
-        cornering_msg = "Slight understeer in high-speed corners"
-    elif wing_balance < -8:
-        cornering_msg = "Rear unstable mid-corner"
-    elif wing_balance > 4:
-        cornering_msg = "Front-end could be sharper"
-    elif wing_balance < -4:
-        cornering_msg = "Tail slides on throttle"
+        cornering_msg = "Neutral aero balance"
+    elif aero_balance > 0.55:
+        cornering_msg = "Front-heavy: likely understeer"
+    elif aero_balance < 0.45:
+        cornering_msg = "Rear-heavy: risk of oversteer"
     else:
-        cornering_msg = "Good balance, minor fine-tuning possible"
+        cornering_msg = "Aero balance needs fine-tuning"
     
-    # Category 2: Straight-line Speed (rear_wing, ride_height_rear)
-    rear_wing_score = get_field_score('rear_wing')
-    ride_rear_score = get_field_score('ride_height_rear')
-    speed_score = (rear_wing_score + ride_rear_score) / 2
-    
-    # Higher rear wing = more drag = lower top speed
-    rear_wing_val = setup_values.get('rear_wing', 50)
-    if rear_wing_val > 65:
-        speed_msg = "Too much drag on straights"
-    elif rear_wing_val < 45:
-        speed_msg = "Good top speed, watch rear grip"
-    elif speed_score >= 85:
+    # Category 2: Straight-line Speed (drag_index)
+    speed_score = _clamp(100 - drag_index * 100, 0, 100)
+    if speed_score >= 85:
         speed_msg = "Good top speed"
+    elif drag_index >= 0.75:
+        speed_msg = "Too much drag on straights"
     else:
-        speed_msg = "Aero drag affecting straight-line speed"
+        speed_msg = "Aero drag affecting top speed"
     
-    # Category 3: Traction (ride heights + suspension)
-    ride_front_score = get_field_score('ride_height_front')
-    ride_rear_score = get_field_score('ride_height_rear')
-    susp_front_score = get_field_score('suspension_front')
-    susp_rear_score = get_field_score('suspension_rear')
-    traction_score = (ride_front_score + ride_rear_score + susp_front_score + susp_rear_score) / 4
-    
-    # Lower rear ride height = better traction
-    ride_rear_val = setup_values.get('ride_height_rear', 50)
-    if ride_rear_val > 65:
-        traction_msg = "Wheelspin on exits"
-    elif traction_score >= 85:
-        traction_msg = "Strong traction out of slow corners"
+    # Category 3: Traction (traction_index)
+    traction_score = _clamp(traction_index * 100, 0, 100)
+    if traction_score >= 85:
+        traction_msg = "Strong traction on exit"
+    elif traction_index < 0.45:
+        traction_msg = "Wheelspin risk on exits"
     else:
         traction_msg = "Traction could be improved"
     
-    # Category 4: Stability (suspension balance)
+    # Category 4: Stability (brake balance + antiroll + suspension delta)
+    brake_balance = setup_values.get('brake_balance', 50)
+    antiroll_front = setup_values.get('antiroll_front', 50)
+    antiroll_rear = setup_values.get('antiroll_rear', 50)
     susp_front_val = setup_values.get('suspension_front', 50)
     susp_rear_val = setup_values.get('suspension_rear', 50)
-    susp_balance = susp_front_val - susp_rear_val
-    stability_score = (susp_front_score + susp_rear_score) / 2
-    # Penalize extreme splits
-    stability_score = max(0, stability_score - abs(susp_balance) * 1.5)
-    
+    balance_penalty = abs(brake_balance - 50) / 50
+    antiroll_penalty = abs(antiroll_front - antiroll_rear) / 100
+    susp_penalty = abs(susp_front_val - susp_rear_val) / 100
+    stability_index = _clamp(1 - (0.5 * balance_penalty + 0.3 * antiroll_penalty + 0.2 * susp_penalty), 0, 1)
+    stability_score = stability_index * 100
     if stability_score >= 85:
         stability_msg = "Stable under braking"
-    elif susp_balance > 15:
+    elif brake_balance > 56:
         stability_msg = "Front locks under heavy braking"
-    elif susp_balance < -15:
-        stability_msg = "Rear slides under braking"
-    elif susp_balance > 8:
-        stability_msg = "Nose dives under braking"
-    elif susp_balance < -8:
-        stability_msg = "Rear light on entry"
+    elif brake_balance < 44:
+        stability_msg = "Rear unstable on entry"
+    elif antiroll_penalty > 0.25:
+        stability_msg = "Chassis balance hurts stability"
     else:
-        stability_msg = "Acceptable stability"
+        stability_msg = "Stability could be improved"
     
     categories = {
         'cornering': {

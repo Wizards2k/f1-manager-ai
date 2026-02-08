@@ -1,0 +1,56 @@
+{
+  "_meta": {
+    "version": "0.1",
+    "last_updated": "2026-02-08",
+    "notes": "Global default damage coefficients (non calibrated). Track modifiers (bump/kerb) da config/tyres/pirelli_track_profile_2025.json, setup (ride_height/suspension) da config/setup/setup_mapping_v2.json.",
+    "derived_context": {
+      "track_features": {
+        "bumps": 3,
+        "kerbs": 3,
+        "avg_speed_rating": 3
+      },
+      "ride_height_min_front": 30.0,
+      "ride_height_min_rear": 41.5,
+      "shock_threshold_multiplier": 0.85
+    },
+    "circuit_id": "mx-1962_mexico_city",
+    "setup_profile_key": "hermanos_rodriguez",
+    "built_at": "2026-02-08T14:23:28Z",
+    "circuit_name": "Aut\u00f3dromo Hermanos Rodr\u00edguez",
+    "telemetry_source": "python_backend/data/circuits/mx-1962_mexico_city_Telemetry.json"
+  },
+  "components": {
+    "suspension": {
+      "shock_threshold": 0.85,
+      "shock_threshold_high_kerb": 0.765,
+      "grip_mech_drop_per_hit": 0.01,
+      "steering_precision_loss_per_hit": 0.01,
+      "failure_risk_per_hit": 0.002
+    },
+    "floor_beam": {
+      "shock_threshold": 0.935,
+      "shock_threshold_high_kerb": 0.85,
+      "drag_increase_per_hit": 0.005,
+      "downforce_loss_per_hit": 0.006,
+      "failure_risk_per_hit": 0.0015
+    },
+    "gearbox": {
+      "shock_threshold": 0.8075,
+      "shock_threshold_high_kerb": 0.7224999999999999,
+      "shift_delay_per_hit": 0.004,
+      "failure_risk_per_hit": 0.003
+    },
+    "steering": {
+      "shock_threshold": 0.85,
+      "shock_threshold_high_kerb": 0.765,
+      "steering_precision_loss_per_hit": 0.012,
+      "handling_penalty_per_hit": 0.01,
+      "failure_risk_per_hit": 0.001
+    }
+  },
+  "defaults": {
+    "shock_scaler_bumpiness": 0.1,
+    "shock_scaler_kerb_severity": 0.15,
+    "recovery_rate_per_lap": 0.001
+  }
+}

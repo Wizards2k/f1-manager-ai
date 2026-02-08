@@ -1,0 +1,48 @@
+{
+  "_meta": {
+    "version": "0.1",
+    "last_updated": "2026-02-08",
+    "notes": "Global default PU maps (non calibrated). Circuit/weather/setup modifiers adjust cooling; da ritarare su dati FastF1.",
+    "derived_context": {
+      "avg_track_temp_delta_c": null,
+      "cooling_share_multiplier": 1.0,
+      "fuel_burn_intensity": "medium",
+      "ers_deployment_style": "balanced"
+    },
+    "circuit_id": "cn-2004_shanghai",
+    "setup_profile_key": "shanghai",
+    "built_at": "2026-02-08T14:23:28Z",
+    "circuit_name": "Shanghai International Circuit",
+    "telemetry_source": "python_backend/data/circuits/cn-2004_shanghai_Telemetry.json"
+  },
+  "maps": {
+    "ECONOMY": {
+      "heat_load_kw": 220,
+      "torque_ramp": 0.4,
+      "deployment_style": "conservative",
+      "cooling_share": 0.55,
+      "ers_output_kw": 80
+    },
+    "STANDARD": {
+      "heat_load_kw": 260,
+      "torque_ramp": 0.6,
+      "deployment_style": "balanced",
+      "cooling_share": 0.5,
+      "ers_output_kw": 120
+    },
+    "RICH": {
+      "heat_load_kw": 300,
+      "torque_ramp": 0.75,
+      "deployment_style": "aggressive",
+      "cooling_share": 0.45,
+      "ers_output_kw": 150
+    },
+    "QUALY": {
+      "heat_load_kw": 330,
+      "torque_ramp": 0.9,
+      "deployment_style": "time_attack",
+      "cooling_share": 0.4,
+      "ers_output_kw": 170
+    }
+  }
+}

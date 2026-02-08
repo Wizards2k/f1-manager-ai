@@ -1,0 +1,48 @@
+{
+  "_meta": {
+    "version": "0.1",
+    "last_updated": "2026-02-08",
+    "notes": "Global default PU maps (non calibrated). Circuit/weather/setup modifiers adjust cooling; da ritarare su dati FastF1.",
+    "derived_context": {
+      "avg_track_temp_delta_c": -8.0,
+      "cooling_share_multiplier": 0.987,
+      "fuel_burn_intensity": "High",
+      "ers_deployment_style": "Traction-Focused"
+    },
+    "circuit_id": "bh-2002_sakhir",
+    "setup_profile_key": "bahrain",
+    "built_at": "2026-02-08T14:23:28Z",
+    "circuit_name": "Bahrain International Circuit",
+    "telemetry_source": "python_backend/data/circuits/bh-2002_sakhir_Telemetry.json"
+  },
+  "maps": {
+    "ECONOMY": {
+      "heat_load_kw": 220,
+      "torque_ramp": 0.4,
+      "deployment_style": "conservative",
+      "cooling_share": 0.54296,
+      "ers_output_kw": 80
+    },
+    "STANDARD": {
+      "heat_load_kw": 260,
+      "torque_ramp": 0.6,
+      "deployment_style": "balanced",
+      "cooling_share": 0.4936,
+      "ers_output_kw": 120
+    },
+    "RICH": {
+      "heat_load_kw": 300,
+      "torque_ramp": 0.75,
+      "deployment_style": "aggressive",
+      "cooling_share": 0.44423999999999997,
+      "ers_output_kw": 150
+    },
+    "QUALY": {
+      "heat_load_kw": 330,
+      "torque_ramp": 0.9,
+      "deployment_style": "time_attack",
+      "cooling_share": 0.39488,
+      "ers_output_kw": 170
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "_meta": {
+    "version": "0.1",
+    "last_updated": "2026-02-08",
+    "notes": "Global default PU maps (non calibrated). Circuit/weather/setup modifiers adjust cooling; da ritarare su dati FastF1.",
+    "derived_context": {
+      "avg_track_temp_delta_c": 2.0,
+      "cooling_share_multiplier": 1.003,
+      "fuel_burn_intensity": "Medium",
+      "ers_deployment_style": "High-Speed-Flow"
+    },
+    "circuit_id": "gb-1948_silverstone",
+    "setup_profile_key": "silverstone",
+    "built_at": "2026-02-08T14:23:28Z",
+    "circuit_name": "Silverstone Circuit",
+    "telemetry_source": "python_backend/data/circuits/gb-1948_silverstone_Telemetry.json"
+  },
+  "maps": {
+    "ECONOMY": {
+      "heat_load_kw": 220,
+      "torque_ramp": 0.4,
+      "deployment_style": "conservative",
+      "cooling_share": 0.5517600000000001,
+      "ers_output_kw": 80
+    },
+    "STANDARD": {
+      "heat_load_kw": 260,
+      "torque_ramp": 0.6,
+      "deployment_style": "balanced",
+      "cooling_share": 0.5016,
+      "ers_output_kw": 120
+    },
+    "RICH": {
+      "heat_load_kw": 300,
+      "torque_ramp": 0.75,
+      "deployment_style": "aggressive",
+      "cooling_share": 0.45144000000000006,
+      "ers_output_kw": 150
+    },
+    "QUALY": {
+      "heat_load_kw": 330,
+      "torque_ramp": 0.9,
+      "deployment_style": "time_attack",
+      "cooling_share": 0.4012800000000001,
+      "ers_output_kw": 170
+    }
+  }
+}

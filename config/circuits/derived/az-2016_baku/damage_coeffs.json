@@ -1,0 +1,56 @@
+{
+  "_meta": {
+    "version": "0.1",
+    "last_updated": "2026-02-08",
+    "notes": "Global default damage coefficients (non calibrated). Track modifiers (bump/kerb) da config/tyres/pirelli_track_profile_2025.json, setup (ride_height/suspension) da config/setup/setup_mapping_v2.json.",
+    "derived_context": {
+      "track_features": {
+        "bumps": 4,
+        "kerbs": 2,
+        "avg_speed_rating": 4
+      },
+      "ride_height_min_front": 32.0,
+      "ride_height_min_rear": 43.5,
+      "shock_threshold_multiplier": 0.86
+    },
+    "circuit_id": "az-2016_baku",
+    "setup_profile_key": "baku",
+    "built_at": "2026-02-08T14:23:28Z",
+    "circuit_name": "Baku City Circuit",
+    "telemetry_source": "python_backend/data/circuits/az-2016_baku_Telemetry.json"
+  },
+  "components": {
+    "suspension": {
+      "shock_threshold": 0.86,
+      "shock_threshold_high_kerb": 0.774,
+      "grip_mech_drop_per_hit": 0.01,
+      "steering_precision_loss_per_hit": 0.01,
+      "failure_risk_per_hit": 0.002
+    },
+    "floor_beam": {
+      "shock_threshold": 0.9460000000000001,
+      "shock_threshold_high_kerb": 0.86,
+      "drag_increase_per_hit": 0.005,
+      "downforce_loss_per_hit": 0.006,
+      "failure_risk_per_hit": 0.0015
+    },
+    "gearbox": {
+      "shock_threshold": 0.817,
+      "shock_threshold_high_kerb": 0.731,
+      "shift_delay_per_hit": 0.004,
+      "failure_risk_per_hit": 0.003
+    },
+    "steering": {
+      "shock_threshold": 0.86,
+      "shock_threshold_high_kerb": 0.774,
+      "steering_precision_loss_per_hit": 0.012,
+      "handling_penalty_per_hit": 0.01,
+      "failure_risk_per_hit": 0.001
+    }
+  },
+  "defaults": {
+    "shock_scaler_bumpiness": 0.1,
+    "shock_scaler_kerb_severity": 0.15,
+    "recovery_rate_per_lap": 0.001
+  }
+}

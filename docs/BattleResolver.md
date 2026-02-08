@@ -76,14 +76,39 @@ Nota inside/outside (mono-rotaia): durante un side-by-side il BR assegna solo un
 - **Start/Restart**: nessun sorpasso fino a linea; poi applica staccata heavy con congestione (collision risk ↑). Gap/delta-v pesati su reaction time e traction.
 - **Blue flag**: nessuna soglia di chance; pass forzato salvo delta-v anomalo (follower molto più lento). In caso di anomalia, attende delta-v/gap sicuro.
 
-## 7. HUD/telemetria eventi
+## 7. Feedback pilota / radio (per scenario)
+- I messaggi alimentano `driver_feedback_queue` (vedi `docs/ai-driver-engine-spec.md`) e l’HUD ingegnere. Trigger: appena il BR registra `attempt`, `blocked`, `side_by_side`, `success`, `collision`, `blue_flag_pass`, `team_order_pass`.
+- **Rettifilo**
+  - Attaccante: “Need more top speed/ERS” se blocked; “Overtake complete on the straight” se success. Se train: “Stuck in DRS train”.
+  - Difensore: “He’s faster on the straight” quando perde; “Holding him with DRS” quando blocca.
+- **Staccata heavy**
+  - Attaccante: “Late braking worked” (success + evento `late_brake_tag`); “Couldn’t dive, brakes fading” se blocked o fade alto.
+  - Difensore: “Covered inside line” se blocca; “Locked up defending” se collisione/minor damage.
+- **Curva/Switchback**
+  - Attaccante: “Too much dirty air, can’t stay side-by-side” salvo condizioni speciali; “Switchback worked” se sorpasso raro.
+  - Difensore: “Holding the apex” quando regge; “Going wide, he might cut back” se handling penalty alto.
+- **Uscita curva**
+  - Attaccante: “Need more traction/ERS on exit” se blocked; “Got him on traction” se sorpasso completato.
+  - Difensore: “Struggling for traction” o “Battery empty, can’t cover exit”.
+- **Start/Restart**
+  - Messaggi legati a reaction/traction: “Bad launch, lost a spot” / “Great launch, inside line T1”.
+  - Difensore: “Got squeezed in T1” se collision risk alto; “Holding position off the line”.
+- **Blue flag / Team order**
+  - Backmarker/compagno: “Blue flag, letting him through” / “Team orders, switching cars”.
+  - Leader/beneficiario: “He needs to move” se ritardo; “Thanks, clean pass” quando avviene.
+- **Blocchi globali (Yellow/VSC/SC)**
+  - Tutti: “No overtakes under yellow/VSC” con richiamo se tentano.
+- **Collisione**
+  - Entrambi: “Contact at [section]” + severity/damage info, integra `Mechanical damage` doc.
+
+## 8. HUD/telemetria eventi
 - `battle_attempt`, `battle_blocked`, `side_by_side`, `overtake_success`, `collision`, `cooldown_active` con durata.
 - Metadati: sezione, delta vel, skill diff, stato gomme/PU/DRS/ERS, esito collisione.
 
-## 8. QA harness
+## 9. QA harness
 - Scenari deterministici: DRS train in rettilineo, attacco in curva lenta con top speed inferiore ma più grip, wet stint con poco grip, lotta con difensore ad alto defending, caso collisione forzata per test danni.
 - Asserzioni: ordering finale, eventi emessi, cooldown aggiornati, nessun sorpasso impossibile in curva stretta con bassa chance.
 
-## 9. Integrazioni
+## 10. Integrazioni
 - Legge grip/derating/danni da LapSimulator/Degradation doc; scrive eventi per orchestratori (Practice/Race) e HUD.
 - Usa mapping sezione (rettilineo/curva, heavy braking) dal telemetry/track profile.

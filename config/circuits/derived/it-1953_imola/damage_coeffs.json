@@ -1,0 +1,56 @@
+{
+  "_meta": {
+    "version": "0.1",
+    "last_updated": "2026-02-08",
+    "notes": "Global default damage coefficients (non calibrated). Track modifiers (bump/kerb) da config/tyres/pirelli_track_profile_2025.json, setup (ride_height/suspension) da config/setup/setup_mapping_v2.json.",
+    "derived_context": {
+      "track_features": {
+        "bumps": 3,
+        "kerbs": 5,
+        "avg_speed_rating": 4
+      },
+      "ride_height_min_front": 30.0,
+      "ride_height_min_rear": 41.5,
+      "shock_threshold_multiplier": 0.79
+    },
+    "circuit_id": "it-1953_imola",
+    "setup_profile_key": "enzo_e_dino_ferrari",
+    "built_at": "2026-02-08T14:23:28Z",
+    "circuit_name": "Autodromo Enzo e Dino Ferrari",
+    "telemetry_source": "python_backend/data/circuits/it-1953_imola_Telemetry.json"
+  },
+  "components": {
+    "suspension": {
+      "shock_threshold": 0.79,
+      "shock_threshold_high_kerb": 0.7110000000000001,
+      "grip_mech_drop_per_hit": 0.01,
+      "steering_precision_loss_per_hit": 0.01,
+      "failure_risk_per_hit": 0.002
+    },
+    "floor_beam": {
+      "shock_threshold": 0.8690000000000001,
+      "shock_threshold_high_kerb": 0.79,
+      "drag_increase_per_hit": 0.005,
+      "downforce_loss_per_hit": 0.006,
+      "failure_risk_per_hit": 0.0015
+    },
+    "gearbox": {
+      "shock_threshold": 0.7505,
+      "shock_threshold_high_kerb": 0.6715,
+      "shift_delay_per_hit": 0.004,
+      "failure_risk_per_hit": 0.003
+    },
+    "steering": {
+      "shock_threshold": 0.79,
+      "shock_threshold_high_kerb": 0.7110000000000001,
+      "steering_precision_loss_per_hit": 0.012,
+      "handling_penalty_per_hit": 0.01,
+      "failure_risk_per_hit": 0.001
+    }
+  },
+  "defaults": {
+    "shock_scaler_bumpiness": 0.1,
+    "shock_scaler_kerb_severity": 0.15,
+    "recovery_rate_per_lap": 0.001
+  }
+}

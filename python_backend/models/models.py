@@ -347,10 +347,15 @@ class Team:
 DEFAULT_SETUP_CONFIG = {
     'front_wing': 50,
     'rear_wing': 50,
+    'beam_wing': 50,
     'ride_height_front': 50,
     'ride_height_rear': 50,
     'suspension_front': 50,
     'suspension_rear': 50,
+    'antiroll_front': 50,
+    'antiroll_rear': 50,
+    'brake_balance': 50,
+    'brake_duct': 50,
 }
 
 

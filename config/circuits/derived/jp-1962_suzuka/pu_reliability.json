@@ -1,0 +1,26 @@
+{
+  "_meta": {
+    "version": "0.1",
+    "last_updated": "2026-02-08",
+    "notes": "Global default PU reliability (non calibrated). Circuit/weather/setup modifiers adjust cooling; da ritarare su dati FastF1.",
+    "circuit_id": "jp-1962_suzuka",
+    "setup_profile_key": "suzuka_racing",
+    "built_at": "2026-02-08T14:23:28Z",
+    "circuit_name": "Suzuka International Racing Course",
+    "telemetry_source": "python_backend/data/circuits/jp-1962_suzuka_Telemetry.json"
+  },
+  "ice": {
+    "wear_coeff": 0.0008,
+    "temp_warning_c": 130,
+    "temp_critical_c": 140,
+    "overrev_factor": 1.15,
+    "shock_factor": 1.1
+  },
+  "ers": {
+    "wear_coeff": 0.0012,
+    "temp_warning_c": 90,
+    "temp_critical_c": 100,
+    "overrev_factor": 1.1,
+    "shock_factor": 1.05
+  }
+}

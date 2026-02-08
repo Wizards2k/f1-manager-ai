@@ -1,0 +1,56 @@
+{
+  "_meta": {
+    "version": "0.1",
+    "last_updated": "2026-02-08",
+    "notes": "Global default damage coefficients (non calibrated). Track modifiers (bump/kerb) da config/tyres/pirelli_track_profile_2025.json, setup (ride_height/suspension) da config/setup/setup_mapping_v2.json.",
+    "derived_context": {
+      "track_features": {
+        "bumps": 2,
+        "kerbs": 3,
+        "avg_speed_rating": 2
+      },
+      "ride_height_min_front": 28.0,
+      "ride_height_min_rear": 39.5,
+      "shock_threshold_multiplier": 0.81
+    },
+    "circuit_id": "hu-1986_budapest",
+    "setup_profile_key": "hungaroring",
+    "built_at": "2026-02-08T14:23:28Z",
+    "circuit_name": "Hungaroring",
+    "telemetry_source": "python_backend/data/circuits/hu-1986_budapest_Telemetry.json"
+  },
+  "components": {
+    "suspension": {
+      "shock_threshold": 0.8099999999999999,
+      "shock_threshold_high_kerb": 0.729,
+      "grip_mech_drop_per_hit": 0.01,
+      "steering_precision_loss_per_hit": 0.01,
+      "failure_risk_per_hit": 0.002
+    },
+    "floor_beam": {
+      "shock_threshold": 0.891,
+      "shock_threshold_high_kerb": 0.8099999999999999,
+      "drag_increase_per_hit": 0.005,
+      "downforce_loss_per_hit": 0.006,
+      "failure_risk_per_hit": 0.0015
+    },
+    "gearbox": {
+      "shock_threshold": 0.7695,
+      "shock_threshold_high_kerb": 0.6884999999999999,
+      "shift_delay_per_hit": 0.004,
+      "failure_risk_per_hit": 0.003
+    },
+    "steering": {
+      "shock_threshold": 0.8099999999999999,
+      "shock_threshold_high_kerb": 0.729,
+      "steering_precision_loss_per_hit": 0.012,
+      "handling_penalty_per_hit": 0.01,
+      "failure_risk_per_hit": 0.001
+    }
+  },
+  "defaults": {
+    "shock_scaler_bumpiness": 0.1,
+    "shock_scaler_kerb_severity": 0.15,
+    "recovery_rate_per_lap": 0.001
+  }
+}

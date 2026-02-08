@@ -1,0 +1,81 @@
+{
+  "_meta": {
+    "version": "0.1",
+    "last_updated": "2026-02-08",
+    "notes": "Global default brake parameters (non calibrated). Circuit/setup modifiers (Telemetry + config/setup/setup_mapping_v2.json) regolano duct/cooling. Da ritarare con dati FastF1/fitting e sostituire ai fallback.",
+    "derived_context": {
+      "heavy_brake_events": 2,
+      "brake_duct_requirement": "medium",
+      "cooling_multiplier": 1.08
+    },
+    "circuit_id": "ae-2009_yas_marina",
+    "setup_profile_key": "yas_marina",
+    "built_at": "2026-02-08T14:23:28Z",
+    "circuit_name": "Yas Marina Circuit",
+    "telemetry_source": "python_backend/data/circuits/ae-2009_yas_marina_Telemetry.json"
+  },
+  "systems": {
+    "base": {
+      "heat_capacity": {
+        "front": 1.1,
+        "rear": 1.0
+      },
+      "thermal_mass": {
+        "front": 1.2,
+        "rear": 1.05
+      },
+      "fade_threshold_c": {
+        "front": 850,
+        "rear": 750
+      },
+      "fade_sensitivity_c_per_unit": 15.0,
+      "cooling_coeff": 1.08,
+      "heat_quality": 1.0
+    },
+    "performance": {
+      "heat_capacity": {
+        "front": 1.25,
+        "rear": 1.1
+      },
+      "thermal_mass": {
+        "front": 1.35,
+        "rear": 1.15
+      },
+      "fade_threshold_c": {
+        "front": 880,
+        "rear": 780
+      },
+      "fade_sensitivity_c_per_unit": 16.0,
+      "cooling_coeff": 1.1340000000000001,
+      "heat_quality": 1.05
+    },
+    "endurance": {
+      "heat_capacity": {
+        "front": 1.05,
+        "rear": 0.98
+      },
+      "thermal_mass": {
+        "front": 1.4,
+        "rear": 1.2
+      },
+      "fade_threshold_c": {
+        "front": 820,
+        "rear": 720
+      },
+      "fade_sensitivity_c_per_unit": 14.0,
+      "cooling_coeff": 1.026,
+      "heat_quality": 0.98
+    }
+  },
+  "defaults": {
+    "duct_opening_range": {
+      "min_open": 0.226,
+      "max_open": 0.676
+    },
+    "bias_range_pct": {
+      "min_pct": 53.0,
+      "max_pct": 58.0,
+      "step_pct": 0.1
+    }
+  }
+}

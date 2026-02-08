@@ -15,6 +15,7 @@ from utils import (
     evaluate_setup_categories,
     mark_simulation_pending,
 )
+from services.setup_engine_service import SetupEngineService
 from utils.debug_log import log_debug_event
 
 
@@ -473,6 +474,58 @@ def register_routes(app):
         return jsonify({
             'message': 'Setup updated',
             'car': _serialize_player_car(car)
+        })
+
+    @app.route('/api/setup/ranges/<circuit_id>')
+    def get_setup_ranges(circuit_id):
+        payload = SetupEngineService.build_ranges_payload(circuit_id)
+        return jsonify(payload)
+
+    @app.route('/api/setup/validate', methods=['POST'])
+    def validate_setup():
+        payload = request.get_json(silent=True) or {}
+        circuit_id = payload.get('circuit_id')
+        setup_payload = payload.get('setup')
+        result = SetupEngineService.validate_setup(setup_payload or {}, circuit_id)
+        return jsonify({
+            'ok': result.ok,
+            'errors': result.errors,
+            'sanitized': result.sanitized,
+            'physics': result.physics,
+            'constraints': result.constraints,
+            'circuit_key': result.circuit_key,
+        })
+
+    @app.route('/api/setup/apply', methods=['POST'])
+    def apply_setup():
+        payload = request.get_json(silent=True) or {}
+        driver_number = payload.get('driver_number')
+        circuit_id = payload.get('circuit_id')
+        setup_payload = payload.get('setup')
+        if not isinstance(driver_number, int):
+            return _error_response('driver_number must be an integer')
+        if not isinstance(setup_payload, dict):
+            return _error_response('setup payload must be an object')
+
+        car, error = _get_player_car(driver_number)
+        if error:
+            return error
+        if car.state != CarState.BOX:
+            return _error_response('Car must be in BOX to edit setup', 409)
+
+        validation = SetupEngineService.validate_setup(setup_payload, circuit_id)
+        if not validation.ok:
+            return jsonify({'ok': False, 'errors': validation.errors}), 400
+
+        current_setup = car.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
+        current_setup.update(validation.sanitized)
+        evaluation = SetupEngineService.evaluate(current_setup)
+        car.setup_feedback = evaluation
+
+        return jsonify({
+            'message': 'Setup applied',
+            'car': _serialize_player_car(car),
+            'evaluation': evaluation,
         })
 
     @app.route('/api/player/car/<int:driver_number>/send_out', methods=['POST'])
