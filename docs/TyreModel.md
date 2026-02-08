@@ -17,7 +17,8 @@ Ogni gomma deve tracciare due temperature distinte:
 - `Braking_Heat`: Applicato alle gomme anteriori durante la decelerazione.
 - **Heat_Loss (Dissipazione)**:
 - `Convection`: `k_air * Air_Speed * (T_surf - Air_Temp)`.
-- `Conduction`: `k_track * (T_surf - Track_Temp)`.
+- `Conduction` verso pista: `k_track * (T_surf - Track_Temp)`.
+- **Scambio Surface ↔ Core**: `core_exchange = (T_surf - T_core) * conduction_coeff`; T_core ha maggiore massa termica → risposta più lenta.
 
 ## 3. Matrice Mescole Pirelli (C1-C5)
 Implementa le seguenti costanti per grip e finestre termiche:
@@ -42,8 +43,8 @@ Il `TyreModel` deve "leggere" la `circuit_section` attuale:
 ## 5. Step di Implementazione per Windsurf
 1. **Classe `TyreModel`**: Crea un metodo `update(delta_time, car_state, environment)`.
 2. **Calcolo Grip**: `Effective_Grip = Base_Grip * Thermal_Factor(T_core) * Wear_Factor`.
-3. **Thermal Factor**: Usa una curva gaussiana centrata sulla Window Ottimale.
-4. **Offline Data Hook**: Se non ci sono dati meteo dinamici, usa di default `Air_Temp = 25.0` e `Track_Temp = 35.0`.
+3. **Thermal Factor**: Usa una curva gaussiana centrata sulla Window Ottimale: `gaussian(temp, window) = exp(-(temp - temp_opt)^2 / (2*sigma^2))` con sigma ≈ 6–8°C surface, 5–7°C core.
+4. **Offline Data Hook**: Se non ci sono dati meteo dinamici (solo dev/test), usa `Air_Temp = 25.0` e `Track_Temp = 35.0`; in produzione le temperature arrivano da weather API/session state.
 
 ## 6. Reference Table per Mescola (per singola ruota)
 
