@@ -100,3 +100,16 @@ Nota: le finestre termiche ufficiali per compound (surface/core min-opt-max) son
 **Output**: `derating_flag/factor`, `temp_ice/ers`, `wear_ice/ers`, eventuale `failure_event`. Orchestratori decidono se rientrare o cambiare mappa; BattleResolver legge derating per valutare sorpasso.
 
 **Parametrizzazione**: `pu_maps.json` (heat_load, torque_ramp, deployment), `pu_reliability.json` (wear_coeff, temp thresholds), `cooling_capacity` per configurazioni radiatori/ducts; link ai profili Pirelli per guidance climatica.
+
+### 5.5 Mechanical damage
+**Input chiave**: stimoli da LapSimulator (bump_penalty, kerb_impact/kerb_severity, airflow_penalty), contatti (collision events), torque_ramp elevato (shock cambio), setup estremo (ride height basso su piste bump/kerb).
+
+**Componenti target**:
+- Sospensioni: accumulo danno → malus grip meccanico/risposta sterzo.
+- Fondo/beam wing: danno → aumento drag e perdita downforce.
+- Cambio: shock da coppia e kerb → rischio failure, shift imprecisi.
+- Sterzo: danno → perdita precisione, aumento handling_penalty.
+
+**Effetti**: malus progressivi (grip_mech_drop, drag_increase, shift_delay, steering_precision_loss), più rischio failure oltre soglie.
+
+**Parametrizzazione**: coeff urti/kerb→shock, soglie danno per componente, curve di accumulo e recupero (se previsto), mapping piste bump/kerb da `config/tyres/pirelli_track_profile_2025.json`. Setup influence: ride height e sospensioni da `config/setup/setup_mapping_v2.json` modulano esposizione a bump/kerb.
