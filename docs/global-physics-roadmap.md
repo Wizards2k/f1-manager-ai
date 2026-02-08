@@ -5,7 +5,7 @@ last_updated: 2026-02-07
 scope: "Coordinare tutte le iniziative necessarie per rilasciare F1 Manager AI con fisica 2.0, multi-car e setup engine rinnovato"
 ---
 
-## 1. Visione
+## 1. Visione – Obiettivi preposti
 Portare il gioco a una release pubblica in cui:
 - Il motore fisico (LapSimulator + BattleResolver) gestisce tutte le auto in pista con sorpassi coerenti.
 - Il Setup Engine 2.0 traduce gli input utente in parametri fisici e guida il giocatore con feedback realistici.
