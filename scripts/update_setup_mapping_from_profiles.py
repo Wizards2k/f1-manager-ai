@@ -199,7 +199,7 @@ def build_entry(record: Dict[str, Any], base_template: Dict[str, Any]) -> Dict[s
     }
     entry["data_sources"] = [
         "tmp/setup_cluster_report_latest.json",
-        "config/pirelli_track_profile_2025.json",
+        "config/tyres/pirelli_track_profile_2025.json",
     ]
     return entry
 
@@ -207,7 +207,7 @@ def build_entry(record: Dict[str, Any], base_template: Dict[str, Any]) -> Dict[s
 def main() -> None:
     parser = argparse.ArgumentParser(description="Update setup_mapping_v2.json using cluster + Pirelli data")
     parser.add_argument("--cluster", default="tmp/setup_cluster_report_latest.json")
-    parser.add_argument("--mapping", default="config/setup_mapping_v2.json")
+    parser.add_argument("--mapping", default="config/setup/setup_mapping_v2.json")
     args = parser.parse_args()
 
     cluster_data = load_json(Path(args.cluster))

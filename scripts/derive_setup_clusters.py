@@ -223,7 +223,7 @@ def main():
     parser.add_argument("--output", default="tmp/setup_cluster_report.json", help="Destination JSON report")
     parser.add_argument(
         "--track-profile",
-        default="config/pirelli_track_profile_2025.json",
+        default="config/tyres/pirelli_track_profile_2025.json",
         help="JSON file with Pirelli track profile + prescriptions",
     )
     args = parser.parse_args()
