@@ -29,6 +29,12 @@ Portare il gioco a una release pubblica in cui:
 ### 1.3 BattleResolver 2.0
 - Aggiornamento `docs/battleresolver-2.0.md`: stati attempt/lock/cooldown, logica side-by-side, metriche HUD/telemetria, output per QA harness.
 
+### 1.4 FastF1 toolchain & calibrazione*
+- Documento FastF1: ingestion, manifest dataset, workflow fitting (aero/tyre/PU), integrazione CI.
+
+### 1.5 Power Unit config spec*
+- Breve spec per `config/pu/pu_maps.json` e `config/pu/pu_reliability.json` (parametri mappe, soglie temp/wear) a supporto della fase B.
+
 ## 2. Implementazione – Fase A (Setup & Validazione) — ref: setup-engine-spec-v0.1.md, lap-physics-spec-v0.5.md, tyre-allocation.md
 1. **SetupEngineService runtime**: modulo/servizio REST + socket che applica mapping slider→fisica e restituisce scoring live.
 2. **Evaluate Setup refresh**: rifattorizzare `evaluate_setup` e categorie per usare `aero_balance`, `drag_index`, `traction_index`, `brake_cooling`.
