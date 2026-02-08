@@ -1,0 +1,71 @@
+{
+  "_meta": {
+    "version": "0.1",
+    "last_updated": "2026-02-08",
+    "notes": "Global default brake parameters (non calibrated). Circuit/setup modifiers (Telemetry + config/setup/setup_mapping_v2.json) regolano duct/cooling. Da ritarare con dati FastF1/fitting e sostituire ai fallback."
+  },
+  "systems": {
+    "base": {
+      "heat_capacity": {
+        "front": 1.10,
+        "rear": 1.00
+      },
+      "thermal_mass": {
+        "front": 1.20,
+        "rear": 1.05
+      },
+      "fade_threshold_c": {
+        "front": 850,
+        "rear": 750
+      },
+      "fade_sensitivity_c_per_unit": 15.0,
+      "cooling_coeff": 1.0,
+      "heat_quality": 1.0
+    },
+    "performance": {
+      "heat_capacity": {
+        "front": 1.25,
+        "rear": 1.10
+      },
+      "thermal_mass": {
+        "front": 1.35,
+        "rear": 1.15
+      },
+      "fade_threshold_c": {
+        "front": 880,
+        "rear": 780
+      },
+      "fade_sensitivity_c_per_unit": 16.0,
+      "cooling_coeff": 1.05,
+      "heat_quality": 1.05
+    },
+    "endurance": {
+      "heat_capacity": {
+        "front": 1.05,
+        "rear": 0.98
+      },
+      "thermal_mass": {
+        "front": 1.40,
+        "rear": 1.20
+      },
+      "fade_threshold_c": {
+        "front": 820,
+        "rear": 720
+      },
+      "fade_sensitivity_c_per_unit": 14.0,
+      "cooling_coeff": 0.95,
+      "heat_quality": 0.98
+    }
+  },
+  "defaults": {
+    "duct_opening_range": {
+      "min_open": 0.25,
+      "max_open": 0.70
+    },
+    "bias_range_pct": {
+      "min_pct": 53.0,
+      "max_pct": 58.0,
+      "step_pct": 0.1
+    }
+  }
+}
