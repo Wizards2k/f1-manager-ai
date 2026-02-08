@@ -12,45 +12,49 @@ Portare il gioco a una release pubblica in cui:
 - La PowerUnit, il TyreModel e il grip meccanico sono calibrati su dati FastF1 e integrati con pipeline CI di validazione.
 - UI/UX, backend e tools lavorano insieme (telemetria, heatmap setup, log ingegnere) per una esperienza completa.
 
-## 2. Stato attuale (Feb 2026)
-- `docs/lap-physics-spec-v0.5.md`: definizione Car/Tyre/Driver, passi `update_section()`, LapSimulator loop, pipeline calibrazione.
-- `docs/setup-engine-spec-v0.1.md`: spec Setup Engine 2.0 (slider mapping, scoring, harness).
-- `docs/BattleResolver.md`: bozza high-level da allineare alla nuova logica.
-- `docs/TyreModel.md`: modello termico base (da estendere a v0.4 completo).
-- `docs/physics-roadmap.md`: piano FastF1 e calibrazione dati.
+### Premessa – Deliverable già completati
+- Spec LapSimulator/Lap Physics (`docs/lap-physics-spec-v0.5.md`) con definizione Car/Tyre/Driver e pipeline `update_section()`.
+- Setup Engine 2.0 (`docs/setup-engine-spec-v0.1.md`) con mapping slider, scoring, harness/tabella mapping.
+- Roadmap dati (`docs/physics-roadmap.md`) e bozza BattleResolver (`docs/BattleResolver.md`).
+- Tooling setup mapping: `config/setup_mapping_v2.json`, report HTML e script di generazione completati.
 
-## 3. Workstreams principali (physics + backend + AI)
+## 1. Analisi da completare prima del codice
 
-### 3.1 Physics Core
-1. **Implementare LapSimulator runtime** (loop InputMixer → parallel update → BattleResolver → StateCommit).
-2. **BattleResolver 2.0**: cooldown/lock, side-by-side events, metriche output (HUD, telemetria). Aggiornare `docs/BattleResolver.md`.
-3. **Grip meccanico / Telaio**: completare spec v0.3 e implementazione (ride height dinamico, sospensioni avanzate, antiroll, handling penalty).
-4. **TyreModel v0.4**: integrare termica completa, finestra ottimale, degrado per asse/ruota, effetti meteo.
-5. **PowerUnit detail**: spec dedicata ICE/ERS maps, derating, SOC, interfaccia Setup Engine.
+### 1.1 AI Driver & Team Behavior
+- Documento `docs/ai-driver-engine-spec.md` per run plan AI (stint length, fuel/ERS usage), gestione parc fermé/setup seed, decisioni di push/pace per sezione, log/eventi necessari.
 
-### 3.2 Setup Engine & UI
-1. Implementare `SetupEngineService` (REST + socket) con mapping slider→fisica e scoring aggiornato.
-2. Aggiornare `evaluate_setup`/`evaluate_setup_categories` per usare indici fisici (aero_balance, drag_index).
-3. UI Garage 2.0: slider con etichette fisiche, range per circuito, feedback ingegnere, status parc fermé.
-4. Setup Harness (`scripts/setup_heatmap.py`) + notebook analisi.
-5. Pipeline `setup-calibration` (CI) per generare range consigliati e verificare regressioni.
+### 1.2 Practice Session Orchestrator
+- Documento `docs/practice-session-orchestrator.md` che descrive stato sessione (tempo residuo, code pitlane), scheduling run multipli (18 AI + 2 player), persistenza lap/feedback, logiche fast-forward/pause.
 
-### 3.3 Data & Calibrazione
-1. FastF1 ingestion toolchain (dataset generator, caching, manifest).
-2. Script fitting componenti (`aero_fit`, `tyre_fit`, `powerunit_fit`, `brake_calibration`).
-3. CI `calibration.yml` (component badge → lap regression → race smoke test).
-4. Repository asset calibrati (`config/calibration/*.json`, manifest con checksum).
-5. Dashboard validation (notebook + Plotly) per confrontare simulazioni vs telemetria reale.
+### 1.3 BattleResolver 2.0
+- Aggiornamento `docs/battleresolver-2.0.md`: stati attempt/lock/cooldown, logica side-by-side, metriche HUD/telemetria, output per QA harness.
 
-### 3.4 Gameplay, Backend & AI Fleet
-1. **RaceSimulator integration** nel backend (scheduler sezioni, orchestrazione multi-car, storage `section_progress`, sincronizzazione multiplayer fantasma).
-2. **AI Driver Engine** per vetture gestite dal gioco:
-   - profili piloti (aggressione, tyre/fuel management) + stato mentale dinamico
-   - decisioni di push level, ERS map e linee attacco/difesa per ogni sezione (interfaccia con DriverModel).
-   - gestione eventi (cooldown, difesa, pit strategy base per Practice/Qualy).
-3. Telemetria & replay: log degli eventi (sorpassi, tentativi, contatti) per UI e analisi.
-4. Strategia/Engineer AI: usare output LapSimulator per suggerire setup/strategie al giocatore.
-5. QA harness: scenari automatici (20 auto in pista, DRS train, wet stint) con seed deterministico.
+## 2. Implementazione – Fase A (Setup & Validazione)
+1. **SetupEngineService runtime**: modulo/servizio REST + socket che applica mapping slider→fisica e restituisce scoring live.
+2. **Evaluate Setup refresh**: rifattorizzare `evaluate_setup` e categorie per usare `aero_balance`, `drag_index`, `traction_index`, `brake_cooling`.
+3. **Pipeline CI `setup-calibration`**: job che rigenera mapping/heatmap, confronterà JSON e bloccherà regressioni.
+4. **UI Garage 2.0 (base)**: slider con etichette fisiche e range circuito, feedback ingegnere collegato al nuovo servizio.
+
+## 3. Implementazione – Fase B (Race Engine Core)
+1. **LapSimulator runtime**: implementare il loop InputMixer → update_section parallelo → BattleResolver 2.0 → StateCommit.
+2. **BattleResolver 2.0**: codice allineato alla nuova spec (cooldown, side-by-side, metriche HUD/telemetria).
+3. **Practice Session Orchestrator**: scheduling tempo sessione, queue pitlane, gestione run e persistenza run data/log.
+
+## 4. Implementazione – Fase C (AI & Experience)
+1. **AI Driver Engine**: loop decisionale per run plan, fuel/ERS, strategie box e ricerca setup.
+2. **Telemetria & HUD eventi**: logging sorpassi, blocchi, dirty air, feedback ingegnere per player e QA.
+3. **UI Garage 2.0 completa**: engineer assistant, feedback testuale, gestione parc fermé e callouts realtime.
+
+## 5. Implementazione – Fase D (Data & Calibrazione)
+1. **FastF1 toolchain**: ingestion, caching, manifest dataset.
+2. **Script fitting componenti**: `aero_fit`, `tyre_fit`, `powerunit_fit`, `brake_calibration` con output in `config/calibration/`.
+3. **CI `calibration.yml`**: pipeline badge componenti → lap regression → race smoke test.
+4. **Manifest & dashboard**: repository asset calibrati + dashboard Plotly per confronto sim vs telemetria reale.
+
+## 6. Gameplay, Backend & QA Harness
+1. **RaceSimulator backend integration**: scheduler sezioni, orchestrazione multi-car, storage `section_progress`, sincronizzazione multiplayer fantasma.
+2. **Strategia/Engineer AI**: usare output LapSimulator per suggerire setup/strategie e gestire traffico.
+3. **QA harness scenari**: test automatici (20 auto, DRS train, wet stint) con seed deterministico e utilizzo dei nuovi log.
 
 ### 3.5 UI/UX & Player Experience
 1. HUD aggiornato (eventi Side-by-side, Attempt blocked, cooldown timer, engineer radio).
@@ -72,30 +76,14 @@ Portare il gioco a una release pubblica in cui:
 4. Release checklist (da §3.5: 3 circuiti calibrati, report `docs/calibration_runs/<date>.md`, manifest aggiornato).
 5. Telemetry anonymizer per dati FastF1 se condivisi.
 
-## 4. Milestone timeline (indicativa)
-1. **M1 – Foundations (Feb)**
-   - Setup Engine spec (done), LapSimulator spec (done), global roadmap (this doc).
-2. **M2 – Setup Engine 2.0 (Mar)**
-   - Implementazione service + UI base, heatmap harness, CI `setup-calibration`.
-3. **M3 – Physics Core Alpha (Apr)**
-   - LapSimulator runtime + BattleResolver 2.0 stub, TyreModel v0.4 implementato, PowerUnit detailed spec.
-4. **M4 – Data & Calibration (May)**
-   - FastF1 ingestion, component fitting scripts, CI `calibration.yml`, manifest versioning.
-5. **M5 – RaceSimulator Beta (Jun)**
-   - Backend multi-car (20 auto) in esecuzione, AI driver loop completo, QA harness scenari, HUD eventi, engineering logs.
-6. **M6 – Release Candidate (Jul)**
-   - Full pipeline verde (component + lap + race), setup UI final, manual QA completato.
-7. **M7 – Physics 2.0 Release (Aug)**
-   - Merge in main, package release note, asset calibrati pubblici.
-
-## 5. Dipendenze chiave
+## 4. Dipendenze chiave
 - Setup Engine 2.0 deve essere completato prima di M3 (LapSimulator dipende dai parametri fisici corretti).
 - TyreModel v0.4 e grip meccanico sono prerequisiti per LapSimulator Beta (altrimenti la fisica non riflette i setup).
 - FastF1 pipeline deve essere operativa prima del gating CI (M4), altrimenti i badge componenti restano rossi.
 - UI Garage/HUD necessarie per player feedback (setup e sorpassi) prima della release.
 - AI Driver Engine dipende dal DriverModel (skill/stato mentale) già definito e deve essere operativo prima dei test con 20 auto (M5).
 
-## 6. Documenti correlati
+## 5. Documenti correlati
 - `docs/lap-physics-spec-v0.5.md`
 - `docs/setup-engine-spec-v0.1.md`
 - `docs/physics-roadmap.md`
@@ -103,7 +91,7 @@ Portare il gioco a una release pubblica in cui:
 - `docs/BattleResolver.md` (da aggiornare)
 - `docs/TyreModel.md`
 
-## 7. Prossimi passi immediati
+## 6. Prossimi passi immediati
 1. Validare questa roadmap con product/gameplay.
 2. Aggiornare `docs/BattleResolver.md` con la nuova logica.
 3. Pianificare implementazione Setup Engine 2.0 (ticket/branch dedicato).

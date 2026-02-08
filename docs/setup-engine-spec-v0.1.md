@@ -62,6 +62,40 @@ SetupEngineService
 
 > **Esclusioni**: comandi `engine_map`, `ers_mode`, fuel load e pace level rimangono nel pannello gara (non fanno parte del Setup Engine). Il cooling bias front/rear non viene esposto nella maschera iniziale.
 
+### 3.2 AeroPackage – formule e range fisici
+
+| Componente       | Conversione slider → fisico                                                                                                     | Range base (override circuito)             | Note / effetto fisico |
+|------------------|-------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------|-----------------------|
+| Front Wing       | `angle = front_wing.min_deg + slider/100 * (max_deg - min_deg)`                                                                | Default 12°–28° (`step_deg = 0.25`), fino a 30° su piste ad alto carico | Contribuisce a `df_front = front_wing.downforce * sin(angle)` e influenza subito l’aero balance. |
+| Rear Wing        | Idem con `rear_wing.min_deg/max_deg`                                                                                           | Default 10°–32° (fino a 35° per piste lenti) | Termina in `df_rear = rear_wing.downforce * sin(angle)` e regola il drag sensibile al DRS.| 
+| Beam Wing        | Slider 0‑100 → `beam_angle = min + slider% * span`                                                                            | Default 4°–18°                              | Somma deportanza al retrotreno e stabilizza il diffusore, ma aumenta `drag_total`. |
+| Ride Height F/R  | Interpolazione lineare su range circuito (`height = min_mm + slider% * span_mm`)                                              | Front 25‑60 mm / Rear 35‑70 mm (rake max 25 mm) | Fissa `rh_pen_front/rear = |height - rh_optimal| * 0.02` che riduce la deportanza disponibile. |
+| Rake (derivato)  | `rake_mm = ride_height_rear - ride_height_front`; `rake_deg = atan(rake_mm / wheelbase_mm)` (wheelbase ≈ 3600 mm)              | +5 mm…+25 mm equiv. ≈0.08°–0.40°            | Valori estremi aumentano deportanza ma penalizzano drag e stabilità frenata. |
+| Constraints      | `rake_mm` e `suspension_delta_limit` dal mapping circuito assicurano che la combinazione rimanga fisicamente valida             | Es. Monza `rake_mm` 5‑18 mm, Singapore 10‑22 mm | Usati da `validate_input()` per bloccare slider fuori specifica. |
+
+**Relazione con l’AeroPackage LapSimulator**
+
+- Il Setup Engine replica le formule del passo 3 (`AeroPackage.compute_forces`): `df_front`/`df_rear` sommano contributi ali + pavimento; poi vengono corretti da efficienza sospensioni e qualità assetto.¹
+- Ride height/rake influiscono tramite i termini `rh_pen_front/rear`, riducendo la deportanza fino al 30 % se si esce dalle finestre ottimali sezione per sezione.¹
+- Il drag finale è `drag_total = Σ component.drag` corretto per densità aria e slipstream; i cambi di angolo (specialmente rear/beam wing) aumentano il coefficiente di drag e riducono il cooling margin disponibile.¹
+- Il bilanciamento aerodinamico utilizzato nei messaggi UI è `aero_balance = df_front_eff / (df_front_eff + df_rear_eff)`; spostarlo oltre ±0.05 rispetto al 50/50 alimenta handling penalty e segnali di under/oversteer inviati al TyreModel.¹
+
+¹ Fonte: `docs/lap-physics-spec-v0.5.md`, §3.3 passo 3.
+
+### 3.3 Power Unit – mapping ICE/ERS
+
+| Input UI / parametro | Range / preset                                          | Conversione → fisica                                                                                                    | Impatto simulazione |
+|----------------------|---------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------|---------------------|
+| `engine_map`         | Tabelle discrete (es. "Race", "Quali", "Safety")     | Seleziona `EngineMapConfig`: `power_percent`, `consumption_rate`, `heat_load`, `min/max_temp`.                           | Aggiorna `power_unit.ice.active_map`, da cui `torque_ice = torque_curve[rpm] * power_percent * (1 - wear*0.002)`.¹ |
+| `ers_mode`           | `deploy`, `balanced`, `harvest`, `attack`, ecc.         | Mappa a `ErsMapConfig`: `output_kw`, `recovery_rate`, `heat_coeff`, `efficiency`.                                        | Determina `power_ers` e il delta SOC per sezione (`ers.consume(output_kw)` / `ers.harvest(recovery_rate)`).¹ |
+| Brake Energy Target  | derivato da `brake_balance` + `brake_duct`              | Usa `brake_energy_recovery_kj` dal profilo circuito per dimensionare il recupero massimo in `DriverIntent`.              | Modula `mguk_state` e la temperatura freni; limita deploy se fade > soglia. |
+| Cooling Guidance     | `Requirement` (low/medium/high) + `ΔTrack Temp`         | Somma al `cooling_margin`: `cooling_capacity = sidepods.cooling + engine_cover.cooling`, confrontato con `heat_load`.¹    | Se `cooling_margin < 0` viene applicato derating potenza e warning UI. |
+| Fuel Burn slider²    | (futuro) 0‑3 step (Lean, Standard, Push)                 | Moltiplica `fuel_burn_rate = map.consumption_rate * fuel_bias`.                                                          | Influenza peso carburante e temperatura ICE. |
+
+¹ Fonte: `docs/lap-physics-spec-v0.5.md`, §3.3 passo 4.
+
+² Fuori scope UI attuale ma già previsto nel modello fisico (`DriverIntent.pace_factor`).
+
 ## 4. Motore di punteggio `evaluate_setup`
 
 ### 4.1 Input
@@ -108,11 +142,42 @@ SetupEvaluation {
 - File `config/setup_ranges/<circuit>.json` contiene per ogni slider: `min`, `max`, `target`, `tolerance`, `weight` (riutilizzati dall’attuale `evaluate_setup` UI).
 - Suite test: `pytest tests/setup/test_evaluate_setup.py` (component) + `tests/setup/test_api_endpoints.py` (integrazione UI/server).
 
+### 5.1 Workflow operativo
+1. **Refresh dati** – eseguire `derive_setup_clusters.py` + `update_setup_mapping_from_profiles.py`; commitare `config/setup_mapping_v2.json` e report (`docs/setup_mapping_report.html`).
+2. **Generazione heatmap** – per i circuiti target lanciare `scripts/setup_heatmap.py --circuit <slug>`; allegare l’output nella cartella `tmp/heatmap/`.
+3. **Validazione** – importare i risultati nel notebook `notebooks/setup/setup_analysis.ipynb`, verificare che `recommended_ranges` ricadano entro i vincoli fisici e aggiornare `config/setup_ranges/`.
+4. **CI setup-calibration** – job dedicato (da aggiungere alla pipeline) che esegue: lint → unit test SetupEngine → rigenera una heatmap rapida (step 10) → confronta i JSON con soglia `±0.5` sui target.
+5. **Sign-off** – l’AI engineer valida i warning/notes generati dal job e aggiorna il changelog (sezione 8 di questo doc).
+
 ## 6. Integrazione con LapSimulator
 1. SetupUI salva i valori nello stato sessione.
 2. `SetupEngineService.map_slider_to_physics()` chiama `Car.apply_setup_change()` che aggiorna gli oggetti `FrontWing`, `RearWing`, `Sidepods`, ecc.
 3. `LapSimulator.InputMixer` legge i componenti già aggiornati (nessuna conversione runtime) e prosegue con la fisica.
 4. Driver feedback (`setup_finding` skill) aggiunge messaggi contestuali che rimandano a slider specifici.
+
+### 6.1 Orchestrazione (pseudocode)
+```python
+def run_lap_simulation(session_state: GarageSession, circuit: CircuitProfile, weather: WeatherSnapshot):
+    setup_engine.validate_input(session_state.setup, circuit.constraints)
+    physics_params = setup_engine.map_slider_to_physics(session_state.setup, circuit)
+    car.apply_setup_change(physics_params)
+
+    driver_intent = DriverModel.compute_inputs(session_state.driver, weather, session_state.strategy)
+    lap_result = LapSimulator.run(
+        circuit=circuit,
+        car_state=car.export_state(),
+        driver_intent=driver_intent,
+        env_ctx=weather
+    )
+
+    evaluation = setup_engine.evaluate_setup(physics_params, lap_result.telemetry)
+    return LapRunResult(lap_result, evaluation, session_state)
+```
+
+Key points:
+- `map_slider_to_physics()` è chiamato **una sola volta** prima del LapSimulator per evitare branching runtime.
+- `driver_intent` usa le stesse finestre di brake balance / ERS definite nel mapping circuito.
+- `evaluate_setup()` riusa l’output sezione per calcolare `lap_time_delta`, `stability_score` e generare messaggi UI.
 
 ## 7. Collegamenti
 - Documento fisico principale: `docs/lap-physics-spec-v0.5.md` (sezione 3.1, 3.3, 3.3.1) per capire l’impatto di ogni slider sulla fisica.
