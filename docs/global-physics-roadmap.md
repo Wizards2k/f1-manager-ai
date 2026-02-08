@@ -29,24 +29,24 @@ Portare il gioco a una release pubblica in cui:
 ### 1.3 BattleResolver 2.0
 - Aggiornamento `docs/battleresolver-2.0.md`: stati attempt/lock/cooldown, logica side-by-side, metriche HUD/telemetria, output per QA harness.
 
-## 2. Implementazione – Fase A (Setup & Validazione)
+## 2. Implementazione – Fase A (Setup & Validazione) — ref: setup-engine-spec-v0.1.md, lap-physics-spec-v0.5.md, tyre-allocation.md
 1. **SetupEngineService runtime**: modulo/servizio REST + socket che applica mapping slider→fisica e restituisce scoring live.
 2. **Evaluate Setup refresh**: rifattorizzare `evaluate_setup` e categorie per usare `aero_balance`, `drag_index`, `traction_index`, `brake_cooling`.
 3. **Pipeline CI `setup-calibration`**: job che rigenera mapping/heatmap, confronterà JSON e bloccherà regressioni.
 4. **UI Garage 2.0 (base)**: slider con etichette fisiche e range circuito, feedback ingegnere collegato al nuovo servizio.
 
-## 3. Implementazione – Fase B (Race Engine Core)
+## 3. Implementazione – Fase B (Race Engine Core) — ref: lap-physics-spec-v0.5.md, battleresolver-2.0.md*, practice-session-orchestrator.md, degradation-and-consumption.md
 1. **LapSimulator runtime**: implementare il loop InputMixer → update_section parallelo → BattleResolver 2.0 → StateCommit.
 2. **BattleResolver 2.0**: codice allineato alla nuova spec (cooldown, side-by-side, metriche HUD/telemetria).
 3. **Practice Session Orchestrator**: scheduling tempo sessione, queue pitlane, gestione run e persistenza run data/log.
 4. **Power Unit config**: creare `config/pu/pu_maps.json` (heat_load, torque_ramp, deployment) e `config/pu/pu_reliability.json` (wear_coeff, soglie temp) per integrazione LapSimulator/BattleResolver.
 
-## 4. Implementazione – Fase C (AI & Experience)
+## 4. Implementazione – Fase C (AI & Experience) — ref: ai-driver-engine-spec.md, practice-session-orchestrator.md, battleresolver-2.0.md*
 1. **AI Driver Engine**: loop decisionale per run plan, fuel/ERS, strategie box e ricerca setup.
 2. **Telemetria & HUD eventi**: logging sorpassi, blocchi, dirty air, feedback ingegnere per player e QA.
 3. **UI Garage 2.0 completa**: engineer assistant, feedback testuale, gestione parc fermé e callouts realtime.
 
-## 5. Implementazione – Fase D (Data & Calibrazione)
+## 5. Implementazione – Fase D (Data & Calibrazione) — ref: physics-roadmap.md, FastF1 toolchain*, fitting scripts (aero_fit/tyre_fit/powerunit_fit/brake_calibration)
 1. **FastF1 toolchain**: ingestion, caching, manifest dataset.
 2. **Script fitting componenti**: `aero_fit`, `tyre_fit`, `powerunit_fit`, `brake_calibration` con output in `config/calibration/`.
 3. **CI `calibration.yml`**: pipeline badge componenti → lap regression → race smoke test.

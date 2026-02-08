@@ -1,46 +1,55 @@
-F1 Race Simulator - Architettura Fisica e Battle System
-Specifiche Tecniche
-1. ARCHITETTURA FISICA DEL SIMULATORE
-1.1 Sistema di Propulsione
-Motore Virtuale: Simulazione ibrida V6 turbo da 1050 CV
-Gestione Potenza: Sistema ERS (Energy Recovery System) con batteria da 4 MJ
-Distribuzione Potenza: 50% anteriore, 50% posteriore con controllo dinamico
-1.2 Sistema di Sospensioni
-Tipo: Doppio braccio oscillante con molle a rigidità variabile
-Escursione: 330mm anteriore, 370mm posteriore
-Ammortizzatori: Adattivi con 16 livelli di regolazione
-Barra Antirollio: Regolabile in 8 posizioni
-1.3 Sistema Frenante
-Tipo: Freni a disco carboceramici
-Diametro: 370mm anteriore, 330mm posteriore
-Decelerazione Massima: 5.5G
-Sistema ABS: Modulazione a 10 kHz
-1.4 Aerodinamica
-Carico Aerodinamico: Fino a 5.5G in curva
-Ala Anteriore: 3 elementi regolabili (0-25°)
-Ala Posteriore: 2 elementi regolabili (0-35°)
-Coefficiente di Resistenza: 0.7 Cd
-2. BATTLE SYSTEM
-2.1 Meccanica di Gara
-Modalità Competitiva: 1v1, 2v2, Campionato Stagionale
-Sistema di Punti: 25-18-15-12-10-8-6-4-2-1 (top 10)
-Penalità: Tempo aggiunto per contatti e fuoriuscite
-2.2 Abilità Speciali
-DRS (Drag Reduction System): Riduce resistenza del 25% per 10 secondi
-Boost ERS: Incremento potenza del 15% per 5 secondi
-Frenata Perfetta: Riduce usura freni del 30%
-2.3 Sistema di Progressione
-Livelli Pilota: 1-100 con sblocchi progressivi
-Upgrade Vettura: 5 categorie (Motore, Sospensioni, Freni, Aero, Elettronica)
-Valuta di Gioco: Crediti e Gettoni Premiumå
-3. PARAMETRI FISICI AVANZATI
-Grip Dinamico: Varia con temperatura gomme (60-120°C)
-Usura Componenti: Gomme, freni, motore degradano nel tempo
-Condizioni Meteo: Pioggia, nebbia, vento influenzano aderenza
-Danno Vettura: Impatti causano perdita di prestazioni
-4. SPECIFICHE TECNICHE HARDWARE
-Risoluzione: 4K @ 120 FPS
-Latenza Input: <16ms
-Supporto Controller: Volante, Gamepad, Tastiera
-Feedback Aptico: Vibrazione realistica del volante
-Documento generato il 7 Febbraio 2026
+# BattleResolver 2.0 – Spec
+last_updated: 2026-02-08
+scope: Risoluzione lotte multi-car nel loop a due livelli (LapSimulator fisica → BattleResolver confronto coppie).
+
+## 1. Obiettivo
+Determinare l’esito delle lotte per posizione in ogni sezione, applicando side-by-side, blocchi, errori/collisioni, in modo coerente con skill pilota, stato vettura, setup e caratteristiche sezione.
+
+## 2. Ruolo nel loop
+1) LapSimulator calcola `update_section()` per ogni auto ignorando le altre.
+2) BattleResolver riceve lo stato di sezione/posizione e valuta coppie/raggruppamenti nella stessa sezione.
+3) Applica outcome: sorpasso riuscito, side-by-side persistente, attempt bloccato, collisione/uscita, cooldown.
+4) Restituisce nuova ordering e flag eventi (HUD/telemetria) da commit nell’orchestratore.
+
+## 3. Input principali (per auto)
+- Sezione corrente e progressione nella sezione.
+- Velocità, accelerazione potenziale, DRS disponibile, deploy ERS attuale.
+- Grip effettivo (da TyreModel, con derating PU), drag/aero balance, brake fade/handling_penalty.
+- Skill pilota: `overtaking`, `defending`/`race_craft`, `aggression`, `confidence`.
+- Stato mentale/penalty: cooldown attivo, attempt_recent, warning collisione.
+
+## 4. Stati del confronto
+- **Attempt**: attacco in corso.
+- **Side-by-side**: due auto affiancate, decisione in uscita sezione.
+- **Blocked**: difesa riuscita, attaccante resta dietro.
+- **Cooldown**: tempo minimo prima di un nuovo tentativo (più lungo dopo collisione).
+- **Collision/Off-track**: incidente, con severità e possibili danni.
+
+## 5. Logica di decisione (outline)
+1. Identifica coppie in zona sorpasso (distanza < soglia + delta velocità favorevole).
+2. Calcola “chance” attacco basata su: delta velocità (PU/drag/DRS/ERS), grip disponibile, sezione (rettilineo vs curva), skill overtake vs defend, aggression.
+3. Applica dirty air: in curva penalizza chi segue se scia attiva e alto downforce.
+4. Se chance alta → side-by-side, altrimenti attempt bloccato (entra cooldown breve).
+5. Risolvi side-by-side: peso a sezione (rettilineo favorisce attaccante veloce, curva favorisce chi è all’interno), skill race_craft/defending, grip/tyre stato, derating PU.
+6. Collision risk: cresce con aggression, bassa confidence, differenza traiettoria; se collisione, applica danni (Mechanical damage doc) e penalty tempo/posizione.
+7. Aggiorna cooldown: lungo se collisione, medio se blocked, breve se side-by-side riuscito.
+
+## 6. Parametri da calibrare
+- Soglie distanza e delta velocità per trigger attempt.
+- Modulatori per sezione: rettilineo, curva lenta/media/veloce, staccata heavy.
+- Peso skill: overtaking vs defending/race_craft, aggression vs confidence.
+- Dirty air penalty per sezione downforce-heavy.
+- Cooldown (blocked, side-by-side, collision) e collision probability curve.
+- Penalty tempo e danno associati (integrazione con Mechanical damage/Degradation doc).
+
+## 7. HUD/telemetria eventi
+- `battle_attempt`, `battle_blocked`, `side_by_side`, `overtake_success`, `collision`, `cooldown_active` con durata.
+- Metadati: sezione, delta vel, skill diff, stato gomme/PU/DRS/ERS, esito collisione.
+
+## 8. QA harness
+- Scenari deterministici: DRS train in rettilineo, attacco in curva lenta con top speed inferiore ma più grip, wet stint con poco grip, lotta con difensore ad alto defending, caso collisione forzata per test danni.
+- Asserzioni: ordering finale, eventi emessi, cooldown aggiornati, nessun sorpasso impossibile in curva stretta con bassa chance.
+
+## 9. Integrazioni
+- Legge grip/derating/danni da LapSimulator/Degradation doc; scrive eventi per orchestratori (Practice/Race) e HUD.
+- Usa mapping sezione (rettilineo/curva, heavy braking) dal telemetry/track profile.
