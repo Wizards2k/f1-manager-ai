@@ -894,6 +894,16 @@ Restituisce `SectionResult(dt, v_exit, events)` e stato interno aggiornato.
 
 ---
 
+### 3.3.x Segnale `overtake_window` (per BattleResolver)
+- Calcolato in `update_section()` per ogni auto, range 0-1, quantizzabile (0/0.5/1) per evitare jitter.
+- Base: funzione di `delta_v` verso l’auto davanti + gap normalizzato (progress sezione) + `pace_factor`/driver intent **e volontà pilota** (se il driver non vuole attaccare, forza `overtake_window` basso/0).
+- Modificatori per tag sezione:
+  - **Rettifilo**: peso alto a delta_v; bonus se solo l’attaccante ha DRS; malus se tutti hanno DRS (train).
+  - **Staccata heavy**: peso a delta_v ingresso + `late_brake_tag` (evento freni), skill overtake/defend; dirty-air/wet malus.
+  - **Curva/Switchback**: malus dirty air/handling; window si apre solo con gap molto piccolo.
+  - **Uscita curva**: peso a velocità apex/traction, derating PU, ERS deploy.
+- Blue flag: bypassato (BR forza il pass salvo delta-v anomalo).
+
 ### 3.3.1 LapSimulator runtime loop (single lap)
 
 Il motore LAP in-game orchestra più auto mantenendo la fisica pura di `Car.update_section()` separata dalla logica d’interazione. Il loop di un giro è composto da quattro blocchi principali.
@@ -905,7 +915,7 @@ SessionController
     │                     │
     │                     └─► SectionResult + segnali (df, drag, power, section_progress)
     │
-    ├─► BattleResolver (pacchetti auto vicine, cooldown/lock)
+    ├─► BattleResolver (pacchetti auto vicine)
     │
     ├─► StateCommit (swap ordine, gap, penalty, eventi)
     │
