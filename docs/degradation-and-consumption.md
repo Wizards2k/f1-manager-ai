@@ -68,6 +68,8 @@ Non copre:
 - Track modifiers (da `pirelli_track_profile_2025.json`): bumpiness/kerb severity influenzano i moltiplicatori sopra; corner distribution può settare `section.heat_factor`/`bumpiness_factor`.
 - Setup influence: aperture `brake_duct` e altezze da `setup_mapping_v2.json` modificano cooling e bump penalty (ride height troppo bassa → più `bump_penalty`/kerb impatti).
 
+⚠️ Parametri critici da tabellare (mancanti): `gaussian_sigma` per compound, `heat_capacity` e `cooling_coeff` per freni/gomme, `fade_threshold`/`fade_sensitivity`, `wear_coeff` PU, `damage_thresholds` per componenti. Fino a calibrazione, usare fallback di sicurezza (es. sigma 7°C surface/6°C core, cooling_coeff 1.0 base) e loggare warning se un coeff mancante/illeggibile.
+
 Nota: le finestre termiche ufficiali per compound (surface/core min-opt-max) sono definite in `docs/TyreModel.md` e devono essere usate dal calcolo grip in `lap-physics-spec-v0.5` (§5.2).
 
 ### 5.2 Brakes
@@ -113,3 +115,21 @@ Nota: le finestre termiche ufficiali per compound (surface/core min-opt-max) son
 **Effetti**: malus progressivi (grip_mech_drop, drag_increase, shift_delay, steering_precision_loss), più rischio failure oltre soglie.
 
 **Parametrizzazione**: coeff urti/kerb→shock, soglie danno per componente, curve di accumulo e recupero (se previsto), mapping piste bump/kerb da `config/tyres/pirelli_track_profile_2025.json`. Setup influence: ride height e sospensioni da `config/setup/setup_mapping_v2.json` modulano esposizione a bump/kerb.
+
+### 6. Performance & fallback
+- L’aggiornamento avviene per sezione per ogni auto; per 20 auto usare batching/vectorization dove possibile e limitare valutazioni di eventi rari (collisione, failure) a step più larghi se non necessari al frame-rate.
+- Se un coefficiente o JSON è mancante/illeggibile, applicare default conservativi e loggare warning (no crash):
+  - Tyres: sigma 7°C surface / 6°C core, cooling_coeff 1.0, wear_rate_base fallback 0.15.
+  - Brakes: fade_threshold_front/rear 850/750°C, fade_sensitivity 15°C, heat_capacity 1.0 base.
+  - PU: derating a warning 130°C ICE/90°C ERS, critical +10°C, wear_coeff minimo.
+  - Damage: shock_threshold medio e malus ridotti.
+Annotare i default in config quando saranno definiti; rimuovere i fallback appena i parametri sono tabellati.
+
+### 7. Config JSON da produrre (fase analisi)
+- `config/tyres/tyre_params_global_default.json` — per compound S/M/H/Int/W: `temp_window`, `gaussian_sigma_surface/core`, `base_grip`, `wear_rate_base`, `thermal_mass_surface/core`, `conduction_coeff`, `cooling_coeff`.
+- `config/brakes/brake_params.json` — per classe impianto: `heat_capacity`, `thermal_mass`, `fade_threshold_front/rear`, `fade_sensitivity`, `heat_quality` curve.
+- `config/pu/pu_maps.json` — mappe ICE/ERS: `heat_load`, `torque_ramp`, `deployment_style`, `cooling_share`.
+- `config/pu/pu_reliability.json` — `wear_coeff` per ICE/ERS, soglie `temp_warning/critical`, fattori over-rev/shock.
+- `config/damage/damage_coeffs.json` — `shock_thresholds`, malus per componente (sospensioni, fondo/beam, cambio, sterzo), fattori pista bump/kerb.
+
+Nota: i valori seed possono provenire da `docs/TyreModel.md`, profili Pirelli (`config/tyres/pirelli_track_profile_2025.json`), telemetria FastF1 (per heat/cool), e fitting dei componenti (fase D, scripts `*_fit`).
