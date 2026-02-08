@@ -64,6 +64,39 @@ Non copre:
 - Heat-cycle penalty: applicare malus grip/warmup se set usato (rimando a `docs/tyre-allocation.md`).
 
 **Parametrizzazione** (per compound S/M/H/Int/W):
-- `temp_window` (min/opt/max), `base_grip`, `wear_rate_base`, `thermal_mass_surface/core`, `conduction_coeff`, `cooling_coeff`, `gaussian_sigma`, soglie warning/puncture.
+- `temp_window` (min/opt/max), `base_grip`, `wear_rate_base`, `thermal_mass_surface/core`, `conduction_coeff`, `cooling_coeff`, `gaussian_sigma`, soglie warning/puncture. Le finestre termiche dettagliate restano in `TyreModel`.
 - Track modifiers (da `pirelli_track_profile_2025.json`): bumpiness/kerb severity influenzano i moltiplicatori sopra; corner distribution può settare `section.heat_factor`/`bumpiness_factor`.
 - Setup influence: aperture `brake_duct` e altezze da `setup_mapping_v2.json` modificano cooling e bump penalty (ride height troppo bassa → più `bump_penalty`/kerb impatti).
+
+Nota: le finestre termiche ufficiali per compound (surface/core min-opt-max) sono definite in `docs/TyreModel.md` e devono essere usate dal calcolo grip in `lap-physics-spec-v0.5` (§5.2).
+
+### 5.2 Brakes
+**Input chiave**: energia frenata per sezione (`braking_energy`), brake bias (driver intent), apertura `brake_duct`, qualità impianto (`system_quality`), airflow_penalty, cooling_coeff; stimoli da pista (heavy_brake_events nel cluster) e setup per circuito (`setup_mapping_v2.json` per duct range).
+
+**Termica** (lap-physics §5.1): calore generato da energia frenata ripartita (front/rear), ridotto da `heat_quality` (miglior impianto disperde meno calore) e dissipato da `duct_cooling = duct_opening * cooling_coeff * (1 - airflow_penalty)`. Temperature per asse aggiornate a ogni sezione.
+
+**Usura / fade**: usura proporzionale a energia per asse e `wear_quality`; se `temp_front` supera soglia → `fade_level` cresce e riduce efficacia frenante + aumenta handling_penalty (sottosterzo ingresso). Influenza indiretta sulle gomme (fade entra nei moltiplicatori di usura).
+
+**Feedback & warning**: se skill `setup_finding`/`tyre_management` è alta, genera messaggi (“Front brakes hot”, “Brake wear high”). Derating/cooling guidance per circuito può provenire da Pirelli track profile (weather_impact) e dal cluster (`heavy_brake_events`).
+
+**Parametrizzazione**: soglie fade (`fade_threshold_front/rear`), sensitività (`fade_sensitivity`), `heat_capacity`, `thermal_mass`, curve qualità impianto (`system_quality`). Range duct per circuito da `config/setup/setup_mapping_v2.json`; requisiti climatici da `config/tyres/pirelli_track_profile_2025.json` (campo `weather_impact`).
+
+### 5.3 Fuel
+**Input chiave**: fuel_mix (Lean/Standard/Rich), `pace_factor`, massa carburante iniziale, intensità consumo circuito (`fuel_burn_intensity` da cluster/Pirelli), temperatura aria/pista.
+
+**Consumo**: stima per sezione/run: `fuel_burn ≈ base_fuel_per_section * pace_factor * fuel_mix_coeff`, raffinata con `dt` e massa residua. Effetto peso: più fuel → peggio accelerazione/frenata e più calore su freni/gomme (coeff lineare da calibrare in LapSimulator).
+
+**Feedback/strategie**: derating termico PU → forzare fuel_mix Lean; orchestratore usa consumo previsto per pianificare stint e rientri.
+
+**Parametrizzazione**: tabella `fuel_mix_profiles.json` (coeff Lean/Std/Rich), curve peso→tempo/giro, `base_fuel_per_section` per circuito (derivabile da Telemetry), scalers da `pirelli_track_profile_2025.json` se presenti note su fuel burn.
+
+### 5.4 Power Unit (ICE/ERS)
+**Input chiave**: mappa motore/ERS (torque_ramp, heat_load, deployment style), cooling_capacity, airflow_penalty, driver intent (pace_factor, deploy mode), shock da kerb/bump.
+
+**Termica**: calcolo da LapPhysics §4 (ICE/ERS heat in/out). Se `temp_ice_next > warning` → derating; sopra `critical` → forzare Economy o rischio failure.
+
+**Usura/failure**: usura ICE proporzionale a power_ice_eff e coeff affidabilità; ERS con cicli carica/scarica e temp. Failure modes: overtemp, over-rev, shock da kerb/contatti.
+
+**Output**: `derating_flag/factor`, `temp_ice/ers`, `wear_ice/ers`, eventuale `failure_event`. Orchestratori decidono se rientrare o cambiare mappa; BattleResolver legge derating per valutare sorpasso.
+
+**Parametrizzazione**: `pu_maps.json` (heat_load, torque_ramp, deployment), `pu_reliability.json` (wear_coeff, temp thresholds), `cooling_capacity` per configurazioni radiatori/ducts; link ai profili Pirelli per guidance climatica.

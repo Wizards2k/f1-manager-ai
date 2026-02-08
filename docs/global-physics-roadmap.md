@@ -39,6 +39,7 @@ Portare il gioco a una release pubblica in cui:
 1. **LapSimulator runtime**: implementare il loop InputMixer → update_section parallelo → BattleResolver 2.0 → StateCommit.
 2. **BattleResolver 2.0**: codice allineato alla nuova spec (cooldown, side-by-side, metriche HUD/telemetria).
 3. **Practice Session Orchestrator**: scheduling tempo sessione, queue pitlane, gestione run e persistenza run data/log.
+4. **Power Unit config**: creare `config/pu/pu_maps.json` (heat_load, torque_ramp, deployment) e `config/pu/pu_reliability.json` (wear_coeff, soglie temp) per integrazione LapSimulator/BattleResolver.
 
 ## 4. Implementazione – Fase C (AI & Experience)
 1. **AI Driver Engine**: loop decisionale per run plan, fuel/ERS, strategie box e ricerca setup.
