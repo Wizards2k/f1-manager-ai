@@ -541,7 +541,8 @@ export class PlayerGarageV3 {
         const { values, recommendation } = setupState;
         const hasFeedback = !!car.has_setup_feedback;
         const fieldFeedback = hasFeedback ? (recommendation?.fields || {}) : {};
-        const categories = hasFeedback ? (recommendation?.categories || {}) : {};
+        const catWrapper = recommendation?.categories || {};
+        const categories = hasFeedback ? (catWrapper.categories || catWrapper) : {};
 
         const sliderCards = this.SETUP_GROUPINGS.map(group => {
             const groupLabel = `<div class="setup-grp-label-v3">${group.title}</div>`;
@@ -554,7 +555,8 @@ export class PlayerGarageV3 {
         let feedbackMsg, score, fbClass;
         if (hasFeedback) {
             feedbackMsg = recommendation?.message || 'Setup feedback available.';
-            score = typeof recommendation?.score === 'number' ? recommendation.score.toFixed(1) : '--';
+            const rawScore = catWrapper.overall_score ?? recommendation?.score;
+            score = typeof rawScore === 'number' ? (rawScore > 10 ? (rawScore / 10).toFixed(1) : rawScore.toFixed(1)) : '--';
             fbClass = '';
         } else {
             feedbackMsg = 'Complete a hot lap to see engineer feedback.';

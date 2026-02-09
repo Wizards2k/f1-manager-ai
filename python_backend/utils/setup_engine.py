@@ -339,6 +339,20 @@ def evaluate_setup_categories(setup_values: Dict[str, int]) -> Dict[str, Any]:
     else:
         stability_msg = "Stability could be improved"
     
+    # Category 5: Braking (brake balance + brake duct)
+    brake_duct = setup_values.get('brake_duct', 50)
+    brake_bal_score = get_field_score('brake_balance')
+    brake_duct_score = get_field_score('brake_duct')
+    braking_score = _clamp(0.6 * brake_bal_score + 0.4 * brake_duct_score, 0, 100)
+    if braking_score >= 85:
+        braking_msg = "Brakes well balanced and cooled"
+    elif brake_bal_score < 60:
+        braking_msg = "Brake balance needs adjustment"
+    elif brake_duct_score < 60:
+        braking_msg = "Brake cooling insufficient"
+    else:
+        braking_msg = "Braking could be improved"
+
     categories = {
         'cornering': {
             'score': round(cornering_score, 1),
@@ -360,10 +374,15 @@ def evaluate_setup_categories(setup_values: Dict[str, int]) -> Dict[str, Any]:
             'color': score_to_color(stability_score),
             'message': stability_msg,
         },
+        'braking': {
+            'score': round(braking_score, 1),
+            'color': score_to_color(braking_score),
+            'message': braking_msg,
+        },
     }
     
     # Overall assessment
-    avg_category_score = sum(c['score'] for c in categories.values()) / 4
+    avg_category_score = sum(c['score'] for c in categories.values()) / 5
     overall_color = score_to_color(avg_category_score)
     
     return {
