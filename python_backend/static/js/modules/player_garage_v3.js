@@ -281,9 +281,7 @@ export class PlayerGarageV3 {
         const isBox = currentState === 'BOX';
         const telemetry = this.buildTelemetryStrip(car);
         const tyreTemps = this.buildTyreTempsSection(car);
-        const infoPct = car.setup_info_percent ?? 0;
-        const infoChipColor = infoPct >= 67 ? 'setup-chip-green' : infoPct >= 34 ? 'setup-chip-yellow' : 'setup-chip-red';
-        const infoChipBlink = infoPct >= 100 ? 'setup-chip-blink' : '';
+        const infoChipColor = 'setup-chip-red';
 
         return `
             <div class="car-card-v3" data-driver="${car.driver_number}" data-state="${currentState}">
@@ -299,7 +297,7 @@ export class PlayerGarageV3 {
                     </div>
                     <div class="header-pills-v3">
                         <span class="state-pill-v3">${stateDisplay}</span>
-                        <span class="setup-chip-v3 ${infoChipColor} ${infoChipBlink}">DATA</span>
+                        <span class="setup-chip-v3 ${infoChipColor}">DATA</span>
                     </div>
                 </header>
                 ${telemetry}
@@ -679,7 +677,12 @@ export class PlayerGarageV3 {
             return;
         }
 
+        const fp = cars.map(c => `${c.driver_number}:${c.state}:${c.total_laps}:${c.current_tire}:${c.tire_age}`).join('|');
+        if (!force && fp === this._lastRenderFp) return;
+        this._lastRenderFp = fp;
+
         this.cardsContainer.innerHTML = cars.map(car => this.buildCarCard(car)).join('');
+        this.updateDataChips();
     }
 
     toggleSetupOverlay(driverNumber, open = true) {
