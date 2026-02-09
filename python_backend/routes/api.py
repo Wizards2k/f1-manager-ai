@@ -270,7 +270,8 @@ def register_routes(app):
             'stint_laps_target': car.player_config.get('stint_target_laps', car.stint_target_laps),
             'setup': car.player_config.get('setup', {**DEFAULT_SETUP_CONFIG}),
             'setup_recommendation': car.setup_feedback or {},
-            'has_setup_feedback': bool(getattr(car, 'has_completed_hot_lap', False) and car.setup_feedback),
+            'has_setup_feedback': bool(getattr(car, 'setup_feedback_ready', False) and car.setup_feedback),
+            'setup_info_percent': round(getattr(car, 'setup_info_percent', 0), 1),
             'ideal_setup': car.player_config.get('ideal_setup'),
         }
 
@@ -401,8 +402,7 @@ def register_routes(app):
 
         current_setup = car.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
         current_setup.update(sanitized)
-        car.has_completed_hot_lap = False
-        car.setup_feedback = None
+        car.reset_setup_info()
         log_debug_event(
             'setup_saved',
             driver=driver_number,
@@ -434,8 +434,7 @@ def register_routes(app):
 
         current_setup = car.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
         current_setup.update(sanitized)
-        car.has_completed_hot_lap = False
-        car.setup_feedback = None
+        car.reset_setup_info()
         log_debug_event(
             'setup_saved',
             driver=driver_number,
@@ -494,8 +493,7 @@ def register_routes(app):
 
         current_setup = car.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
         current_setup.update(validation.sanitized)
-        car.has_completed_hot_lap = False
-        car.setup_feedback = None
+        car.reset_setup_info()
         ideal_setup = SetupEngineService.build_ideal_setup(circuit_id, car)
         car.player_config['ideal_setup'] = ideal_setup
 

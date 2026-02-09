@@ -7,6 +7,13 @@ Definiamo l’interfaccia per aprire e modificare il setup delle auto tramite un
 3. Mantenere feedback colore/messaggi e range consigliati direttamente nella stessa vista.
 4. Garantire accessibilità e compatibilità con il layout attuale (desktop first, responsive minimo).
 
+## Indicatori raccolta dati setup
+- Mostrare una chip "SETUP" (o "DATA") sempre visibile accanto allo stato giro (HOT/OUT/IN).
+- Colori: rosso (0–33% info raccolte), giallo (34–66%), verde (≥67%; lampeggia quando il target informativo è raggiunto).
+- La chip legge `info_progress/info_target` dal backend e comunica all'utente quanta telemetria utile è stata raccolta per aggiornare il feedback.
+- Nel pannello overlay replicare lo stato con barra/label coerente e testo "Gathering more data..." finché non si passa al verde.
+- Al cambio slider/Apply la chip torna rossa e il contatore riparte.
+
 ## Sequenza proposta
 1. **Trigger & stato UI**
    - Inserire un pulsante "Setup" accanto ai bottoni Send/Box nella card.

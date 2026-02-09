@@ -281,6 +281,9 @@ export class PlayerGarageV3 {
         const isBox = currentState === 'BOX';
         const telemetry = this.buildTelemetryStrip(car);
         const tyreTemps = this.buildTyreTempsSection(car);
+        const infoPct = car.setup_info_percent ?? 0;
+        const infoChipColor = infoPct >= 67 ? 'setup-chip-green' : infoPct >= 34 ? 'setup-chip-yellow' : 'setup-chip-red';
+        const infoChipBlink = infoPct >= 100 ? 'setup-chip-blink' : '';
 
         return `
             <div class="car-card-v3" data-driver="${car.driver_number}" data-state="${currentState}">
@@ -294,7 +297,10 @@ export class PlayerGarageV3 {
                             </div>
                         </div>
                     </div>
-                    <span class="state-pill-v3">${stateDisplay}</span>
+                    <div class="header-pills-v3">
+                        <span class="state-pill-v3">${stateDisplay}</span>
+                        <span class="setup-chip-v3 ${infoChipColor} ${infoChipBlink}">DATA</span>
+                    </div>
                 </header>
                 ${telemetry}
                 <div class="controls-area-v3">
@@ -550,6 +556,7 @@ export class PlayerGarageV3 {
         const setupState = this.getSetupPayload(car);
         const { values, recommendation } = setupState;
         const hasFeedback = !!car.has_setup_feedback;
+        const infoPct = car.setup_info_percent ?? 0;
         const fieldFeedback = hasFeedback ? (recommendation?.fields || {}) : {};
         const catWrapper = recommendation?.categories || {};
         const categories = hasFeedback ? (catWrapper.categories || catWrapper) : {};
@@ -562,7 +569,7 @@ export class PlayerGarageV3 {
             return groupLabel + cards;
         }).join('');
 
-        let feedbackMsg, score, fbClass;
+        let feedbackMsg, score, fbClass, progressHtml;
         if (hasFeedback) {
             feedbackMsg = recommendation?.message || 'Setup feedback available.';
             const rawScore = catWrapper.overall_score ?? recommendation?.score;
@@ -570,10 +577,20 @@ export class PlayerGarageV3 {
             score = typeof rawScore === 'number' ? (rawScore > 10 ? (rawScore / 10).toFixed(1) : rawScore.toFixed(1)) : '--';
             this._scoreColorClass = this.scoreColorClass(score100);
             fbClass = '';
+            progressHtml = '';
         } else {
-            feedbackMsg = 'Complete a hot lap to see engineer feedback.';
+            const barColor = infoPct >= 67 ? '#63d59f' : infoPct >= 34 ? '#f5d56a' : '#ff6d6d';
+            const pctLabel = Math.round(infoPct);
+            if (infoPct <= 0) {
+                feedbackMsg = 'Send the car out to collect setup data.';
+            } else if (infoPct < 100) {
+                feedbackMsg = `Gathering data… ${pctLabel}%`;
+            } else {
+                feedbackMsg = 'Data ready — box the car for engineer feedback.';
+            }
             score = '';
             fbClass = 'no-feedback';
+            progressHtml = `<div class="setup-progress-v3"><div class="setup-progress-bar-v3" style="width:${Math.min(pctLabel, 100)}%;background:${barColor}"></div></div>`;
         }
         const circuitLabel = this.state?.circuitId || '';
 
@@ -593,6 +610,7 @@ export class PlayerGarageV3 {
                     ${score ? `<span class="setup-fb-score-v3 ${this._scoreColorClass || ''}">${score}</span>` : ''}
                     <span class="setup-fb-msg-v3">${feedbackMsg}</span>
                 </div>
+                ${progressHtml || ''}
                 ${hasFeedback ? `<div class="setup-cats-v3">${this.buildCategoryChips(categories)}</div>` : ''}
                 <div class="setup-slider-grid-v3">
                     ${sliderCards}

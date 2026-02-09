@@ -41,7 +41,7 @@ Portare il gioco a una release pubblica in cui:
 1. ✅ **SetupEngineService runtime**: modulo/servizio REST + socket che applica mapping slider→fisica e restituisce scoring live.
 2. ✅ **Evaluate Setup refresh**: rifattorizzare `evaluate_setup` e categorie per usare `aero_balance`, `drag_index`, `traction_index`, `brake_cooling`.
 3. ✅ **Pipeline CI `setup-calibration`**: requisito assolto tramite i controlli già presenti (slider UI clampati sui range circuito + `SetupEngineService.sanitize_input()` lato backend). Non è previsto un job CI separato finché il progetto rimane single-developer.
-4. ✅ **UI Garage 2.0 (base)**: implementata con design Jarvis Variant B — 11 slider in 4 gruppi, valori fisici (°/mm/%), range circuito, feedback row + 5 category chips. Feedback ingegnere gated da HOT LAP: nessun feedback live, solo dopo rientro ai box con almeno 1 hot lap completato. Modifica slider nasconde il feedback fino al prossimo hot lap.
+4. ✅ **UI Garage 2.0 (base)** (`docs/setup-ui-plan.md`, `docs/setup-search-plan.md`): implementata con design Jarvis Variant B — 11 slider in 4 gruppi, valori fisici (°/mm/%), range circuito, feedback row + 5 category chips. Feedback ingegnere basato su quota informazioni (chip SETUP/Data rosso→giallo→verde) e senza feedback live; serve raccolta dati e rientro ai box per pubblicare nuovi suggerimenti. Modifica slider azzera il progresso.
 
 ## 3. Implementazione – Fase B (Race Engine Core — `docs/lap-physics-spec-v0.5.md`, `docs/BattleResolver.md`, `docs/practice-session-orchestrator.md`)
 1. **LapSimulator runtime**: implementare il loop InputMixer → update_section parallelo → BattleResolver 2.0 → StateCommit.

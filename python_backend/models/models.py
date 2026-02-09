@@ -381,6 +381,8 @@ class RaceCar:
         self.total_session_laps = 0
         self.last_lap_type = None
         self.has_completed_hot_lap = False
+        self.setup_info_points = 0.0
+        self.setup_info_target = 100.0
         
         # Tempi e performance
         self.lap_times = []
@@ -532,7 +534,7 @@ class RaceCar:
             # Tempo ai box per la prossima uscita (5-20 minuti)
             self.box_time_until = time.time() - self.session_start_time + random.uniform(300, 1200)
         self.distance_traveled = 0
-        if self.is_player_controlled and self.has_completed_hot_lap:
+        if self.is_player_controlled and self.setup_feedback_ready:
             self._generate_setup_feedback(trigger='box_entry')
 
     def complete_lap(self, lap_type):
@@ -567,6 +569,8 @@ class RaceCar:
         if lap_type == CarState.HOT_LAP:
             self.has_completed_hot_lap = True
         if self.is_player_controlled:
+            self._accumulate_setup_info(lap_type)
+        if self.is_player_controlled:
             log_debug_event(
                 'lap_complete',
                 driver=self.driver_number,
@@ -594,6 +598,83 @@ class RaceCar:
             update_session_bests(self)
 
         self._persist_lap_debug(lap_type, realistic_lap_time)
+
+    @property
+    def setup_feedback_ready(self):
+        return self.setup_info_points >= self.setup_info_target
+
+    @property
+    def setup_info_percent(self):
+        if self.setup_info_target <= 0:
+            return 100.0
+        return min(100.0, (self.setup_info_points / self.setup_info_target) * 100.0)
+
+    def _compute_setup_info_target(self):
+        """Calcola la soglia di info necessarie in base alla distanza dall'ideal setup.
+        Setup molto lontano o molto vicino all'ideale → più info necessarie.
+        Setup 'quasi buono' → meno info necessarie."""
+        base_target = 100.0
+        current_setup = self.player_config.get('setup', {})
+        ideal_setup = self.player_config.get('ideal_setup') or {}
+        if not ideal_setup:
+            return base_target
+        deltas = []
+        for key, val in current_setup.items():
+            ideal_val = ideal_setup.get(key, 50)
+            deltas.append(abs(val - ideal_val))
+        avg_delta = sum(deltas) / max(len(deltas), 1)
+        # U-shaped penalty: very low delta (near perfect) or very high delta → more info needed
+        # Sweet spot around delta 15-25 → least extra info
+        if avg_delta < 5:
+            delta_penalty = 40  # near-perfect is hard to read
+        elif avg_delta < 15:
+            delta_penalty = 10
+        elif avg_delta <= 25:
+            delta_penalty = 0   # sweet spot
+        elif avg_delta <= 40:
+            delta_penalty = 20
+        else:
+            delta_penalty = 50  # terrible setup, hard to judge
+        return base_target + delta_penalty
+
+    def _compute_setup_info_gain(self, lap_type):
+        """Calcola quanti info_points vengono raccolti in un giro.
+        Dipende dal tipo di giro e dalla skill ricerca_assetto del pilota."""
+        # Base gain per lap type
+        if lap_type == CarState.HOT_LAP:
+            base_gain = 35.0
+        elif lap_type == CarState.OUT_LAP:
+            base_gain = 8.0
+        elif lap_type == CarState.IN_LAP:
+            base_gain = 5.0
+        else:
+            base_gain = 15.0
+        # Skill bonus: ricerca_assetto 1-100 → multiplier 0.6x to 1.4x
+        skill = getattr(self.pilot, 'ricerca_assetto', 50)
+        skill_mult = 0.6 + (skill / 100.0) * 0.8  # 1→0.608, 50→1.0, 100→1.4
+        return base_gain * skill_mult
+
+    def _accumulate_setup_info(self, lap_type):
+        """Accumula info_points dopo ogni giro completato."""
+        gain = self._compute_setup_info_gain(lap_type)
+        self.setup_info_points = min(self.setup_info_points + gain, self.setup_info_target * 1.5)
+        log_debug_event(
+            'setup_info_accumulated',
+            driver=self.driver_number,
+            lap_type=lap_type.value if isinstance(lap_type, CarState) else str(lap_type),
+            gain=round(gain, 1),
+            total=round(self.setup_info_points, 1),
+            target=round(self.setup_info_target, 1),
+            percent=round(self.setup_info_percent, 1),
+            ready=self.setup_feedback_ready,
+        )
+
+    def reset_setup_info(self):
+        """Azzera i punti info e ricalcola il target. Chiamato su Apply/save setup."""
+        self.setup_info_points = 0.0
+        self.setup_info_target = self._compute_setup_info_target()
+        self.setup_feedback = None
+        self.has_completed_hot_lap = False
 
     def _generate_setup_feedback(self, trigger='manual'):
         """Calcola e salva il feedback setup corrente"""

@@ -156,23 +156,38 @@ SetupEvaluation {
 - **Combinazione**: `ideal_setup = clamp(baseline + team_offset + driver_offset, 0, 100)` e viene esposto sia nella UI (highlight target) sia nelle raccomandazioni ingegnere.
 - **Persistenza**: gli offset applicati vanno salvati in `garage_state.json` per garantire coerenza fra sessioni.
 
-### 4.4 Flusso feedback setup (HOT LAP gate)
-Il feedback ingegnere NON viene calcolato in tempo reale durante la modifica degli slider.
-Il flusso implementato è:
-1. **BOX → Setup panel**: l'utente vede gli slider con valori correnti ma nessun feedback (messaggio: "Complete a hot lap to see engineer feedback").
-2. **Apply**: il setup viene salvato come nuovo default; i flag `has_completed_hot_lap` e `setup_feedback` vengono resettati.
-3. **Send Out → HOT LAP**: al completamento di almeno un giro veloce, `has_completed_hot_lap = True`.
-4. **Rientro BOX**: `enter_box()` invoca `_generate_setup_feedback()` solo se `has_completed_hot_lap` è True. Questo genera score, categorie e delta per campo.
-5. **Setup panel**: il feedback è ora visibile (score, 5 category chips, delta per slider).
-6. **Modifica slider**: il feedback viene nascosto (messaggio: "Apply and complete a hot lap to see updated feedback").
-7. **Nuovo Apply → nuovo hot lap necessario** per ottenere feedback aggiornato.
+### 4.4 Flusso feedback setup (quota informazioni)
+Il feedback ingegnere non è più legato a un singolo hot lap, ma alla quantità di **informazioni raccolte** mentre l'auto è in pista. Ogni giro genera un certo numero di `info_points` in base a:
 
-Flag chiave nel model `Car`:
-- `has_completed_hot_lap: bool` — resettato a False su ogni save setup e su `start_stint()`.
-- `setup_feedback: Optional[Dict]` — resettato a None su ogni save setup.
+- **Skill Setup/Engineer del pilota** → piloti esperti estraggono più informazioni per settore/giro.
+- **Qualità dell'assetto corrente** → se il setup è terribile o troppo perfetto è più difficile da leggere, quindi servono più dati; se è “quasi buono” l'ingegnere converge prima.
 
-Serializzazione API/websocket:
-- `has_setup_feedback = bool(has_completed_hot_lap AND setup_feedback)` — il frontend usa questo flag per decidere se mostrare il feedback.
+Per ogni Apply calcoliamo una soglia dinamica:
+
+```
+info_target = base_target (es. 100) + delta_penalty(setup_delta)
+info_gain_per_lap = base_gain + skill_bonus
+```
+
+Quando la somma degli `info_points` raggiunge `info_target`, l'ingegnere può pubblicare il feedback completo. Nel frattempo mostriamo lo **stato di raccolta dati** sia sulla HUD sia nel pannello setup:
+
+1. **Chip SETUP/Data** (sempre visibile accanto alla chip HOT/OUT/IN):
+   - **Rosso**: 0–33% della soglia (nessuna valutazione disponibile).
+   - **Giallo**: 34–66% (raccolta in corso, suggeriamo di continuare a girare).
+   - **Verde**: ≥67% e chip lampeggiante quando si supera il 100% → feedback pronto.
+2. **Setup panel**:
+   - Barra di progresso/label coerente con la chip (rosso/giallo/verde).
+   - Messaggi parziali opzionali (“Gathering more data…”) finché non raggiungiamo il verde.
+
+Reset logica:
+- **Apply** o modifica slider → `info_points` azzerati, `info_target` ricalcolato (perché cambia la distanza dall’ideal setup).
+- **Send Out** → inizia la raccolta; appena raggiunto il target mostra la chip verde e abilita `_generate_setup_feedback()` al rientro ai box.
+- **Rientro BOX**: se la chip è verde e siamo ≥ info_target, `_generate_setup_feedback()` produce score/categorie/delta. Se la chip è rossa/gialla il feedback resta pendente.
+
+Flag e serializzazione aggiornati:
+- `info_progress` (0–100%) e `info_target` vengono serializzati per ciascuna auto.
+- `setup_feedback_ready = (info_progress >= info_target)` sostituisce il precedente `has_completed_hot_lap` come condizione per mostrare il feedback in UI.
+- Il frontend usa `info_progress` per colorare sia la chip SETUP/Data sia la barra nel pannello setup.
 
 ## 6. Integrazione con LapSimulator
 1. SetupUI salva i valori nello stato sessione.
