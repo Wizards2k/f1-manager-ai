@@ -38,6 +38,7 @@ Portare il gioco a una release pubblica in cui:
 - Calibration/validation workflow (fitting componenti, badge CI, manifest)
 
 ## 2. Implementazione – Fase A (Setup & Validazione — `docs/setup-engine-spec-v0.1.md`, `docs/config-spec.md`, `docs/setup-ui-plan.md`)
+> **Stato:** ✅ Completata il 2026-02-10 (merge in `feature/mvp-phase-1`)
 1. ✅ **SetupEngineService runtime**: modulo/servizio REST + socket che applica mapping slider→fisica e restituisce scoring live.
 2. ✅ **Evaluate Setup refresh**: rifattorizzare `evaluate_setup` e categorie per usare `aero_balance`, `drag_index`, `traction_index`, `brake_cooling`.
 3. ✅ **Pipeline CI `setup-calibration`**: requisito assolto tramite i controlli già presenti (slider UI clampati sui range circuito + `SetupEngineService.sanitize_input()` lato backend). Non è previsto un job CI separato finché il progetto rimane single-developer.
