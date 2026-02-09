@@ -1,7 +1,7 @@
 ---
 title: Setup Engine 2.0 – v0.1 (Auto/LapSimulator integration)
-version: 0.1
-last_updated: 2026-02-07
+version: 0.2
+last_updated: 2026-02-09
 scope: "Ridefinire il motore di setup (UI + simulazione) per allinearlo alla nuova fisica LapSimulator e ai componenti Car"
 ---
 
@@ -156,6 +156,24 @@ SetupEvaluation {
 - **Combinazione**: `ideal_setup = clamp(baseline + team_offset + driver_offset, 0, 100)` e viene esposto sia nella UI (highlight target) sia nelle raccomandazioni ingegnere.
 - **Persistenza**: gli offset applicati vanno salvati in `garage_state.json` per garantire coerenza fra sessioni.
 
+### 4.4 Flusso feedback setup (HOT LAP gate)
+Il feedback ingegnere NON viene calcolato in tempo reale durante la modifica degli slider.
+Il flusso implementato è:
+1. **BOX → Setup panel**: l'utente vede gli slider con valori correnti ma nessun feedback (messaggio: "Complete a hot lap to see engineer feedback").
+2. **Apply**: il setup viene salvato come nuovo default; i flag `has_completed_hot_lap` e `setup_feedback` vengono resettati.
+3. **Send Out → HOT LAP**: al completamento di almeno un giro veloce, `has_completed_hot_lap = True`.
+4. **Rientro BOX**: `enter_box()` invoca `_generate_setup_feedback()` solo se `has_completed_hot_lap` è True. Questo genera score, categorie e delta per campo.
+5. **Setup panel**: il feedback è ora visibile (score, 5 category chips, delta per slider).
+6. **Modifica slider**: il feedback viene nascosto (messaggio: "Apply and complete a hot lap to see updated feedback").
+7. **Nuovo Apply → nuovo hot lap necessario** per ottenere feedback aggiornato.
+
+Flag chiave nel model `Car`:
+- `has_completed_hot_lap: bool` — resettato a False su ogni save setup e su `start_stint()`.
+- `setup_feedback: Optional[Dict]` — resettato a None su ogni save setup.
+
+Serializzazione API/websocket:
+- `has_setup_feedback = bool(has_completed_hot_lap AND setup_feedback)` — il frontend usa questo flag per decidere se mostrare il feedback.
+
 ## 6. Integrazione con LapSimulator
 1. SetupUI salva i valori nello stato sessione.
 2. `SetupEngineService.map_slider_to_physics()` chiama `Car.apply_setup_change()` che aggiorna gli oggetti `FrontWing`, `RearWing`, `Sidepods`, ecc.
@@ -192,8 +210,11 @@ Key points:
 - Pianificazione ricerca: `docs/setup-search-plan.md` (include la sequenza operativa già approvata).
 
 ## 8. Prossimi passi
-1. Trasporre i vecchi slider nel nuovo mapping (definire file `config/setup_mapping_v2.json`).
-2. Implementare `SetupEngineService` con API REST + socket feedback.
-3. Aggiornare `evaluate_setup_categories` per usare gli indici fisici (`aero_balance`, `drag_index`, `traction_index`).
-4. Integrare i test di calibrazione setup nella pipeline descritta al §3.5 del documento principale (nuovo job CI `setup-calibration`).
-5. Documentare nella UI (tooltips + manuale ingegnere) come leggere gli indicatori.
+1. ✅ Trasporre i vecchi slider nel nuovo mapping (`config/setup_mapping_v2.json` completato).
+2. ✅ Implementare `SetupEngineService` con API REST.
+3. ✅ Aggiornare `evaluate_setup_categories` per usare gli indici fisici.
+4. ✅ UI Garage 2.0 (Jarvis Variant B) con 11 slider, feedback ingegnere, category chips.
+5. ✅ Flusso feedback gated da HOT LAP (nessun feedback live, solo dopo rientro ai box).
+6. Integrare i test di calibrazione setup nella pipeline CI (quando necessario).
+7. Documentare nella UI (tooltips + manuale ingegnere) come leggere gli indicatori.
+8. Persistenza `garage_state.json` per sessione (opzionale).
