@@ -382,7 +382,7 @@ class RaceCar:
         self.last_lap_type = None
         self.has_completed_hot_lap = False
         self.setup_info_points = 0.0
-        self.setup_baseline: Dict[str, int] = {**DEFAULT_SETUP_CONFIG}
+        self.setup_baseline: Optional[Dict[str, int]] = None
         self.setup_info_target = self._compute_setup_info_target()
         
         # Tempi e performance
@@ -617,17 +617,22 @@ class RaceCar:
         - tutti 11 → ~150 punti (4-5 giri)
         Più un piccolo bonus per setup molto estremi."""
         current_setup = getattr(self, 'player_config', {}).get('setup', {})
-        baseline = self.setup_baseline or {}
-        # Count how many fields changed (threshold > 2 to ignore micro-adjustments)
-        changed = 0
-        total_delta = 0
-        for key in DEFAULT_SETUP_CONFIG:
-            cur = current_setup.get(key, 50)
-            base = baseline.get(key, 50)
-            diff = abs(cur - base)
-            if diff > 2:
-                changed += 1
-                total_delta += diff
+        baseline = getattr(self, 'setup_baseline', None)
+        if baseline is None:
+            # Session start: no data collected yet, all fields need analysis
+            changed = len(DEFAULT_SETUP_CONFIG)  # 11
+            total_delta = 0
+        else:
+            # Count how many fields changed (threshold > 2 to ignore micro-adjustments)
+            changed = 0
+            total_delta = 0
+            for key in DEFAULT_SETUP_CONFIG:
+                cur = current_setup.get(key, 50)
+                base = baseline.get(key, 50)
+                diff = abs(cur - base)
+                if diff > 2:
+                    changed += 1
+                    total_delta += diff
         # Base: 30 points per changed field, minimum 30 (at least 1 field worth)
         fields_target = max(30.0, changed * 30.0)
         # Small bonus for extreme total delta (all sliders moved a lot)
