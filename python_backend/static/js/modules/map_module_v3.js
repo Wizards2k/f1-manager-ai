@@ -142,7 +142,11 @@ export class MapModuleV3 {
         this.lastBounds = bounds;
         // Slightly tighten bounds so the circuit line occupies more of the canvas
         const tightenedBounds = bounds.pad(-0.08);
-        this.map.fitBounds(tightenedBounds, { padding: [6, 6] });
+        // Shift circuit upward so it's visually centered above the dock
+        this.map.fitBounds(tightenedBounds, { 
+            paddingTopLeft: [20, 20],
+            paddingBottomRight: [20, 130] 
+        });
         const currentZoom = this.map.getZoom();
         if (typeof currentZoom === 'number') {
             console.debug('[MapV3] fitBounds zoom', currentZoom);
@@ -151,7 +155,7 @@ export class MapModuleV3 {
         requestAnimationFrame(() => {
             const latestZoom = this.map.getZoom();
             if (typeof latestZoom !== 'number') return;
-            const adjustedZoom = latestZoom - 0.30;
+            const adjustedZoom = latestZoom - 0.80;
             this.map.setZoom(adjustedZoom);
             console.debug('[MapV3] applied zoom offset', { previous: latestZoom, adjusted: adjustedZoom });
         });

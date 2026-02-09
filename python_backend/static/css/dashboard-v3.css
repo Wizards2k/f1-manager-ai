@@ -33,10 +33,9 @@ body {
 
 .game-area {
     display: grid;
-    grid-template-rows: 1fr 260px;
+    grid-template-rows: 1fr auto;
     min-width: 0;
     min-height: 0;
-    position: relative;
 }
 
 .map-area {
@@ -59,25 +58,6 @@ body {
 .leaflet-control-attribution,
 .leaflet-control {
     display: none !important;
-}
-
-/* Car marker styles */
-.car-marker {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
 }
 
 /* ===============================
@@ -221,12 +201,11 @@ body {
 .car-card-v3 {
     border: 1px solid #2e2e2e;
     border-radius: 10px;
-    padding: 8px 10px;
+    padding: 5px 8px;
     background: #1b1b1b;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    height: 100%;
+    gap: 4px;
     overflow: visible;
 }
 
@@ -282,8 +261,8 @@ body {
 /* Telemetry Strip */
 .telemetry-strip-v3 {
     border: 1px solid #2d2d2d;
-    border-radius: 8px;
-    padding: 4px 8px;
+    border-radius: 6px;
+    padding: 2px 6px;
     background: #151515;
     display: grid;
     grid-template-columns: 100px 1fr 140px;
@@ -354,32 +333,70 @@ body {
     border-radius: 999px;
 }
 
-/* Control Grid */
-.control-grid-v3 {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(110px, 1fr));
-    gap: 8px 10px;
+/* Controls Area (controls left + tyre temps right) */
+.controls-area-v3 {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    position: relative;
+}
+
+.controls-left-v3 {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.ctrl-row-v3 {
+    display: flex;
+    gap: 6px;
     align-items: end;
+    flex-wrap: nowrap;
 }
 
-.field-span-2 { grid-column: span 2; }
-.field-span-3 { grid-column: span 3; }
-
-@media (max-width: 1400px) {
-    .control-grid-v3 { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
+.ctrl-row-v3:first-child {
+    padding-right: 96px;
 }
 
-@media (max-width: 900px) {
-    .control-grid-v3 { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+.ctrl-cell-v3 {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
-.control-grid-v3 label {
+.ctrl-cell-v3 label {
     display: block;
-    font-size: 9px;
+    font-size: 8px;
     color: #bbb;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 2px;
+    letter-spacing: 0.04em;
+    margin-bottom: 1px;
+    white-space: nowrap;
+    line-height: 1.1;
+}
+
+.ctrl-compound-v3 { flex: 1 1 120px; }
+.ctrl-fuel-v3 { flex: 0 0 40px; }
+.ctrl-stint-v3 { flex: 0 0 48px; }
+.ctrl-ice-v3 { flex: 0 0 75px; max-width: 75px; }
+.ctrl-ers-v3 { flex: 0 0 75px; max-width: 75px; }
+.ctrl-push-v3 { flex: 1 1 auto; min-width: 80px; }
+
+
+.ctrl-cell-v3 select,
+.ctrl-cell-v3 input[type="number"] {
+    width: 100%;
+    padding: 2px 4px;
+    border-radius: 4px;
+    border: 1px solid #333;
+    background: #101010;
+    color: #fff;
+    font-size: 10px;
+    height: 22px;
+}
+
+.ctrl-cell-v3 input[type="range"] {
+    width: 100%;
 }
 
 .tyre-row-v3,
@@ -400,40 +417,21 @@ body {
     max-width: 110px;
 }
 
+.ctrl-cell-v3 .select-compact-v3 {
+    flex: unset;
+    max-width: 100%;
+    width: 100%;
+}
+
 .input-compact-v3 {
-    width: 46px;
-    min-width: 46px;
-    flex: 0 0 46px;
+    width: 100%;
+    min-width: 32px;
+    flex: 1 1 auto;
     text-align: left;
     padding-right: 0;
 }
 
-.offset-left { margin-left: -50px; }
-.offset-left-small { margin-left: -75px; }
-
-.control-dual-v3 {
-    display: flex;
-    gap: 10px;
-    align-items: flex-end;
-}
-
-.control-dual-v3 .inline-control {
-    flex: 0 0 auto;
-}
-
-.slider-inline-v3 {
-    margin-left: -160px;
-    width: 120px;
-    max-width: 120px;
-    flex: 0 0 120px;
-}
-
-.control-dual-v3.shift-left {
-    margin-left: -55px;
-}
-
-.wear-indicator-v3,
-.numeric-hint-v3 {
+.wear-indicator-v3 {
     font-size: 9px;
     color: #dcdcdc;
     border: 1px solid #2f2f2f;
@@ -443,34 +441,72 @@ body {
     text-align: center;
 }
 
-.numeric-hint-v3 { color: #a3a3a3; }
+/* Tyre Temps 2x2 Grid (car wheel layout) */
+.tyre-temps-grid-v3 {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0;
+    z-index: 2;
+    pointer-events: none;
+}
 
-.control-grid-v3 select,
-.control-grid-v3 input[type="number"],
-.control-grid-v3 input[type="range"] {
+.tt-title-v3 {
+    font-size: 8px;
+    color: #777;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 1px;
+    text-align: center;
     width: 100%;
-    padding: 4px 6px;
-    border-radius: 5px;
-    border: 1px solid #333;
-    background: #101010;
-    color: #fff;
+}
+
+.tt-2x2-v3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0px 6px;
+}
+
+.tt-cell-v3 {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+    justify-content: flex-end;
+}
+
+.tt-pos-v3 {
+    font-size: 8px;
+    color: #777;
+    text-transform: uppercase;
+}
+
+.tt-val-v3 {
     font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
 }
 
-.control-grid-v3 input[type="number"] {
-    height: 28px;
+.tt-window-v3 {
+    font-size: 7px;
+    color: #555;
+    margin-top: 1px;
+    text-align: center;
     width: 100%;
-    max-width: 110px;
+    line-height: 1;
 }
 
-.control-grid-v3 input[type="number"].input-compact-v3 {
-    width: 64px;
-    min-width: 64px;
-}
+/* Tyre temp status colors */
+.tt-status-ok { color: #78d4aa; }
+.tt-status-cold { color: #91b9ff; }
+.tt-status-hot { color: #ff9b7c; }
+.tt-status-na { color: #666; }
 
-.control-grid-v3 select {
-    height: 28px;
-}
+/* Legacy grid support */
+.field-span-2 { grid-column: span 2; }
+.field-span-3 { grid-column: span 3; }
 
 /* Car Actions */
 .car-actions-v3 {
@@ -493,10 +529,12 @@ body {
 .car-actions-v3 button {
     flex: 1;
     border: none;
-    border-radius: 6px;
-    padding: 8px;
+    border-radius: 5px;
+    padding: 6px 5px;
     cursor: pointer;
     font-weight: 600;
+    font-size: 11px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .car-actions-v3 button:disabled {
@@ -512,12 +550,14 @@ body {
     border: 1px solid #494949;
     background: linear-gradient(135deg, #1f1f1f, #292929);
     color: #f2f2f2;
-    border-radius: 6px;
-    padding: 7px 12px;
+    border-radius: 5px;
+    padding: 6px 12px;
     font-weight: 600;
+    font-size: 11px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .btn-setup-v3:disabled {
