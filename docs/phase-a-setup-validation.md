@@ -1,6 +1,6 @@
 ---
 title: Phase A – Setup & Validation – Technical Spec
-version: 0.2
+version: 0.3
 last_updated: 2026-02-09
 scope: "SetupEngineService runtime, mapping slider→fisica, endpoint REST minimi, validazione e feedback iniziale"
 ---
@@ -45,18 +45,45 @@ scope: "SetupEngineService runtime, mapping slider→fisica, endpoint REST minim
 - Valori fisici (°, mm, %) e range circuito mostrati per ogni slider.
 - Hover effects su slider cards e bottoni.
 
-### 4.4 Flusso feedback setup (HOT LAP gate)
-Il feedback ingegnere NON è mostrato in tempo reale durante la modifica degli slider. Il flusso è:
-1. **BOX → Setup**: slider visibili, nessun feedback ("Complete a hot lap to see engineer feedback").
-2. **Apply**: salva setup come nuovo default; resetta `has_completed_hot_lap` e `setup_feedback`.
-3. **Send Out → HOT LAP**: al completamento del giro, `has_completed_hot_lap = True`.
-4. **Rientro BOX**: `enter_box()` genera feedback via `_generate_setup_feedback()` solo se `has_completed_hot_lap`.
-5. **Setup panel**: feedback visibile (score, categorie, delta per campo).
-6. **Modifica slider**: feedback nascosto ("Apply and complete a hot lap to see updated feedback").
-7. **Apply → nuovo hot lap necessario** per aggiornare il feedback.
+### 4.4 Flusso feedback setup (sistema adattivo info_points)
+Il feedback ingegnere è basato sulla quantità di **informazioni raccolte** in pista, non su un singolo hot lap.
 
-Flag chiave: `car.has_completed_hot_lap` (bool), `car.setup_feedback` (dict|None).
-Serializzazione: `has_setup_feedback = has_completed_hot_lap AND setup_feedback` (esposto in API + websocket).
+#### Accumulo informazioni
+Ogni giro completato genera `info_points` in base a:
+- **Tipo giro**: HOT LAP = 35 punti base, OUT LAP = 8, IN LAP = 5.
+- **Skill pilota**: `ricerca_assetto` (1–100) → moltiplicatore 0.6x–1.4x.
+- Formula: `info_gain = base_gain × (0.6 + ricerca_assetto / 100 × 0.8)`
+
+#### Soglia dinamica
+`info_target = 100 + delta_penalty(setup_delta)` dove `delta_penalty` segue una curva U-shaped:
+- Delta < 5 (quasi perfetto): +40 (difficile da leggere)
+- Delta 5–15: +10
+- Delta 15–25 (sweet spot): +0
+- Delta 25–40: +20
+- Delta > 40 (terribile): +50 (difficile da giudicare)
+
+#### Chip DATA sulla car card
+Sempre visibile accanto alla pill di stato (HOT/OUT/IN):
+- **Rosso**: 0–33% del target.
+- **Giallo**: 34–66%.
+- **Verde**: ≥67%; **lampeggia** quando raggiunge il 100%.
+
+#### Setup panel
+- Barra di progresso colorata (rosso/giallo/verde) con messaggi contestuali:
+  - `"Send the car out to collect setup data."` (0%)
+  - `"Gathering data… N%"` (1–99%)
+  - `"Data ready — box the car for engineer feedback."` (≥100%)
+- Feedback completo (score, categorie, delta) visibile solo quando `setup_feedback_ready AND setup_feedback`.
+
+#### Reset
+- **Apply/save setup** → `car.reset_setup_info()`: azzera `info_points`, ricalcola `info_target`, cancella `setup_feedback`.
+- **Rientro BOX**: `enter_box()` genera feedback solo se `setup_feedback_ready` è True.
+
+#### Flag e serializzazione
+- `car.setup_info_points` (float), `car.setup_info_target` (float)
+- `car.setup_feedback_ready` (property: `info_points >= info_target`)
+- `car.setup_info_percent` (property: `info_points / info_target × 100`, cap 100)
+- API + websocket: `has_setup_feedback`, `setup_info_percent`
 
 ## 5. Stato corrente
 ✅ Modulo `SetupEngineService` creato e connesso alle API.
@@ -67,12 +94,15 @@ Serializzazione: `has_setup_feedback = has_completed_hot_lap AND setup_feedback`
 ✅ Generati i file `config/setup/setup_ranges/*.json` tramite `scripts/generate_setup_ranges.py` (es. `config/setup/setup_ranges/at-1969_spielberg.json`).
 ✅ Implementata la gerarchia ideal setup (baseline circuito + offset team/pilota) con `config/setup/team_offsets.json` e endpoint `/api/setup/ideal`.
 ✅ UI Garage 2.0 implementata (Jarvis Variant B): 11 slider, design compatto, feedback row, category chips.
-✅ Flusso feedback post-HOT LAP: nessun feedback live, solo dopo rientro ai box con almeno 1 hot lap completato.
+✅ Sistema adattivo info_points: accumulo per giro (skill × tipo giro), soglia U-shaped, chip DATA (rosso/giallo/verde/blink), progress bar nel pannello setup.
+✅ 5 categorie feedback: cornering, speed, traction, stability, braking.
+✅ Score globale colorato (28px, classi green/yellow/orange/red/fuchsia).
+✅ Barra notifiche ancorata al dock (non più flottante).
 
 ## 6. Gap / prossimo step
 - ✅ **CI setup-calibration**: coperto dai clamp FE/BE.
 - ✅ **UI Garage 2.0**: implementata con Jarvis Variant B.
-- ✅ **Feedback flow**: gated da HOT LAP, nessun feedback live.
+- ✅ **Feedback flow**: sistema adattivo info_points con chip DATA e progress bar.
 - Integrare `setup_ranges/<circuit>.json` quando disponibile (oggi fallback ai range base).
 - (Opzionale) persistenza `garage_state.json` per sessione.
 - (Opzionale) tooltips/manuale ingegnere per spiegare gli indicatori fisici.

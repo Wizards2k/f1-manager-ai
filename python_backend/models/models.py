@@ -383,6 +383,7 @@ class RaceCar:
         self.has_completed_hot_lap = False
         self.setup_info_points = 0.0
         self.setup_info_target = 100.0
+        self.setup_baseline: Dict[str, int] = {**DEFAULT_SETUP_CONFIG}
         
         # Tempi e performance
         self.lap_times = []
@@ -610,32 +611,28 @@ class RaceCar:
         return min(100.0, (self.setup_info_points / self.setup_info_target) * 100.0)
 
     def _compute_setup_info_target(self):
-        """Calcola la soglia di info necessarie in base alla distanza dall'ideal setup.
-        Setup molto lontano o molto vicino all'ideale → più info necessarie.
-        Setup 'quasi buono' → meno info necessarie."""
-        base_target = 100.0
+        """Calcola la soglia di info necessarie.
+        Dipende dal numero di slider modificati rispetto al baseline:
+        - 1 slider cambiato → ~30 punti (1 giro con pilota bravo)
+        - tutti 11 → ~150 punti (4-5 giri)
+        Più un piccolo bonus per setup molto estremi."""
         current_setup = self.player_config.get('setup', {})
-        ideal_setup = self.player_config.get('ideal_setup') or {}
-        if not ideal_setup:
-            return base_target
-        deltas = []
-        for key, val in current_setup.items():
-            ideal_val = ideal_setup.get(key, 50)
-            deltas.append(abs(val - ideal_val))
-        avg_delta = sum(deltas) / max(len(deltas), 1)
-        # U-shaped penalty: very low delta (near perfect) or very high delta → more info needed
-        # Sweet spot around delta 15-25 → least extra info
-        if avg_delta < 5:
-            delta_penalty = 40  # near-perfect is hard to read
-        elif avg_delta < 15:
-            delta_penalty = 10
-        elif avg_delta <= 25:
-            delta_penalty = 0   # sweet spot
-        elif avg_delta <= 40:
-            delta_penalty = 20
-        else:
-            delta_penalty = 50  # terrible setup, hard to judge
-        return base_target + delta_penalty
+        baseline = self.setup_baseline or {}
+        # Count how many fields changed (threshold > 2 to ignore micro-adjustments)
+        changed = 0
+        total_delta = 0
+        for key in DEFAULT_SETUP_CONFIG:
+            cur = current_setup.get(key, 50)
+            base = baseline.get(key, 50)
+            diff = abs(cur - base)
+            if diff > 2:
+                changed += 1
+                total_delta += diff
+        # Base: 30 points per changed field, minimum 30 (at least 1 field worth)
+        fields_target = max(30.0, changed * 30.0)
+        # Small bonus for extreme total delta (all sliders moved a lot)
+        extreme_bonus = min(30.0, total_delta * 0.15) if total_delta > 50 else 0
+        return fields_target + extreme_bonus
 
     def _compute_setup_info_gain(self, lap_type):
         """Calcola quanti info_points vengono raccolti in un giro.
@@ -673,6 +670,8 @@ class RaceCar:
         """Azzera i punti info e ricalcola il target. Chiamato su Apply/save setup."""
         self.setup_info_points = 0.0
         self.setup_info_target = self._compute_setup_info_target()
+        # Snapshot current setup as new baseline for next change detection
+        self.setup_baseline = dict(self.player_config.get('setup', {**DEFAULT_SETUP_CONFIG}))
         self.setup_feedback = None
         self.has_completed_hot_lap = False
 
