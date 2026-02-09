@@ -382,8 +382,8 @@ class RaceCar:
         self.last_lap_type = None
         self.has_completed_hot_lap = False
         self.setup_info_points = 0.0
-        self.setup_info_target = 100.0
         self.setup_baseline: Dict[str, int] = {**DEFAULT_SETUP_CONFIG}
+        self.setup_info_target = self._compute_setup_info_target()
         
         # Tempi e performance
         self.lap_times = []
@@ -616,7 +616,7 @@ class RaceCar:
         - 1 slider cambiato → ~30 punti (1 giro con pilota bravo)
         - tutti 11 → ~150 punti (4-5 giri)
         Più un piccolo bonus per setup molto estremi."""
-        current_setup = self.player_config.get('setup', {})
+        current_setup = getattr(self, 'player_config', {}).get('setup', {})
         baseline = self.setup_baseline or {}
         # Count how many fields changed (threshold > 2 to ignore micro-adjustments)
         changed = 0

@@ -281,7 +281,9 @@ export class PlayerGarageV3 {
         const isBox = currentState === 'BOX';
         const telemetry = this.buildTelemetryStrip(car);
         const tyreTemps = this.buildTyreTempsSection(car);
-        const infoChipColor = 'setup-chip-red';
+        const infoPct = car.setup_info_percent ?? 0;
+        const infoChipColor = infoPct >= 67 ? 'setup-chip-green' : infoPct >= 34 ? 'setup-chip-yellow' : 'setup-chip-red';
+        const infoChipBlink = infoPct >= 100 ? 'setup-chip-blink' : '';
 
         return `
             <div class="car-card-v3" data-driver="${car.driver_number}" data-state="${currentState}">
@@ -297,7 +299,7 @@ export class PlayerGarageV3 {
                     </div>
                     <div class="header-pills-v3">
                         <span class="state-pill-v3">${stateDisplay}</span>
-                        <span class="setup-chip-v3 ${infoChipColor}">DATA</span>
+                        <span class="setup-chip-v3 ${infoChipColor} ${infoChipBlink}">DATA</span>
                     </div>
                 </header>
                 ${telemetry}
