@@ -644,6 +644,24 @@ export class PlayerGarageV3 {
         `;
     }
 
+    updateDataChips() {
+        if (!this.cardsContainer) return;
+        const cards = this.cardsContainer.querySelectorAll('.car-card-v3');
+        cards.forEach(card => {
+            const driverNumber = Number(card.dataset.driver);
+            const car = this.state.getPlayerCar(driverNumber);
+            if (!car) return;
+            const chip = card.querySelector('.setup-chip-v3');
+            if (!chip) return;
+            const pct = car.setup_info_percent ?? 0;
+            chip.classList.remove('setup-chip-red', 'setup-chip-yellow', 'setup-chip-green', 'setup-chip-blink');
+            if (pct >= 67) chip.classList.add('setup-chip-green');
+            else if (pct >= 34) chip.classList.add('setup-chip-yellow');
+            else chip.classList.add('setup-chip-red');
+            if (pct >= 100) chip.classList.add('setup-chip-blink');
+        });
+    }
+
     render(force = false) {
         if (!this.cardsContainer) return;
         if (!force && this.cardsContainer.contains(document.activeElement)) {

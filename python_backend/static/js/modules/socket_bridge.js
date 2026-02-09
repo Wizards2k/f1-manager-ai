@@ -41,7 +41,8 @@ export class SocketBridge {
         this.timingPanel.render(cars);
 
         if (seenPlayerDrivers.size > 0) {
-            this.playerGarage.render(true);
+            this.playerGarage.render();
+            this.playerGarage.updateDataChips();
         }
 
         this.timingPanel.updateSessionTimer(data.session_time_remaining ?? null);
