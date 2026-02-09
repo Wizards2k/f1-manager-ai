@@ -26,19 +26,76 @@ export class PlayerGarageV3 {
         this.SETUP_FIELDS = [
             'front_wing',
             'rear_wing',
+            'beam_wing',
             'ride_height_front',
             'ride_height_rear',
             'suspension_front',
-            'suspension_rear'
+            'suspension_rear',
+            'antiroll_front',
+            'antiroll_rear',
+            'brake_balance',
+            'brake_duct'
         ];
         this.setupDefaults = {
             front_wing: 50,
             rear_wing: 50,
+            beam_wing: 50,
             ride_height_front: 50,
             ride_height_rear: 50,
             suspension_front: 50,
-            suspension_rear: 50
+            suspension_rear: 50,
+            antiroll_front: 50,
+            antiroll_rear: 50,
+            brake_balance: 50,
+            brake_duct: 50
         };
+        this.circuitMapping = null;
+        this.validateTimer = null;
+        this.lastValidation = null;
+        this.PHYS_UNITS = {
+            front_wing: '°', rear_wing: '°', beam_wing: '°',
+            ride_height_front: 'mm', ride_height_rear: 'mm',
+            suspension_front: '', suspension_rear: '',
+            antiroll_front: '', antiroll_rear: '',
+            brake_balance: '%', brake_duct: '%'
+        };
+        this.CAT_COLORS = {
+            cornering: '#63d59f', speed: '#7fb4ff', traction: '#f2c059',
+            stability: '#c49bff', braking: '#ff9a7c'
+        };
+        this.SETUP_GROUPINGS = [
+            {
+                title: 'Aerodynamics',
+                pairs: [
+                    { field: 'front_wing', label: 'Front wing' },
+                    { field: 'rear_wing', label: 'Rear wing' },
+                    { field: 'beam_wing', label: 'Beam wing' }
+                ]
+            },
+            {
+                title: 'Ride Height',
+                pairs: [
+                    { field: 'ride_height_front', label: 'Front' },
+                    { field: 'ride_height_rear', label: 'Rear' }
+                ]
+            },
+            {
+                title: 'Suspension & Anti-roll',
+                pairs: [
+                    { field: 'suspension_front', label: 'Susp. front' },
+                    { field: 'suspension_rear', label: 'Susp. rear' },
+                    { field: 'antiroll_front', label: 'Antiroll F' },
+                    { field: 'antiroll_rear', label: 'Antiroll R' }
+                ]
+            },
+            {
+                title: 'Brakes',
+                pairs: [
+                    { field: 'brake_balance', label: 'Brake balance' },
+                    { field: 'brake_duct', label: 'Brake duct' }
+                ]
+            }
+        ];
         this.setupOpenDrivers = new Set();
         this.setupDrafts = new Map();
         this.notificationTimers = new WeakMap();
@@ -147,6 +204,64 @@ export class PlayerGarageV3 {
         return this.STATE_DISPLAY[state] || state?.replace(/_/g, ' ') || 'BOX';
     }
 
+    static extractTempWindow(rawWindow) {
+        if (!rawWindow) return null;
+        if (Array.isArray(rawWindow) && rawWindow.length >= 2) {
+            return [Number(rawWindow[0]), Number(rawWindow[1])];
+        }
+        if (typeof rawWindow === 'object') {
+            const values = Object.values(rawWindow);
+            if (values.length >= 2) {
+                return [Number(values[0]), Number(values[1])];
+            }
+        }
+        return null;
+    }
+
+    getTyreTempStatus(value, range) {
+        if (typeof value !== 'number' || !range) {
+            return { className: 'tt-status-na', label: 'N/A' };
+        }
+        if (value < range[0]) {
+            return { className: 'tt-status-cold', label: 'COLD' };
+        }
+        if (value > range[1]) {
+            return { className: 'tt-status-hot', label: 'HOT' };
+        }
+        return { className: 'tt-status-ok', label: 'OK' };
+    }
+
+    buildTyreTempsSection(car) {
+        const temps = car.tire_temps;
+        const rawWindow = car.tire_temp_window;
+        const window = PlayerGarageV3.extractTempWindow(rawWindow);
+        const positions = [
+            { key: 'fl', label: 'FL' },
+            { key: 'fr', label: 'FR' },
+            { key: 'rl', label: 'RL' },
+            { key: 'rr', label: 'RR' }
+        ];
+
+        const cells = positions.map(pos => {
+            const val = temps ? temps[pos.key] : null;
+            const status = this.getTyreTempStatus(val, window);
+            const display = typeof val === 'number' ? `${Math.round(val)}°` : '--';
+            return `<div class="tt-cell-v3"><span class="tt-pos-v3">${pos.label}</span><span class="tt-val-v3 ${status.className}">${display}</span></div>`;
+        }).join('');
+
+        const windowLabel = window ? `${Math.round(window[0])}–${Math.round(window[1])}°C` : '';
+
+        return `
+            <div class="tyre-temps-grid-v3">
+                <span class="tt-title-v3">Tyre °C</span>
+                <div class="tt-2x2-v3">
+                    ${cells}
+                </div>
+                ${windowLabel ? `<span class="tt-window-v3">${windowLabel}</span>` : ''}
+            </div>
+        `;
+    }
+
     buildCarCard(car) {
         const tyreChoice = car.player_config?.tyre_compound || car.current_tire || 'medium';
         const fuelPercent = car.player_config?.fuel_percent ?? car.fuel_percent ?? 100;
@@ -165,6 +280,7 @@ export class PlayerGarageV3 {
             : `${stateDisplay}${lapInfo ? ` ${lapInfo}` : ''}`;
         const isBox = currentState === 'BOX';
         const telemetry = this.buildTelemetryStrip(car);
+        const tyreTemps = this.buildTyreTempsSection(car);
 
         return `
             <div class="car-card-v3" data-driver="${car.driver_number}" data-state="${currentState}">
@@ -181,42 +297,47 @@ export class PlayerGarageV3 {
                     <span class="state-pill-v3">${stateDisplay}</span>
                 </header>
                 ${telemetry}
-                <div class="control-grid-v3">
-                    <div class="field-span-2">
-                        <label>Tyre compound</label>
-                        <div class="tyre-row-v3">
-                            <select class="select-compact-v3" data-field="tyre_compound" ${isBox ? '' : 'disabled'}>
-                                ${this.tyreOptions.map(opt => `<option value="${opt.value}" ${opt.value === tyreChoice ? 'selected' : ''}>${opt.label}</option>`).join('')}
-                            </select>
-                            <span class="wear-indicator-v3">${tireHealthPct}%</span>
+                <div class="controls-area-v3">
+                    <div class="controls-left-v3">
+                        <div class="ctrl-row-v3">
+                            <div class="ctrl-cell-v3 ctrl-compound-v3">
+                                <label>Tyre compound</label>
+                                <div class="tyre-row-v3">
+                                    <select class="select-compact-v3" data-field="tyre_compound" ${isBox ? '' : 'disabled'}>
+                                        ${this.tyreOptions.map(opt => `<option value="${opt.value}" ${opt.value === tyreChoice ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                                    </select>
+                                    <span class="wear-indicator-v3">${tireHealthPct}%</span>
+                                </div>
+                            </div>
+                            <div class="ctrl-cell-v3 ctrl-fuel-v3">
+                                <label>Fuel %</label>
+                                <input class="input-compact-v3" type="number" data-field="fuel_percent" min="1" max="100" value="${fuelPercent}" ${isBox ? '' : 'disabled'}>
+                            </div>
+                            <div class="ctrl-cell-v3 ctrl-stint-v3">
+                                <label>Stint laps (${maxStint})</label>
+                                <input class="input-compact-v3" type="number" data-field="stint_target_laps" min="1" max="${maxStint}" value="${stintTarget}" ${isBox ? '' : 'disabled'}>
+                            </div>
+                        </div>
+                        <div class="ctrl-row-v3">
+                            <div class="ctrl-cell-v3 ctrl-ice-v3">
+                                <label>ICE map</label>
+                                <select class="select-compact-v3" data-field="ice_mode">
+                                    ${this.iceOptions.map(mode => `<option value="${mode}" ${mode === iceMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="ctrl-cell-v3 ctrl-ers-v3">
+                                <label>ERS mode</label>
+                                <select class="select-compact-v3" data-field="ers_mode">
+                                    ${this.ersOptions.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="ctrl-cell-v3 ctrl-push-v3">
+                                <label>Driver push (${paceLevel})</label>
+                                <input class="compact-range" type="range" data-field="pace_level" min="1" max="10" value="${paceLevel}">
+                            </div>
                         </div>
                     </div>
-                    <div class="offset-left">
-                        <label>Fuel %</label>
-                        <input class="input-compact-v3" type="number" data-field="fuel_percent" min="1" max="100" value="${fuelPercent}" ${isBox ? '' : 'disabled'}>
-                    </div>
-                    <div class="offset-left">
-                        <label>Stint laps <span class="numeric-hint-v3">max ${maxStint}</span></label>
-                        <input class="input-compact-v3" type="number" data-field="stint_target_laps" min="1" max="${maxStint}" value="${stintTarget}" ${isBox ? '' : 'disabled'}>
-                    </div>
-                    <div class="field-span-2">
-                        <label>ICE map</label>
-                        <select class="select-compact-v3" data-field="ice_mode">
-                            ${this.iceOptions.map(mode => `<option value="${mode}" ${mode === iceMode ? 'selected' : ''}>${mode}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="field-span-2 control-dual-v3 shift-left">
-                        <div class="inline-control offset-left-small" style="margin-right:-6px;">
-                            <label>ERS mode</label>
-                            <select class="select-compact-v3" data-field="ers_mode">
-                                ${this.ersOptions.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div class="inline-control slider-inline-v3" style="flex:0 0 auto;margin-left:10px;">
-                            <label>Driver push (${paceLevel})</label>
-                            <input class="compact-range" type="range" data-field="pace_level" min="1" max="10" value="${paceLevel}">
-                        </div>
-                    </div>
+                    ${tyreTemps}
                 </div>
                 <div class="car-actions-v3 with-setup">
                     <div class="drive-actions">
@@ -288,97 +409,205 @@ export class PlayerGarageV3 {
         return { values, recommendation };
     }
 
-    buildSetupOverlay(car, isBox) {
+    sliderToPhysical(field, sliderVal) {
+        const mapping = this.circuitMapping;
+        if (!mapping) return sliderVal;
+        const cfg = mapping[field];
+        if (!cfg) return sliderVal;
+        const v = sliderVal / 100;
+        if (cfg.min_deg !== undefined) return +(cfg.min_deg + v * (cfg.max_deg - cfg.min_deg)).toFixed(1);
+        if (cfg.min_mm !== undefined) return +(cfg.min_mm + v * (cfg.max_mm - cfg.min_mm)).toFixed(1);
+        if (cfg.min_pct !== undefined) return +(cfg.min_pct + v * (cfg.max_pct - cfg.min_pct)).toFixed(1);
+        if (cfg.min_open !== undefined) return Math.round(cfg.min_open * 100 + v * (cfg.max_open - cfg.min_open) * 100);
+        if (cfg.rigidity) return sliderVal;
+        return sliderVal;
+    }
+
+    getPhysicalRangeLabel(field) {
+        const mapping = this.circuitMapping;
+        if (!mapping) return '';
+        const cfg = mapping[field];
+        if (!cfg) return '';
+        if (cfg.min_deg !== undefined) return `${cfg.min_deg}°–${cfg.max_deg}°`;
+        if (cfg.min_mm !== undefined) return `${cfg.min_mm}–${cfg.max_mm} mm`;
+        if (cfg.min_pct !== undefined) return `${cfg.min_pct}%–${cfg.max_pct}%`;
+        if (cfg.min_open !== undefined) return `${Math.round(cfg.min_open * 100)}%–${Math.round(cfg.max_open * 100)}%`;
+        if (cfg.rigidity) return 'Soft–Stiff';
+        return '';
+    }
+
+    async fetchCircuitMapping() {
+        try {
+            const circuitId = this.state?.circuitId || 'default';
+            const res = await fetch(`/api/setup/ranges/${circuitId}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            this.circuitMapping = data.mapping || {};
+        } catch (err) {
+            console.warn('[GarageV3] Failed to load circuit mapping:', err);
+        }
+    }
+
+    async fetchValidation(driverNumber) {
+        try {
+            const car = this.state.getPlayerCar(driverNumber);
+            if (!car) return null;
+            const payload = this.buildSetupPayloadFromDraft(driverNumber, car);
+            const circuitId = this.state?.circuitId || 'default';
+            const res = await fetch('/api/setup/validate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ setup: payload, circuit_id: circuitId })
+            });
+            if (!res.ok) return null;
+            const data = await res.json();
+            this.lastValidation = data;
+            return data;
+        } catch (err) {
+            console.warn('[GarageV3] Validation fetch failed:', err);
+            return null;
+        }
+    }
+
+    scheduleValidation(driverNumber) {
+        if (this.validateTimer) clearTimeout(this.validateTimer);
+        this.validateTimer = setTimeout(async () => {
+            const result = await this.fetchValidation(driverNumber);
+            if (result) this.updateOverlayFeedback(result);
+        }, 400);
+    }
+
+    updateOverlayFeedback(validation) {
+        if (!this.overlayContainer) return;
+        const eval_ = validation.evaluation || {};
+        const catData = eval_.categories || {};
+        const fbRow = this.overlayContainer.querySelector('.setup-fb-row-v3');
+        if (fbRow && validation.ok) {
+            const scoreEl = fbRow.querySelector('.setup-fb-score-v3');
+            if (scoreEl && catData.overall_score != null) {
+                scoreEl.textContent = catData.overall_score.toFixed(1);
+            }
+            const msgEl = fbRow.querySelector('.setup-fb-msg-v3');
+            if (msgEl && eval_.message) {
+                msgEl.textContent = eval_.message;
+            }
+        }
+        const catsEl = this.overlayContainer.querySelector('.setup-cats-v3');
+        if (catsEl && catData.categories) {
+            catsEl.innerHTML = this.buildCategoryChips(catData.categories);
+        }
+    }
+
+    hideSetupFeedback() {
+        if (!this.overlayContainer) return;
+        const fbRow = this.overlayContainer.querySelector('.setup-fb-row-v3');
+        if (fbRow) {
+            fbRow.classList.add('no-feedback');
+            const scoreEl = fbRow.querySelector('.setup-fb-score-v3');
+            if (scoreEl) scoreEl.remove();
+            const msgEl = fbRow.querySelector('.setup-fb-msg-v3');
+            if (msgEl) msgEl.textContent = 'Apply and complete a hot lap to see updated feedback.';
+        }
+        const catsEl = this.overlayContainer.querySelector('.setup-cats-v3');
+        if (catsEl) catsEl.remove();
+    }
+
+    buildCategoryChips(categories) {
+        if (!categories || typeof categories !== 'object') {
+            return Object.entries(this.CAT_COLORS).map(([key, color]) =>
+                `<div class="setup-cat-chip-v3" title="${key}"><div class="setup-cat-dot-v3" style="background:${color}"></div>${key.slice(0, 5)} <span class="setup-cat-val-v3">--</span></div>`
+            ).join('');
+        }
+        const entries = Object.entries(categories)
+            .map(([key, val]) => {
+                const score = typeof val === 'number' ? val : (val?.score ?? 0);
+                return { key, score: score / 10 };
+            })
+            .sort((a, b) => b.score - a.score);
+        return entries.map(({ key, score }) => {
+            const color = this.CAT_COLORS[key] || '#888';
+            return `<div class="setup-cat-chip-v3" title="${key} ${score.toFixed(1)}/10"><div class="setup-cat-dot-v3" style="background:${color}"></div>${key.slice(0, 5)} <span class="setup-cat-val-v3">${score.toFixed(1)}</span></div>`;
+        }).join('');
+    }
+
+    async buildSetupOverlay(car, isBox) {
         if (!this.overlayContainer) return;
         const driverNumber = car.driver_number;
+        const driverName = car.driver_name || `Driver`;
+
+        if (!this.circuitMapping) await this.fetchCircuitMapping();
+
         const setupState = this.getSetupPayload(car);
         const { values, recommendation } = setupState;
-        const fieldFeedback = recommendation?.fields || {};
+        const hasFeedback = !!car.has_setup_feedback;
+        const fieldFeedback = hasFeedback ? (recommendation?.fields || {}) : {};
+        const categories = hasFeedback ? (recommendation?.categories || {}) : {};
 
-        const groupings = [
-            {
-                title: 'Aerodynamics',
-                pairs: [
-                    { field: 'front_wing', label: 'Front wing' },
-                    { field: 'rear_wing', label: 'Rear wing' }
-                ]
-            },
-            {
-                title: 'Ride height',
-                pairs: [
-                    { field: 'ride_height_front', label: 'Front ride height' },
-                    { field: 'ride_height_rear', label: 'Rear ride height' }
-                ]
-            },
-            {
-                title: 'Suspension',
-                pairs: [
-                    { field: 'suspension_front', label: 'Front suspension' },
-                    { field: 'suspension_rear', label: 'Rear suspension' }
-                ]
-            }
-        ];
+        const sliderCards = this.SETUP_GROUPINGS.map(group => {
+            const groupLabel = `<div class="setup-grp-label-v3">${group.title}</div>`;
+            const cards = group.pairs.map(cfg =>
+                this.buildSetupControl(driverNumber, cfg.field, cfg.label, values[cfg.field], fieldFeedback[cfg.field])
+            ).join('');
+            return groupLabel + cards;
+        }).join('');
 
-        const controls = groupings.map(group => `
-            <section class="setup-group-v3">
-                <div class="setup-group-title-v3">${group.title}</div>
-                <div class="setup-pair-v3">
-                    ${group.pairs.map(cfg => this.buildSetupControl(driverNumber, cfg.field, cfg.label, values[cfg.field], fieldFeedback[cfg.field])).join('')}
-                </div>
-            </section>
-        `).join('');
-
-        const recommendationMsg = recommendation?.message || 'Adjust the sliders to explore balance. Recommendations coming soon.';
-        const recommendationTone = recommendation?.tone || 'info';
-        const score = typeof recommendation?.score === 'number' ? recommendation.score.toFixed(2) : null;
+        let feedbackMsg, score, fbClass;
+        if (hasFeedback) {
+            feedbackMsg = recommendation?.message || 'Setup feedback available.';
+            score = typeof recommendation?.score === 'number' ? recommendation.score.toFixed(1) : '--';
+            fbClass = '';
+        } else {
+            feedbackMsg = 'Complete a hot lap to see engineer feedback.';
+            score = '';
+            fbClass = 'no-feedback';
+        }
+        const circuitLabel = this.state?.circuitId || '';
 
         this.overlayContainer.dataset.driver = driverNumber;
         this.overlayContainer.classList.add('is-visible');
         this.overlayContainer.classList.remove('is-hiding');
-        // V3: Dock stays normal, overlay is fixed position
         this.overlayContainer.innerHTML = `
             <div class="setup-panel-v3">
-                <div class="setup-header-v3">
+                <div class="setup-hdr-v3">
                     <div>
-                        <h4>Setup - #${driverNumber}</h4>
-                        <div class="setup-status-pill-v3">${isBox ? 'In garage' : 'On track'}${score ? ` • Score ${score}` : ''}</div>
+                        <h4>Setup – #${driverNumber} ${driverName}</h4>
+                        <span class="setup-pill-v3">${isBox ? 'In garage' : 'On track'}${circuitLabel ? ' • ' + circuitLabel : ''}</span>
                     </div>
                     <button class="setup-close-v3" data-action="close-setup" aria-label="Close setup">×</button>
                 </div>
-                <div class="setup-feedback-v3 ${recommendationTone}">${recommendationMsg}</div>
-                <div class="setup-groups-v3">
-                    ${controls}
+                <div class="setup-fb-row-v3 ${fbClass}">
+                    ${score ? `<span class="setup-fb-score-v3">${score}</span>` : ''}
+                    <span class="setup-fb-msg-v3">${feedbackMsg}</span>
                 </div>
-                <div class="setup-footer-v3">
-                    <button class="reset" data-action="reset-setup">Reset</button>
-                    <button class="apply" data-action="apply-setup">Apply</button>
+                ${hasFeedback ? `<div class="setup-cats-v3">${this.buildCategoryChips(categories)}</div>` : ''}
+                <div class="setup-slider-grid-v3">
+                    ${sliderCards}
+                </div>
+                <div class="setup-foot-v3">
+                    <button class="setup-foot-rst-v3" data-action="reset-setup">Reset</button>
+                    <button class="setup-foot-apl-v3" data-action="apply-setup">Apply</button>
                 </div>
             </div>
         `;
     }
 
     buildSetupControl(driverNumber, field, label, value, feedback = {}) {
-        const range = feedback?.range;
-        const rangeLabel = range ? `${range.min}-${range.max}` : 'No range yet';
-        const statusClass = feedback?.status ? `status-${feedback.status}` : 'status-missing';
-        const deltaLabel = feedback?.delta_label || 'Pending data';
-        const recommendedValue = typeof feedback?.value === 'number' ? feedback.value : null;
-        const displayValue = value;
-        const recommendationBadge = recommendedValue !== null
-            ? `<span class="setup-recommendation-v3">Recommended ${recommendedValue}</span>`
-            : '';
+        const physVal = this.sliderToPhysical(field, value);
+        const unit = this.PHYS_UNITS[field] || '';
+        const rangeLabel = this.getPhysicalRangeLabel(field) || 'No range';
+        const statusClass = feedback?.status ? `status-${feedback.status}` : '';
+        const deltaLabel = feedback?.delta_label || '';
         return `
             <div class="setup-control-v3 ${statusClass}" data-field="${field}" data-driver="${driverNumber}">
                 <div class="setup-control-header-v3">
                     <span>${label}</span>
                     <span class="setup-range-badge-v3">${rangeLabel}</span>
                 </div>
-                <input type="range" min="1" max="100" value="${displayValue}" data-setup-field="${field}" />
+                <input type="range" min="0" max="100" value="${value}" data-setup-field="${field}" />
                 <div class="setup-control-footer-v3">
-                    <span class="setup-value-v3">${displayValue}</span>
+                    <span><span class="setup-phys-val-v3">${physVal}</span><span class="setup-phys-unit-v3">${unit}</span></span>
                     <span class="setup-delta-v3 ${statusClass}">${deltaLabel}</span>
                 </div>
-                ${recommendationBadge}
             </div>
         `;
     }
@@ -682,9 +911,13 @@ export class PlayerGarageV3 {
         draft[setupField] = value;
         const control = event.target.closest('.setup-control-v3');
         if (control) {
-            const valueLabel = control.querySelector('.setup-value-v3');
-            if (valueLabel) valueLabel.textContent = value;
+            const physEl = control.querySelector('.setup-phys-val-v3');
+            if (physEl) physEl.textContent = this.sliderToPhysical(setupField, value);
+            const deltaEl = control.querySelector('.setup-delta-v3');
+            if (deltaEl) deltaEl.textContent = '';
+            control.className = 'setup-control-v3';
         }
+        this.hideSetupFeedback();
     }
 
     async submitSetupConfig(driverNumber, setupPayload, state) {

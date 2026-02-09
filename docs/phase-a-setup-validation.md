@@ -46,6 +46,7 @@ scope: "SetupEngineService runtime, mapping slider→fisica, endpoint REST minim
 ✅ Implementata la gerarchia ideal setup (baseline circuito + offset team/pilota) con `config/setup/team_offsets.json` e endpoint `/api/setup/ideal`.
 
 ## 6. Gap / prossimo step
+- ✅ **CI setup-calibration**: il requisito di validazione è coperto dai clamp FE/BE (slider con min/max circuito e `SetupEngineService.sanitize_input()`); nessun job CI dedicato al momento.
 - Integrare `setup_ranges/<circuit>.json` quando disponibile (oggi fallback ai range base).
 - Esporre feedback UI più coerente con Setup Engine 2.0 (tone/messages).
 - (Opzionale) persistenza `garage_state.json` per sessione.

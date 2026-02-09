@@ -270,6 +270,7 @@ def register_routes(app):
             'stint_laps_target': car.player_config.get('stint_target_laps', car.stint_target_laps),
             'setup': car.player_config.get('setup', {**DEFAULT_SETUP_CONFIG}),
             'setup_recommendation': car.setup_feedback or {},
+            'has_setup_feedback': bool(getattr(car, 'has_completed_hot_lap', False) and car.setup_feedback),
             'ideal_setup': car.player_config.get('ideal_setup'),
         }
 
@@ -400,6 +401,8 @@ def register_routes(app):
 
         current_setup = car.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
         current_setup.update(sanitized)
+        car.has_completed_hot_lap = False
+        car.setup_feedback = None
         log_debug_event(
             'setup_saved',
             driver=driver_number,
@@ -431,48 +434,15 @@ def register_routes(app):
 
         current_setup = car.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
         current_setup.update(sanitized)
+        car.has_completed_hot_lap = False
+        car.setup_feedback = None
         log_debug_event(
-            'setup_request',
+            'setup_saved',
             driver=driver_number,
             state=str(car.state),
-            last_lap_type=car.last_lap_type.value if isinstance(car.last_lap_type, CarState) else car.last_lap_type,
             fields=list(sanitized.keys()),
             total_laps=car.total_laps,
         )
-        # Provide setup feedback only after la vettura ha completato almeno un HOT_LAP
-        if car.has_completed_hot_lap:
-            recommendation = evaluate_setup(current_setup)
-            categories = evaluate_setup_categories(current_setup)
-            car.setup_feedback = recommendation
-            car.setup_feedback['categories'] = categories
-            log_debug_event(
-                'setup_feedback_sent',
-                driver=driver_number,
-                state=str(car.state),
-                last_lap_type=car.last_lap_type.value if isinstance(car.last_lap_type, CarState) else car.last_lap_type,
-                has_completed_hot_lap=car.has_completed_hot_lap,
-                fields=len(recommendation.get('fields', {})),
-            )
-        else:
-            # Keep existing feedback; add placeholder message
-            placeholder_msg = 'Awaiting on-track data: complete a hot lap for feedback.'
-            if not car.setup_feedback:
-                car.setup_feedback = {
-                    'status': 'missing',
-                    'message': placeholder_msg,
-                    'tone': 'neutral',
-                    'fields': {key: {'status': 'missing', 'range': None} for key in DEFAULT_SETUP_CONFIG.keys()}
-                }
-            else:
-                car.setup_feedback.setdefault('status', 'pending')
-                car.setup_feedback.setdefault('message', placeholder_msg)
-            log_debug_event(
-                'setup_feedback_placeholder',
-                driver=driver_number,
-                state=str(car.state),
-                last_lap_type=car.last_lap_type.value if isinstance(car.last_lap_type, CarState) else car.last_lap_type,
-                has_completed_hot_lap=car.has_completed_hot_lap,
-            )
 
         return jsonify({
             'message': 'Setup updated',
@@ -490,6 +460,7 @@ def register_routes(app):
         circuit_id = payload.get('circuit_id')
         setup_payload = payload.get('setup')
         result = SetupEngineService.validate_setup(setup_payload or {}, circuit_id)
+        evaluation = SetupEngineService.evaluate(result.sanitized) if result.ok else {}
         return jsonify({
             'ok': result.ok,
             'errors': result.errors,
@@ -497,6 +468,7 @@ def register_routes(app):
             'physics': result.physics,
             'constraints': result.constraints,
             'circuit_key': result.circuit_key,
+            'evaluation': evaluation,
         })
 
     @app.route('/api/setup/apply', methods=['POST'])
@@ -522,15 +494,14 @@ def register_routes(app):
 
         current_setup = car.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
         current_setup.update(validation.sanitized)
-        evaluation = SetupEngineService.evaluate(current_setup)
-        car.setup_feedback = evaluation
+        car.has_completed_hot_lap = False
+        car.setup_feedback = None
         ideal_setup = SetupEngineService.build_ideal_setup(circuit_id, car)
         car.player_config['ideal_setup'] = ideal_setup
 
         return jsonify({
             'message': 'Setup applied',
             'car': _serialize_player_car(car),
-            'evaluation': evaluation,
             'ideal_setup': ideal_setup,
         })
 
