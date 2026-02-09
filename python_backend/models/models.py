@@ -634,26 +634,20 @@ class RaceCar:
         extreme_bonus = min(30.0, total_delta * 0.15) if total_delta > 50 else 0
         return fields_target + extreme_bonus
 
-    def _compute_setup_info_gain(self, lap_type):
-        """Calcola quanti info_points vengono raccolti in un giro.
-        Dipende dal tipo di giro e dalla skill ricerca_assetto del pilota."""
-        # Base gain per lap type
-        if lap_type == CarState.HOT_LAP:
-            base_gain = 35.0
-        elif lap_type == CarState.OUT_LAP:
-            base_gain = 8.0
-        elif lap_type == CarState.IN_LAP:
-            base_gain = 5.0
-        else:
-            base_gain = 15.0
+    def _compute_setup_info_gain(self):
+        """Calcola quanti info_points vengono raccolti in un hot lap.
+        Dipende dalla skill ricerca_assetto del pilota."""
+        base_gain = 35.0
         # Skill bonus: ricerca_assetto 1-100 → multiplier 0.6x to 1.4x
         skill = getattr(self.pilot, 'ricerca_assetto', 50)
         skill_mult = 0.6 + (skill / 100.0) * 0.8  # 1→0.608, 50→1.0, 100→1.4
         return base_gain * skill_mult
 
     def _accumulate_setup_info(self, lap_type):
-        """Accumula info_points dopo ogni giro completato."""
-        gain = self._compute_setup_info_gain(lap_type)
+        """Accumula info_points solo durante HOT LAP."""
+        if lap_type != CarState.HOT_LAP:
+            return
+        gain = self._compute_setup_info_gain()
         self.setup_info_points = min(self.setup_info_points + gain, self.setup_info_target * 1.5)
         log_debug_event(
             'setup_info_accumulated',
