@@ -512,11 +512,20 @@ export class PlayerGarageV3 {
         if (catsEl) catsEl.remove();
     }
 
+    scoreColorClass(score100) {
+        if (score100 >= 95) return 'score-fuchsia';
+        if (score100 >= 80) return 'score-green';
+        if (score100 >= 60) return 'score-yellow';
+        if (score100 >= 40) return 'score-orange';
+        return 'score-red';
+    }
+
     buildCategoryChips(categories) {
         if (!categories || typeof categories !== 'object') {
-            return Object.entries(this.CAT_COLORS).map(([key, color]) =>
-                `<div class="setup-cat-chip-v3" title="${key}"><div class="setup-cat-dot-v3" style="background:${color}"></div>${key.slice(0, 5)} <span class="setup-cat-val-v3">--</span></div>`
-            ).join('');
+            return Object.entries(this.CAT_COLORS).map(([key, color]) => {
+                const label = key.charAt(0).toUpperCase() + key.slice(1);
+                return `<div class="setup-cat-chip-v3" title="${key}"><div class="setup-cat-dot-v3" style="background:${color}"></div>${label} <span class="setup-cat-val-v3">--</span></div>`;
+            }).join('');
         }
         const entries = Object.entries(categories)
             .map(([key, val]) => {
@@ -526,7 +535,8 @@ export class PlayerGarageV3 {
             .sort((a, b) => b.score - a.score);
         return entries.map(({ key, score }) => {
             const color = this.CAT_COLORS[key] || '#888';
-            return `<div class="setup-cat-chip-v3" title="${key} ${score.toFixed(1)}/10"><div class="setup-cat-dot-v3" style="background:${color}"></div>${key.slice(0, 5)} <span class="setup-cat-val-v3">${score.toFixed(1)}</span></div>`;
+            const label = key.charAt(0).toUpperCase() + key.slice(1);
+            return `<div class="setup-cat-chip-v3" title="${key} ${score.toFixed(1)}/10"><div class="setup-cat-dot-v3" style="background:${color}"></div>${label} <span class="setup-cat-val-v3">${score.toFixed(1)}</span></div>`;
         }).join('');
     }
 
@@ -556,7 +566,9 @@ export class PlayerGarageV3 {
         if (hasFeedback) {
             feedbackMsg = recommendation?.message || 'Setup feedback available.';
             const rawScore = catWrapper.overall_score ?? recommendation?.score;
+            const score100 = typeof rawScore === 'number' ? rawScore : 0;
             score = typeof rawScore === 'number' ? (rawScore > 10 ? (rawScore / 10).toFixed(1) : rawScore.toFixed(1)) : '--';
+            this._scoreColorClass = this.scoreColorClass(score100);
             fbClass = '';
         } else {
             feedbackMsg = 'Complete a hot lap to see engineer feedback.';
@@ -578,7 +590,7 @@ export class PlayerGarageV3 {
                     <button class="setup-close-v3" data-action="close-setup" aria-label="Close setup">×</button>
                 </div>
                 <div class="setup-fb-row-v3 ${fbClass}">
-                    ${score ? `<span class="setup-fb-score-v3">${score}</span>` : ''}
+                    ${score ? `<span class="setup-fb-score-v3 ${this._scoreColorClass || ''}">${score}</span>` : ''}
                     <span class="setup-fb-msg-v3">${feedbackMsg}</span>
                 </div>
                 ${hasFeedback ? `<div class="setup-cats-v3">${this.buildCategoryChips(categories)}</div>` : ''}

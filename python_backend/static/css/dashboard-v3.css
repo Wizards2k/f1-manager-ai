@@ -646,11 +646,19 @@ body {
 }
 
 .setup-fb-score-v3 {
-    font-weight: 700;
-    font-size: 14px;
-    margin-right: 4px;
-    color: #f5d56a;
+    font-weight: 800;
+    font-size: 28px;
+    line-height: 1;
+    margin-right: 8px;
+    min-width: 42px;
+    text-align: center;
 }
+
+.setup-fb-score-v3.score-green  { color: #63d59f; }
+.setup-fb-score-v3.score-yellow { color: #f5d56a; }
+.setup-fb-score-v3.score-orange { color: #f2a24b; }
+.setup-fb-score-v3.score-red    { color: #ff6d6d; }
+.setup-fb-score-v3.score-fuchsia { color: #e879f9; }
 
 .setup-fb-msg-v3 {
     line-height: 1.4;
@@ -665,21 +673,23 @@ body {
 /* Category chips */
 .setup-cats-v3 {
     display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+    gap: 6px;
 }
 
 .setup-cat-chip-v3 {
+    flex: 1;
     display: flex;
     align-items: center;
-    gap: 3px;
-    padding: 3px 7px;
+    justify-content: center;
+    gap: 5px;
+    padding: 5px 6px;
     border-radius: 6px;
     background: rgba(20,20,20,0.9);
     border: 1px solid #2a2a2a;
-    font-size: 11px;
+    font-size: 12px;
     cursor: default;
     transition: all 0.2s;
+    white-space: nowrap;
 }
 
 .setup-cat-chip-v3:hover {
@@ -688,9 +698,10 @@ body {
 }
 
 .setup-cat-dot-v3 {
-    width: 5px;
-    height: 5px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
+    flex-shrink: 0;
 }
 
 .setup-cat-val-v3 {
