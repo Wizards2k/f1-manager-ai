@@ -276,6 +276,87 @@
             border-radius: 999px;
         }
 
+        .tyre-temp-panel {
+            border: 1px solid #2d2d2d;
+            border-radius: 10px;
+            padding: 8px 10px 10px;
+            background: #151515;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 11px;
+        }
+
+        .tyre-temp-header {
+            display: flex;
+            justify-content: space-between;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #cfcfcf;
+        }
+
+        .tyre-temp-meta {
+            color: #8f8f8f;
+            font-size: 10px;
+        }
+
+        .tyre-temp-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 8px;
+        }
+
+        .tyre-temp-pill {
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 6px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            background: rgba(18,18,18,0.85);
+        }
+
+        .tyre-temp-label {
+            font-size: 10px;
+            color: #bdbdbd;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .tyre-temp-value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .tyre-temp-state {
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .tyre-temp-pill.status-ok {
+            border-color: rgba(120, 212, 170, 0.4);
+            background: rgba(26, 58, 44, 0.65);
+            color: #78d4aa;
+        }
+
+        .tyre-temp-pill.status-cold {
+            border-color: rgba(125, 170, 255, 0.38);
+            background: rgba(30, 46, 78, 0.65);
+            color: #91b9ff;
+        }
+
+        .tyre-temp-pill.status-hot {
+            border-color: rgba(255, 145, 120, 0.38);
+            background: rgba(78, 38, 24, 0.65);
+            color: #ff9b7c;
+        }
+
+        .tyre-temp-pill.status-na {
+            border-color: rgba(255,255,255,0.08);
+            color: #8a8a8a;
+        }
+
         .car-actions.with-setup {
             flex-wrap: wrap;
             gap: 6px;

@@ -70,6 +70,8 @@ def race_simulation():
                 'current_tire': car.current_tire.value,
                 'tire_age': car.tire_age,
                 'tire_wear': car.tire_wear,
+                'tire_temps': getattr(car, 'tire_temps', None),
+                'tire_temp_window': getattr(car, 'tire_temp_window', None),
                 'is_player_controlled': car.is_player_controlled,
                 'player_config': car.player_config if car.is_player_controlled else None,
                 'setup_recommendation': car.setup_feedback if car.is_player_controlled else None,

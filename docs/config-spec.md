@@ -37,6 +37,12 @@ Catalogo dei file JSON di configurazione e del loro utilizzo nei moduli (LapSimu
   - Per-circuito: range fisici slider (ali, ride height, sospensioni, antiroll, brake_duct, brake_balance), constraints (rake, delta sospensioni), tyre_nomination, energy_profile (fuel/ERS), cooling_guidance, cluster_context (metrics), pirelli_context (track_features, wear_rate_base, corner distribution), metadata circuito.
   - Default: fallback per circuiti senza entry dedicata.
   - Usato da: Setup Engine per bounds/interpolazione; script derived per modulare tyres/brakes/PU/damage.
+- `config/setup/setup_ranges/<circuit>.json`
+  - Target neutro per ciascun slider (min/max/target/tolerance/weight) derivato dal mapping e heatmap.
+  - Usato da: UI/SetupEngine per mostrare ideal baseline del circuito.
+- `config/setup/team_offsets.json`
+  - Contiene gerarchia ideal setup: per ogni team comprende `metadata` (es. `aero_bias`, `drag_profile`), blocco `team` (offset slider ±5) e blocco `drivers` (override per pilota ±3). Permette di calcolare target personalizzati: `ideal = clamp(baseline + team + driver, 0, 100)`.
+  - Usato da: SetupEngineService per restituire setup ideale specifico auto/pilota; ingegnere UI per suggerimenti.
 
 ## 5. Profili derivati per circuito (runtime)
 - Path: `config/circuits/derived/<circuit_id>/`

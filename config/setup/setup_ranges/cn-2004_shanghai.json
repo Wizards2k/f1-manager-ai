@@ -1,0 +1,87 @@
+{
+  "circuit_key": "shanghai",
+  "circuit_id": "cn-2004_shanghai",
+  "ranges": {
+    "front_wing": {
+      "min": 42,
+      "max": 70,
+      "target": 52,
+      "tolerance": 6,
+      "weight": 1.1
+    },
+    "rear_wing": {
+      "min": 45,
+      "max": 75,
+      "target": 58,
+      "tolerance": 6,
+      "weight": 1.0
+    },
+    "beam_wing": {
+      "min": 35,
+      "max": 70,
+      "target": 50,
+      "tolerance": 8,
+      "weight": 0.7
+    },
+    "ride_height_front": {
+      "min": 30,
+      "max": 70,
+      "target": 48,
+      "tolerance": 8,
+      "weight": 0.8
+    },
+    "ride_height_rear": {
+      "min": 35,
+      "max": 75,
+      "target": 55,
+      "tolerance": 8,
+      "weight": 0.8
+    },
+    "suspension_front": {
+      "min": 20,
+      "max": 80,
+      "target": 50,
+      "tolerance": 10,
+      "weight": 0.6
+    },
+    "suspension_rear": {
+      "min": 20,
+      "max": 80,
+      "target": 50,
+      "tolerance": 10,
+      "weight": 0.6
+    },
+    "antiroll_front": {
+      "min": 20,
+      "max": 80,
+      "target": 50,
+      "tolerance": 10,
+      "weight": 0.5
+    },
+    "antiroll_rear": {
+      "min": 20,
+      "max": 80,
+      "target": 50,
+      "tolerance": 10,
+      "weight": 0.5
+    },
+    "brake_balance": {
+      "min": 40,
+      "max": 60,
+      "target": 50,
+      "tolerance": 6,
+      "weight": 0.4
+    },
+    "brake_duct": {
+      "min": 30,
+      "max": 70,
+      "target": 50,
+      "tolerance": 10,
+      "weight": 0.4
+    }
+  },
+  "source": {
+    "mapping_file": "config/setup/setup_mapping_v2.json",
+    "generated_at": "2026-02-08T23:00:26Z"
+  }
+}

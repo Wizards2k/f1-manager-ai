@@ -38,8 +38,8 @@ Portare il gioco a una release pubblica in cui:
 - Calibration/validation workflow (fitting componenti, badge CI, manifest)
 
 ## 2. Implementazione – Fase A (Setup & Validazione — `docs/setup-engine-spec-v0.1.md`, `docs/config-spec.md`, `docs/setup-ui-plan.md`)
-1. **SetupEngineService runtime**: modulo/servizio REST + socket che applica mapping slider→fisica e restituisce scoring live.
-2. **Evaluate Setup refresh**: rifattorizzare `evaluate_setup` e categorie per usare `aero_balance`, `drag_index`, `traction_index`, `brake_cooling`.
+1. ✅ **SetupEngineService runtime**: modulo/servizio REST + socket che applica mapping slider→fisica e restituisce scoring live.
+2. ✅ **Evaluate Setup refresh**: rifattorizzare `evaluate_setup` e categorie per usare `aero_balance`, `drag_index`, `traction_index`, `brake_cooling`.
 3. **Pipeline CI `setup-calibration`**: job che rigenera mapping/heatmap, confronterà JSON e bloccherà regressioni.
 4. **UI Garage 2.0 (base)**: slider con etichette fisiche e range circuito, feedback ingegnere collegato al nuovo servizio.
 

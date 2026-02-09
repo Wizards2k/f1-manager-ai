@@ -150,6 +150,8 @@ def register_routes(app):
                 'current_tire': car.current_tire.value,
                 'tire_age': car.tire_age,
                 'tire_wear': car.tire_wear,
+                'tire_temps': getattr(car, 'tire_temps', None),
+                'tire_temp_window': getattr(car, 'tire_temp_window', None),
                 'is_player_controlled': car.is_player_controlled,
                 'player_config': car.player_config if car.is_player_controlled else None,
                 'setup_recommendation': car.setup_feedback if car.is_player_controlled else None,
@@ -268,6 +270,7 @@ def register_routes(app):
             'stint_laps_target': car.player_config.get('stint_target_laps', car.stint_target_laps),
             'setup': car.player_config.get('setup', {**DEFAULT_SETUP_CONFIG}),
             'setup_recommendation': car.setup_feedback or {},
+            'ideal_setup': car.player_config.get('ideal_setup'),
         }
 
     def _validate_setup_payload(setup_payload):
@@ -521,12 +524,27 @@ def register_routes(app):
         current_setup.update(validation.sanitized)
         evaluation = SetupEngineService.evaluate(current_setup)
         car.setup_feedback = evaluation
+        ideal_setup = SetupEngineService.build_ideal_setup(circuit_id, car)
+        car.player_config['ideal_setup'] = ideal_setup
 
         return jsonify({
             'message': 'Setup applied',
             'car': _serialize_player_car(car),
             'evaluation': evaluation,
+            'ideal_setup': ideal_setup,
         })
+
+    @app.route('/api/setup/ideal/<int:driver_number>')
+    def get_ideal_setup(driver_number):
+        circuit_id = request.args.get('circuit_id')
+        car, error = _get_player_car(driver_number)
+        if error:
+            return error
+        ideal = car.player_config.get('ideal_setup')
+        if not ideal:
+            ideal = SetupEngineService.build_ideal_setup(circuit_id, car)
+            car.player_config['ideal_setup'] = ideal
+        return jsonify({'ideal_setup': ideal, 'driver_number': driver_number})
 
     @app.route('/api/player/car/<int:driver_number>/send_out', methods=['POST'])
     def send_player_car_out(driver_number):

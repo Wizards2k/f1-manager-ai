@@ -12,6 +12,7 @@ from python_backend.utils.setup_engine import evaluate_setup, evaluate_setup_cat
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MAPPING_PATH = _REPO_ROOT / "config" / "setup" / "setup_mapping_v2.json"
+_TEAM_OFFSETS_PATH = _REPO_ROOT / "config" / "setup" / "team_offsets.json"
 
 
 @dataclass
@@ -26,6 +27,7 @@ class SetupValidationResult:
 
 class SetupEngineService:
     _mapping_cache: Optional[Dict[str, Any]] = None
+    _team_offsets_cache: Optional[Dict[str, Any]] = None
 
     @classmethod
     def _load_mapping(cls) -> Dict[str, Any]:
@@ -33,6 +35,16 @@ class SetupEngineService:
             with _MAPPING_PATH.open("r", encoding="utf-8") as handle:
                 cls._mapping_cache = json.load(handle)
         return cls._mapping_cache
+
+    @classmethod
+    def _load_team_offsets(cls) -> Dict[str, Any]:
+        if cls._team_offsets_cache is None:
+            try:
+                with _TEAM_OFFSETS_PATH.open("r", encoding="utf-8") as handle:
+                    cls._team_offsets_cache = json.load(handle)
+            except FileNotFoundError:
+                cls._team_offsets_cache = {}
+        return cls._team_offsets_cache
 
     @classmethod
     def _merge_mapping(cls, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
@@ -185,3 +197,33 @@ class SetupEngineService:
         categories = evaluate_setup_categories(setup)
         base["categories"] = categories
         return base
+
+    @classmethod
+    def build_ideal_setup(cls, circuit_id: Optional[str], car: Any) -> Dict[str, int]:
+        # Baseline da setup_ranges
+        circuit_key, _ = cls.get_circuit_mapping(circuit_id)
+        ranges_dir = _REPO_ROOT / "config" / "setup" / "setup_ranges"
+        baseline_path = ranges_dir / f"{circuit_id or circuit_key}.json"
+        if not baseline_path.exists():
+            baseline_path = ranges_dir / f"{circuit_key}.json"
+        baseline_target = {}
+        if baseline_path.exists():
+            with baseline_path.open("r", encoding="utf-8") as handle:
+                data = json.load(handle)
+                ranges = data.get("ranges", {})
+                for field, cfg in ranges.items():
+                    baseline_target[field] = int(cfg.get("target", 50))
+        else:
+            baseline_target = {field: 50 for field in DEFAULT_SETUP_CONFIG.keys()}
+
+        team_offsets = cls._load_team_offsets()
+        team_entry = team_offsets.get(getattr(car, "team_name", "")) or {}
+        team_delta = team_entry.get("team", {})
+        driver_entry = team_entry.get("drivers", {}).get(getattr(car, "driver_name", ""), {})
+
+        ideal: Dict[str, int] = {}
+        for field in DEFAULT_SETUP_CONFIG.keys():
+            base_value = baseline_target.get(field, 50)
+            delta = int(team_delta.get(field, 0)) + int(driver_entry.get(field, 0))
+            ideal[field] = max(0, min(100, base_value + delta))
+        return ideal

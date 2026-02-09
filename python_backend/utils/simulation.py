@@ -18,6 +18,9 @@ def update_car_position(car, dt):
 
     if not getattr(car, 'is_player_controlled', False):
         return
+
+    if hasattr(car, 'update_tire_temps'):
+        car.update_tire_temps(dt)
         
     current_time = time.time()
     session_time = current_time - car.session_start_time

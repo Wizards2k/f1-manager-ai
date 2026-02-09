@@ -1,0 +1,199 @@
+{
+  "_meta": {
+    "version": "0.1",
+    "description": "Team & driver-specific setup offsets applied on top of circuit baseline targets",
+    "last_updated": "2026-02-09"
+  },
+  "Ferrari": {
+    "metadata": {
+      "aero_bias": "high_df",
+      "drag_profile": "balanced"
+    },
+    "team": {
+      "front_wing": 2,
+      "rear_wing": 1,
+      "ride_height_rear": -1
+    },
+    "drivers": {
+      "Charles Leclerc": {
+        "front_wing": 1,
+        "brake_balance": -1
+      },
+      "Lewis Hamilton": {
+        "rear_wing": -1,
+        "antiroll_front": 1
+      }
+    }
+  },
+  "Red Bull Racing": {
+    "metadata": {
+      "aero_bias": "low_drag",
+      "drag_profile": "efficient"
+    },
+    "team": {
+      "rear_wing": -3,
+      "beam_wing": -2,
+      "ride_height_front": -1
+    },
+    "drivers": {
+      "Max Verstappen": {
+        "rear_wing": -1,
+        "brake_balance": 1
+      },
+      "Liam Lawson": {
+        "front_wing": 1
+      }
+    }
+  },
+  "Mercedes": {
+    "metadata": {
+      "aero_bias": "balanced",
+      "drag_profile": "medium"
+    },
+    "team": {
+      "front_wing": 1,
+      "antiroll_rear": -1
+    },
+    "drivers": {
+      "George Russell": {
+        "front_wing": 1,
+        "brake_balance": -1
+      },
+      "Andrea Kimi Antonelli": {
+        "rear_wing": 1,
+        "antiroll_front": -1
+      }
+    }
+  },
+  "McLaren": {
+    "metadata": {
+      "aero_bias": "balanced",
+      "drag_profile": "efficient"
+    },
+    "team": {
+      "front_wing": 1,
+      "rear_wing": 1
+    },
+    "drivers": {
+      "Lando Norris": {
+        "front_wing": 1
+      },
+      "Oscar Piastri": {
+        "rear_wing": -1
+      }
+    }
+  },
+  "Aston Martin": {
+    "metadata": {
+      "aero_bias": "high_df",
+      "drag_profile": "heavy"
+    },
+    "team": {
+      "rear_wing": 2,
+      "beam_wing": 1,
+      "ride_height_rear": 1
+    },
+    "drivers": {
+      "Fernando Alonso": {
+        "front_wing": -1,
+        "antiroll_front": -1
+      },
+      "Lance Stroll": {
+        "ride_height_front": 1
+      }
+    }
+  },
+  "Williams": {
+    "metadata": {
+      "aero_bias": "low_df",
+      "drag_profile": "low_drag"
+    },
+    "team": {
+      "rear_wing": -2,
+      "beam_wing": -1,
+      "ride_height_front": -1
+    },
+    "drivers": {
+      "Alexander Albon": {
+        "rear_wing": -1
+      },
+      "Carlos Sainz Jnr": {
+        "front_wing": 1,
+        "brake_balance": -1
+      }
+    }
+  },
+  "Alpine": {
+    "metadata": {
+      "aero_bias": "balanced",
+      "drag_profile": "medium"
+    },
+    "team": {
+      "front_wing": 1,
+      "ride_height_front": 1
+    },
+    "drivers": {
+      "Pierre Gasly": {
+        "front_wing": 1
+      },
+      "Jack Doohan": {
+        "antiroll_front": -1
+      }
+    }
+  },
+  "Racing Bulls": {
+    "metadata": {
+      "aero_bias": "agile",
+      "drag_profile": "low_drag"
+    },
+    "team": {
+      "front_wing": -1,
+      "ride_height_front": -1
+    },
+    "drivers": {
+      "Yuki Tsunoda": {
+        "antiroll_rear": -1
+      },
+      "Isack Hadjar": {
+        "front_wing": 1
+      }
+    }
+  },
+  "Sauber": {
+    "metadata": {
+      "aero_bias": "balanced",
+      "drag_profile": "medium"
+    },
+    "team": {
+      "rear_wing": 1,
+      "beam_wing": 1
+    },
+    "drivers": {
+      "Nico Hulkenberg": {
+        "front_wing": 1
+      },
+      "Gabriel Bortoleto": {
+        "ride_height_rear": -1
+      }
+    }
+  },
+  "Haas": {
+    "metadata": {
+      "aero_bias": "high_df",
+      "drag_profile": "heavy"
+    },
+    "team": {
+      "front_wing": 1,
+      "rear_wing": 2,
+      "ride_height_rear": 1
+    },
+    "drivers": {
+      "Oliver Bearman": {
+        "front_wing": -1
+      },
+      "Esteban Ocon": {
+        "rear_wing": 1
+      }
+    }
+  }
+}

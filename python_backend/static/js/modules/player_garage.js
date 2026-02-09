@@ -46,6 +46,33 @@ export class PlayerGarage {
         this.bindEvents();
     }
 
+    static extractTempWindow(rawWindow) {
+        if (!rawWindow) return null;
+        if (Array.isArray(rawWindow) && rawWindow.length >= 2) {
+            return [Number(rawWindow[0]), Number(rawWindow[1])];
+        }
+        if (typeof rawWindow === 'object') {
+            const values = Object.values(rawWindow);
+            if (values.length >= 2) {
+                return [Number(values[0]), Number(values[1])];
+            }
+        }
+        return null;
+    }
+
+    getTyreTempStatus(value, range) {
+        if (typeof value !== 'number' || !range) {
+            return { className: 'status-na', label: 'N/A' };
+        }
+        if (value < range[0]) {
+            return { className: 'status-cold', label: 'COLD' };
+        }
+        if (value > range[1]) {
+            return { className: 'status-hot', label: 'HOT' };
+        }
+        return { className: 'status-ok', label: 'OK' };
+    }
+
     bindEvents() {
         if (!this.cardsContainer) return;
         this.cardsContainer.addEventListener('click', (event) => this.handleCardClick(event));
@@ -165,6 +192,7 @@ export class PlayerGarage {
             : `${stateDisplay}${lapInfo ? ` ${lapInfo}` : ''}`;
         const isBox = currentState === 'BOX';
         const telemetry = this.buildTelemetryStrip(car);
+        const tyreTemps = this.buildTyreTempsSection(car);
 
         return `
             <div class="car-card" data-driver="${car.driver_number}" data-state="${currentState}">
@@ -181,6 +209,7 @@ export class PlayerGarage {
                     <span class="state-pill">${stateDisplay}</span>
                 </header>
                 ${telemetry}
+                ${tyreTemps}
                 <div class="control-grid">
                     <div class="field-span-2">
                         <label>Tyre compound</label>

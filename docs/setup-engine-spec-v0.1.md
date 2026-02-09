@@ -149,6 +149,13 @@ SetupEvaluation {
 4. **CI setup-calibration** – job dedicato (da aggiungere alla pipeline) che esegue: lint → unit test SetupEngine → rigenera una heatmap rapida (step 10) → confronta i JSON con soglia `±0.5` sui target.
 5. **Sign-off** – l’AI engineer valida i warning/notes generati dal job e aggiorna il changelog (sezione 8 di questo doc).
 
+### 5.2 Ideal setup hierarchy (nuovo requisito)
+- **Baseline circuito**: `config/setup/setup_ranges/<circuit>.json` definisce il target neutro per ciascun slider, coerente con i vincoli fisici del tracciato.
+- **Offset team/auto**: ogni team/car development state applica correzioni (±2‑5 punti) per riflettere il DNA dell’auto (es. high‑DF vs low‑drag). Gli offset sono definiti in `config/setup/team_offsets.json` (da introdurre) e vengono sommati clamped 0‑100.
+- **Offset pilota**: skill/stile pilota (`understeer_style`, `oversteer_style`, aggressività) aggiungono micro correzioni (±1‑3 punti) per personalizzare la preferenza di handling.
+- **Combinazione**: `ideal_setup = clamp(baseline + team_offset + driver_offset, 0, 100)` e viene esposto sia nella UI (highlight target) sia nelle raccomandazioni ingegnere.
+- **Persistenza**: gli offset applicati vanno salvati in `garage_state.json` per garantire coerenza fra sessioni.
+
 ## 6. Integrazione con LapSimulator
 1. SetupUI salva i valori nello stato sessione.
 2. `SetupEngineService.map_slider_to_physics()` chiama `Car.apply_setup_change()` che aggiorna gli oggetti `FrontWing`, `RearWing`, `Sidepods`, ecc.

@@ -402,6 +402,13 @@ class RaceCar:
         self.current_gomma = Gomma(initial_compound, percentuale_vita=1.0)
         self.tire_age = 0
         self.tire_wear = 0.0
+        self.tire_temp_window = self.get_tire_temp_window(initial_compound)
+        self.tire_temps = {
+            'fl': sum(self.tire_temp_window) / 2,
+            'fr': sum(self.tire_temp_window) / 2,
+            'rl': sum(self.tire_temp_window) / 2,
+            'rr': sum(self.tire_temp_window) / 2,
+        }
 
         # Player control & configurazioni
         self.is_player_controlled = False
@@ -443,7 +450,35 @@ class RaceCar:
         self.current_gomma = Gomma(compound, percentuale_vita=percentuale_vita)
         self.tire_age = 0
         self.tire_wear = 0.0
+        self.tire_temp_window = self.get_tire_temp_window(compound)
         self.player_config["tyre_compound"] = self.current_tire.value
+
+    def get_tire_temp_window(self, compound: TireCompound) -> tuple[float, float]:
+        windows = {
+            TireCompound.SOFT: (92.0, 105.0),
+            TireCompound.MEDIUM: (88.0, 101.0),
+            TireCompound.HARD: (84.0, 97.0),
+            TireCompound.INTERMEDIATE: (72.0, 86.0),
+            TireCompound.WET: (65.0, 80.0),
+        }
+        return windows.get(compound, (85.0, 100.0))
+
+    def update_tire_temps(self, dt: float):
+        min_temp, max_temp = self.tire_temp_window
+        target = (min_temp + max_temp) / 2
+        if self.state == CarState.HOT_LAP:
+            target += 4 + (self.tire_wear * 12)
+        elif self.state == CarState.OUT_LAP:
+            target -= 6
+        elif self.state == CarState.IN_LAP:
+            target -= 8
+        else:
+            target = min_temp - 5
+
+        smoothing = min(1.0, dt * 1.2)
+        for key in self.tire_temps.keys():
+            current = self.tire_temps[key]
+            self.tire_temps[key] = current + (target - current) * smoothing
 
     def update_tire_wear(self):
         """Aggiorna l'usura delle gomme con factor pace_level."""

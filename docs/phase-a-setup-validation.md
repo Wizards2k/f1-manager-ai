@@ -42,6 +42,8 @@ scope: "SetupEngineService runtime, mapping slider→fisica, endpoint REST minim
 ✅ Endpoint testati localmente (ranges/validate/apply) con circuito specifico.
 ✅ `evaluate_setup` aggiornato con indici fisici (`aero_balance`, `drag_index`, `traction_index`) + `recommended_ranges`.
 ✅ `evaluate_setup_categories` allineato ai nuovi indici (cornering/speed/traction/stability).
+✅ Generati i file `config/setup/setup_ranges/*.json` tramite `scripts/generate_setup_ranges.py` (es. `config/setup/setup_ranges/at-1969_spielberg.json`).
+✅ Implementata la gerarchia ideal setup (baseline circuito + offset team/pilota) con `config/setup/team_offsets.json` e endpoint `/api/setup/ideal`.
 
 ## 6. Gap / prossimo step
 - Integrare `setup_ranges/<circuit>.json` quando disponibile (oggi fallback ai range base).
@@ -52,6 +54,8 @@ scope: "SetupEngineService runtime, mapping slider→fisica, endpoint REST minim
 - `GET /api/setup/ranges/<circuit_id>` restituisce mapping circuito corretto.
 - `POST /api/setup/validate` con setup valido → ok=true, physics popolato.
 - `POST /api/setup/apply` con driver in BOX → setup aggiornato + evaluation.
+- Verifica presenza output in `config/setup/setup_ranges/`.
+- Verifica campione: `config/setup/setup_ranges/at-1969_spielberg.json` coerente con range/target/tolerance/weight base.
 
 ## 8. Note
 - In caso di `circuit_id` non risolto, fallback su `default`.
