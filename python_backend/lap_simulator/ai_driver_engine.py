@@ -20,6 +20,14 @@ from .ai_data_types import (
     AIDriverConfig,
     AITeamConfig,
     AIPracticeRunEvent,
+    CarStatus,
+    NotificationPriority,
+    PIT_OVERHEAD_S,
+    PIT_WORK_STATUS,
+    PIT_WORK_TIMES,
+    PitStop,
+    PitWorkItem,
+    PitWorkType,
     RUN_PROGRAM_DEFAULTS,
     RunOutcome,
     RunPlan,
@@ -50,7 +58,6 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-PIT_TURNAROUND_S = 120.0              # minimum pit stop duration (spec §4)
 TRAFFIC_DELAY_MAX_S = 60.0            # max delay for traffic (spec §4)
 SETUP_CONVERGENCE_THRESHOLD = 0.15    # all deltas below this = converged
 SETUP_SEED_MAX_OFFSET = 0.20          # max slider offset from target (20%)
@@ -416,6 +423,98 @@ def apply_adjustments(
 
 
 # ---------------------------------------------------------------------------
+# Pit work calculation (spec §4.1)
+# ---------------------------------------------------------------------------
+
+def compute_pit_stop(
+    has_tyre_change: bool = True,
+    has_refuel: bool = True,
+    fuel_kg: float = 50.0,
+    setup_adjustments: int = 0,
+    has_brake_duct_change: bool = False,
+    has_wing_replace: bool = False,
+    has_inspection: bool = False,
+) -> PitStop:
+    """
+    Compute pit stop duration from work items.
+
+    Formula: total = max(work_durations) + PIT_OVERHEAD_S
+    Parallel work: team works on different areas simultaneously.
+
+    Reference: ai-driver-engine-spec §4.1
+    """
+    items: List[PitWorkItem] = []
+
+    if has_tyre_change:
+        lo, hi = PIT_WORK_TIMES[PitWorkType.TYRE_CHANGE]
+        items.append(PitWorkItem(PitWorkType.TYRE_CHANGE, random.uniform(lo, hi)))
+
+    if has_refuel:
+        # Refuel time scales with fuel amount (~1 s/kg, clamped to range)
+        lo, hi = PIT_WORK_TIMES[PitWorkType.REFUEL]
+        refuel_time = clamp(fuel_kg * 1.0, lo, hi)
+        items.append(PitWorkItem(PitWorkType.REFUEL, refuel_time))
+
+    if setup_adjustments > 0:
+        if setup_adjustments <= 2:
+            lo, hi = PIT_WORK_TIMES[PitWorkType.SETUP_MINOR]
+        else:
+            lo, hi = PIT_WORK_TIMES[PitWorkType.SETUP_MAJOR]
+        items.append(PitWorkItem(
+            PitWorkType.SETUP_MINOR if setup_adjustments <= 2 else PitWorkType.SETUP_MAJOR,
+            random.uniform(lo, hi),
+        ))
+
+    if has_brake_duct_change:
+        lo, hi = PIT_WORK_TIMES[PitWorkType.BRAKE_DUCT]
+        items.append(PitWorkItem(PitWorkType.BRAKE_DUCT, random.uniform(lo, hi)))
+
+    if has_wing_replace:
+        lo, hi = PIT_WORK_TIMES[PitWorkType.WING_REPLACE]
+        items.append(PitWorkItem(PitWorkType.WING_REPLACE, random.uniform(lo, hi)))
+
+    if has_inspection:
+        lo, hi = PIT_WORK_TIMES[PitWorkType.INSPECTION]
+        items.append(PitWorkItem(PitWorkType.INSPECTION, random.uniform(lo, hi)))
+
+    # If no work items, just overhead (quick stop)
+    if not items:
+        return PitStop(
+            total_duration_s=PIT_OVERHEAD_S,
+            status_label=CarStatus.BOX_READY,
+            description="Quick stop",
+        )
+
+    # Total = max(durations) + overhead (parallel work)
+    max_duration = max(item.duration_s for item in items)
+    total = max_duration + PIT_OVERHEAD_S
+
+    # Status label = label of the longest work item
+    longest_item = max(items, key=lambda x: x.duration_s)
+    status_label = PIT_WORK_STATUS.get(longest_item.work_type, CarStatus.BOX_CHECK)
+
+    # Human-readable description
+    work_names = {
+        PitWorkType.TYRE_CHANGE: "Tyre change",
+        PitWorkType.REFUEL: "Refuel",
+        PitWorkType.SETUP_MINOR: "Setup adj.",
+        PitWorkType.SETUP_MAJOR: "Setup (major)",
+        PitWorkType.BRAKE_DUCT: "Brake duct",
+        PitWorkType.WING_REPLACE: "Wing replace",
+        PitWorkType.INSPECTION: "Inspection",
+    }
+    desc_parts = [work_names.get(item.work_type, item.work_type.value) for item in items]
+    description = " + ".join(desc_parts) + f" (~{int(total)}s)"
+
+    return PitStop(
+        work_items=items,
+        total_duration_s=total,
+        status_label=status_label,
+        description=description,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Event generation (spec §7)
 # ---------------------------------------------------------------------------
 
@@ -426,6 +525,7 @@ def emit_run_event(
     run_plan: Optional[RunPlan] = None,
     run_result: Optional[RunResult] = None,
     message: str = "",
+    priority: NotificationPriority = NotificationPriority.NORMAL,
 ) -> AIPracticeRunEvent:
     """Create an AI practice run event for HUD/telemetry/QA."""
     return AIPracticeRunEvent(
@@ -440,6 +540,7 @@ def emit_run_event(
         ers_mode=run_plan.ers_mode.value if run_plan else "",
         outcome=run_result.outcome.value if run_result else "",
         message=message,
+        priority=priority.value,
     )
 
 
@@ -486,6 +587,8 @@ class AIDriverEngine:
         self.run_results: List[RunResult] = []
         self.events: List[AIPracticeRunEvent] = []
         self.elapsed_s: float = 0.0
+        self.car_status: CarStatus = CarStatus.BOX_READY
+        self.last_pit_stop: Optional[PitStop] = None
 
     # ------------------------------------------------------------------
     # Session lifecycle
@@ -542,9 +645,11 @@ class AIDriverEngine:
         event = emit_run_event(
             "ai_run_started", self.team_config, self.driver_config,
             run_plan=run_plan,
-            message=f"Starting {run_plan.program.value}: {run_plan.objective}",
+            message=f"Starting {run_plan.program.value} ({run_plan.laps_planned} laps)",
+            priority=NotificationPriority.LOW,
         )
         self.events.append(event)
+        self.car_status = CarStatus.OUT_LAP
 
         return entry
 
@@ -577,6 +682,7 @@ class AIDriverEngine:
             self.events.append(adj_event)
 
         # Update convergence
+        was_converged = self.setup_converged
         if result.setup_converged:
             self.setup_converged = True
 
@@ -584,14 +690,54 @@ class AIDriverEngine:
         event = emit_run_event(
             "ai_run_completed", self.team_config, self.driver_config,
             run_plan=run_plan, run_result=result,
-            message=f"Best: {result.telemetry.best_lap_time_s:.1f}s, "
-                    f"wear: {result.telemetry.avg_tyre_wear_pct:.1f}%",
+            message=f"Run complete \u2013 best: {result.telemetry.best_lap_time_s:.1f}s",
         )
         self.events.append(event)
 
-        # Advance time (run laps + pit turnaround)
+        # Setup convergence notification
+        if result.setup_converged and not was_converged:
+            conv_event = emit_run_event(
+                "ai_setup_converged", self.team_config, self.driver_config,
+                run_plan=run_plan,
+                message="Setup OK \u2013 all targets in range",
+                priority=NotificationPriority.HIGH,
+            )
+            self.events.append(conv_event)
+
+        # Compute pit stop duration from actual work items
+        n_adjustments = len(result.setup_adjustments)
+        has_brake_adj = any(
+            a.slider_name == "brake_duct_opening" for a in result.setup_adjustments
+        )
+        pit_stop = compute_pit_stop(
+            has_tyre_change=True,
+            has_refuel=True,
+            fuel_kg=run_plan.fuel_kg,
+            setup_adjustments=n_adjustments,
+            has_brake_duct_change=has_brake_adj,
+        )
+        self.last_pit_stop = pit_stop
+        self.car_status = pit_stop.status_label
+
+        # Emit pit work events
+        pit_start_event = emit_run_event(
+            "ai_pit_work_started", self.team_config, self.driver_config,
+            run_plan=run_plan,
+            message=f"Pit: {pit_stop.description}",
+        )
+        self.events.append(pit_start_event)
+
+        pit_end_event = emit_run_event(
+            "ai_pit_work_complete", self.team_config, self.driver_config,
+            run_plan=run_plan,
+            message="Work complete \u2013 ready to go",
+        )
+        self.events.append(pit_end_event)
+
+        # Advance time (run laps + pit stop duration)
         run_time_s = sum(lr.lap_time_s for lr in lap_results)
-        self.elapsed_s += run_time_s + PIT_TURNAROUND_S
+        self.elapsed_s += run_time_s + pit_stop.total_duration_s
+        self.car_status = CarStatus.BOX_READY
 
         # Advance to next run
         self.current_run_idx += 1

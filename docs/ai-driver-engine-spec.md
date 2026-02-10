@@ -1,7 +1,7 @@
 ---
 title: AI Driver & Team Behavior – Practice Sessions
-version: 0.1
-last_updated: 2026-02-08
+version: 0.2
+last_updated: 2026-02-10
 scope: "Definire logica e requisiti per le 18 auto AI durante le sessioni practice (setup search, run plan, strategia box)"
 ---
 
@@ -36,11 +36,51 @@ Ogni team compone un **programma sessione** scegliendo 2‑3 run coerenti con la
 
 ## 4. Scheduling run e vincoli temporali
 
-- **Durata run**: `laps_planned` ∈ [3, 10] a seconda del programma. L’AI può anticipare il rientro se raggiunge l’obiettivo (es. dati sufficienti) o se scatta un warning (traffico, bandiera gialla).
-- **Pit turnaround minimo**: quando si modificano slider, fuel load o pneumatici, il team impiega almeno **120s** prima di rimandare l’auto in pista (simula cambio gomme, regolazioni meccaniche, refuel).
+- **Durata run**: `laps_planned` ∈ [3, 10] a seconda del programma. L'AI può anticipare il rientro se raggiunge l'obiettivo (es. dati sufficienti) o se scatta un warning (traffico, bandiera gialla).
 - **Tyre allocation**: ogni team consuma set reali del weekend. Il Practice Planner controlla la disponibilità e sceglie composti coerenti (es. FP1 usa soprattutto Hard/Medium, FP3 Soft nuovi). TBD il dettaglio numerico nel modulo gomme.
-- **Fuel handling**: ogni refuel richiede quota del pit turnaround. Il planner evita run consecutivi con fuel alto senza pausa per coerenza.
-- **Traffico**: se il LapSimulator segnala congestione, l’AI può ritardare l’uscita fino a 60s (slot di respiro) per simulare queue pitlane.
+- **Traffico**: se il LapSimulator segnala congestione, l'AI può ritardare l'uscita fino a 60s (slot di respiro) per simulare queue pitlane.
+
+### 4.1 Pit work – lavori ai box e tempi
+
+Ogni sosta ai box è composta da uno o più lavori. I tempi si sommano con overlap parziale (il team lavora in parallelo su aree diverse): `total = max(work_times) + 15s` (overhead base ingresso/uscita box).
+
+| Lavoro | Codice | Tempo (s) | Note |
+|--------|--------|-----------|------|
+| Tyre change | `TYRE_CHANGE` | 25–30 | 4 gomme, practice (non gara) |
+| Fuel refill | `REFUEL` | 40–60 | ~1 s/kg, dipende da quantità |
+| Setup change (minor) | `SETUP_MINOR` | 60–90 | 1–2 slider (ala, brake bias) |
+| Setup change (major) | `SETUP_MAJOR` | 120–180 | Ride height, sospensioni, antiroll |
+| Brake duct change | `BRAKE_DUCT` | 45–60 | Cambio configurazione cooling |
+| Front wing replacement | `WING_REPLACE` | 90–120 | Danno o cambio spec |
+| Inspection / check | `INSPECTION` | 30–45 | Controllo visivo post-run |
+
+Formula tempo totale:
+```
+pit_duration_s = max(work_durations) + PIT_OVERHEAD_S
+```
+dove `PIT_OVERHEAD_S = 15` (ingresso pitlane + posizionamento + uscita).
+
+### 4.2 Car status labels
+
+Ogni auto ha una label di stato visibile nell'interfaccia:
+
+| Label | Significato |
+|-------|-------------|
+| `Out Lap` | Uscita dai box, riscaldamento gomme |
+| `Hot Lap` | Giro lanciato |
+| `In Lap` | Rientro ai box |
+| `Box - Tyres` | Cambio gomme in corso |
+| `Box - Fuel` | Rifornimento |
+| `Box - Setup` | Modifica setup |
+| `Box - Check` | Ispezione / controllo |
+| `Box - Ready` | Lavori completati, in attesa uscita |
+
+Se più lavori sono in corso contemporaneamente, la label mostra il lavoro principale (quello con durata maggiore). Esempio: cambio gomme + setup minor → `Box - Setup`.
+
+### 4.3 Visibilità programmi
+
+- **Auto del player**: programma di lavoro visibile (il player è il team principal).
+- **Auto AI avversarie**: solo la label di stato è visibile (Box/Out/Hot/In). Il programma specifico (Setup Validation, Quali Sim, ecc.) resta nascosto, come nel mondo reale.
 
 ## 5. Refinement loop
 
@@ -59,7 +99,7 @@ Ogni team compone un **programma sessione** scegliendo 2‑3 run coerenti con la
 - I livelli di push restano inferiori a quelli di Qualifica reale per preservare i componenti, eccetto nei run esplicitamente "Quali".
 - Il planner può ridurre la potenza se il cooling margin scende sotto soglia.
 
-## 7. Logging & eventi
+## 7. Logging, eventi & notifiche
 
 - Ogni run genera un record `AIPracticeRun` con: programma, time window, laps, compound usato, fuel load, mappe ICE/ERS, outcome (success/partial/abort), delta setup.
 - Eventi principali emessi verso HUD/telemetria:
@@ -67,6 +107,21 @@ Ogni team compone un **programma sessione** scegliendo 2‑3 run coerenti con la
   - `ai_setup_adjustment` con dettaglio slider cambiati.
   - `ai_rnd_correlation` (placeholder) per when R&D runs saranno attivi.
 - I log vengono usati anche dal QA harness per validare comportamenti multi-car.
+
+### 7.1 Notifiche barra (player car)
+
+Per l'auto del player, il sistema invia notifiche alla barra notifiche:
+
+| Evento | Messaggio esempio | Priorità |
+|--------|-------------------|----------|
+| Pit work start | `"Pit: Tyre change + Setup adj. (~90s)"` | normal |
+| Pit work complete | `"Work complete – ready to go"` | normal |
+| Run started | `"Starting Quali Simulation (3 laps)"` | low |
+| Run completed | `"Run complete – best: 1:47.2"` | normal |
+| Setup converged | `"Setup OK – all targets in range"` | high |
+| Run aborted | `"Run aborted: red flag"` | high |
+
+Per le auto AI avversarie, le notifiche non vengono inviate (solo label di stato visibile).
 
 ## 8. Dipendenze future
 

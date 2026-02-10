@@ -40,6 +40,63 @@ class RunOutcome(str, Enum):
     ABORTED = "aborted"
 
 
+class PitWorkType(str, Enum):
+    """Types of pit box work as defined in ai-driver-engine-spec §4.1."""
+    TYRE_CHANGE = "TYRE_CHANGE"
+    REFUEL = "REFUEL"
+    SETUP_MINOR = "SETUP_MINOR"
+    SETUP_MAJOR = "SETUP_MAJOR"
+    BRAKE_DUCT = "BRAKE_DUCT"
+    WING_REPLACE = "WING_REPLACE"
+    INSPECTION = "INSPECTION"
+
+
+class CarStatus(str, Enum):
+    """Car status labels for UI (ai-driver-engine-spec §4.2)."""
+    OUT_LAP = "Out Lap"
+    HOT_LAP = "Hot Lap"
+    IN_LAP = "In Lap"
+    BOX_TYRES = "Box - Tyres"
+    BOX_FUEL = "Box - Fuel"
+    BOX_SETUP = "Box - Setup"
+    BOX_CHECK = "Box - Check"
+    BOX_READY = "Box - Ready"
+
+
+class NotificationPriority(str, Enum):
+    LOW = "low"
+    NORMAL = "normal"
+    HIGH = "high"
+
+
+# ---------------------------------------------------------------------------
+# Pit work times (spec §4.1) — (min_s, max_s)
+# ---------------------------------------------------------------------------
+
+PIT_WORK_TIMES: Dict[PitWorkType, tuple] = {
+    PitWorkType.TYRE_CHANGE:  (25, 30),
+    PitWorkType.REFUEL:       (40, 60),
+    PitWorkType.SETUP_MINOR:  (60, 90),
+    PitWorkType.SETUP_MAJOR:  (120, 180),
+    PitWorkType.BRAKE_DUCT:   (45, 60),
+    PitWorkType.WING_REPLACE: (90, 120),
+    PitWorkType.INSPECTION:   (30, 45),
+}
+
+PIT_OVERHEAD_S: float = 15.0  # pitlane entry + positioning + exit
+
+# Map PitWorkType → CarStatus label shown during that work
+PIT_WORK_STATUS: Dict[PitWorkType, CarStatus] = {
+    PitWorkType.TYRE_CHANGE:  CarStatus.BOX_TYRES,
+    PitWorkType.REFUEL:       CarStatus.BOX_FUEL,
+    PitWorkType.SETUP_MINOR:  CarStatus.BOX_SETUP,
+    PitWorkType.SETUP_MAJOR:  CarStatus.BOX_SETUP,
+    PitWorkType.BRAKE_DUCT:   CarStatus.BOX_SETUP,
+    PitWorkType.WING_REPLACE: CarStatus.BOX_SETUP,
+    PitWorkType.INSPECTION:   CarStatus.BOX_CHECK,
+}
+
+
 # ---------------------------------------------------------------------------
 # Team & driver AI config
 # ---------------------------------------------------------------------------
@@ -204,6 +261,22 @@ class RunResult:
 # ---------------------------------------------------------------------------
 
 @dataclass
+class PitWorkItem:
+    """A single piece of work to be done in the pit box."""
+    work_type: PitWorkType
+    duration_s: float = 0.0            # actual duration (randomised from range)
+
+
+@dataclass
+class PitStop:
+    """A complete pit stop with one or more work items."""
+    work_items: List[PitWorkItem] = field(default_factory=list)
+    total_duration_s: float = 0.0      # max(durations) + PIT_OVERHEAD_S
+    status_label: CarStatus = CarStatus.BOX_CHECK
+    description: str = ""              # human-readable, e.g. "Tyre change + Setup adj."
+
+
+@dataclass
 class AIPracticeRunEvent:
     """Event emitted by AI Driver Engine for HUD/telemetry/QA."""
     event_type: str = ""               # ai_run_started, ai_run_completed, etc.
@@ -217,3 +290,4 @@ class AIPracticeRunEvent:
     ers_mode: str = ""
     outcome: str = ""
     message: str = ""
+    priority: str = NotificationPriority.NORMAL.value

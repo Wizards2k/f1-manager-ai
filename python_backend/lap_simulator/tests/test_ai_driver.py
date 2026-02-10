@@ -8,6 +8,9 @@ from lap_simulator.ai_data_types import (
     AIDriverConfig,
     AITeamConfig,
     AIPracticeRunEvent,
+    CarStatus,
+    PIT_OVERHEAD_S,
+    PitWorkType,
     RunOutcome,
     RunPlan,
     RunProgram,
@@ -18,9 +21,9 @@ from lap_simulator.ai_data_types import (
 )
 from lap_simulator.ai_driver_engine import (
     AIDriverEngine,
-    PIT_TURNAROUND_S,
     analyze_run,
     apply_adjustments,
+    compute_pit_stop,
     configure_run,
     emit_run_event,
     generate_setup_seed,
@@ -407,3 +410,144 @@ class TestAIDriverEngineIntegration:
 
         summary = engine.session_summary()
         assert summary["runs_completed"] == len(plan.runs)
+
+
+# ---------------------------------------------------------------------------
+# Pit work calculation (spec §4.1)
+# ---------------------------------------------------------------------------
+
+class TestPitWork:
+    def test_tyre_change_only(self):
+        """Tyre change only → 25-30s + 15s overhead."""
+        random.seed(42)
+        pit = compute_pit_stop(
+            has_tyre_change=True, has_refuel=False,
+            setup_adjustments=0,
+        )
+        assert len(pit.work_items) == 1
+        assert pit.work_items[0].work_type == PitWorkType.TYRE_CHANGE
+        assert 40.0 <= pit.total_duration_s <= 45.0  # 25-30 + 15
+        assert pit.status_label == CarStatus.BOX_TYRES
+
+    def test_refuel_scales_with_fuel(self):
+        """Refuel time ~1s/kg, clamped to [40, 60]."""
+        pit_low = compute_pit_stop(
+            has_tyre_change=False, has_refuel=True, fuel_kg=20.0,
+        )
+        pit_high = compute_pit_stop(
+            has_tyre_change=False, has_refuel=True, fuel_kg=80.0,
+        )
+        # 20kg → clamped to 40s; 80kg → clamped to 60s
+        assert pit_low.work_items[0].duration_s == 40.0
+        assert pit_high.work_items[0].duration_s == 60.0
+
+    def test_setup_minor_vs_major(self):
+        """1-2 adjustments = minor (60-90s), 3+ = major (120-180s)."""
+        random.seed(42)
+        pit_minor = compute_pit_stop(
+            has_tyre_change=False, has_refuel=False,
+            setup_adjustments=1,
+        )
+        pit_major = compute_pit_stop(
+            has_tyre_change=False, has_refuel=False,
+            setup_adjustments=4,
+        )
+        minor_item = pit_minor.work_items[0]
+        major_item = pit_major.work_items[0]
+        assert minor_item.work_type == PitWorkType.SETUP_MINOR
+        assert major_item.work_type == PitWorkType.SETUP_MAJOR
+        assert minor_item.duration_s < major_item.duration_s
+
+    def test_parallel_work_uses_max(self):
+        """Multiple work items → total = max(durations) + overhead."""
+        random.seed(42)
+        pit = compute_pit_stop(
+            has_tyre_change=True, has_refuel=True, fuel_kg=50.0,
+            setup_adjustments=1,
+        )
+        assert len(pit.work_items) == 3
+        max_dur = max(item.duration_s for item in pit.work_items)
+        assert abs(pit.total_duration_s - (max_dur + PIT_OVERHEAD_S)) < 0.01
+
+    def test_status_label_shows_longest_work(self):
+        """Status label = label of the longest work item."""
+        random.seed(42)
+        pit = compute_pit_stop(
+            has_tyre_change=True, has_refuel=False,
+            setup_adjustments=3,  # major setup = 120-180s, longer than tyres
+        )
+        assert pit.status_label == CarStatus.BOX_SETUP
+
+    def test_no_work_items(self):
+        """No work → just overhead, status = BOX_READY."""
+        pit = compute_pit_stop(
+            has_tyre_change=False, has_refuel=False,
+            setup_adjustments=0,
+        )
+        assert pit.total_duration_s == PIT_OVERHEAD_S
+        assert pit.status_label == CarStatus.BOX_READY
+
+    def test_description_includes_time(self):
+        """Description should list work items and estimated time."""
+        random.seed(42)
+        pit = compute_pit_stop(
+            has_tyre_change=True, has_refuel=True, fuel_kg=50.0,
+        )
+        assert "Tyre change" in pit.description
+        assert "Refuel" in pit.description
+        assert "~" in pit.description
+
+
+# ---------------------------------------------------------------------------
+# Car status tracking in AIDriverEngine
+# ---------------------------------------------------------------------------
+
+class TestCarStatus:
+    def test_status_transitions(self, monza_config, team_top, driver_good, skills_good):
+        """Car status should transition through the session lifecycle."""
+        random.seed(42)
+        env = EnvContext()
+
+        engine = AIDriverEngine(
+            monza_config, team_top, driver_good, skills_good
+        )
+        assert engine.car_status == CarStatus.BOX_READY
+
+        engine.start_session(SessionType.FP1)
+        run_plan = engine.next_run()
+        car_entry = engine.configure_current_run()
+        assert engine.car_status == CarStatus.OUT_LAP
+
+        sim = LapSimulator(monza_config, env)
+        sim.register_car(car_entry)
+        multi = sim.run_laps(run_plan.laps_planned)
+        result = engine.complete_run(multi[car_entry.car_id])
+
+        # After completing run, should be BOX_READY
+        assert engine.car_status == CarStatus.BOX_READY
+        # Should have a pit stop recorded
+        assert engine.last_pit_stop is not None
+        assert engine.last_pit_stop.total_duration_s > PIT_OVERHEAD_S
+
+    def test_pit_events_emitted(self, monza_config, team_top, driver_good, skills_good):
+        """Pit work start/complete events should be emitted."""
+        random.seed(42)
+        env = EnvContext()
+
+        engine = AIDriverEngine(
+            monza_config, team_top, driver_good, skills_good
+        )
+        engine.start_session(SessionType.FP1)
+        run_plan = engine.next_run()
+        car_entry = engine.configure_current_run()
+
+        sim = LapSimulator(monza_config, env)
+        sim.register_car(car_entry)
+        multi = sim.run_laps(run_plan.laps_planned)
+        engine.complete_run(multi[car_entry.car_id])
+
+        event_types = [e.event_type for e in engine.events]
+        assert "ai_run_started" in event_types
+        assert "ai_pit_work_started" in event_types
+        assert "ai_pit_work_complete" in event_types
+        assert "ai_run_completed" in event_types
