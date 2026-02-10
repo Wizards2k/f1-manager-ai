@@ -482,6 +482,10 @@ class SessionBridge:
         race_car.last_lap_type = phase_to_state.get(ts.lap_phase, GameCarState.HOT_LAP)
         race_car.distance_traveled = 0
 
+        # Accumulate setup info points (all cars, player + AI)
+        if is_competitive and hasattr(race_car, '_accumulate_setup_info'):
+            race_car._accumulate_setup_info(GameCarState.HOT_LAP)
+
         # Update session bests (only competitive laps)
         if is_competitive:
             update_session_bests(race_car)

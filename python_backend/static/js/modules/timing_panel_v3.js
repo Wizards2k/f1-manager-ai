@@ -96,10 +96,12 @@ export class TimingPanelV3 {
                         </div>
                     </div>
                     <div class="lap-count">${car.total_laps ?? 0}</div>
-                    <div class="state-indicator ${stateClass}">
-                        ${car.state || 'BOX'}
+                    <div class="state-data-col">
+                        <div class="state-indicator ${stateClass}">
+                            ${car.state || 'BOX'}
+                        </div>
+                        <div class="data-chip ${(car.setup_info_percent ?? 0) >= 100 ? 'data-chip-ready' : (car.setup_info_percent ?? 0) >= 67 ? 'data-chip-green' : (car.setup_info_percent ?? 0) >= 34 ? 'data-chip-yellow' : 'data-chip-red'}">DATA</div>
                     </div>
-                    <div class="status-indicator"></div>
                 </div>
             `;
         }).join('');
