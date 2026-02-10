@@ -35,10 +35,17 @@ from lap_simulator.data_types import (
     TyreCompound,
 )
 from lap_simulator.update_section import update_section
+from lap_simulator.battle_resolver import (
+    BattleEvent,
+    BattleOutcome,
+    BattleResolver,
+    BattleResult,
+)
 from lap_simulator.practice_session import (
     CarPhase,
     PracticeEventType,
     PracticeSessionOrchestrator,
+    SessionFlag,
 )
 
 from utils.adapter import (
@@ -275,6 +282,8 @@ class SessionBridge:
         self._accumulated_time_s: float = 0.0
         self._team_plans: Dict[str, TeamSessionPlan] = {}
         self._ai_teams_cars: Dict[str, List[str]] = {}  # team_name → [car_ids]
+        self.battle_resolver = BattleResolver()
+        self.battle_events: List[BattleEvent] = []       # events from last tick
 
     # ------------------------------------------------------------------
     # Initialization
@@ -411,7 +420,7 @@ class SessionBridge:
         self._move_cars(sim_dt)
 
         # ── FASE 3: SEPARATION / BATTLE ──
-        self._enforce_separation()
+        self._resolve_battles()
 
         # ── FASE 4: STATE COMMIT ──
         self._sync_phases()
@@ -886,17 +895,155 @@ class SessionBridge:
             race_car.distance_traveled = 0
 
     # ------------------------------------------------------------------
-    # FASE 3: Separation & proximity
+    # FASE 3: BattleResolver & separation
     # ------------------------------------------------------------------
 
-    def _enforce_separation(self) -> None:
-        """Prevent cars from overlapping on track by enforcing minimum gap."""
+    def _resolve_battles(self) -> None:
+        """
+        Run BattleResolver on cars sharing the same section, then enforce
+        minimum gap for remaining overlaps.
+        """
+        self.battle_events = []
+
+        if not self._track_states or self.circuit_config is None:
+            return
+        if self.pso and self.pso.clock.flag != SessionFlag.GREEN:
+            # No battles under yellow/red
+            self._enforce_min_gap()
+            return
+
+        circuit_m = self.circuit_config.circuit_length_m
+        n_sections = len(self.sections)
+
+        # ── Group on-track cars by current section ──
+        section_cars: Dict[int, List[tuple]] = {}
+        for car_id, ts in self._track_states.items():
+            pso_car = self.pso.cars.get(car_id) if self.pso else None
+            if not pso_car or pso_car.phase != CarPhase.ON_TRACK:
+                continue
+            race_car = self.race_cars_map.get(car_id)
+            if not race_car:
+                continue
+            sec_idx = ts.current_section_idx % n_sections
+            section_cars.setdefault(sec_idx, []).append((car_id, ts, race_car))
+
+        # ── Detect lapped cars (blue flag candidates) ──
+        blue_flag_car_ids: List[str] = []
+        lap_counts = {}
+        for car_id, ts in self._track_states.items():
+            lap_counts[car_id] = ts.lap_number
+
+        if lap_counts:
+            max_laps = max(lap_counts.values())
+            for car_id, laps in lap_counts.items():
+                if max_laps - laps >= 1:
+                    blue_flag_car_ids.append(car_id)
+
+        # Update PSO blue flags
+        if self.pso:
+            for car_id in self._track_states:
+                is_blue = car_id in blue_flag_car_ids
+                css = self.pso.cars.get(car_id)
+                if css and css.blue_flag != is_blue:
+                    self.pso.set_blue_flag(car_id, is_blue)
+
+        # ── Resolve battles per section ──
+        for sec_idx, cars_list in section_cars.items():
+            if len(cars_list) < 2:
+                continue
+
+            section = self.sections[sec_idx]
+
+            # Sort by distance (leader first = furthest along in section)
+            cars_list.sort(key=lambda x: x[1].distance_in_lap, reverse=True)
+
+            # Build input: (car_id, gap_to_ahead_m, v_effective_kph)
+            cars_in_section = []
+            for i, (car_id, ts, race_car) in enumerate(cars_list):
+                if i == 0:
+                    gap = 0.0
+                else:
+                    leader_dist = cars_list[i - 1][1].distance_in_lap
+                    gap = abs(leader_dist - ts.distance_in_lap)
+                    if gap > circuit_m / 2:
+                        gap = circuit_m - gap
+
+                v_kph = race_car.speed * 3.6 if race_car.speed else 200.0
+                cars_in_section.append((car_id, gap, v_kph))
+
+            # Build car_entries and section_results dicts
+            car_entries = {}
+            section_results = {}
+            for car_id, ts, _ in cars_list:
+                car_entries[car_id] = ts.car_entry
+                # Use last section result if available, else create a minimal one
+                if ts.lap_section_results:
+                    section_results[car_id] = ts.lap_section_results[-1]
+                else:
+                    section_results[car_id] = SectionResult(
+                        dt_s=section.dt_ref_s if section.dt_ref_s > 0 else 3.0,
+                        v_exit_kph=200.0,
+                    )
+
+            result: BattleResult = self.battle_resolver.resolve_section(
+                cars_in_section=cars_in_section,
+                section=section,
+                car_entries=car_entries,
+                section_results=section_results,
+                blue_flag_cars=blue_flag_car_ids,
+            )
+
+            # ── Apply outcomes ──
+            for pair in result.pairs:
+                if pair.outcome == BattleOutcome.OVERTAKE_SUCCESS:
+                    # Swap distances to reflect position change
+                    ts_att = self._track_states.get(pair.attacker_id)
+                    ts_def = self._track_states.get(pair.defender_id)
+                    rc_att = self.race_cars_map.get(pair.attacker_id)
+                    rc_def = self.race_cars_map.get(pair.defender_id)
+                    if ts_att and ts_def and rc_att and rc_def:
+                        ts_att.distance_in_lap, ts_def.distance_in_lap = (
+                            ts_def.distance_in_lap, ts_att.distance_in_lap
+                        )
+                        rc_att.distance_traveled, rc_def.distance_traveled = (
+                            rc_def.distance_traveled, rc_att.distance_traveled
+                        )
+
+                elif pair.outcome == BattleOutcome.BLOCKED:
+                    # Slow the attacker slightly
+                    ts_att = self._track_states.get(pair.attacker_id)
+                    if ts_att:
+                        ts_att.distance_in_lap = max(
+                            0, ts_att.distance_in_lap - 2.0
+                        )
+                        rc_att = self.race_cars_map.get(pair.attacker_id)
+                        if rc_att:
+                            rc_att.distance_traveled = max(
+                                0, rc_att.distance_traveled - 2.0
+                            )
+
+                elif pair.outcome == BattleOutcome.COLLISION:
+                    # Trigger yellow flag (red for severe — future: check damage)
+                    if self.pso:
+                        self.pso.set_session_flag(SessionFlag.YELLOW)
+                    logger.warning(
+                        "COLLISION: %s vs %s in section %s",
+                        pair.attacker_id, pair.defender_id, section.section_id,
+                    )
+
+            # Store events
+            self.battle_events.extend(result.events)
+
+        # ── Enforce minimum gap for remaining overlaps ──
+        self._enforce_min_gap()
+
+    def _enforce_min_gap(self) -> None:
+        """Push overlapping cars apart (safety net after battle resolution)."""
         if not self._track_states or self.circuit_config is None:
             return
 
         circuit_m = self.circuit_config.circuit_length_m
 
-        # Build sorted list of on-track cars by distance
         on_track = []
         for car_id, ts in self._track_states.items():
             race_car = self.race_cars_map.get(car_id)
@@ -908,18 +1055,15 @@ class SessionBridge:
 
         on_track.sort(key=lambda x: x[1])
 
-        # Enforce minimum gap: if car behind is too close, slow it down
         for i in range(1, len(on_track)):
             _, dist_ahead, _ = on_track[i - 1]
             car_id_behind, dist_behind, ts_behind = on_track[i]
 
             gap = dist_behind - dist_ahead
-            # Handle wrap-around
             if gap < 0:
                 gap += circuit_m
 
             if gap < MIN_CAR_GAP_M:
-                # Push the car behind back slightly
                 race_car = self.race_cars_map.get(car_id_behind)
                 if race_car:
                     new_dist = dist_ahead - MIN_CAR_GAP_M

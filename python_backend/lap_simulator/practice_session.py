@@ -476,6 +476,7 @@ class PracticeSessionOrchestrator:
         self.events: List[PracticeEvent] = []
         self._next_run_id = 0
         self._started = False
+        self._flag_clear_at_s: float = 0.0   # auto-clear yellow/red after this time
 
     # ------------------------------------------------------------------
     # Registration
@@ -533,6 +534,13 @@ class PracticeSessionOrchestrator:
             return []
 
         now = self.clock.elapsed_s
+
+        # Auto-clear yellow flag after timer expires
+        if (self.clock.flag == SessionFlag.YELLOW
+                and self._flag_clear_at_s > 0
+                and now >= self._flag_clear_at_s):
+            self.set_session_flag(SessionFlag.GREEN)
+            self._flag_clear_at_s = 0.0
 
         # Process pitlane releases (blocked under yellow/red)
         if self.clock.flag == SessionFlag.GREEN:
@@ -802,18 +810,28 @@ class PracticeSessionOrchestrator:
                 message=f"{css.driver_name}: blue flag {'shown' if active else 'cleared'}",
             )
 
-    def set_session_flag(self, flag: SessionFlag) -> None:
+    def set_session_flag(self, flag: SessionFlag, duration_s: float = 0.0) -> None:
         """
         Change the session-wide flag state.
 
         GREEN: normal session, pit releases allowed.
         YELLOW: no new pit releases, cars on track continue at reduced pace.
+                Auto-clears after duration_s (default: random 60-120s).
         RED: session suspended — clock paused, all cars forced back, pit queue cleared.
         """
         prev = self.clock.flag
         if flag == prev:
             return
         self.clock.set_flag(flag)
+
+        # Set auto-recovery timer for yellow flag
+        if flag == SessionFlag.YELLOW:
+            if duration_s <= 0:
+                duration_s = random.uniform(60.0, 120.0)
+            self._flag_clear_at_s = self.clock.elapsed_s + duration_s
+        elif flag == SessionFlag.GREEN:
+            self._flag_clear_at_s = 0.0
+
         self._emit(
             PracticeEventType.FLAG_CHANGE,
             data={"flag": flag.value, "previous": prev.value},

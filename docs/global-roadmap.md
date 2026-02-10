@@ -76,6 +76,7 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 3. ✅ **Backend integration**: `f1_manager_ai.py` usa SessionBridge v2 con fallback V1. Flag system (green/yellow/red banner + blue flag per-car).
 4. ✅ **Socket/frontend compatibility**: tutti i campi frontend mappati 1:1 con payload `race_update`. `player_car_ids` set per team multi-player. Banner flag + blue-flag-bar in timing UI.
 5. ✅ **Test end-to-end**: FP1 Suzuka, 20 auto (2 player + 18 AI), 54/54 AI runs completati, 0.5s wall time.
+6. ✅ **BattleResolver 2.0 integration**: BR2 nel tick loop SessionBridge (FASE 3). Proximity detection per sezione, resolve pairs (overtake/blocked/side-by-side/collision). Collision → yellow flag con auto-recovery (60-120s). Blue flag detection per auto doppiate. Battle events emessi via socket. E2E: 166 overtakes, 40 blocked, 6 collisions, 6 yellow periods, 54/54 runs completati.
 
 ## 5. Implementazione – Fase D (AI & Experience — `docs/ai-driver-engine-spec.md`, `docs/setup-ui-plan.md`)
 1. ✅ **AI Driver Engine**: implementato in `python_backend/lap_simulator/ai_driver_engine.py`. Setup seed, session planning, run config, refinement loop. 105/105 test.

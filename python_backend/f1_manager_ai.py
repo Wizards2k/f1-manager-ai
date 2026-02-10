@@ -103,6 +103,20 @@ def race_simulation():
             })
         
         session_flag = bridge.session_flag if bridge and bridge.active else 'green'
+        battle_events = []
+        if bridge and bridge.active and bridge.battle_events:
+            battle_events = [
+                {
+                    'type': ev.event_type,
+                    'attacker': ev.attacker_id,
+                    'defender': ev.defender_id,
+                    'section': ev.section_id,
+                    'scenario': ev.scenario,
+                    'outcome': ev.outcome,
+                    'message': ev.message,
+                }
+                for ev in bridge.battle_events
+            ]
 
         socketio.emit('race_update', {
             'cars': cars_data,
@@ -112,6 +126,7 @@ def race_simulation():
             'is_paused': current_pause_state,
             'session_bests': get_session_bests(),
             'session_flag': session_flag,
+            'battle_events': battle_events,
         })
 
 if __name__ == '__main__':
