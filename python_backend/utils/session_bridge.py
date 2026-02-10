@@ -57,11 +57,22 @@ logger = logging.getLogger(__name__)
 
 SESSION_DURATION_S = 3600
 AI_RUN_INTERVAL_S = 30
+OUT_LAP_SPEED_FACTOR = 0.65     # out lap ~65% of reference speed
+IN_LAP_SPEED_FACTOR = 0.70      # in lap ~70% of reference speed
+SLOW_LAP_SPEED_FACTOR = 0.75    # slow/cooldown lap
+MIN_CAR_GAP_M = 40.0            # minimum gap between cars on track (metres)
 
 
 # ---------------------------------------------------------------------------
 # CarTrackState – per-car state in the tick loop (spec §2.3)
 # ---------------------------------------------------------------------------
+
+class LapPhase:
+    OUT_LAP = "out_lap"
+    HOT_LAP = "hot_lap"
+    IN_LAP = "in_lap"
+    SLOW_LAP = "slow_lap"
+
 
 @dataclass
 class CarTrackState:
@@ -76,6 +87,9 @@ class CarTrackState:
     laps_done_in_run: int = 0
     laps_planned: int = 5
     is_player: bool = False
+    lap_phase: str = LapPhase.OUT_LAP       # current lap type
+    pit_exit_delay_s: float = 0.0           # stagger delay before going on track
+    pit_exit_waited_s: float = 0.0          # time waited so far
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +132,7 @@ class SessionBridge:
         self._track_states: Dict[str, CarTrackState] = {}
         self._ai_last_check_s: float = 0.0
         self._accumulated_time_s: float = 0.0
+        self._stagger_counter: int = 0  # increments per car scheduled, for stagger
 
     # ------------------------------------------------------------------
     # Initialization
@@ -234,9 +249,8 @@ class SessionBridge:
         # ── FASE 2: MOVE CARS (per-section) ──
         self._move_cars(sim_dt)
 
-        # ── FASE 3: BATTLE RESOLVER ──
-        # TODO: proximity detection + resolve duels based on distance_traveled
-        # For now, dirty air is computed per-section via airflow_penalty
+        # ── FASE 3: SEPARATION / BATTLE ──
+        self._enforce_separation()
 
         # ── FASE 4: STATE COMMIT ──
         self._sync_phases()
@@ -271,14 +285,30 @@ class SessionBridge:
             if race_car is None:
                 continue
 
+            # ── Stagger delay: wait before entering track ──
+            if ts.pit_exit_delay_s > 0 and ts.pit_exit_waited_s < ts.pit_exit_delay_s:
+                ts.pit_exit_waited_s += sim_dt
+                continue
+
             section = self.sections[ts.current_section_idx]
 
-            # Accumulate time
+            # ── Speed factor based on lap phase ──
+            if ts.lap_phase == LapPhase.OUT_LAP:
+                speed_factor = OUT_LAP_SPEED_FACTOR
+            elif ts.lap_phase == LapPhase.IN_LAP:
+                speed_factor = IN_LAP_SPEED_FACTOR
+            elif ts.lap_phase == LapPhase.SLOW_LAP:
+                speed_factor = SLOW_LAP_SPEED_FACTOR
+            else:
+                speed_factor = 1.0
+
+            # Accumulate time (slower laps take longer per section)
+            dt_ref = section.dt_ref_s if section.dt_ref_s > 0 else 3.0
+            effective_dt_ref = dt_ref / speed_factor  # slower = more time per section
             ts.section_time_acc += sim_dt
 
             # ── Interpolate position (every tick) ──
-            dt_ref = section.dt_ref_s if section.dt_ref_s > 0 else 3.0
-            fraction = min(ts.section_time_acc / dt_ref, 1.0)
+            fraction = min(ts.section_time_acc / effective_dt_ref, 1.0)
 
             dist_in_section = fraction * section.length_m
             section_start_m = sum(
@@ -286,20 +316,20 @@ class SessionBridge:
             )
             ts.distance_in_lap = section_start_m + dist_in_section
 
-            # Speed interpolation (v_entry → v_exit)
+            # Speed interpolation (v_entry → v_exit) scaled by phase
             v_entry = section.v_entry_kph if section.v_entry_kph > 0 else 200.0
             v_exit = section.v_exit_kph if section.v_exit_kph > 0 else v_entry
-            speed_kph = v_entry + fraction * (v_exit - v_entry)
+            speed_kph = (v_entry + fraction * (v_exit - v_entry)) * speed_factor
 
             race_car.distance_traveled = ts.distance_in_lap % circuit_m
             race_car.speed = max(speed_kph / 3.6, 1.0)
 
-            # Set state to HOT_LAP while on track
-            set_racecar_phase(race_car, "hot_lap")
+            # Set RaceCar state based on lap phase
+            set_racecar_phase(race_car, ts.lap_phase)
 
             # ── Check section completion ──
-            if ts.section_time_acc >= dt_ref:
-                overflow = ts.section_time_acc - dt_ref
+            if ts.section_time_acc >= effective_dt_ref:
+                overflow = ts.section_time_acc - effective_dt_ref
 
                 # Call update_section() for physics
                 entry = ts.car_entry
@@ -334,9 +364,13 @@ class SessionBridge:
                     entry.state.current_section_idx = 0
                     ts.section_time_acc = 0.0
 
-                    # Check if run is complete
+                    # Update lap phase for next lap
                     if ts.laps_done_in_run >= ts.laps_planned:
                         completed_runs.append(car_id)
+                    elif ts.laps_done_in_run >= ts.laps_planned - 1:
+                        ts.lap_phase = LapPhase.IN_LAP
+                    else:
+                        ts.lap_phase = LapPhase.HOT_LAP
 
         # Complete finished runs
         for car_id in completed_runs:
@@ -487,6 +521,7 @@ class SessionBridge:
         self._track_states[car_id] = CarTrackState(
             car_id=car_id, car_entry=entry,
             laps_planned=stint_laps, is_player=True,
+            pit_exit_delay_s=2.0,  # player gets short delay
         )
         return True
 
@@ -522,6 +557,8 @@ class SessionBridge:
         if self.pso is None or self.circuit_config is None:
             return
 
+        self._stagger_counter = 0  # reset per scheduling batch
+
         for car_id, engine in self.ai_engines.items():
             if car_id in self._track_states:
                 continue
@@ -549,11 +586,15 @@ class SessionBridge:
             )
 
             if record is not None:
+                # Stagger delay: 3-8s base + 5s per car in this batch
+                stagger = 3.0 + self._stagger_counter * 5.0 + random.uniform(0, 3.0)
+                self._stagger_counter += 1
                 self._track_states[car_id] = CarTrackState(
                     car_id=car_id, car_entry=car_entry,
                     laps_planned=run_plan.laps_planned,
+                    pit_exit_delay_s=stagger,
                 )
-                logger.debug("AI %s: starting %s run", car_id, run_plan.program.value)
+                logger.debug("AI %s: starting %s run (stagger %.1fs)", car_id, run_plan.program.value, stagger)
 
     # ------------------------------------------------------------------
     # Internal: complete run
@@ -599,6 +640,49 @@ class SessionBridge:
             set_racecar_phase(race_car, "box")
             race_car.stint_laps_remaining = 0
             race_car.distance_traveled = 0
+
+    # ------------------------------------------------------------------
+    # FASE 3: Separation & proximity
+    # ------------------------------------------------------------------
+
+    def _enforce_separation(self) -> None:
+        """Prevent cars from overlapping on track by enforcing minimum gap."""
+        if not self._track_states or self.circuit_config is None:
+            return
+
+        circuit_m = self.circuit_config.circuit_length_m
+
+        # Build sorted list of on-track cars by distance
+        on_track = []
+        for car_id, ts in self._track_states.items():
+            race_car = self.race_cars_map.get(car_id)
+            if race_car and race_car.distance_traveled > 0:
+                on_track.append((car_id, race_car.distance_traveled, ts))
+
+        if len(on_track) < 2:
+            return
+
+        on_track.sort(key=lambda x: x[1])
+
+        # Enforce minimum gap: if car behind is too close, slow it down
+        for i in range(1, len(on_track)):
+            _, dist_ahead, _ = on_track[i - 1]
+            car_id_behind, dist_behind, ts_behind = on_track[i]
+
+            gap = dist_behind - dist_ahead
+            # Handle wrap-around
+            if gap < 0:
+                gap += circuit_m
+
+            if gap < MIN_CAR_GAP_M:
+                # Push the car behind back slightly
+                race_car = self.race_cars_map.get(car_id_behind)
+                if race_car:
+                    new_dist = dist_ahead - MIN_CAR_GAP_M
+                    if new_dist < 0:
+                        new_dist += circuit_m
+                    race_car.distance_traveled = new_dist
+                    ts_behind.distance_in_lap = new_dist
 
     # ------------------------------------------------------------------
     # Internal: sync phases

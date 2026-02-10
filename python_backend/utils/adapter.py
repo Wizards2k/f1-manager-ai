@@ -216,6 +216,7 @@ def set_racecar_phase(car, phase_name: str) -> None:
         "hot_lap": GameCarState.HOT_LAP,
         "in_lap": GameCarState.IN_LAP,
         "pit_entry": GameCarState.IN_LAP,
+        "slow_lap": GameCarState.OUT_LAP,
         "pit_work": GameCarState.BOX,
         "pit_queue": GameCarState.BOX,
     }
