@@ -738,7 +738,8 @@ class SessionBridge:
                 "player_send_out: car %s phase=%s (need IN_GARAGE)",
                 car_id, css.phase,
             )
-            return False
+            # Car is already queued or on track — not an error, just ignore
+            return True if css.phase in (CarPhase.PIT_QUEUE, CarPhase.PIT_EXIT, CarPhase.ON_TRACK) else False
         if self.pso.clock.is_finished:
             logger.warning("player_send_out: session finished")
             return False
@@ -932,7 +933,6 @@ class SessionBridge:
             return
         if self.pso and self.pso.clock.flag != SessionFlag.GREEN:
             # No battles under yellow/red
-            self._enforce_min_gap()
             return
 
         circuit_m = self.circuit_config.circuit_length_m
@@ -1050,9 +1050,7 @@ class SessionBridge:
             # Store events
             self.battle_events.extend(result.events)
 
-        # ── Enforce minimum gap for remaining overlaps ──
-        self._enforce_min_gap()
-        # Clear cooldown after gap enforcement
+        # Cooldown no longer needed (no gap enforcement)
         self._battle_cooldown.clear()
 
     def _enforce_min_gap(self) -> None:
