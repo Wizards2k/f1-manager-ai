@@ -25,10 +25,12 @@ python_backend/lap_simulator/
 ├── power_unit.py            # Passo 4 – ICE + ERS + fuel
 ├── tyre_model.py            # Passo 5a – Termica 2 strati + grip + usura
 ├── brake_system.py          # Passo 5b – Termica freni + fade
-├── driver_model.py          # Passo 2 – Decisione pilota
+├── driver_model.py          # Passo 2 – Decisione pilota (tattico, per-sezione)
 ├── update_section.py        # Passi 1-8 orchestrati
 ├── lap_simulator.py         # Runtime loop (InputMixer → update × N → Commit)
-└── tests/                   # 85 test unitari + integrazione
+├── ai_data_types.py         # AI Driver Engine types (RunProgram, RunPlan, SessionPlan)
+├── ai_driver_engine.py      # AI Driver Engine (strategico, per-run)
+└── tests/                   # 105 test unitari + integrazione
 ```
 
 ### 2.1 Flusso dati (un giro)
@@ -164,6 +166,36 @@ Classe `LapSimulator` con:
 - `run_laps(n)` → Dict[car_id, List[LapResult]] — N giri
 - Tracking settori via `sector_markers_m`
 - Placeholder per `_compute_airflow_penalty()` e `_compute_traffic_constraint()` (multi-car futuro)
+
+### 3.10 ai_driver_engine.py – AI Driver Engine (strategico)
+
+Livello **strategico** (per-run) che si affianca al livello **tattico** (per-sezione) di `driver_model.py`.
+
+**Moduli**: `ai_data_types.py` (tipi) + `ai_driver_engine.py` (logica)
+
+**Tipi principali**:
+- `RunProgram`: enum (SETUP_VALIDATION, TYRE_DEG, QUALI_SIM, RACE_TRIM, AERO_RND)
+- `RunPlan`: programma + laps + fuel + compound + engine_map + ers_mode + push_level
+- `SessionPlan`: lista RunPlan per FP1/FP2/FP3
+- `AITeamConfig`: simulation_efficiency, budget_tier
+- `AIDriverConfig`: sim_affinity, setup_finding_skill, mechanical_sympathy
+- `RunResult`: outcome + telemetry summary + setup adjustments + converged flag
+
+**Classe `AIDriverEngine`** — lifecycle per sessione:
+1. `start_session(session_type)` → genera `SessionPlan` con 2-3 run
+2. `has_next_run()` / `next_run()` → iterazione sui run pianificati
+3. `configure_current_run()` → `CarEntry` pronto per LapSimulator
+4. `complete_run(lap_results)` → analisi telemetria, proposta setup adjustments, avanzamento
+5. `session_summary()` → riepilogo sessione
+
+**Setup seed** (spec §2): `score = 0.7 × sim_eff + 0.3 × sim_affinity` → offset_factor inversamente proporzionale. Top team: offset ~2%, backmarker: ~14%.
+
+**Refinement loop** (spec §5): dopo ogni run, analizza grip balance (front vs rear), brake cooling, traction. Se delta > threshold → propone adjustment su front_wing, antiroll, brake_duct. Accuracy dipende da `sim_affinity + mechanical_sympathy`.
+
+**Session programs** (spec §3):
+- FP1: 2× Setup Validation (+ Tyre Deg per top team)
+- FP2: Tyre Deg + Quali Sim + Race Trim
+- FP3: Quali Sim (+ Setup Validation se non converged)
 
 ## 4. Coefficienti globali di tuning
 
@@ -315,7 +347,8 @@ Spec: `docs/telemetry-sections-v2-spec.md`. Branch `feature/telemetry-sections-v
 | test_tyre_model | 9 | ✅ PASS |
 | test_brake_system | 7 | ✅ PASS |
 | test_integration_lap | 12 | ✅ PASS |
-| **Totale** | **85** | **✅ ALL PASS** |
+| test_ai_driver | 20 | ✅ PASS |
+| **Totale** | **105** | **✅ ALL PASS** |
 
 ## 8. Risultati simulazione Monza
 
@@ -361,7 +394,7 @@ Risultati L1 (top team, raw_pace=85):
 2. ✅ ~~Implementare gap §6.7-6.10~~ — fuel weight, mechanical grip, driver skills brakes, overtake window
 3. ✅ ~~Tuning coefficienti~~ — calibrato su 24/24 circuiti (3 round). L1 avg=+5.7%, 22/24 nel target.
 4. ✅ ~~PU over_rev/shock~~ — usura ICE/ERS ora usa overrev_factor + shock_factor
-5. **⚡ AI Driver Engine** — loop decisionale per run plan, fuel/ERS, strategie box (spec: `docs/ai-driver-engine-spec.md`)
+5. ✅ ~~AI Driver Engine~~ — setup seed, session planning (FP1/2/3), run config, post-run analysis, refinement loop. 20 test.
 6. **BattleResolver 2.0** — logica sorpassi/difesa basata su overtake_window + driver skills
 7. **Practice Session Orchestrator** — scheduling sessione, queue pitlane, run data
 8. **TyreModel v2** — compound C1-C6, graining/blistering, heat-cycle penalty (risolverà degrado L5)

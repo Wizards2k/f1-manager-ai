@@ -116,9 +116,23 @@ Risultati L1 (top team, 24 circuiti):
 
 ---
 
+## ✅ Completato: AI Driver Engine
+
+Moduli: `ai_data_types.py` + `ai_driver_engine.py` (20 test, 105/105 totali)
+
+- **Setup seed**: `score = 0.7 × sim_eff + 0.3 × sim_affinity` → offset inversamente proporzionale
+- **Session planning**: FP1 (2× Setup Validation + Tyre Deg per top), FP2 (Tyre Deg + Quali Sim + Race Trim), FP3 (Quali Sim + Setup se non converged)
+- **Run config**: `configure_run()` → `CarEntry` pronto per LapSimulator (fuel, compound, engine_map, push_level)
+- **Post-run analysis**: telemetry summary, grip balance delta, brake cooling delta → setup adjustments
+- **Refinement loop**: accuracy da `sim_affinity + mechanical_sympathy`, convergenza quando tutti i delta < threshold
+- **Classe `AIDriverEngine`**: lifecycle completo start_session → has_next_run → configure → complete_run → summary
+
+Integrazione testata su Monza: top team FP1 (3 run), backmarker FP2 (3 run).
+
+---
+
 ## Prossimi passi
 
-1. **⚡ AI Driver Engine** — loop decisionale per run plan, fuel/ERS, strategie box
-2. BattleResolver 2.0 — logica sorpassi/difesa
-3. Practice Session Orchestrator
-4. TyreModel v2 — modello termico completo (risolverà degrado L5)
+1. **⚡ BattleResolver 2.0** — logica sorpassi/difesa basata su overtake_window + driver skills
+2. Practice Session Orchestrator — scheduling sessione, queue pitlane, run data
+3. TyreModel v2 — modello termico completo (risolverà degrado L5)

@@ -57,13 +57,14 @@ Portare il gioco a una release pubblica in cui:
    > ✅ **Tuning multi-circuito** completato: baseline 0.07, k_grip 0.02, k_brake 0.015, k_fuel 0.015, k_driver 0.03, thermal floor 0.82. L1 avg=+5.7%, 22/24 nel target [4.5–7.5%]. Degrado L5 rimandato a TyreModel v2.
    > ✅ **PU over_rev/shock** fix: usura ICE/ERS ora tiene conto di `overrev_factor` (mappe aggressive) e `shock_factor` (kerb/bump).
    > **Copertura `degradation-and-consumption.md`**: §5.2 Brakes ✅, §5.3 Fuel ✅, §5.4 PU ✅, §5.1 Tyres 🟡 (manca compound C1-C6, graining, heat-cycle → TyreModel v2), §5.5 Damage 🟡 (struttura presente, dettagli da completare).
-   > **Step successivi:** (1) AI Driver Engine → (2) BattleResolver 2.0 → (3) Practice Session Orchestrator → (4) TyreModel v2 (compound + graining/blistering).
+   > ✅ **AI Driver Engine** implementato: setup seed, session planning (FP1/2/3), run config, post-run analysis con refinement loop, 20 test. Spec: `docs/ai-driver-engine-spec.md`.
+   > **Step successivi:** (1) BattleResolver 2.0 → (2) Practice Session Orchestrator → (3) TyreModel v2.
 2. **BattleResolver 2.0**: codice allineato alla nuova spec (cooldown, side-by-side, metriche HUD/telemetria).
 3. **Practice Session Orchestrator**: scheduling tempo sessione, queue pitlane, gestione run e persistenza run data/log.
 4. **TyreModel v2**: compound C1-C6, graining/blistering trigger, heat-cycle penalty, puncture risk. Completa copertura `docs/degradation-and-consumption.md` §5.1.
 
 ## 4. Implementazione – Fase C (AI & Experience — `docs/ai-driver-engine-spec.md`, `docs/setup-ui-plan.md`)
-1. **AI Driver Engine**: loop decisionale per run plan, fuel/ERS, strategie box e ricerca setup.
+1. ✅ **AI Driver Engine**: implementato in `python_backend/lap_simulator/ai_driver_engine.py`. Setup seed, session planning, run config, refinement loop. 105/105 test.
 2. **Telemetria & HUD eventi**: logging sorpassi, blocchi, dirty air, feedback ingegnere per player e QA.
 3. **UI Garage 2.0 completa**: engineer assistant, feedback testuale, gestione parc fermé e callouts realtime.
 
