@@ -53,6 +53,7 @@ logger = logging.getLogger(__name__)
 SESSION_DURATION_S = 3600  # 60 min
 AI_RUN_INTERVAL_S = 30     # AI checks for new run every 30s sim time
 LAP_TIME_ESTIMATE_S = 100  # rough estimate for scheduling
+OUT_LAP_FACTOR = 1.15      # out lap is ~15% slower
 
 
 # ---------------------------------------------------------------------------
@@ -99,6 +100,7 @@ class SessionBridge:
         self._ai_last_check_s: float = 0.0
         self._cars_on_track: Dict[str, dict] = {}  # car_id → {laps_done, laps_planned, entry}
         self._accumulated_time_s: float = 0.0
+        self._lap_progress: Dict[str, dict] = {}  # car_id → {start_time, est_lap_s, circuit_m}
 
     # ------------------------------------------------------------------
     # Initialization
@@ -238,7 +240,10 @@ class SessionBridge:
         # 3. Process cars on track: simulate laps
         self._process_on_track_cars()
 
-        # 4. Sync phases back to RaceCar objects
+        # 4. Interpolate car positions for smooth map movement
+        self._interpolate_positions(dt)
+
+        # 5. Sync phases back to RaceCar objects
         self._sync_phases()
 
     # ------------------------------------------------------------------
@@ -483,6 +488,57 @@ class SessionBridge:
 
         # Remove from simulator entries
         self.car_entries.pop(car_id, None)
+
+    # ------------------------------------------------------------------
+    # Internal: interpolate positions for map
+    # ------------------------------------------------------------------
+
+    def _interpolate_positions(self, dt: float) -> None:
+        """
+        Update distance_traveled and speed for on-track cars each tick.
+
+        The LapSimulator runs whole laps instantly, but the frontend needs
+        smooth position updates. We interpolate based on estimated lap time.
+        """
+        if self.circuit_config is None:
+            return
+
+        circuit_m = self.circuit_config.circuit_length_m
+
+        for car_id, info in self._cars_on_track.items():
+            race_car = self.race_cars_map.get(car_id)
+            if race_car is None:
+                continue
+
+            prog = self._lap_progress.get(car_id)
+            if prog is None:
+                # First tick for this car: initialize progress
+                est_lap = LAP_TIME_ESTIMATE_S
+                if race_car.lap_times:
+                    est_lap = race_car.lap_times[-1]
+                # Out lap is slower
+                if info["laps_done"] == 0:
+                    est_lap *= OUT_LAP_FACTOR
+                prog = {
+                    "elapsed": 0.0,
+                    "est_lap_s": max(est_lap, 60.0),
+                    "circuit_m": circuit_m,
+                }
+                self._lap_progress[car_id] = prog
+
+            prog["elapsed"] += dt
+            fraction = min(prog["elapsed"] / prog["est_lap_s"], 1.0)
+
+            # Update distance (wraps around circuit)
+            race_car.distance_traveled = fraction * circuit_m
+
+            # Update speed (m/s) for animation
+            avg_speed = circuit_m / prog["est_lap_s"]
+            race_car.speed = avg_speed
+
+    def _reset_lap_progress(self, car_id: str) -> None:
+        """Reset lap progress after a lap is completed (restart interpolation)."""
+        self._lap_progress.pop(car_id, None)
 
     # ------------------------------------------------------------------
     # Internal: sync phases
