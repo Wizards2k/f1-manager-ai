@@ -98,6 +98,7 @@ class CarTrackState:
     pit_exit_waited_s: float = 0.0          # time waited so far
     current_sector: int = 0                 # 0=S1, 1=S2, 2=S3
     sector_dt_acc: float = 0.0             # accumulated dt_s in current sector
+    setup_data_complete: bool = False       # AI: has enough setup info → head back in
 
 
 # ---------------------------------------------------------------------------
@@ -257,6 +258,19 @@ def _get_team_tier(team_name: str) -> str:
     return "midfield"
 
 
+def _ai_setup_target(sim_efficiency: int) -> float:
+    """Compute setup info target for AI cars based on team simulation quality.
+
+    Top teams have better simulators → initial setup closer to optimal
+    → less on-track data needed.  Results (at gain ≈ 35 pts/hot-lap):
+      top  (sim_eff=85) → target ≈ 212 → ~6 hot laps → 2-3 runs
+      mid  (sim_eff=70) → target ≈ 325 → ~9 hot laps → 3-4 runs
+      back (sim_eff=55) → target ≈ 438 → ~12 hot laps → 4-5 runs
+    """
+    factor = 1.0 - (sim_efficiency / 100.0)
+    return round(100.0 + factor * 750.0, 1)
+
+
 # ---------------------------------------------------------------------------
 # Session Bridge
 # ---------------------------------------------------------------------------
@@ -356,6 +370,11 @@ class SessionBridge:
                     engine.start_session(st)
                     self.ai_engines[car_id] = engine
                     self._ai_teams_cars.setdefault(team_name, []).append(car_id)
+
+                    # Override setup_info_target for AI based on team sim quality
+                    sim_eff = team_cfg.simulation_efficiency
+                    car.setup_info_target = _ai_setup_target(sim_eff)
+                    car.setup_info_points = 0.0
 
         # Precompute section cumulative distances for fast lookup
         self._section_end_m: List[float] = []
@@ -570,6 +589,8 @@ class SessionBridge:
                     # Update lap phase for next lap
                     if ts.laps_done_in_run >= ts.laps_planned:
                         completed_runs.append(car_id)
+                    elif ai_ready_for_box or (ts.setup_data_complete and not ts.is_player):
+                        ts.lap_phase = LapPhase.IN_LAP
                     elif ts.laps_done_in_run >= ts.laps_planned - 1:
                         ts.lap_phase = LapPhase.IN_LAP
                     else:
@@ -639,8 +660,20 @@ class SessionBridge:
         race_car.distance_traveled = 0
 
         # Accumulate setup info points (all cars, player + AI)
+        ai_ready_for_box = False
         if is_competitive and hasattr(race_car, '_accumulate_setup_info'):
             race_car._accumulate_setup_info(GameCarState.HOT_LAP)
+            if (not ts.is_player
+                    and not ts.setup_data_complete
+                    and getattr(race_car, 'setup_feedback_ready', False)):
+                ts.setup_data_complete = True
+                ai_ready_for_box = True
+                logger.debug(
+                    "AI %s collected setup data (%.1f/%.1f) → boxing next lap",
+                    car_id,
+                    getattr(race_car, 'setup_info_points', 0.0),
+                    getattr(race_car, 'setup_info_target', 0.0),
+                )
 
         # Update session bests (only competitive laps)
         if is_competitive:

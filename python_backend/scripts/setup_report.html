@@ -1,0 +1,3002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Setup Optimization Report</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+h1 { color: #fff; margin-bottom: 5px; }
+h2 { color: #aaa; margin: 30px 0 15px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+h3 { color: #ddd; margin-bottom: 10px; }
+.subtitle { color: #888; font-size: 14px; margin-bottom: 20px; }
+.tier-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; color: #fff; font-size: 11px; font-weight: bold; margin-right: 6px; }
+.skill { font-size: 12px; color: #888; font-weight: normal; margin-left: 15px; }
+
+/* Summary table */
+table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+th { background: #16213e; color: #aaa; text-align: left; padding: 8px 10px; font-size: 12px; text-transform: uppercase; }
+td { padding: 6px 10px; border-bottom: 1px solid #2a2a4a; font-size: 13px; }
+tr:hover { background: #1f1f3a; }
+.num { text-align: center; }
+.highlight { color: #4FC3F7; font-weight: bold; }
+.detail { font-size: 11px; color: #888; }
+
+/* Progress bar */
+.bar-bg { display: inline-block; width: 80px; height: 12px; background: #333; border-radius: 6px; overflow: hidden; vertical-align: middle; }
+.bar-fill { height: 100%; border-radius: 6px; }
+.pct { font-size: 11px; margin-left: 4px; }
+
+/* Tier cards */
+.tier-card { background: #16213e; padding: 15px 20px; border-radius: 8px; margin-bottom: 12px; }
+.tier-stats { display: flex; gap: 30px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; }
+.tier-stats div { background: #1a1a2e; padding: 6px 12px; border-radius: 4px; }
+
+/* Detail */
+.car-detail { background: #16213e; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+.detail-table th { font-size: 11px; }
+.detail-table td { font-size: 12px; }
+.run-complete { background: rgba(76, 175, 80, 0.08); }
+
+/* Target reference */
+.ref-box { background: #16213e; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 40px; flex-wrap: wrap; }
+.ref-box div { font-size: 13px; }
+.ref-box strong { color: #4FC3F7; }
+</style>
+</head>
+<body>
+<h1>🏎️ AI Setup Optimization Report</h1>
+<p class="subtitle">Generated 2026-02-10 23:25 — Simulated FP1 + FP2 + FP3 (all 8 sessions runs per car)</p>
+
+<div class="ref-box">
+    <div><strong>Target:</strong> Top ~213 pts | Mid ~325 pts | Back ~438 pts</div>
+    <div><strong>Formula:</strong> 100 + (1 − sim_eff/100) × 750</div>
+    <div><strong>Base gain/hot lap:</strong> 35 pts × skill multiplier</div>
+    <div><strong>Skill multiplier:</strong> 0.6× (skill=1) → 1.4× (skill=100)</div>
+    <div><strong>Expected:</strong> Top ≤3 runs | Mid 3-4 runs | Back 4-5 runs</div>
+</div>
+
+<h2>📊 Tier Summary</h2>
+
+        <div class="tier-card" style="border-left: 4px solid #4CAF50">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span> TOP (8 cars)</h3>
+            <div class="tier-stats">
+                <div><strong>Avg runs to complete:</strong> 3.0</div>
+                <div><strong>Range:</strong> 3–3 runs</div>
+                <div><strong>Avg hot laps:</strong> 6.8</div>
+                <div><strong>Session breakdown:</strong> FP1: 8</div>
+            </div>
+        </div>
+        <div class="tier-card" style="border-left: 4px solid #FF9800">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span> MIDFIELD (8 cars)</h3>
+            <div class="tier-stats">
+                <div><strong>Avg runs to complete:</strong> 3.2</div>
+                <div><strong>Range:</strong> 3–4 runs</div>
+                <div><strong>Avg hot laps:</strong> 10.0</div>
+                <div><strong>Session breakdown:</strong> FP1: 6, FP2: 2</div>
+            </div>
+        </div>
+        <div class="tier-card" style="border-left: 4px solid #F44336">
+            <h3><span class="tier-badge" style="background:#F44336">BACK</span> BACKMARKER (4 cars)</h3>
+            <div class="tier-stats">
+                <div><strong>Avg runs to complete:</strong> 4.2</div>
+                <div><strong>Range:</strong> 4–5 runs</div>
+                <div><strong>Avg hot laps:</strong> 13.0</div>
+                <div><strong>Session breakdown:</strong> FP2: 4</div>
+            </div>
+        </div>
+
+<h2>📋 All Cars — Setup Completion</h2>
+<table>
+<thead><tr>
+    <th>Tier</th><th>Team</th><th>Driver</th><th>Skill</th><th>Target</th><th>Gain/Lap</th>
+    <th>Runs</th><th>Hot Laps</th><th>Session</th><th>Detail</th>
+</tr></thead>
+<tbody>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>MCL</td>
+            <td><strong>#4</strong> Lando Norris</td>
+            <td class="num">50</td>
+            <td class="num">212</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">3</td>
+            <td class="num highlight">7</td>
+            <td>FP1</td>
+            <td class="detail">Run 3 (FP1 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>MCL</td>
+            <td><strong>#81</strong> Oscar Piastri</td>
+            <td class="num">50</td>
+            <td class="num">212</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">3</td>
+            <td class="num highlight">7</td>
+            <td>FP1</td>
+            <td class="detail">Run 3 (FP1 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>MER</td>
+            <td><strong>#12</strong> Andrea Kimi Antonelli</td>
+            <td class="num">50</td>
+            <td class="num">212</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">3</td>
+            <td class="num highlight">7</td>
+            <td>FP1</td>
+            <td class="detail">Run 3 (FP1 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>MER</td>
+            <td><strong>#63</strong> George Russell</td>
+            <td class="num">50</td>
+            <td class="num">212</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">3</td>
+            <td class="num highlight">7</td>
+            <td>FP1</td>
+            <td class="detail">Run 3 (FP1 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>RBR</td>
+            <td><strong>#1</strong> Max Verstappen</td>
+            <td class="num">50</td>
+            <td class="num">212</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">3</td>
+            <td class="num highlight">7</td>
+            <td>FP1</td>
+            <td class="detail">Run 3 (FP1 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>RBR</td>
+            <td><strong>#22</strong> Yuki Tsunoda</td>
+            <td class="num">50</td>
+            <td class="num">212</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">3</td>
+            <td class="num highlight">7</td>
+            <td>FP1</td>
+            <td class="detail">Run 3 (FP1 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>FER</td>
+            <td><strong>#16</strong> Charles Leclerc</td>
+            <td class="num">85</td>
+            <td class="num">212</td>
+            <td class="num">44.8</td>
+            <td class="num highlight">3</td>
+            <td class="num highlight">5</td>
+            <td>FP1</td>
+            <td class="detail">Run 3 (FP1 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>FER</td>
+            <td><strong>#44</strong> Lewis Hamilton</td>
+            <td class="num">50</td>
+            <td class="num">212</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">3</td>
+            <td class="num highlight">7</td>
+            <td>FP1</td>
+            <td class="detail">Run 3 (FP1 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>AMR</td>
+            <td><strong>#14</strong> Fernando Alonso</td>
+            <td class="num">50</td>
+            <td class="num">325</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">3</td>
+            <td class="num highlight">10</td>
+            <td>FP1</td>
+            <td class="detail">Run 3 (FP1 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>AMR</td>
+            <td><strong>#18</strong> Lance Stroll</td>
+            <td class="num">50</td>
+            <td class="num">325</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">3</td>
+            <td class="num highlight">10</td>
+            <td>FP1</td>
+            <td class="detail">Run 3 (FP1 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>ALP</td>
+            <td><strong>#10</strong> Pierre Gasly</td>
+            <td class="num">50</td>
+            <td class="num">325</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">3</td>
+            <td class="num highlight">10</td>
+            <td>FP1</td>
+            <td class="detail">Run 3 (FP1 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>ALP</td>
+            <td><strong>#43</strong> Franco Colapinto</td>
+            <td class="num">50</td>
+            <td class="num">325</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">4</td>
+            <td class="num highlight">10</td>
+            <td>FP2</td>
+            <td class="detail">Run 4 (FP2 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>RB</td>
+            <td><strong>#6</strong> Isack Hadjar</td>
+            <td class="num">50</td>
+            <td class="num">325</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">3</td>
+            <td class="num highlight">10</td>
+            <td>FP1</td>
+            <td class="detail">Run 3 (FP1 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>RB</td>
+            <td><strong>#30</strong> Liam Lawson</td>
+            <td class="num">50</td>
+            <td class="num">325</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">4</td>
+            <td class="num highlight">10</td>
+            <td>FP2</td>
+            <td class="detail">Run 4 (FP2 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>WIL</td>
+            <td><strong>#23</strong> Alexander Albon</td>
+            <td class="num">50</td>
+            <td class="num">325</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">3</td>
+            <td class="num highlight">10</td>
+            <td>FP1</td>
+            <td class="detail">Run 3 (FP1 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>WIL</td>
+            <td><strong>#55</strong> Carlos Sainz</td>
+            <td class="num">50</td>
+            <td class="num">325</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">3</td>
+            <td class="num highlight">10</td>
+            <td>FP1</td>
+            <td class="detail">Run 3 (FP1 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#F44336">BACK</span></td>
+            <td>HAA</td>
+            <td><strong>#31</strong> Esteban Ocon</td>
+            <td class="num">50</td>
+            <td class="num">438</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">4</td>
+            <td class="num highlight">13</td>
+            <td>FP2</td>
+            <td class="detail">Run 4 (FP2 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#F44336">BACK</span></td>
+            <td>HAA</td>
+            <td><strong>#87</strong> Oliver Bearman</td>
+            <td class="num">50</td>
+            <td class="num">438</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">4</td>
+            <td class="num highlight">13</td>
+            <td>FP2</td>
+            <td class="detail">Run 4 (FP2 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#F44336">BACK</span></td>
+            <td>SAU</td>
+            <td><strong>#5</strong> Gabriel Bortoleto</td>
+            <td class="num">50</td>
+            <td class="num">438</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">4</td>
+            <td class="num highlight">13</td>
+            <td>FP2</td>
+            <td class="detail">Run 4 (FP2 / TYRE_DEG)</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#F44336">BACK</span></td>
+            <td>SAU</td>
+            <td><strong>#27</strong> Nico Hülkenberg</td>
+            <td class="num">50</td>
+            <td class="num">438</td>
+            <td class="num">35.0</td>
+            <td class="num highlight">5</td>
+            <td class="num highlight">13</td>
+            <td>FP2</td>
+            <td class="detail">Run 5 (FP2 / QUALI_SIM)</td>
+        </tr></tbody>
+</table>
+
+<h2>🔍 Per-Car Run Detail</h2>
+
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                MCL #4 Lando Norris
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 212</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">0</td>
+                <td class="num">35 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:16.5%;background:#2196F3"></div></div>
+                    <span class="pct">16%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6</td>
+                <td class="num">4</td>
+                <td class="num">140.0</td>
+                <td class="num">35</td>
+                <td class="num">175 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:82.4%;background:#2196F3"></div></div>
+                    <span class="pct">82%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">6</td>
+                <td class="num">2</td>
+                <td class="num">70.0</td>
+                <td class="num">175</td>
+                <td class="num">245 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 2)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">7</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">245</td>
+                <td class="num">280 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">280</td>
+                <td class="num">315 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">5</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">315</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                MCL #81 Oscar Piastri
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 212</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">0</td>
+                <td class="num">35 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:16.5%;background:#2196F3"></div></div>
+                    <span class="pct">16%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">35</td>
+                <td class="num">140 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:65.9%;background:#2196F3"></div></div>
+                    <span class="pct">66%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">6</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">140</td>
+                <td class="num">245 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 3)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">9</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">245</td>
+                <td class="num">280 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">280</td>
+                <td class="num">315 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">5</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">315</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                MER #12 Andrea Kimi Antonelli
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 212</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">4</td>
+                <td class="num">2</td>
+                <td class="num">70.0</td>
+                <td class="num">0</td>
+                <td class="num">70 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:32.9%;background:#2196F3"></div></div>
+                    <span class="pct">33%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6</td>
+                <td class="num">4</td>
+                <td class="num">140.0</td>
+                <td class="num">70</td>
+                <td class="num">210 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:98.8%;background:#2196F3"></div></div>
+                    <span class="pct">99%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">210</td>
+                <td class="num">245 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 1)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">9</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">245</td>
+                <td class="num">280 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">280</td>
+                <td class="num">315 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">315</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                MER #63 George Russell
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 212</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">0</td>
+                <td class="num">105 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:49.4%;background:#2196F3"></div></div>
+                    <span class="pct">49%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">105</td>
+                <td class="num">140 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:65.9%;background:#2196F3"></div></div>
+                    <span class="pct">66%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">6</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">140</td>
+                <td class="num">245 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 3)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">245</td>
+                <td class="num">280 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">280</td>
+                <td class="num">315 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">7</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">315</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                RBR #1 Max Verstappen
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 212</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">0</td>
+                <td class="num">35 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:16.5%;background:#2196F3"></div></div>
+                    <span class="pct">16%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">35</td>
+                <td class="num">140 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:65.9%;background:#2196F3"></div></div>
+                    <span class="pct">66%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">7</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">140</td>
+                <td class="num">245 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 3)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">9</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">245</td>
+                <td class="num">280 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">280</td>
+                <td class="num">315 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">5</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">315</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                RBR #22 Yuki Tsunoda
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 212</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6</td>
+                <td class="num">4</td>
+                <td class="num">140.0</td>
+                <td class="num">0</td>
+                <td class="num">140 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:65.9%;background:#2196F3"></div></div>
+                    <span class="pct">66%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">140</td>
+                <td class="num">175 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:82.4%;background:#2196F3"></div></div>
+                    <span class="pct">82%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">9</td>
+                <td class="num">2</td>
+                <td class="num">70.0</td>
+                <td class="num">175</td>
+                <td class="num">245 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 2)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">6</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">245</td>
+                <td class="num">280 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">280</td>
+                <td class="num">315 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">7</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">315</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                FER #16 Charles Leclerc
+                <span class="skill">ricerca_assetto: 85 | gain/lap: 44.8 | target: 212</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">4</td>
+                <td class="num">2</td>
+                <td class="num">89.6</td>
+                <td class="num">0</td>
+                <td class="num">90 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:42.2%;background:#2196F3"></div></div>
+                    <span class="pct">42%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">4</td>
+                <td class="num">2</td>
+                <td class="num">89.6</td>
+                <td class="num">90</td>
+                <td class="num">179 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:84.3%;background:#2196F3"></div></div>
+                    <span class="pct">84%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">7</td>
+                <td class="num">1</td>
+                <td class="num">44.8</td>
+                <td class="num">179</td>
+                <td class="num">224 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 1)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">6</td>
+                <td class="num">1</td>
+                <td class="num">44.8</td>
+                <td class="num">224</td>
+                <td class="num">269 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">44.8</td>
+                <td class="num">269</td>
+                <td class="num">314 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8</td>
+                <td class="num">1</td>
+                <td class="num">44.8</td>
+                <td class="num">314</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">44.8</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">1</td>
+                <td class="num">44.8</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                FER #44 Lewis Hamilton
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 212</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">0</td>
+                <td class="num">35 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:16.5%;background:#2196F3"></div></div>
+                    <span class="pct">16%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">35</td>
+                <td class="num">140 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:65.9%;background:#2196F3"></div></div>
+                    <span class="pct">66%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">6</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">140</td>
+                <td class="num">245 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 3)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">6</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">245</td>
+                <td class="num">280 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">280</td>
+                <td class="num">315 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">315</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">319</td>
+                <td class="num">319 / 212</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                AMR #14 Fernando Alonso
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 325</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">0</td>
+                <td class="num">35 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:10.8%;background:#2196F3"></div></div>
+                    <span class="pct">11%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6</td>
+                <td class="num">4</td>
+                <td class="num">140.0</td>
+                <td class="num">35</td>
+                <td class="num">175 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:53.8%;background:#2196F3"></div></div>
+                    <span class="pct">54%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8</td>
+                <td class="num">5</td>
+                <td class="num">175.0</td>
+                <td class="num">175</td>
+                <td class="num">350 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 5)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">9</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">350</td>
+                <td class="num">385 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">385</td>
+                <td class="num">420 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">5</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">420</td>
+                <td class="num">455 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">455</td>
+                <td class="num">488 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">488</td>
+                <td class="num">488 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                AMR #18 Lance Stroll
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 325</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">0</td>
+                <td class="num">105 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:32.3%;background:#2196F3"></div></div>
+                    <span class="pct">32%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">105</td>
+                <td class="num">210 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:64.6%;background:#2196F3"></div></div>
+                    <span class="pct">65%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">7</td>
+                <td class="num">4</td>
+                <td class="num">140.0</td>
+                <td class="num">210</td>
+                <td class="num">350 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 4)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">350</td>
+                <td class="num">385 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">385</td>
+                <td class="num">420 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">420</td>
+                <td class="num">455 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">455</td>
+                <td class="num">488 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">488</td>
+                <td class="num">488 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                ALP #10 Pierre Gasly
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 325</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">0</td>
+                <td class="num">105 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:32.3%;background:#2196F3"></div></div>
+                    <span class="pct">32%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">105</td>
+                <td class="num">140 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:43.1%;background:#2196F3"></div></div>
+                    <span class="pct">43%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">9</td>
+                <td class="num">6</td>
+                <td class="num">210.0</td>
+                <td class="num">140</td>
+                <td class="num">350 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 6)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">350</td>
+                <td class="num">385 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">385</td>
+                <td class="num">420 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">5</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">420</td>
+                <td class="num">455 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">455</td>
+                <td class="num">488 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">488</td>
+                <td class="num">488 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                ALP #43 Franco Colapinto
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 325</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">4</td>
+                <td class="num">2</td>
+                <td class="num">70.0</td>
+                <td class="num">0</td>
+                <td class="num">70 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:21.5%;background:#2196F3"></div></div>
+                    <span class="pct">22%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">70</td>
+                <td class="num">105 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:32.3%;background:#2196F3"></div></div>
+                    <span class="pct">32%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8</td>
+                <td class="num">6</td>
+                <td class="num">210.0</td>
+                <td class="num">105</td>
+                <td class="num">315 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:96.9%;background:#2196F3"></div></div>
+                    <span class="pct">97%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">7</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">315</td>
+                <td class="num">350 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 1)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">350</td>
+                <td class="num">385 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">385</td>
+                <td class="num">420 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">420</td>
+                <td class="num">455 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">455</td>
+                <td class="num">488 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                RB #6 Isack Hadjar
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 325</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">0</td>
+                <td class="num">105 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:32.3%;background:#2196F3"></div></div>
+                    <span class="pct">32%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">4</td>
+                <td class="num">2</td>
+                <td class="num">70.0</td>
+                <td class="num">105</td>
+                <td class="num">175 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:53.8%;background:#2196F3"></div></div>
+                    <span class="pct">54%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8</td>
+                <td class="num">5</td>
+                <td class="num">175.0</td>
+                <td class="num">175</td>
+                <td class="num">350 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 5)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">7</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">350</td>
+                <td class="num">385 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">385</td>
+                <td class="num">420 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">6</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">420</td>
+                <td class="num">455 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">455</td>
+                <td class="num">488 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">488</td>
+                <td class="num">488 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                RB #30 Liam Lawson
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 325</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">0</td>
+                <td class="num">35 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:10.8%;background:#2196F3"></div></div>
+                    <span class="pct">11%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">4</td>
+                <td class="num">2</td>
+                <td class="num">70.0</td>
+                <td class="num">35</td>
+                <td class="num">105 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:32.3%;background:#2196F3"></div></div>
+                    <span class="pct">32%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8</td>
+                <td class="num">6</td>
+                <td class="num">210.0</td>
+                <td class="num">105</td>
+                <td class="num">315 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:96.9%;background:#2196F3"></div></div>
+                    <span class="pct">97%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">315</td>
+                <td class="num">350 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 1)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">350</td>
+                <td class="num">385 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">6</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">385</td>
+                <td class="num">420 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">420</td>
+                <td class="num">455 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">455</td>
+                <td class="num">488 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                WIL #23 Alexander Albon
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 325</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6</td>
+                <td class="num">4</td>
+                <td class="num">140.0</td>
+                <td class="num">0</td>
+                <td class="num">140 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:43.1%;background:#2196F3"></div></div>
+                    <span class="pct">43%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">140</td>
+                <td class="num">245 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:75.4%;background:#2196F3"></div></div>
+                    <span class="pct">75%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">245</td>
+                <td class="num">350 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 3)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">7</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">350</td>
+                <td class="num">385 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">385</td>
+                <td class="num">420 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">420</td>
+                <td class="num">455 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">455</td>
+                <td class="num">488 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">488</td>
+                <td class="num">488 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                WIL #55 Carlos Sainz
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 325</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">4</td>
+                <td class="num">2</td>
+                <td class="num">70.0</td>
+                <td class="num">0</td>
+                <td class="num">70 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:21.5%;background:#2196F3"></div></div>
+                    <span class="pct">22%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6</td>
+                <td class="num">4</td>
+                <td class="num">140.0</td>
+                <td class="num">70</td>
+                <td class="num">210 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:64.6%;background:#2196F3"></div></div>
+                    <span class="pct">65%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8</td>
+                <td class="num">4</td>
+                <td class="num">140.0</td>
+                <td class="num">210</td>
+                <td class="num">350 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 4)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">6</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">350</td>
+                <td class="num">385 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">385</td>
+                <td class="num">420 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">5</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">420</td>
+                <td class="num">455 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">455</td>
+                <td class="num">488 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">488</td>
+                <td class="num">488 / 325</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#F44336">BACK</span>
+                HAA #31 Esteban Ocon
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 438</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">0</td>
+                <td class="num">105 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:24.0%;background:#2196F3"></div></div>
+                    <span class="pct">24%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">105</td>
+                <td class="num">140 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:32.0%;background:#2196F3"></div></div>
+                    <span class="pct">32%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">9</td>
+                <td class="num">7</td>
+                <td class="num">245.0</td>
+                <td class="num">140</td>
+                <td class="num">385 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.0%;background:#2196F3"></div></div>
+                    <span class="pct">88%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">7</td>
+                <td class="num">2</td>
+                <td class="num">70.0</td>
+                <td class="num">385</td>
+                <td class="num">455 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 2)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">455</td>
+                <td class="num">490 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">7</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">490</td>
+                <td class="num">525 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">525</td>
+                <td class="num">560 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">560</td>
+                <td class="num">595 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#F44336">BACK</span>
+                HAA #87 Oliver Bearman
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 438</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">0</td>
+                <td class="num">105 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:24.0%;background:#2196F3"></div></div>
+                    <span class="pct">24%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">105</td>
+                <td class="num">140 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:32.0%;background:#2196F3"></div></div>
+                    <span class="pct">32%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">9</td>
+                <td class="num">7</td>
+                <td class="num">245.0</td>
+                <td class="num">140</td>
+                <td class="num">385 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.0%;background:#2196F3"></div></div>
+                    <span class="pct">88%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">7</td>
+                <td class="num">2</td>
+                <td class="num">70.0</td>
+                <td class="num">385</td>
+                <td class="num">455 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 2)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">455</td>
+                <td class="num">490 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">6</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">490</td>
+                <td class="num">525 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">525</td>
+                <td class="num">560 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">560</td>
+                <td class="num">595 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#F44336">BACK</span>
+                SAU #5 Gabriel Bortoleto
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 438</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5</td>
+                <td class="num">3</td>
+                <td class="num">105.0</td>
+                <td class="num">0</td>
+                <td class="num">105 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:24.0%;background:#2196F3"></div></div>
+                    <span class="pct">24%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">105</td>
+                <td class="num">140 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:32.0%;background:#2196F3"></div></div>
+                    <span class="pct">32%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">9</td>
+                <td class="num">7</td>
+                <td class="num">245.0</td>
+                <td class="num">140</td>
+                <td class="num">385 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.0%;background:#2196F3"></div></div>
+                    <span class="pct">88%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">9</td>
+                <td class="num">2</td>
+                <td class="num">70.0</td>
+                <td class="num">385</td>
+                <td class="num">455 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 2)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">455</td>
+                <td class="num">490 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">7</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">490</td>
+                <td class="num">525 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">525</td>
+                <td class="num">560 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">560</td>
+                <td class="num">595 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#F44336">BACK</span>
+                SAU #27 Nico Hülkenberg
+                <span class="skill">ricerca_assetto: 50 | gain/lap: 35.0 | target: 438</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Laps</th><th>Hot</th>
+                    <th>Gain</th><th>Start</th><th>End / Target</th><th>Progress</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">0</td>
+                <td class="num">35 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:8.0%;background:#2196F3"></div></div>
+                    <span class="pct">8%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">3</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">35</td>
+                <td class="num">70 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:16.0%;background:#2196F3"></div></div>
+                    <span class="pct">16%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">7</td>
+                <td class="num">5</td>
+                <td class="num">175.0</td>
+                <td class="num">70</td>
+                <td class="num">245 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:56.0%;background:#2196F3"></div></div>
+                    <span class="pct">56%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">6</td>
+                <td class="num">4</td>
+                <td class="num">140.0</td>
+                <td class="num">245</td>
+                <td class="num">385 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.0%;background:#2196F3"></div></div>
+                    <span class="pct">88%</span>
+                </td>
+                <td></td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">2</td>
+                <td class="num">70.0</td>
+                <td class="num">385</td>
+                <td class="num">455 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅ (ready @ hot lap 2)</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">7</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">455</td>
+                <td class="num">490 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">4</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">490</td>
+                <td class="num">525 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6</td>
+                <td class="num">1</td>
+                <td class="num">35.0</td>
+                <td class="num">525</td>
+                <td class="num">560 / 438</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:100%;background:#4CAF50"></div></div>
+                    <span class="pct">100%</span>
+                </td>
+                <td>✅</td>
+            </tr></tbody>
+            </table>
+        </div>
+
+</body>
+</html>
