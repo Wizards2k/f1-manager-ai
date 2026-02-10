@@ -291,24 +291,41 @@ Spec: `docs/telemetry-sections-v2-spec.md`. Branch `feature/telemetry-sections-v
 | test_integration_lap | 12 | ✅ PASS |
 | **Totale** | **85** | **✅ ALL PASS** |
 
-## 8. Risultati simulazione Monza (pre-calibrazione)
+## 8. Risultati simulazione Monza
+
+### 8.1 v0.1 (pre-calibrazione, sezioni v1 difettose)
 
 | Giro | Tempo | Fuel | Usura | Temp gomme | Note |
 |------|-------|------|-------|------------|------|
 | 1 | 81.6s | 98.5 kg | 1.09% | 72.7°C | Ref VER Q: 101.1s |
-| 2 | 83.3s | 97.0 kg | 2.17% | 63.1°C | Degrado visibile |
-| 3 | 83.7s | 95.4 kg | 3.23% | 59.6°C | Temp stabilizzata |
-| 4 | 84.0s | 93.9 kg | 4.30% | 58.4°C | |
-| 5 | 84.3s | 92.4 kg | 5.36% | 57.9°C | |
+| 5 | 84.3s | 92.4 kg | 5.36% | 57.9°C | Gap: -20s |
 
-**Gap**: ~20s più veloce del riferimento. Causa principale era §6.11 (sezioni difettose), ora **risolto**.
-Con le sezioni v2, i dati di base sono corretti (dt_ref ≈ lap_time, braking_energy > 0, DRS mappato).
-Resta da integrare i nuovi campi nel LapSimulator e calibrare i coefficienti.
+### 8.2 v0.2 (modello dt_ref, sezioni v2, baseline=+5%)
+
+| Giro | Tempo | Fuel | Usura | Temp gomme | Note |
+|------|-------|------|-------|------------|------|
+| 1 | 108.1s | 98.1 kg | 1.43% | 107.0°C | +6.9% vs VER Q ✅ |
+| 2 | 110.0s | 96.1 kg | 2.83% | 115.0°C | Degrado visibile |
+| 3 | 111.6s | 94.2 kg | 4.22% | 117.3°C | Stabilizzazione |
+| 4 | 111.9s | 92.2 kg | 5.60% | 117.5°C | |
+| 5 | 112.0s | 90.3 kg | 6.97% | 117.1°C | Plateau |
+
+**Modello dt_ref**: `dt = dt_ref × (1 + baseline + Σ penalties)`
+- `baseline_delta = +0.05` (top team inizio 2025, +5% vs VER 2024 Q)
+- Penalties: aero (±0.03), grip (±0.05), brake (±0.03), fuel (±0.03), driver (±0.05)
+- Clamp totale: -0.05 → +0.30
+
+**Posizionamento griglia** (basato su dati F1 2025 reali, prime 4 gare):
+- Top team inizio stagione: +5% (108s Monza)
+- Midfield: +7% (108-110s)
+- Backmarker: +9% (110-112s)
+- Spread griglia: ~4% (~4s)
+- Floor post-sviluppo: +2% (~103s, raggiungibile a fine stagione)
 
 ## 9. Prossimi passi
 
-1. **⚡ Integrare sezioni v2 nel LapSimulator** — aggiornare `SectionContext`, `config_loader`, `update_section` per usare `dt_ref_s` come ancora e i nuovi campi
-2. **Tuning coefficienti** — allineare lap time a ±5s dal riferimento con dt_ref affidabili
+1. ✅ ~~Integrare sezioni v2 nel LapSimulator~~ — completato (modello dt_ref penalty)
+2. **Tuning coefficienti** — calibrare k_aero/grip/brake/fuel/driver per range realistico su tutti i circuiti
 3. **Implementare gap §6.7-6.9** — fuel weight, mechanical grip, driver skills in brakes
 4. **Overtake window** (§6.10) — prerequisito per BattleResolver
 5. **BattleResolver 2.0** — punto 2 della Fase B roadmap

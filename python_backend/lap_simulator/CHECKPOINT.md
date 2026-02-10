@@ -2,7 +2,7 @@
 
 ## Branch: `feature/lapsimulator-runtime`
 
-## Stato: 🔧 IN CORSO — telemetry sections v2 risolto, integrazione in corso
+## Stato: 🔧 IN CORSO — modello dt_ref integrato, tuning coefficienti da fare
 
 ---
 
@@ -61,20 +61,33 @@ I **778 punti telemetrici** (distance, speed, timestamp, throttle, brake, gear, 
 
 ---
 
-## Prossimo passo: Rigenerare le sezioni
+## ✅ Completato: Telemetry Sections v2
 
-Branch: `feature/telemetry-sections-v2`
+Branch `feature/telemetry-sections-v2` merged in `feature/lapsimulator-runtime`.
+24/24 circuiti rigenerati con `scripts/regenerate_telemetry_sections.py`.
 Spec: `docs/telemetry-sections-v2-spec.md`
 
-Obiettivo:
-1. Copertura 100% del circuito (nessun gap)
-2. Confini ai punti naturali (inizio frenata, apex, uscita curva)
-3. `avg_speed` = vera media dei punti nella sezione
-4. `dt_ref` = integrazione Σ(ds/v) dei punti nella sezione
-5. `braking_energy_mj` calcolata dai punti brake
-6. DRS zones mappate alle sezioni
+## ✅ Completato: Modello dt_ref penalty
 
-Una volta completato, tornare su questo branch per:
-- Aggiornare `config_loader.py` per leggere i nuovi campi
-- Calibrare i coefficienti k_* con dt_ref affidabili
-- Implementare i gap §6.7-6.10
+Formula: `dt = dt_ref × (1 + baseline + Σ penalties)`
+
+- `baseline_delta = +0.05` (top team inizio 2025, +5% vs VER 2024 Q)
+- Penalties: aero (±0.03), grip (±0.05), brake (±0.03), fuel (±0.03), driver (±0.05)
+- Clamp: -0.05 → +0.30
+
+Risultati Monza (top team, baseline=+5%):
+- Lap 1: 108.1s (+6.9% vs VER Q 101.1s) ✅
+- Lap 5: 112.0s (degrado ~2s/giro preservato) ✅
+
+Posizionamento griglia (basato su F1 2025 reale, prime 4 gare):
+- Top team: +5% | Midfield: +7% | Backmarker: +9% | Spread: ~4%
+- Floor post-sviluppo: +2% (raggiungibile a fine stagione)
+
+---
+
+## Prossimi passi
+
+1. Tuning coefficienti k_* su più circuiti
+2. Implementare gap §6.7-6.9 (fuel weight, mechanical grip, driver skills)
+3. Overtake window (§6.10)
+4. BattleResolver 2.0
