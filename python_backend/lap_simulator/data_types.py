@@ -126,10 +126,17 @@ class TyreCompoundParams:
     gaussian_sigma_core_c: float = 6.0
     base_grip: float = 1.0
     wear_rate_base_pct_per_km: float = 0.13
+    degradation_rate_multiplier: float = 1.0   # C1=0.6, C3=1.0, C5=1.6 (spec §3)
+    slip_sensitivity: float = 1.0              # C1=0.75, C3=1.0, C5=1.30 (spec §6)
     thermal_mass_surface: float = 1.10
     thermal_mass_core: float = 1.25
     conduction_coeff: float = 0.07
     cooling_coeff: float = 1.0
+    heat_cycle_grip_penalty: float = 0.005     # grip loss per heat cycle (tyre-allocation §5)
+    heat_cycle_warmup_penalty_s: float = 1.5   # extra warmup seconds per heat cycle
+    heat_cycle_eol_threshold: int = 5          # end-of-life after N heat cycles
+    graining_time_threshold_s: float = 8.0     # seconds below window before graining triggers
+    blistering_time_threshold_s: float = 10.0  # seconds above window before blistering triggers
 
     @property
     def temp_opt_surface(self) -> float:
@@ -149,6 +156,7 @@ class TyreState:
     core_temp_c: float = 75.0
     wear_pct: float = 0.0
     lap_age: int = 0
+    heat_cycles: int = 0                 # incremented each time set is reused
     graining_level: float = 0.0
     blistering_level: float = 0.0
     flatspot_severity: float = 0.0
@@ -156,6 +164,8 @@ class TyreState:
     overheat_warning: bool = False
     cold_warning: bool = False
     effective_grip: float = 1.0          # computed each section
+    graining_time_acc_s: float = 0.0     # accumulated time below surface window
+    blistering_time_acc_s: float = 0.0   # accumulated time above surface/core window
 
 
 # ---------------------------------------------------------------------------

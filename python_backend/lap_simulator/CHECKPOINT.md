@@ -131,8 +131,23 @@ Integrazione testata su Monza: top team FP1 (3 run), backmarker FP2 (3 run).
 
 ---
 
+## ✅ Completato: TyreModel v2
+
+4 feature aggiunte chirurgicamente al modello esistente (18 test, 123/123 totali):
+
+- **degradation_rate_multiplier**: C1=0.6x, C3=1.0x, C5=1.6x, C6=1.8x — wear proporzionale al compound
+- **slip_sensitivity**: C1=0.75, C3=1.0, C5=1.30, C6=1.45 — amplifica grip in curva per soft compound
+- **heat_cycle_penalty**: grip_penalty = 0.005/cycle, floor 0.85. Gomme usate perdono grip progressivamente
+- **Graining/blistering temporali**: accumulatori con soglia (8s/10s). Brief exposure non triggera, sustained sì. Decay quando condizioni rientrano.
+
+Nuovi campi `TyreCompoundParams`: degradation_rate_multiplier, slip_sensitivity, heat_cycle_grip_penalty, heat_cycle_warmup_penalty_s, heat_cycle_eol_threshold, graining_time_threshold_s, blistering_time_threshold_s.
+Nuovi campi `TyreState`: heat_cycles, graining_time_acc_s, blistering_time_acc_s.
+
+JSON config aggiornato per tutti gli 8 compound (C1-C6 + Inter + Wet).
+
+---
+
 ## Prossimi passi
 
 1. **⚡ BattleResolver 2.0** — logica sorpassi/difesa basata su overtake_window + driver skills
 2. Practice Session Orchestrator — scheduling sessione, queue pitlane, run data
-3. TyreModel v2 — modello termico completo (risolverà degrado L5)

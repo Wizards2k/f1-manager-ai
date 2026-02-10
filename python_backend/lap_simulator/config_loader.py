@@ -133,6 +133,8 @@ def _parse_tyre_params(data: Dict[str, Any]) -> Dict[TyreCompound, TyreCompoundP
             gaussian_sigma_core_c=vals.get("gaussian_sigma_core_c", 6.0),
             base_grip=vals.get("base_grip", 1.0),
             wear_rate_base_pct_per_km=vals.get("wear_rate_base_pct_per_km", 0.13),
+            degradation_rate_multiplier=vals.get("degradation_rate_multiplier", 1.0),
+            slip_sensitivity=vals.get("slip_sensitivity", 1.0),
             thermal_mass_surface=vals.get("thermal_mass_surface", 1.10),
             thermal_mass_core=vals.get("thermal_mass_core", 1.25),
             conduction_coeff=vals.get("conduction_coeff", 0.07),

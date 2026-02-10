@@ -17,6 +17,7 @@ from .data_types import (
     AeroSetup,
     CarState,
     CircuitConfig,
+    CORNER_KINDS,
     DriverIntent,
     EnvContext,
     SectionContext,
@@ -106,6 +107,8 @@ def _update_single_tyre(
     # --- Wear ---
     section_km = section.length_m / 1000.0
     wear_rate = params.wear_rate_base_pct_per_km * driver.pace_factor
+    # Compound degradation multiplier (C1=0.6x ... C6=1.8x)
+    wear_rate *= params.degradation_rate_multiplier
     # Multipliers from degradation spec
     wear_rate *= (1.0 + aero.bump_penalty + aero.kerb_severity)
     wear_rate *= (1.0 + aero.handling_penalty + 0.0)  # fade_level added by brake step
@@ -136,6 +139,14 @@ def _update_single_tyre(
 
     wear_factor = max(0.5, 1.0 - tyre.wear_pct / 100.0)
 
+    # Heat-cycle penalty (tyre-allocation §5)
+    heat_cycle_factor = max(0.85, 1.0 - tyre.heat_cycles * params.heat_cycle_grip_penalty)
+
+    # Slip sensitivity: amplifies grip loss in corners (spec §6)
+    slip_factor = 1.0
+    if section.kind in CORNER_KINDS:
+        slip_factor = 1.0 + (params.slip_sensitivity - 1.0) * 0.1
+
     # Setup bonus from suspension/antiroll/ride_height (§6.8)
     setup_bonus = 1.0
     if aero_setup is not None:
@@ -157,7 +168,14 @@ def _update_single_tyre(
 
         setup_bonus = clamp(1.0 + susp_bonus - rh_penalty - antiroll_penalty, 0.92, 1.05)
 
-    tyre.effective_grip = params.base_grip * thermal_factor * wear_factor * setup_bonus
+    tyre.effective_grip = (
+        params.base_grip
+        * thermal_factor
+        * wear_factor
+        * heat_cycle_factor
+        * slip_factor
+        * setup_bonus
+    )
 
     # --- Health flags & events ---
     window_max_surface = params.temp_window_surface_c[2]
@@ -189,21 +207,47 @@ def _update_single_tyre(
             message=f"{tyre.wheel_pos.value} tyre wear critical",
         ))
 
-    # Graining (understeer + cold surface on front)
-    if is_front and aero.understeer_level > 0.3 and tyre.surface_temp_c < params.temp_opt_surface:
-        tyre.graining_level += 0.02
+    # Graining: temporal trigger (spec §8 — accumulate time below window)
+    if tyre.surface_temp_c < window_min_surface and aero.understeer_level > 0.15:
+        tyre.graining_time_acc_s += dt_s
+    else:
+        tyre.graining_time_acc_s = max(0.0, tyre.graining_time_acc_s - dt_s * 0.5)
+
+    if tyre.graining_time_acc_s >= params.graining_time_threshold_s:
+        tyre.graining_level += 0.02 * (tyre.graining_time_acc_s / params.graining_time_threshold_s)
         tyre.graining_level = clamp(tyre.graining_level, 0.0, 1.0)
+        if tyre.graining_level > 0.3:
+            events.append(SectionEvent(
+                event_type="tyre_graining",
+                severity=tyre.graining_level,
+                message=f"{tyre.wheel_pos.value} tyre graining",
+            ))
 
     # Flatspot from kerb + braking
     if aero.kerb_impact > 0 and is_front:
         tyre.flatspot_severity += aero.kerb_severity * 0.01
         tyre.flatspot_severity = clamp(tyre.flatspot_severity, 0.0, 1.0)
 
-    # Blistering (core overheated)
+    # Blistering: temporal trigger (spec §8 — accumulate time above window)
     window_max_core = params.temp_window_core_c[2]
-    if tyre.core_temp_c > window_max_core + 5:
-        tyre.blistering_level += 0.015
+    is_overheated = (
+        tyre.surface_temp_c > window_max_surface + 3
+        or tyre.core_temp_c > window_max_core + 3
+    )
+    if is_overheated:
+        tyre.blistering_time_acc_s += dt_s
+    else:
+        tyre.blistering_time_acc_s = max(0.0, tyre.blistering_time_acc_s - dt_s * 0.5)
+
+    if tyre.blistering_time_acc_s >= params.blistering_time_threshold_s:
+        tyre.blistering_level += 0.015 * (tyre.blistering_time_acc_s / params.blistering_time_threshold_s)
         tyre.blistering_level = clamp(tyre.blistering_level, 0.0, 1.0)
+        if tyre.blistering_level > 0.3:
+            events.append(SectionEvent(
+                event_type="tyre_blistering",
+                severity=tyre.blistering_level,
+                message=f"{tyre.wheel_pos.value} tyre blistering",
+            ))
 
     return events
 

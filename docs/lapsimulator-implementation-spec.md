@@ -344,11 +344,11 @@ Spec: `docs/telemetry-sections-v2-spec.md`. Branch `feature/telemetry-sections-v
 | test_config_loader | 17 | ✅ PASS |
 | test_aero_package | 11 | ✅ PASS |
 | test_power_unit | 10 | ✅ PASS |
-| test_tyre_model | 9 | ✅ PASS |
+| test_tyre_model | 18 | ✅ PASS |
 | test_brake_system | 7 | ✅ PASS |
 | test_integration_lap | 12 | ✅ PASS |
-| test_ai_driver | 20 | ✅ PASS |
-| **Totale** | **105** | **✅ ALL PASS** |
+| test_ai_driver | 29 | ✅ PASS |
+| **Totale** | **123** | **✅ ALL PASS** |
 
 ## 8. Risultati simulazione Monza
 
@@ -397,13 +397,13 @@ Risultati L1 (top team, raw_pace=85):
 5. ✅ ~~AI Driver Engine~~ — setup seed, session planning (FP1/2/3), run config, post-run analysis, refinement loop. 20 test.
 6. **BattleResolver 2.0** — logica sorpassi/difesa basata su overtake_window + driver skills
 7. **Practice Session Orchestrator** — scheduling sessione, queue pitlane, run data
-8. **TyreModel v2** — compound C1-C6, graining/blistering, heat-cycle penalty (risolverà degrado L5)
+8. ✅ ~~TyreModel v2~~ — compound C1-C6 con degradation_rate_multiplier + slip_sensitivity, graining/blistering temporali, heat-cycle penalty. 9 nuovi test.
 
 ### 9.1 Copertura `degradation-and-consumption.md`
 
 | Sezione | Stato | Note |
 |---------|-------|------|
-| §5.1 Tyres | 🟡 Parziale | Manca compound C1-C6, graining trigger, heat-cycle → TyreModel v2 |
+| §5.1 Tyres | ✅ Completo | Compound C1-C6+Inter+Wet, degradation multiplier, slip sensitivity, heat-cycle penalty, graining/blistering temporali |
 | §5.2 Brakes | ✅ Completo | Termica, fade, wear, braking_efficiency |
 | §5.3 Fuel | ✅ Completo | Fuel burn + fuel weight penalty (§6.7) |
 | §5.4 PU | ✅ Completo | Termica, derating, wear con over_rev/shock |
