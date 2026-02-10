@@ -35,7 +35,11 @@ function getPythonExecutable() {
         }
         return 'python'; // Fallback to system Python
     } else {
-        // macOS/Linux - use system Python or bundled
+        // macOS/Linux - use venv Python first, then bundled, then system
+        const venvPython = path.join(__dirname, '..', '.venv', 'bin', 'python3');
+        if (fs.existsSync(venvPython)) {
+            return venvPython;
+        }
         const bundledPython = path.join(process.resourcesPath, 'python', 'bin', 'python3');
         if (fs.existsSync(bundledPython)) {
             return bundledPython;
