@@ -219,7 +219,11 @@ def register_routes(app):
         if speed not in [1.0, 2.0, 4.0, 6.0]:
             return jsonify({'error': 'Speed must be 1.0, 2.0, 4.0, or 6.0'}), 400
         
-        set_game_speed(speed)
+        # Map button values to effective simulation speeds
+        # 1x=1x, 2x=5x, 4x=15x, 6x=30x
+        speed_map = {1.0: 1.0, 2.0: 5.0, 4.0: 15.0, 6.0: 30.0}
+        effective_speed = speed_map.get(speed, speed)
+        set_game_speed(effective_speed)
         return jsonify({
             'message': f'Game speed set to {speed}x',
             'speed': speed
