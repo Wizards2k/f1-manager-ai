@@ -31,8 +31,9 @@ Coordinare un’intera sessione di Practice (FP1/FP2/FP3) gestendo simultaneamen
 - Player: definisce manualmente run (compound, fuel, mappe) via UI; l’orchestratore valida disponibilità set/fuel e registra il run, **consultando le regole di allocazione gomme del weekend** (doc dedicato).
 - AI: utilizza il programma definito nella spec AI Driver (Setup Validation, Tyre Deg, Quali Sim, Race Trim, R&D). Ogni entry è un `PracticeRunPlan` con `start_window`, `laps_planned`, `objective`, `priority` e rispetta i vincoli del documento gomme.
 ### 3.2 Cooldown e queue pitlane
-- Cooldown minimo 120 s tra run con modifiche setup/fuel/tyre. L’orchestratore mantiene `next_slot_time` per ogni auto per evitare violazioni.
-- Queue pitlane: se più auto vogliono uscire nello stesso tick, vengono ordinate per priorità e ritardate di 5‑10 s per simulare traffico reale.
+- Cooldown minimo **45 s** tra run consecutivi. Gestito nativamente nel PSO tramite `CarSessionState.next_available_s`, settato in `complete_run()` e verificato in `car_can_run()`.
+- La `PitlaneQueue` mantiene anche `next_slot_time` per car (ridondante, usato come safety net).
+- Queue pitlane: se più auto vogliono uscire nello stesso tick, vengono ordinate per priorità (`PLAYER > AI_CRITICAL > AI_STANDARD`) e rilasciate con gap minimo di `MIN_PIT_EXIT_GAP_S = 5 s` e delay `PITLANE_QUEUE_DELAY_S = 7 s` per auto in coda.
 ### 3.3 Gestione gomme/fuel
 - Tyre allocation per sessione: numero di set per compound definito dal regolamento. Ogni run consuma un set (flag `reused` se riutilizzato con penalty grip).
 - Fuel load espresso in kg e convertito in litri. Rifornimenti conteggiati nel pit turnaround.
@@ -143,7 +144,7 @@ SessionBridge.tick(sim_dt)
 | Pitlane queue (§2.2) | 🟡 | Queue funziona, bandiere non attive |
 | Pause/fast-forward (§2.3) | 🟡 | Pausa globale (non selettiva), speed 1×/5×/15×/30× |
 | Input programma AI (§3.1) | ✅ | `AIDriverEngine.start_session()` genera `SessionPlan` |
-| Cooldown tra run (§3.2) | ⬜ | Solo `pit_work_duration_s` base |
+| Cooldown tra run (§3.2) | ✅ | 45s nativo in PSO via `CarSessionState.next_available_s` |
 | Tyre inventory (§3.3) | ✅ | Allocazione per team, consumo set |
 | **Team Session Plan (§3.4)** | ✅ | Scheduling batch randomizzato (blocchi da 8, jitter intra-team) |
 | **Staggered exit (§3.5)** | ✅ | Random batches + teammate offset + anti-collision 5–8s |

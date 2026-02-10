@@ -431,6 +431,7 @@ class CarSessionState:
     pit_work_end_s: float = 0.0       # when pit work finishes
     runs_completed: int = 0
     best_lap_s: float = 0.0
+    next_available_s: float = 0.0     # earliest time this car can start a new run
 
 
 # ---------------------------------------------------------------------------
@@ -693,12 +694,15 @@ class PracticeSessionOrchestrator:
         css.runs_completed += 1
         css.laps_this_run = laps_completed
 
-        # Pit work phase
+        # Pit work phase + cooldown
+        cooldown_end = now + PITLANE_COOLDOWN_S
         if pit_work_duration_s > 0:
             css.phase = CarPhase.PIT_WORK
             css.pit_work_end_s = now + pit_work_duration_s
+            css.next_available_s = max(cooldown_end, css.pit_work_end_s)
         else:
             css.phase = CarPhase.IN_GARAGE
+            css.next_available_s = cooldown_end
 
         css.current_run_id = -1
         css.current_tyre_set_id = ""
@@ -765,6 +769,9 @@ class PracticeSessionOrchestrator:
         if self.clock.is_finished:
             return False
         if self.clock.flag == SessionFlag.RED:
+            return False
+        # Enforce cooldown between runs
+        if self.clock.elapsed_s < css.next_available_s:
             return False
         return True
 
