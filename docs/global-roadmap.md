@@ -45,7 +45,13 @@ Portare il gioco a una release pubblica in cui:
 4. ✅ **UI Garage 2.0 (base)** (`docs/setup-ui-plan.md`, `docs/setup-search-plan.md`): implementata con design Jarvis Variant B — 11 slider in 4 gruppi, valori fisici (°/mm/%), range circuito, feedback row + 5 category chips. Feedback ingegnere basato su quota informazioni (chip SETUP/Data rosso→giallo→verde) e senza feedback live; serve raccolta dati e rientro ai box per pubblicare nuovi suggerimenti. Modifica slider azzera il progresso.
 
 ## 3. Implementazione – Fase B (Race Engine Core — `docs/lap-physics-spec-v0.5.md`, `docs/BattleResolver.md`, `docs/practice-session-orchestrator.md`)
+
+> **Spec tecnica di riferimento**: `docs/lapsimulator-implementation-spec.md`
+
 1. **LapSimulator runtime**: implementare il loop InputMixer → update_section parallelo → BattleResolver 2.0 → StateCommit.
+   > **Stato:** 🔧 v0.1 implementata il 2026-02-10 (branch `feature/lapsimulator-runtime`, 85/85 test).
+   > Modulo standalone in `python_backend/lap_simulator/` — 8 passi update_section, config loader, test integrazione Monza.
+   > **Da completare:** calibrazione coefficienti, dati sezione mancanti (braking_energy, DRS, radius), fuel weight, mechanical grip, overtake_window.
 2. **BattleResolver 2.0**: codice allineato alla nuova spec (cooldown, side-by-side, metriche HUD/telemetria).
 3. **Practice Session Orchestrator**: scheduling tempo sessione, queue pitlane, gestione run e persistenza run data/log.
 
@@ -94,11 +100,13 @@ Portare il gioco a una release pubblica in cui:
 
 ## 5. Documenti correlati
 - `docs/lap-physics-spec-v0.5.md`
+- `docs/lapsimulator-implementation-spec.md` ← **NEW** (Fase B, spec tecnica implementazione)
 - `docs/setup-engine-spec-v0.1.md`
 - `docs/physics-roadmap.md`
 - `docs/setup-search-plan.md`, `docs/setup-ui-plan.md`
 - `docs/BattleResolver.md` (da aggiornare)
 - `docs/TyreModel.md`
+- `docs/AeroPackage.md`, `docs/config-spec.md`, `docs/degradation-and-consumption.md`
 
 ## 6. Prossimi passi immediati
 1. Validare questa roadmap con product/gameplay.

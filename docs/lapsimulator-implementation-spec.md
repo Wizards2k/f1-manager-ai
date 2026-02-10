@@ -1,0 +1,266 @@
+---
+title: LapSimulator Runtime – Implementation Spec v0.1
+version: 0.1
+last_updated: 2026-02-10
+status: in_progress
+branch: feature/lapsimulator-runtime
+scope: "Implementazione standalone del motore fisico LapSimulator (8-step update_section loop) con test indipendenti"
+parent_spec: docs/lap-physics-spec-v0.5.md
+---
+
+## 1. Obiettivo
+
+Implementare il LapSimulator come modulo Python standalone (`python_backend/lap_simulator/`), completamente indipendente dal RaceEngine esistente. Il modulo implementa il loop a 8 passi descritto in `lap-physics-spec-v0.5.md` §3.3 e il runtime loop §3.3.1.
+
+Una volta testato e calibrato, il modulo verrà integrato nel gioco sostituendo il motore fisico attuale.
+
+## 2. Architettura
+
+```
+python_backend/lap_simulator/
+├── __init__.py              # Package entry point
+├── data_types.py            # Type system (30+ dataclass, enum, helpers)
+├── config_loader.py         # Carica JSON circuito + profili derivati
+├── aero_package.py          # Passo 3 – Forze aerodinamiche
+├── power_unit.py            # Passo 4 – ICE + ERS + fuel
+├── tyre_model.py            # Passo 5a – Termica 2 strati + grip + usura
+├── brake_system.py          # Passo 5b – Termica freni + fade
+├── driver_model.py          # Passo 2 – Decisione pilota
+├── update_section.py        # Passi 1-8 orchestrati
+├── lap_simulator.py         # Runtime loop (InputMixer → update × N → Commit)
+└── tests/                   # 85 test unitari + integrazione
+```
+
+### 2.1 Flusso dati (un giro)
+
+```
+CircuitConfig (JSON)  ──►  LapSimulator
+                              │
+EnvContext (meteo)    ──►     │
+                              │
+CarEntry (state+setup+driver) │
+                              ▼
+                    ┌─── Per ogni sezione ───┐
+                    │                        │
+                    │  1. Input & stato       │
+                    │  2. DriverModel         │  → DriverIntent
+                    │  3. AeroPackage         │  → AeroForces
+                    │  4. PowerUnit           │  → PU output + thermal
+                    │  5a. TyreModel          │  → grip + thermal + wear
+                    │  5b. BrakeSystem        │  → braking_efficiency
+                    │  6. Velocità + dt       │  → v_effective, dt_s
+                    │  7. State update        │  → fuel, mental, cooldowns
+                    │  8. Return              │  → SectionResult
+                    │                        │
+                    └────────────────────────┘
+                              │
+                              ▼
+                         LapResult
+                    (lap_time, sectors, events,
+                     fuel, wear, temperatures)
+```
+
+## 3. Moduli implementati
+
+### 3.1 data_types.py – Type System
+
+| Dataclass | Ruolo | Campi chiave |
+|-----------|-------|-------------|
+| `SectionContext` | Descrizione statica sezione circuito | kind, length_m, v_base_kph, heat/cool_factor, bumpiness, kerb_severity, braking_energy_mj |
+| `EnvContext` | Condizioni ambientali | air_temp, track_temp, air_density, rain, rubber_level |
+| `TyreCompoundParams` | Parametri immutabili per compound | temp_window (surface/core), sigma, base_grip, wear_rate, thermal_mass, conduction/cooling |
+| `TyreState` | Stato mutabile per ruota | surface_temp, core_temp, wear_pct, graining, blistering, effective_grip |
+| `BrakeSystemParams` / `BrakeState` | Parametri e stato freni | heat_capacity, fade_threshold, temp, fade_level, duct_opening, bias |
+| `EngineMapParams` / `PUState` | Mappe motore e stato PU | heat_load, torque_ramp, ers_output; ice/ers_temp, wear, fuel_kg, ers_energy_mj |
+| `AeroComponent` / `AeroSetup` / `AeroForces` | Componenti aero, setup e output | base_df/drag, angle, suspension, ride_height; df_eff, drag_eff, handling_penalty |
+| `DriverSkills` / `DriverMentalState` / `DriverIntent` | Pilota statico, mentale, decisioni | raw_pace, aggression, consistency; confidence, fatigue; pace_factor, target_line |
+| `DamageCoeffs` / `DamageState` | Danni meccanici | shock_threshold per componente, grip_drop, drag_increase |
+| `CarState` | Stato completo auto | tyres (4), brakes, pu, damage, mental, lap tracking, battle signals |
+| `SectionResult` | Output di update_section() | dt_s, v_effective, events, overtake_window, grip, power |
+| `CircuitConfig` | Config completa circuito | sections, tyre/brake/pu/damage params, coefficienti globali |
+
+**Helpers**: `clamp()`, `gaussian()`, `SECTION_HEAT_COOL`, `CURVE_FACTOR`
+
+### 3.2 config_loader.py – Caricamento configurazione
+
+- Carica telemetria circuito da `python_backend/data/circuits/<id>_Telemetry.json`
+- Carica profili derivati da `config/circuits/derived/<id>/` (tyre, brake, PU, damage)
+- Fallback a global defaults (`config/tyres|brakes|pu|damage/*_global_default.json`)
+- Parsing automatico sezioni con heat/cool factor da `SECTION_HEAT_COOL`
+
+### 3.3 aero_package.py – Passo 3
+
+**Input**: AeroSetup, SectionContext, EnvContext, CarState, v_kph, airflow_penalty, drs_active
+**Output**: AeroForces (df_front/rear_eff, drag_eff, aero_balance, handling_penalty, under/oversteer, bump/kerb, cooling)
+
+**Decisione implementativa**: DF e drag sono trattati come "punti aero" (scala 0-50 per componente), NON come forze fisiche. Un `speed_factor` (0.8-1.15) modula leggermente il DF con la velocità. Questo mantiene i valori nella scala di `df_ref=70`.
+
+Formula chiave:
+```
+df_component = base_downforce * angle_term * speed_factor * damage_factor
+aero_balance = df_front_eff / df_total
+handling_penalty = |balance_error| * k_handling
+```
+
+### 3.4 power_unit.py – Passo 4
+
+**Input**: PUState, DriverIntent, AeroForces, SectionContext, config
+**Output**: PUState aggiornato, eventi
+
+- ICE: `power = BASE_550kW * torque_ramp * wear_factor * derating_factor * fuel_mix`
+- ERS: output da mappa, limitato da batteria e derating termico
+- Fuel burn: `rate = BASE_0.035 * torque_ramp * fuel_mix`
+- Termica: heat_in da mappa, cooling da aero capacity
+- Derating: progressivo tra temp_warning e temp_critical
+
+### 3.5 tyre_model.py – Passo 5a
+
+**Input**: CarState (4 gomme), SectionContext, EnvContext, AeroForces, DriverIntent
+**Output**: effective_grip_front/rear, eventi
+
+Modello termico a 2 strati per ogni ruota:
+- **Surface**: reattiva — heat da section.heat_factor × pace × axis_modifier, cool da convection
+- **Core**: inerte — scambio con surface via conduction_coeff
+- **Grip**: `base_grip × gaussian_thermal × wear_factor × setup_bonus`
+- **Usura**: `wear_rate_base × pace × (1 + bump + kerb + handling) × section_km`
+- **Failure modes**: overheat, puncture risk (>80% wear), graining (understeer+cold), blistering (core hot), flatspot (kerb+brake)
+
+### 3.6 brake_system.py – Passo 5b
+
+**Input**: CarState.brakes, SectionContext, AeroForces, DriverIntent
+**Output**: braking_efficiency (0.9-1.15), eventi
+
+- Energia ripartita front/rear da bias
+- Termica: heat_in da energy/capacity, cooling da duct × airspeed
+- Fade: se temp > threshold → fade_level proporzionale all'eccesso
+- Braking efficiency calcolata SOLO su sezioni con braking_energy ≥ 0.05
+
+### 3.7 driver_model.py – Passo 2
+
+**Input**: DriverSkills, DriverMentalState, SectionContext, CarState
+**Output**: DriverIntent
+
+- `pace_factor` = skill_pace + confidence - fatigue - pressure, × push_level
+- Aggression bonus in curva proporzionale a skill × confidence
+- Target line: optimal/defensive/aggressive basato su stato battaglia
+- ERS deploy: su rettilinei con batteria > 0.5 MJ o in attacco
+- Tyre/fuel save: attivati da usura alta, push basso, fuel critico
+
+### 3.8 update_section.py – Orchestrazione Passi 1-8
+
+Chiama in sequenza: DriverModel → AeroPackage → PowerUnit → TyreModel → BrakeSystem → calcolo velocità → state update → return SectionResult.
+
+Formula velocità:
+- **Curva**: `v = v_base × (1 + curvature × k_df × Δdf/df_ref) × (1 - handling) × braking_eff × grip_axis`
+- **Rettifilo**: `v = v_base + k_power × Δpower - k_drag × Δdrag`, clampato a v_cap
+- **dt = section_length / v_effective**
+
+### 3.9 lap_simulator.py – Runtime Loop
+
+Classe `LapSimulator` con:
+- `register_car(CarEntry)` — registra auto con stato, setup, driver
+- `run_lap()` → Dict[car_id, LapResult] — un giro per tutte le auto
+- `run_laps(n)` → Dict[car_id, List[LapResult]] — N giri
+- Tracking settori via `sector_markers_m`
+- Placeholder per `_compute_airflow_penalty()` e `_compute_traffic_constraint()` (multi-car futuro)
+
+## 4. Coefficienti globali di tuning
+
+| Coefficiente | Valore v0.1 | Ruolo |
+|-------------|-------------|-------|
+| `df_ref` | 70.0 | DF normalizzazione (punti aero) |
+| `drag_ref` | 30.0 | Drag normalizzazione |
+| `power_ref_kw` | 450.0 | Potenza di riferimento (ICE+ERS STANDARD) |
+| `k_df` | 0.15 | Peso DF su velocità curva |
+| `k_drag` | 0.10 | Peso drag su velocità rettifilo |
+| `k_drag_curve` | 0.05 | Peso drag in curva/staccata |
+| `k_power` | 0.12 | Peso potenza su velocità rettifilo |
+| `k_handling` | 0.8 | Peso balance error su handling penalty |
+| `v_min_kph` | 50.0 | Velocità minima assoluta |
+| `v_cap_kph` | 370.0 | Velocità massima assoluta |
+
+## 5. Bug trovati e risolti durante implementazione
+
+### Bug 1 – Velocità curve esplode (CRITICO)
+- **Causa**: `dyn_pressure` (forza fisica) moltiplicata per `base_downforce` (punti aero) produceva DF ~271K vs df_ref=70
+- **Fix**: Rimosso dyn_pressure, usato speed_factor (0.8-1.15). Aggiunto v_cap clamp anche per curve.
+- **Gap spec**: §3.3 Passo 3 mescola coefficienti fisici (Cl × q) con punti aero (df_ref=70). Serve chiarire la scala.
+
+### Bug 2 – Brake fade non rilevato
+- **Causa**: Soglia evento brake_fade a 0.1, ma fade_level reale era 0.033 (corretto ma sotto soglia)
+- **Fix**: Soglia abbassata a 0.01
+- **Gap spec**: Manca tabella severity → azione per tutti gli eventi
+
+### Bug 3 – late_brake_success su ogni sezione
+- **Causa**: Formula braking_efficiency produceva sempre 1.15 (termine positivo troppo forte), anche su rettilinei senza frenata
+- **Fix**: braking_efficiency = 1.0 se braking_energy < 0.05; ridotto peso termine positivo; evento richiede braking_energy ≥ 0.5
+- **Gap spec**: Formula non specifica che va applicata solo con frenata significativa
+
+## 6. Gap identificati nelle specifiche funzionali
+
+### 6.1 Ambiguità DF: punti aero vs forze fisiche
+La spec usa `dyn_pressure = 0.5 * ρ * v²` nel calcolo DF componente (§3.3 Passo 3), ma poi normalizza con `df_ref = 70` (§5). Se df_ref fosse in Newton, dovrebbe essere ~10,000-50,000 N. Se è in "punti aero", dyn_pressure non va applicato. **Decisione presa**: punti aero. **Azione**: aggiornare la spec per chiarire.
+
+### 6.2 braking_energy_mj mancante nelle sezioni
+I file Telemetry JSON non contengono `braking_energy_mj` per sezione. Attualmente è 0 per tutte le sezioni, il che rende il BrakeSystem inerte. **Azione**: calcolare braking_energy dalla telemetria (punti brake > 0) o stimarla da v_entry - v_exit.
+
+### 6.3 bumpiness_factor e kerb_severity mancanti
+I file Telemetry hanno `bumpiness: null` per tutte le sezioni. I valori sono nel `pirelli_track_profile_2025.json` a livello circuito (bumps: 2, kerbs: 4 per Monza) ma non per sezione. **Azione**: distribuire i valori circuito alle sezioni o arricchire la telemetria.
+
+### 6.4 Soglie eventi non definite
+La spec non definisce quando un evento deve essere generato (es. a quale fade_level scatta "Brake fade", a quale temperatura "Tyres overheating"). **Azione**: creare tabella severity/threshold per tutti gli event_type.
+
+### 6.5 DRS zones non mappate alle sezioni
+I file Telemetry hanno `drs_zones` con `detection_m/start_m/end_m` tutti null. Le sezioni non hanno `drs_available` popolato. **Azione**: mappare le zone DRS reali alle sezioni.
+
+### 6.6 Assenza di radius_m nelle sezioni
+Le sezioni curve hanno `radius_m: null`. Il `curvature_factor` viene calcolato dal tipo sezione (SlowCorner=0.4, FastCorner=1.0) invece che dalla geometria reale. **Azione**: estrarre radius dalla telemetria (coordinate x,y) o definire valori manuali.
+
+### 6.7 Fuel weight effect non implementato
+La spec menziona l'effetto peso carburante su accelerazione/frenata (§5.3 degradation doc), ma non è implementato. Con 100kg di fuel il lap time dovrebbe essere ~3s più lento che con 10kg. **Azione**: aggiungere `fuel_weight_penalty` nel calcolo velocità.
+
+### 6.8 Mechanical grip / setup_bonus non collegato
+Il `setup_bonus` nel calcolo grip gomme è fisso a 1.0. Dovrebbe derivare da ride_height, antiroll, suspension per asse. **Azione**: implementare la formula da spec §4 (grip_mech_eff).
+
+### 6.9 DriverSkills non passate al BrakeSystem
+La `braking_efficiency` usa `driver_brake_skill = 0.5` hardcoded. Dovrebbe usare `(race_craft + aggression) / 200` dal DriverSkills. **Azione**: passare DriverSkills al brake step.
+
+### 6.10 Overtake window non calcolato
+Il `overtake_window` (0-1) descritto in §3.3.x non è implementato. È necessario per il BattleResolver. **Azione**: implementare basandosi su delta_v, gap, driver intent, section tags.
+
+## 7. Stato test
+
+| Suite | Test | Stato |
+|-------|------|-------|
+| test_data_types | 19 | ✅ PASS |
+| test_config_loader | 17 | ✅ PASS |
+| test_aero_package | 11 | ✅ PASS |
+| test_power_unit | 10 | ✅ PASS |
+| test_tyre_model | 9 | ✅ PASS |
+| test_brake_system | 7 | ✅ PASS |
+| test_integration_lap | 12 | ✅ PASS |
+| **Totale** | **85** | **✅ ALL PASS** |
+
+## 8. Risultati simulazione Monza (pre-calibrazione)
+
+| Giro | Tempo | Fuel | Usura | Temp gomme | Note |
+|------|-------|------|-------|------------|------|
+| 1 | 81.6s | 98.5 kg | 1.09% | 72.7°C | Ref VER Q: 101.1s |
+| 2 | 83.3s | 97.0 kg | 2.17% | 63.1°C | Degrado visibile |
+| 3 | 83.7s | 95.4 kg | 3.23% | 59.6°C | Temp stabilizzata |
+| 4 | 84.0s | 93.9 kg | 4.30% | 58.4°C | |
+| 5 | 84.3s | 92.4 kg | 5.36% | 57.9°C | |
+
+**Gap**: ~20s più veloce del riferimento. Cause principali:
+- Grip troppo basso (~0.74) penalizza curve ma non abbastanza i rettilinei
+- braking_energy = 0 su tutte le sezioni (dato mancante)
+- Fuel weight effect assente
+- Coefficienti k_* non calibrati
+
+## 9. Prossimi passi
+
+1. **Tuning rapido coefficienti** — allineare lap time a ±5s dal riferimento
+2. **Popolare dati mancanti** — braking_energy, bumpiness, kerb_severity, DRS zones, radius_m
+3. **Implementare gap §6.7-6.9** — fuel weight, mechanical grip, driver skills in brakes
+4. **Overtake window** (§6.10) — prerequisito per BattleResolver
+5. **BattleResolver 2.0** — punto 2 della Fase B roadmap
