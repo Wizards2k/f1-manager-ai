@@ -1,6 +1,6 @@
 ---
-title: LapSimulator Runtime – Implementation Spec v0.1
-version: 0.1
+title: LapSimulator Runtime – Implementation Spec v0.2
+version: 0.2
 last_updated: 2026-02-10
 status: in_progress
 branch: feature/lapsimulator-runtime
@@ -112,6 +112,7 @@ handling_penalty = |balance_error| * k_handling
 - Fuel burn: `rate = BASE_0.035 * torque_ramp * fuel_mix`
 - Termica: heat_in da mappa, cooling da aero capacity
 - Derating: progressivo tra temp_warning e temp_critical
+- Wear: `ice_wear += coeff * power * dt * overrev_factor * shock_factor` (over_rev se torque_ramp > 0.85; shock da kerb_severity + bump_penalty)
 
 ### 3.5 tyre_model.py – Passo 5a
 
@@ -166,8 +167,10 @@ Classe `LapSimulator` con:
 
 ## 4. Coefficienti globali di tuning
 
-| Coefficiente | Valore v0.1 | Ruolo |
-|-------------|-------------|-------|
+### 4.1 Coefficienti velocità (v_effective model, fallback)
+
+| Coefficiente | Valore | Ruolo |
+|-------------|--------|-------|
 | `df_ref` | 70.0 | DF normalizzazione (punti aero) |
 | `drag_ref` | 30.0 | Drag normalizzazione |
 | `power_ref_kw` | 450.0 | Potenza di riferimento (ICE+ERS STANDARD) |
@@ -178,6 +181,23 @@ Classe `LapSimulator` con:
 | `k_handling` | 0.8 | Peso balance error su handling penalty |
 | `v_min_kph` | 50.0 | Velocità minima assoluta |
 | `v_cap_kph` | 370.0 | Velocità massima assoluta |
+
+### 4.2 Coefficienti dt_ref penalty model (v0.2 — tuned su 24 circuiti)
+
+| Coefficiente | v0.1 | v0.2 (tuned) | Ruolo |
+|-------------|------|-------------|-------|
+| `baseline_delta` | 0.05 | **0.07** | Baseline % sopra VER 2024 Q (netto ~+5.5% dopo grip bonus) |
+| `k_aero_penalty` | 0.03 | 0.03 | Contributo aero al penalty |
+| `k_grip_penalty` | 0.05 | **0.02** | Contributo grip (formula normalizzata su `grip_ref=0.70`) |
+| `k_brake_penalty` | 0.03 | **0.015** | Contributo brake fade |
+| `k_fuel_penalty` | 0.03 | **0.015** | Contributo peso carburante |
+| `k_driver_penalty` | 0.05 | **0.03** | Contributo skill pilota |
+| `fuel_max_kg` | 110.0 | 110.0 | Fuel di riferimento per normalizzazione |
+
+**Modifiche formula v0.2**:
+- `delta_grip = k_grip × (grip_ref - grip_avg) / grip_ref` — neutro a grip=0.70, bonus se sopra, penalty se sotto
+- `thermal_factor` floor alzato da 0.70 → 0.82 (gomme fredde meno penalizzanti al L1)
+- Clamp totale invariato: [-0.05, +0.30]
 
 ## 5. Bug trovati e risolti durante implementazione
 
@@ -317,14 +337,21 @@ Spec: `docs/telemetry-sections-v2-spec.md`. Branch `feature/telemetry-sections-v
 | 5 | 112.0s | 90.3 kg | 6.97% | 117.1°C | Plateau |
 
 **Modello dt_ref**: `dt = dt_ref × (1 + baseline + Σ penalties)`
-- `baseline_delta = +0.05` (top team inizio 2025, +5% vs VER 2024 Q)
-- Penalties: aero (±0.03), grip (±0.05), brake (±0.03), fuel (±0.03), driver (±0.05)
+- `baseline_delta = +0.07` (netto ~+5.5% dopo grip bonus)
+- Penalties: aero (±0.03), grip (±0.02), brake (±0.015), fuel (±0.015), driver (±0.03)
 - Clamp totale: -0.05 → +0.30
 
+### 8.3 v0.2 (tuning multi-circuito, 24/24 circuiti)
+
+Risultati L1 (top team, raw_pace=85):
+- **Media**: +5.7% vs ref | **Range**: 4.7%–8.8% | **22/24** nel target [4.5–7.5%]
+- Outlier alti: Imola +8.8% (23 sez, 12 curve), Austin +7.6% (17 sez) — giustificato dalla natura tecnica
+- Degrado L5 su circuiti tecnici: rimandato a TyreModel v2 (compound C1-C6 cambieranno il comportamento)
+
 **Posizionamento griglia** (basato su dati F1 2025 reali, prime 4 gare):
-- Top team inizio stagione: +5% (108s Monza)
-- Midfield: +7% (108-110s)
-- Backmarker: +9% (110-112s)
+- Top team inizio stagione: +5.5% netto (~107s Monza)
+- Midfield: +7.5% (~109s)
+- Backmarker: +9.5% (~111s)
 - Spread griglia: ~4% (~4s)
 - Floor post-sviluppo: +2% (~103s, raggiungibile a fine stagione)
 
@@ -332,6 +359,19 @@ Spec: `docs/telemetry-sections-v2-spec.md`. Branch `feature/telemetry-sections-v
 
 1. ✅ ~~Integrare sezioni v2 nel LapSimulator~~ — completato (modello dt_ref penalty)
 2. ✅ ~~Implementare gap §6.7-6.10~~ — fuel weight, mechanical grip, driver skills brakes, overtake window
-3. **Tuning coefficienti** — calibrare k_aero/grip/brake/fuel/driver per range realistico su tutti i circuiti
-4. **⚡ BattleResolver 2.0** — logica sorpassi/difesa basata su overtake_window + driver skills
-5. **Practice Session Orchestrator** — scheduling sessione, queue pitlane, run data
+3. ✅ ~~Tuning coefficienti~~ — calibrato su 24/24 circuiti (3 round). L1 avg=+5.7%, 22/24 nel target.
+4. ✅ ~~PU over_rev/shock~~ — usura ICE/ERS ora usa overrev_factor + shock_factor
+5. **⚡ AI Driver Engine** — loop decisionale per run plan, fuel/ERS, strategie box (spec: `docs/ai-driver-engine-spec.md`)
+6. **BattleResolver 2.0** — logica sorpassi/difesa basata su overtake_window + driver skills
+7. **Practice Session Orchestrator** — scheduling sessione, queue pitlane, run data
+8. **TyreModel v2** — compound C1-C6, graining/blistering, heat-cycle penalty (risolverà degrado L5)
+
+### 9.1 Copertura `degradation-and-consumption.md`
+
+| Sezione | Stato | Note |
+|---------|-------|------|
+| §5.1 Tyres | 🟡 Parziale | Manca compound C1-C6, graining trigger, heat-cycle → TyreModel v2 |
+| §5.2 Brakes | ✅ Completo | Termica, fade, wear, braking_efficiency |
+| §5.3 Fuel | ✅ Completo | Fuel burn + fuel weight penalty (§6.7) |
+| §5.4 PU | ✅ Completo | Termica, derating, wear con over_rev/shock |
+| §5.5 Damage | 🟡 Parziale | Struttura DamageState presente, effetti progressivi da completare |
