@@ -31,6 +31,7 @@ export class SessionControls {
             this.speedIndicator.textContent = `Speed: ${speed}x`;
         }
         this.speedButtons.forEach(btn => {
+            if (!btn.dataset.speed) return;
             btn.classList.toggle('active', parseFloat(btn.dataset.speed) === speed);
         });
     }
@@ -81,11 +82,11 @@ export class SessionControls {
     }
 
     applyServerState({ is_paused: isPaused, game_speed: gameSpeed } = {}) {
-        if (typeof isPaused === 'boolean') {
+        if (typeof isPaused === 'boolean' && isPaused !== this.isPaused) {
             this.isPaused = isPaused;
             this.updatePauseButton(this.isPaused);
         }
-        if (typeof gameSpeed === 'number' && !Number.isNaN(gameSpeed)) {
+        if (typeof gameSpeed === 'number' && !Number.isNaN(gameSpeed) && gameSpeed !== this.currentSpeed) {
             this.currentSpeed = gameSpeed;
             this.updateSpeedIndicator(this.currentSpeed);
         }

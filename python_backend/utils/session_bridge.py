@@ -284,6 +284,7 @@ class SessionBridge:
         self._ai_teams_cars: Dict[str, List[str]] = {}  # team_name → [car_ids]
         self.battle_resolver = BattleResolver()
         self.battle_events: List[BattleEvent] = []       # events from last tick
+        self._battle_cooldown: set = set()               # car_ids protected from min-gap this tick
 
     # ------------------------------------------------------------------
     # Initialization
@@ -996,18 +997,26 @@ class SessionBridge:
             # ── Apply outcomes ──
             for pair in result.pairs:
                 if pair.outcome == BattleOutcome.OVERTAKE_SUCCESS:
-                    # Swap distances to reflect position change
+                    # Nudge attacker just ahead of defender (no full swap)
                     ts_att = self._track_states.get(pair.attacker_id)
                     ts_def = self._track_states.get(pair.defender_id)
                     rc_att = self.race_cars_map.get(pair.attacker_id)
                     rc_def = self.race_cars_map.get(pair.defender_id)
                     if ts_att and ts_def and rc_att and rc_def:
-                        ts_att.distance_in_lap, ts_def.distance_in_lap = (
-                            ts_def.distance_in_lap, ts_att.distance_in_lap
-                        )
-                        rc_att.distance_traveled, rc_def.distance_traveled = (
-                            rc_def.distance_traveled, rc_att.distance_traveled
-                        )
+                        def_dist = ts_def.distance_in_lap
+                        # Place attacker just ahead of defender
+                        new_att_dist = def_dist + MIN_CAR_GAP_M
+                        if new_att_dist > circuit_m:
+                            new_att_dist -= circuit_m
+                        delta_att = new_att_dist - ts_att.distance_in_lap
+                        ts_att.distance_in_lap = new_att_dist
+                        rc_att.distance_traveled += delta_att
+                        # Slow defender slightly
+                        ts_def.distance_in_lap = max(0, def_dist - 2.0)
+                        rc_def.distance_traveled = max(0, rc_def.distance_traveled - 2.0)
+                        # Protect both from _enforce_min_gap this tick
+                        self._battle_cooldown.add(pair.attacker_id)
+                        self._battle_cooldown.add(pair.defender_id)
 
                 elif pair.outcome == BattleOutcome.BLOCKED:
                     # Slow the attacker slightly
@@ -1021,6 +1030,7 @@ class SessionBridge:
                             rc_att.distance_traveled = max(
                                 0, rc_att.distance_traveled - 2.0
                             )
+                        self._battle_cooldown.add(pair.attacker_id)
 
                 elif pair.outcome == BattleOutcome.COLLISION:
                     # Trigger yellow flag (red for severe — future: check damage)
@@ -1030,12 +1040,16 @@ class SessionBridge:
                         "COLLISION: %s vs %s in section %s",
                         pair.attacker_id, pair.defender_id, section.section_id,
                     )
+                    self._battle_cooldown.add(pair.attacker_id)
+                    self._battle_cooldown.add(pair.defender_id)
 
             # Store events
             self.battle_events.extend(result.events)
 
         # ── Enforce minimum gap for remaining overlaps ──
         self._enforce_min_gap()
+        # Clear cooldown after gap enforcement
+        self._battle_cooldown.clear()
 
     def _enforce_min_gap(self) -> None:
         """Push overlapping cars apart (safety net after battle resolution)."""
@@ -1056,8 +1070,12 @@ class SessionBridge:
         on_track.sort(key=lambda x: x[1])
 
         for i in range(1, len(on_track)):
-            _, dist_ahead, _ = on_track[i - 1]
+            car_id_ahead, dist_ahead, _ = on_track[i - 1]
             car_id_behind, dist_behind, ts_behind = on_track[i]
+
+            # Skip cars recently involved in battle resolution
+            if car_id_behind in self._battle_cooldown or car_id_ahead in self._battle_cooldown:
+                continue
 
             gap = dist_behind - dist_ahead
             if gap < 0:
