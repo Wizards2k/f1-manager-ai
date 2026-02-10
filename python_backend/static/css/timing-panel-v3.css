@@ -104,11 +104,27 @@
     border-radius: 4px;
     font-weight: bold;
     cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 44px;
+    height: 34px;
+}
+
+.speed-btn:hover,
+.pause-btn:hover {
+    background: #555;
+    transform: translateY(-2px);
 }
 
 .speed-btn.active {
     background: #e10600;
+    color: #fff;
     box-shadow: 0 2px 8px rgba(225, 6, 0, 0.5);
+}
+
+.pause-btn.paused {
+    background: #ff6600;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(255, 102, 0, 0.5);
 }
 
 .speed-btn.circuit-select-btn,
@@ -146,6 +162,7 @@
     border-radius: 6px;
     border-left: 3px solid;
     gap: 8px;
+    transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .position {
