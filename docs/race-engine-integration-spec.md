@@ -1,6 +1,6 @@
 ---
 title: Race Engine Integration – Fase C
-version: 0.2
+version: 0.3
 last_updated: 2026-02-10
 branch: feature/race-engine
 scope: "Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio motore semplificato"
@@ -304,18 +304,37 @@ Traccia la posizione di ogni auto nella griglia di sezioni:
 - Backend integration (game_logic, f1_manager_ai, api)
 - 20 auto funzionanti su Suzuka (~91.5s)
 
-### 6.3 🔄 Step 3 — Session Bridge v2 (tick per-sezione)
-- Riscrivere `session_bridge.py` con il tick loop a 4 fasi (§2.1)
-- Implementare `CarTrackState` per tracking sezione
-- Interpolazione posizione fluida (§2.5)
-- BattleResolver per-tick basato su distance_traveled
-- Le auto si muovono sulla mappa in tempo reale
+### 6.3 ✅ Step 3 — Session Bridge v2 (tick per-sezione)
+- `session_bridge.py` riscritto con tick loop a 4 fasi (§2.1)
+- `CarTrackState` con tracking sezione, lap phase, sector tracking
+- Interpolazione posizione fluida (distance + speed per tick)
+- Uscita scaglionata con stagger delay (3-8s + 5s×index)
+- Lap phases: OUT_LAP (65%) → HOT_LAP (100%) → IN_LAP (70%)
+- Out lap penalty su dt_s (tempi non competitivi)
+- Separazione base (MIN_CAR_GAP_M = 40m)
+- Performance: 0.1ms/tick per 20 auto
 
-### 6.4 Step 4 — Polish e fallback
-- Verifica tutti i campi frontend
-- Gestione errori e fallback al vecchio motore
-- Performance profiling (20 auto × tick)
-- Sector crossing detection per timing panel
+### 6.4 ✅ Step 4 — Timing panel e polish
+- Live sector times al passaggio sector markers
+- `update_session_bests()` per colori timing panel (viola/verde)
+- Best times solo da HOT_LAP (out/in lap non contano)
+- Speed buttons mapping (1×→1×, 2×→5×, 4×→15×, 6×→30×)
+- File logging in `python_backend/logs/server.log`
+- `last_lap_type` corretto (OUT_LAP/HOT_LAP/IN_LAP)
+
+### 6.5 🔄 Step 5 — Team Session Plan + uscite randomiche
+- Implementare `TeamSessionPlan` (vedi `practice-session-orchestrator.md §3.4`)
+- Finestra di uscita randomica per squadra (30-300s)
+- Gap tra run (120-360s) con variazione per tier
+- Ordine piloti randomizzato intra-team
+- Stagger anti-collisione tra squadre
+- Sostituire scheduling fisso ogni 30s con piano basato su tempo
+
+### 6.6 Step 6 — BattleResolver 2.0 nel tick loop
+- Proximity detection basata su distance_traveled
+- Dirty air (airflow_penalty) passato a update_section()
+- Risoluzione duelli (overtake/blocked/side-by-side)
+- Sostituire `_enforce_separation()` con BR 2.0 completo
 
 ---
 
