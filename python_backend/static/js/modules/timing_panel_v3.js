@@ -1,8 +1,10 @@
 export class TimingPanelV3 {
-    constructor({ state = null, tableContainer, timerElement }) {
+    constructor({ state = null, tableContainer, timerElement, headerElement = null }) {
         this.state = state || { sessionBests: { best_lap: null, best_sectors: {} } };
         this.tableElement = tableContainer;
         this.timerElement = timerElement;
+        this.headerElement = headerElement || document.querySelector('.timing-header');
+        this._currentFlag = 'green';
     }
 
     static formatLapTime(seconds) {
@@ -72,8 +74,11 @@ export class TimingPanelV3 {
             return `
                 <div class="driver-row ${isInBox ? 'in-box' : 'on-track'}" style="border-left-color: ${car.team_color}">
                     <div class="position">${index + 1}</div>
-                    <div class="driver-number" style="background: ${car.team_color}">
-                        ${car.driver_number}
+                    <div class="driver-number-wrapper">
+                        <div class="driver-number" style="background: ${car.team_color}">
+                            ${car.driver_number}
+                        </div>
+                        <div class="blue-flag-bar ${car.blue_flag ? 'active' : ''}"></div>
                     </div>
                     <div class="driver-info">
                         <div class="driver-name-team">
@@ -107,6 +112,28 @@ export class TimingPanelV3 {
         }).join('');
 
         this.tableElement.innerHTML = rows;
+    }
+
+    updateFlag(flag) {
+        if (!this.headerElement || flag === this._currentFlag) return;
+        this._currentFlag = flag;
+        this.headerElement.classList.remove('flag-green', 'flag-yellow', 'flag-red');
+        this.headerElement.classList.add(`flag-${flag}`);
+
+        let labelEl = this.headerElement.querySelector('.flag-label');
+        if (!labelEl) {
+            labelEl = document.createElement('span');
+            labelEl.className = 'flag-label';
+            const titleEl = this.headerElement.querySelector('.session-title');
+            if (titleEl) titleEl.parentNode.insertBefore(labelEl, titleEl.nextSibling);
+        }
+
+        const labels = {
+            green: '',
+            yellow: '\u26A0 YELLOW FLAG',
+            red: '\uD83D\uDD34 RED FLAG \u2014 SUSPENDED',
+        };
+        labelEl.textContent = labels[flag] || '';
     }
 
     updateSessionTimer(secondsRemaining) {

@@ -758,6 +758,18 @@ class SessionBridge:
         return self.pso.clock.remaining_s if self.pso else 0.0
 
     @property
+    def session_flag(self) -> str:
+        """Current session flag state: 'green', 'yellow', or 'red'."""
+        return self.pso.clock.flag.value if self.pso else "green"
+
+    def get_car_blue_flag(self, car_id: str) -> bool:
+        """Return True if the given car is under blue flag."""
+        if self.pso is None:
+            return False
+        css = self.pso.cars.get(car_id)
+        return css.blue_flag if css else False
+
+    @property
     def is_finished(self) -> bool:
         return self.pso.is_finished if self.pso else True
 

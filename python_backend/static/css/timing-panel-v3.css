@@ -17,14 +17,50 @@
 }
 
 .timing-header {
-    background: linear-gradient(135deg, #e10600 0%, #ff6b35 100%);
     color: white;
     padding: 12px 16px;
     font-weight: bold;
     font-size: 16px;
     border-radius: 8px;
     margin-bottom: 12px;
-    box-shadow: 0 2px 10px rgba(225, 6, 0, 0.3);
+    transition: background 0.4s ease, box-shadow 0.4s ease;
+}
+
+/* Flag-based banner colors */
+.timing-header.flag-green,
+.timing-header:not(.flag-yellow):not(.flag-red) {
+    background: linear-gradient(135deg, #1a7a3a 0%, #2ecc71 100%);
+    box-shadow: 0 2px 10px rgba(46, 204, 113, 0.3);
+}
+
+.timing-header.flag-yellow {
+    background: linear-gradient(135deg, #b8860b 0%, #f1c40f 100%);
+    box-shadow: 0 2px 10px rgba(241, 196, 15, 0.4);
+    animation: flag-pulse-yellow 1.2s ease-in-out infinite;
+}
+
+.timing-header.flag-red {
+    background: linear-gradient(135deg, #cc2222 0%, #e74c3c 100%);
+    box-shadow: 0 2px 10px rgba(231, 76, 60, 0.5);
+    animation: flag-pulse-red 1.5s ease-in-out infinite;
+}
+
+.flag-label {
+    font-size: 11px;
+    opacity: 0.85;
+    margin-left: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+@keyframes flag-pulse-yellow {
+    0%, 100% { box-shadow: 0 2px 10px rgba(241, 196, 15, 0.3); }
+    50% { box-shadow: 0 2px 20px rgba(241, 196, 15, 0.7); }
+}
+
+@keyframes flag-pulse-red {
+    0%, 100% { box-shadow: 0 2px 10px rgba(231, 76, 60, 0.4); }
+    50% { box-shadow: 0 2px 24px rgba(231, 76, 60, 0.8); }
 }
 
 .header-content {
@@ -129,9 +165,35 @@
     justify-content: center;
 }
 
+.driver-number-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.blue-flag-bar {
+    width: 28px;
+    height: 4px;
+    border-radius: 2px;
+    background: transparent;
+    transition: background 0.3s ease;
+}
+
+.blue-flag-bar.active {
+    background: #2196F3;
+    animation: blink-blue 0.8s ease-in-out infinite;
+}
+
+@keyframes blink-blue {
+    0%, 100% { opacity: 1; background: #2196F3; }
+    50% { opacity: 0.3; background: #1565C0; }
+}
+
 .driver-info {
     flex: 1;
     min-width: 80px;
+    overflow: hidden;
 }
 
 .driver-name {

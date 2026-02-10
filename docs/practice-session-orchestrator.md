@@ -141,7 +141,7 @@ SessionBridge.tick(sim_dt)
 | Feature | Stato | Note |
 |---|---|---|
 | Cronometro ufficiale (§2.1) | ✅ | `PSO.clock`, tick con sim_dt |
-| Pitlane queue (§2.2) | 🟡 | Queue funziona, bandiere non attive |
+| Pitlane queue (§2.2) | ✅ | Queue con priorità, bandiere green/yellow/red attive |
 | Pause/fast-forward (§2.3) | 🟡 | Pausa globale (non selettiva), speed 1×/5×/15×/30× |
 | Input programma AI (§3.1) | ✅ | `AIDriverEngine.start_session()` genera `SessionPlan` |
 | Cooldown tra run (§3.2) | ✅ | 45s nativo in PSO via `CarSessionState.next_available_s` |
@@ -152,4 +152,5 @@ SessionBridge.tick(sim_dt)
 | Export API (§4.2) | ⬜ | |
 | SetupEngine integration (§5.1) | ⬜ | |
 | EventBus (§5.1) | ⬜ | |
+| Blue flag per-car | ✅ | `CarSessionState.blue_flag`, `set_blue_flag()`, barra blu in timing UI |
 | Eventi UI (§6) | ⬜ | |

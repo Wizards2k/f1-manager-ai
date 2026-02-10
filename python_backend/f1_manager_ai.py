@@ -99,15 +99,19 @@ def race_simulation():
                 'ice_mode': getattr(car, 'ice_mode', None),
                 'ers_mode': getattr(car, 'ers_mode', None),
                 'stint_target_laps': getattr(car, 'stint_target_laps', None),
+                'blue_flag': bridge.get_car_blue_flag(str(car.driver_number)) if bridge and bridge.active else False,
             })
         
+        session_flag = bridge.session_flag if bridge and bridge.active else 'green'
+
         socketio.emit('race_update', {
             'cars': cars_data,
             'session_time_remaining': session_remaining,
             'session_time_formatted': format_session_time(session_remaining),
             'game_speed': get_game_speed(),
             'is_paused': current_pause_state,
-            'session_bests': get_session_bests()
+            'session_bests': get_session_bests(),
+            'session_flag': session_flag,
         })
 
 if __name__ == '__main__':

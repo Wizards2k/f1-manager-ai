@@ -247,7 +247,14 @@ class SessionClock:
         self.speed_multiplier = max(1.0, min(multiplier, 6.0))
 
     def set_flag(self, flag: SessionFlag) -> None:
+        prev = self.flag
         self.flag = flag
+        # Red flag suspends the clock
+        if flag == SessionFlag.RED and not self.paused:
+            self.paused = True
+        # Returning to green resumes the clock (if it was paused by a flag)
+        if flag == SessionFlag.GREEN and prev in (SessionFlag.RED, SessionFlag.YELLOW):
+            self.paused = False
 
 
 # ---------------------------------------------------------------------------
@@ -432,6 +439,7 @@ class CarSessionState:
     runs_completed: int = 0
     best_lap_s: float = 0.0
     next_available_s: float = 0.0     # earliest time this car can start a new run
+    blue_flag: bool = False            # True when a leader is approaching this car
 
 
 # ---------------------------------------------------------------------------
@@ -525,17 +533,18 @@ class PracticeSessionOrchestrator:
 
         now = self.clock.elapsed_s
 
-        # Process pitlane releases
-        released = self.pitlane.process_tick(now)
-        for req in released:
-            css = self.cars.get(req.car_id)
-            if css:
-                css.phase = CarPhase.ON_TRACK
-                self._emit(
-                    PracticeEventType.CAR_EXIT_PIT,
-                    car_id=req.car_id, team_id=css.team_id,
-                    message=f"{css.driver_name} exits pit",
-                )
+        # Process pitlane releases (blocked under yellow/red)
+        if self.clock.flag == SessionFlag.GREEN:
+            released = self.pitlane.process_tick(now)
+            for req in released:
+                css = self.cars.get(req.car_id)
+                if css:
+                    css.phase = CarPhase.ON_TRACK
+                    self._emit(
+                        PracticeEventType.CAR_EXIT_PIT,
+                        car_id=req.car_id, team_id=css.team_id,
+                        message=f"{css.driver_name} exits pit",
+                    )
 
         # Check pit work completion
         for css in self.cars.values():
@@ -550,11 +559,14 @@ class PracticeSessionOrchestrator:
                     self._abort_run(css, "Session time expired")
             self._emit(PracticeEventType.SESSION_END, message=f"{self.session_type.value} finished")
 
-        # Red flag: force all cars back
+        # Red flag: force all cars back and clear pit queue
         if self.clock.flag == SessionFlag.RED:
             for css in self.cars.values():
                 if css.phase == CarPhase.ON_TRACK:
                     self._abort_run(css, "Red flag")
+                elif css.phase == CarPhase.PIT_QUEUE:
+                    css.phase = CarPhase.IN_GARAGE
+            self.pitlane.queue.clear()
 
         tick_events = self.events[events_before:]
         return tick_events
@@ -768,12 +780,45 @@ class PracticeSessionOrchestrator:
             return False
         if self.clock.is_finished:
             return False
-        if self.clock.flag == SessionFlag.RED:
+        if self.clock.flag in (SessionFlag.RED, SessionFlag.YELLOW):
             return False
         # Enforce cooldown between runs
         if self.clock.elapsed_s < css.next_available_s:
             return False
         return True
+
+    def set_blue_flag(self, car_id: str, active: bool) -> None:
+        """Set or clear blue flag for a specific car."""
+        css = self.cars.get(car_id)
+        if css is None:
+            return
+        if css.blue_flag != active:
+            css.blue_flag = active
+            self._emit(
+                PracticeEventType.FLAG_CHANGE,
+                car_id=car_id, team_id=css.team_id,
+                data={"flag": "blue", "active": active},
+                message=f"{css.driver_name}: blue flag {'shown' if active else 'cleared'}",
+            )
+
+    def set_session_flag(self, flag: SessionFlag) -> None:
+        """
+        Change the session-wide flag state.
+
+        GREEN: normal session, pit releases allowed.
+        YELLOW: no new pit releases, cars on track continue at reduced pace.
+        RED: session suspended — clock paused, all cars forced back, pit queue cleared.
+        """
+        prev = self.clock.flag
+        if flag == prev:
+            return
+        self.clock.set_flag(flag)
+        self._emit(
+            PracticeEventType.FLAG_CHANGE,
+            data={"flag": flag.value, "previous": prev.value},
+            message=f"Flag changed: {prev.value} → {flag.value}",
+            priority=NotificationPriority.HIGH,
+        )
 
     # ------------------------------------------------------------------
     # Internal

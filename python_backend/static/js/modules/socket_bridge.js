@@ -47,6 +47,10 @@ export class SocketBridge {
 
         this.timingPanel.updateSessionTimer(data.session_time_remaining ?? null);
 
+        if (data.session_flag) {
+            this.timingPanel.updateFlag(data.session_flag);
+        }
+
         if (this.sessionControls) {
             this.sessionControls.applyServerState({
                 is_paused: data.is_paused,
