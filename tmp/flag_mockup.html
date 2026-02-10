@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flag System Mockup — F1 Manager AI</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0a;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    padding: 20px;
+  }
+
+  h2 { color: #888; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; margin: 30px 0 12px; }
+  h2:first-of-type { margin-top: 0; }
+
+  /* ===== TIMING PANEL SHELL ===== */
+  .timing-panel {
+    width: 440px;
+    background: #0f0f0f;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 24px;
+  }
+
+  /* ===== BANNER / HEADER ===== */
+  .timing-header {
+    color: white;
+    padding: 12px 16px;
+    font-weight: bold;
+    font-size: 15px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.4s ease, box-shadow 0.4s ease;
+  }
+
+  /* Green flag (normal session) */
+  .timing-header.flag-green {
+    background: linear-gradient(135deg, #1a7a3a 0%, #2ecc71 100%);
+    box-shadow: 0 2px 10px rgba(46, 204, 113, 0.3);
+  }
+
+  /* Yellow flag (VSC / incident) */
+  .timing-header.flag-yellow {
+    background: linear-gradient(135deg, #b8860b 0%, #f1c40f 100%);
+    box-shadow: 0 2px 10px rgba(241, 196, 15, 0.4);
+    animation: pulse-yellow 1.2s ease-in-out infinite;
+  }
+
+  /* Red flag (session suspended) */
+  .timing-header.flag-red {
+    background: linear-gradient(135deg, #cc2222 0%, #e74c3c 100%);
+    box-shadow: 0 2px 10px rgba(231, 76, 60, 0.5);
+    animation: pulse-red 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-yellow {
+    0%, 100% { box-shadow: 0 2px 10px rgba(241, 196, 15, 0.3); }
+    50% { box-shadow: 0 2px 20px rgba(241, 196, 15, 0.7); }
+  }
+
+  @keyframes pulse-red {
+    0%, 100% { box-shadow: 0 2px 10px rgba(231, 76, 60, 0.4); }
+    50% { box-shadow: 0 2px 24px rgba(231, 76, 60, 0.8); }
+  }
+
+  .session-title { font-size: 14px; }
+  .flag-label { font-size: 11px; opacity: 0.85; margin-left: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .session-timer {
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  /* ===== DRIVER ROW ===== */
+  .driver-row {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+    background: #1a1a1a;
+    border-radius: 6px;
+    border-left: 3px solid;
+    gap: 8px;
+  }
+  .driver-row:hover { background: #252525; }
+
+  .position {
+    width: 30px;
+    min-width: 30px;
+    font-weight: bold;
+    font-size: 14px;
+    text-align: center;
+  }
+
+  /* Driver number circle + blue flag bar container */
+  .driver-number-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .driver-number {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 11px;
+    border: 2px solid white;
+    color: white;
+  }
+
+  /* Blue flag bar — hidden by default */
+  .blue-flag-bar {
+    width: 28px;
+    height: 4px;
+    border-radius: 2px;
+    background: transparent;
+    transition: background 0.3s ease;
+  }
+
+  /* Blue flag active — pulsing blue bar */
+  .blue-flag-bar.active {
+    background: #2196F3;
+    animation: blink-blue 0.8s ease-in-out infinite;
+  }
+
+  @keyframes blink-blue {
+    0%, 100% { opacity: 1; background: #2196F3; }
+    50% { opacity: 0.3; background: #1565C0; }
+  }
+
+  .driver-info { flex: 1; min-width: 80px; overflow: hidden; }
+  .driver-name { font-weight: bold; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .driver-team { font-size: 11px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .driver-laps { font-size: 10px; color: #777; margin-top: 2px; }
+
+  .tire-icon {
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: bold;
+  }
+  .tire-M { background: #f1c40f; color: #000; }
+  .tire-S { background: #e74c3c; color: #fff; }
+  .tire-H { background: #ecf0f1; color: #000; }
+
+  .lap-times { display: flex; flex-direction: column; min-width: 120px; }
+  .best-lap { font-family: 'Courier New', monospace; font-weight: bold; font-size: 12px; color: #e10600; }
+  .sector-times { font-size: 10px; color: #aaa; }
+  .sector-row { display: flex; gap: 4px; }
+  .last-lap { font-family: 'Courier New', monospace; font-size: 11px; color: #00ff00; }
+  .best-lap small, .last-lap small { font-size: 9px; color: #666; margin-left: 4px; }
+
+  .state-data-col { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 40px; }
+  .state-indicator { font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 3px; text-align: center; }
+  .state-indicator.box { background: #333; color: #aaa; }
+  .state-indicator.on-track { background: #1a7a3a; color: #63d59f; }
+  .data-chip { font-size: 9px; font-weight: bold; padding: 1px 6px; border-radius: 3px; }
+  .data-chip-red { background: #522; color: #ff8787; }
+  .data-chip-yellow { background: #3d3520; color: #f5d56a; }
+  .data-chip-green { background: #174b2f; color: #63d59f; }
+
+  /* ===== DEMO CONTROLS ===== */
+  .demo-controls {
+    display: flex; gap: 10px; margin-bottom: 20px;
+  }
+  .demo-btn {
+    padding: 8px 18px; border: none; border-radius: 6px;
+    font-weight: bold; font-size: 13px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .demo-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+  .demo-btn.green { background: #1a7a3a; color: #fff; }
+  .demo-btn.yellow { background: #b8860b; color: #fff; }
+  .demo-btn.red { background: #cc2222; color: #fff; }
+  .demo-btn.blue { background: #2196F3; color: #fff; }
+
+  .mockup-note {
+    background: #1a1a2e; border: 1px solid #333; border-radius: 8px;
+    padding: 12px 16px; margin-bottom: 20px; font-size: 12px; color: #aaa;
+    line-height: 1.6;
+  }
+  .mockup-note strong { color: #7dd3fc; }
+</style>
+</head>
+<body>
+
+<div class="mockup-note">
+  <strong>MOCKUP — Flag System UI</strong><br>
+  Click the buttons below to switch between flag states.<br>
+  The <strong>blue flag bar</strong> appears under driver #22 (Tsunoda) as an example — it blinks when a leader is approaching.
+</div>
+
+<div class="demo-controls">
+  <button class="demo-btn green" onclick="setFlag('green')">🟢 Green Flag</button>
+  <button class="demo-btn yellow" onclick="setFlag('yellow')">🟡 Yellow Flag</button>
+  <button class="demo-btn red" onclick="setFlag('red')">🔴 Red Flag</button>
+  <button class="demo-btn blue" onclick="toggleBlue()">🔵 Toggle Blue (Tsunoda)</button>
+</div>
+
+<!-- ===== GREEN FLAG STATE ===== -->
+<div class="timing-panel" id="panel">
+
+  <div class="timing-header flag-green" id="banner">
+    <span>
+      <span class="session-title">FREE PRACTICE - LIVE TIMING</span>
+      <span class="flag-label" id="flag-label"></span>
+    </span>
+    <div class="session-timer">54:22</div>
+  </div>
+
+  <!-- P1 — Verstappen (on track) -->
+  <div class="driver-row" style="border-left-color: #3671C6;">
+    <div class="position">1</div>
+    <div class="driver-number-wrapper">
+      <div class="driver-number" style="background: #3671C6;">1</div>
+      <div class="blue-flag-bar"></div>
+    </div>
+    <div class="driver-info">
+      <div class="driver-name">Verstappen</div>
+      <div class="driver-team">Oracle Red B...</div>
+      <div class="driver-laps">Lap 4 (4 total)</div>
+    </div>
+    <div class="tire-icon tire-M">M</div>
+    <div class="lap-times">
+      <div class="best-lap">1:31.442 <small>BEST</small></div>
+      <div class="sector-times">
+        <div class="sector-row"><span>S1:</span> <span>28.91</span></div>
+        <div class="sector-row"><span>S2:</span> <span>38.22</span></div>
+        <div class="sector-row"><span>S3:</span> <span>24.31</span></div>
+      </div>
+      <div class="last-lap">1:32.108 <small>LAST</small></div>
+    </div>
+    <div class="state-data-col">
+      <div class="state-indicator on-track">ON TRACK</div>
+      <div class="data-chip data-chip-yellow">DATA</div>
+    </div>
+  </div>
+
+  <!-- P2 — Tsunoda (on track, BLUE FLAG example) -->
+  <div class="driver-row" style="border-left-color: #6692FF;">
+    <div class="position">2</div>
+    <div class="driver-number-wrapper">
+      <div class="driver-number" style="background: #6692FF;">22</div>
+      <div class="blue-flag-bar" id="blue-bar-tsunoda"></div>
+    </div>
+    <div class="driver-info">
+      <div class="driver-name">Tsunoda</div>
+      <div class="driver-team">Oracle Red B...</div>
+      <div class="driver-laps">Lap 3 (3 total)</div>
+    </div>
+    <div class="tire-icon tire-M">M</div>
+    <div class="lap-times">
+      <div class="best-lap">1:32.891 <small>BEST</small></div>
+      <div class="sector-times">
+        <div class="sector-row"><span>S1:</span> <span>29.44</span></div>
+        <div class="sector-row"><span>S2:</span> <span>38.90</span></div>
+        <div class="sector-row"><span>S3:</span> <span>24.55</span></div>
+      </div>
+      <div class="last-lap">1:33.210 <small>LAST</small></div>
+    </div>
+    <div class="state-data-col">
+      <div class="state-indicator on-track">ON TRACK</div>
+      <div class="data-chip data-chip-red">DATA</div>
+    </div>
+  </div>
+
+  <!-- P3 — Leclerc (in box) -->
+  <div class="driver-row" style="border-left-color: #E8002D;">
+    <div class="position">3</div>
+    <div class="driver-number-wrapper">
+      <div class="driver-number" style="background: #E8002D;">16</div>
+      <div class="blue-flag-bar"></div>
+    </div>
+    <div class="driver-info">
+      <div class="driver-name">Leclerc</div>
+      <div class="driver-team">Scuderia Ferrari</div>
+      <div class="driver-laps">Lap 0 (0 total)</div>
+    </div>
+    <div class="tire-icon tire-S">S</div>
+    <div class="lap-times">
+      <div class="best-lap">--:--.--- <small>BEST</small></div>
+      <div class="sector-times">
+        <div class="sector-row"><span>S1:</span> <span>--:--</span></div>
+        <div class="sector-row"><span>S2:</span> <span>--:--</span></div>
+        <div class="sector-row"><span>S3:</span> <span>--:--</span></div>
+      </div>
+      <div class="last-lap">--:--.--- <small>LAST</small></div>
+    </div>
+    <div class="state-data-col">
+      <div class="state-indicator box">BOX</div>
+      <div class="data-chip data-chip-red">DATA</div>
+    </div>
+  </div>
+
+  <!-- P4 — Hamilton (in box) -->
+  <div class="driver-row" style="border-left-color: #E8002D;">
+    <div class="position">4</div>
+    <div class="driver-number-wrapper">
+      <div class="driver-number" style="background: #E8002D;">44</div>
+      <div class="blue-flag-bar"></div>
+    </div>
+    <div class="driver-info">
+      <div class="driver-name">Hamilton</div>
+      <div class="driver-team">Scuderia Ferrari</div>
+      <div class="driver-laps">Lap 0 (0 total)</div>
+    </div>
+    <div class="tire-icon tire-M">M</div>
+    <div class="lap-times">
+      <div class="best-lap">--:--.--- <small>BEST</small></div>
+      <div class="sector-times">
+        <div class="sector-row"><span>S1:</span> <span>--:--</span></div>
+        <div class="sector-row"><span>S2:</span> <span>--:--</span></div>
+        <div class="sector-row"><span>S3:</span> <span>--:--</span></div>
+      </div>
+      <div class="last-lap">--:--.--- <small>LAST</small></div>
+    </div>
+    <div class="state-data-col">
+      <div class="state-indicator box">BOX</div>
+      <div class="data-chip data-chip-green">DATA</div>
+    </div>
+  </div>
+
+  <!-- P5 — Russell (on track) -->
+  <div class="driver-row" style="border-left-color: #27F4D2;">
+    <div class="position">5</div>
+    <div class="driver-number-wrapper">
+      <div class="driver-number" style="background: #27F4D2; color: #000;">63</div>
+      <div class="blue-flag-bar"></div>
+    </div>
+    <div class="driver-info">
+      <div class="driver-name">Russell</div>
+      <div class="driver-team">Mercedes-AM...</div>
+      <div class="driver-laps">Lap 5 (5 total)</div>
+    </div>
+    <div class="tire-icon tire-H">H</div>
+    <div class="lap-times">
+      <div class="best-lap">1:33.201 <small>BEST</small></div>
+      <div class="sector-times">
+        <div class="sector-row"><span>S1:</span> <span>29.88</span></div>
+        <div class="sector-row"><span>S2:</span> <span>39.10</span></div>
+        <div class="sector-row"><span>S3:</span> <span>24.22</span></div>
+      </div>
+      <div class="last-lap">1:33.890 <small>LAST</small></div>
+    </div>
+    <div class="state-data-col">
+      <div class="state-indicator on-track">ON TRACK</div>
+      <div class="data-chip data-chip-yellow">DATA</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const banner = document.getElementById('banner');
+  const flagLabel = document.getElementById('flag-label');
+  const blueBar = document.getElementById('blue-bar-tsunoda');
+
+  const flagConfig = {
+    green:  { class: 'flag-green',  label: '',                          title: 'FREE PRACTICE - LIVE TIMING' },
+    yellow: { class: 'flag-yellow', label: '⚠ YELLOW FLAG',            title: 'FREE PRACTICE - LIVE TIMING' },
+    red:    { class: 'flag-red',    label: '🔴 RED FLAG — SUSPENDED',  title: 'FREE PRACTICE - LIVE TIMING' },
+  };
+
+  function setFlag(flag) {
+    banner.className = 'timing-header ' + flagConfig[flag].class;
+    flagLabel.textContent = flagConfig[flag].label;
+  }
+
+  function toggleBlue() {
+    blueBar.classList.toggle('active');
+  }
+
+  // Start with green
+  setFlag('green');
+</script>
+
+</body>
+</html>

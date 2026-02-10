@@ -1,0 +1,84 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<title>FP1 Practice Session Report</title>
+<style>
+body{font-family:"Segoe UI",Arial,sans-serif;background:#0d0d0d;color:#e0e0e0;padding:24px}
+h1{color:#ff6b35;margin-bottom:4px}.meta{color:#888;margin-bottom:16px;font-size:.95em}
+.stats{display:flex;gap:24px;margin-bottom:20px}
+.stat-box{background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:12px 20px}
+.stat-box .val{font-size:1.8em;font-weight:bold;color:#63d59f}.stat-box .label{font-size:.85em;color:#888}
+table{border-collapse:collapse;width:100%;font-size:.92em}
+th{background:#1a1a1a;padding:10px 12px;text-align:left;border-bottom:2px solid #333;position:sticky;top:0}
+td{padding:8px 12px;border-bottom:1px solid #222}tr:hover{background:#1a1a1a}
+.tag{padding:3px 10px;border-radius:4px;font-size:.85em;font-weight:600}
+.tag.success{background:#174b2f;color:#63d59f}.tag.partial{background:#3d3520;color:#f5d56a}
+.tag.aborted{background:#522;color:#ff8787}.tag.not_run{background:#333;color:#888}
+.tier{padding:2px 8px;border-radius:3px;font-size:.8em}
+.tier.top{background:#2a1a3a;color:#c084fc}.tier.midfield{background:#1a2a3a;color:#7dd3fc}
+.tier.backmarker{background:#2a2a1a;color:#fcd34d}
+</style></head><body>
+<h1>FP1 Practice Session Report</h1>
+<div class="meta">Circuit: <strong>Suzuka</strong> | Session: FP1 | AI Cars: 18 | Scheduling: random batches of 8 | Cooldown: 45s | Inter-run gap: 75-150s</div>
+<div class="stats">
+<div class="stat-box"><div class="val">54</div><div class="label">Total Runs Planned</div></div>
+<div class="stat-box"><div class="val">53</div><div class="label">Runs Completed</div></div>
+<div class="stat-box"><div class="val">0</div><div class="label">Not Run</div></div>
+<div class="stat-box"><div class="val">98%</div><div class="label">Completion Rate</div></div>
+</div>
+<table><thead><tr>
+<th>Team</th><th>Tier</th><th>Driver</th><th>Run #</th><th>Program</th><th>Planned Laps</th><th>Laps Recorded</th><th>Best Lap (s)</th><th>Outcome</th><th>Setup Adj.</th>
+</tr></thead><tbody>
+<tr><td>Oracle Red Bull Racing</td><td><span class='tier top'>top</span></td><td>Max Verstappen</td><td>1</td><td>SetupValidation</td><td>6</td><td>6</td><td>91.36</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Oracle Red Bull Racing</td><td><span class='tier top'>top</span></td><td>Max Verstappen</td><td>2</td><td>SetupValidation</td><td>6</td><td>6</td><td>91.36</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Oracle Red Bull Racing</td><td><span class='tier top'>top</span></td><td>Max Verstappen</td><td>3</td><td>TyreDeg</td><td>6</td><td>6</td><td>91.59</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>BWT Alpine F1 Team</td><td><span class='tier midfield'>midfield</span></td><td>Pierre Gasly</td><td>1</td><td>SetupValidation</td><td>5</td><td>5</td><td>91.40</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>BWT Alpine F1 Team</td><td><span class='tier midfield'>midfield</span></td><td>Pierre Gasly</td><td>2</td><td>SetupValidation</td><td>5</td><td>5</td><td>91.40</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>BWT Alpine F1 Team</td><td><span class='tier midfield'>midfield</span></td><td>Pierre Gasly</td><td>3</td><td>TyreDeg</td><td>6</td><td>3</td><td>91.64</td><td><span class='tag partial'>partial</span></td><td>0</td></tr>
+<tr><td>Mercedes-AMG PETRONAS</td><td><span class='tier top'>top</span></td><td>Andrea Kimi Antonelli</td><td>1</td><td>SetupValidation</td><td>5</td><td>5</td><td>91.40</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Mercedes-AMG PETRONAS</td><td><span class='tier top'>top</span></td><td>Andrea Kimi Antonelli</td><td>2</td><td>SetupValidation</td><td>6</td><td>6</td><td>91.40</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Mercedes-AMG PETRONAS</td><td><span class='tier top'>top</span></td><td>Andrea Kimi Antonelli</td><td>3</td><td>TyreDeg</td><td>7</td><td>1</td><td>140.57</td><td><span class='tag partial'>partial</span></td><td>0</td></tr>
+<tr><td>Aston Martin Aramco</td><td><span class='tier midfield'>midfield</span></td><td>Fernando Alonso</td><td>1</td><td>SetupValidation</td><td>6</td><td>6</td><td>91.39</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Aston Martin Aramco</td><td><span class='tier midfield'>midfield</span></td><td>Fernando Alonso</td><td>2</td><td>SetupValidation</td><td>4</td><td>4</td><td>91.39</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Aston Martin Aramco</td><td><span class='tier midfield'>midfield</span></td><td>Fernando Alonso</td><td>3</td><td>TyreDeg</td><td>7</td><td>7</td><td>91.63</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Scuderia Ferrari</td><td><span class='tier top'>top</span></td><td>Charles Leclerc</td><td>1</td><td>SetupValidation</td><td>5</td><td>5</td><td>91.38</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Scuderia Ferrari</td><td><span class='tier top'>top</span></td><td>Charles Leclerc</td><td>2</td><td>SetupValidation</td><td>6</td><td>6</td><td>91.38</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Scuderia Ferrari</td><td><span class='tier top'>top</span></td><td>Charles Leclerc</td><td>3</td><td>TyreDeg</td><td>8</td><td>8</td><td>91.62</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Aston Martin Aramco</td><td><span class='tier midfield'>midfield</span></td><td>Lance Stroll</td><td>1</td><td>SetupValidation</td><td>4</td><td>4</td><td>91.43</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Aston Martin Aramco</td><td><span class='tier midfield'>midfield</span></td><td>Lance Stroll</td><td>2</td><td>SetupValidation</td><td>5</td><td>5</td><td>91.43</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Aston Martin Aramco</td><td><span class='tier midfield'>midfield</span></td><td>Lance Stroll</td><td>3</td><td>TyreDeg</td><td>9</td><td>3</td><td>91.66</td><td><span class='tag partial'>partial</span></td><td>0</td></tr>
+<tr><td>Oracle Red Bull Racing</td><td><span class='tier top'>top</span></td><td>Yuki Tsunoda</td><td>1</td><td>SetupValidation</td><td>6</td><td>6</td><td>91.41</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Oracle Red Bull Racing</td><td><span class='tier top'>top</span></td><td>Yuki Tsunoda</td><td>2</td><td>SetupValidation</td><td>6</td><td>6</td><td>91.41</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Oracle Red Bull Racing</td><td><span class='tier top'>top</span></td><td>Yuki Tsunoda</td><td>3</td><td>TyreDeg</td><td>7</td><td>0</td><td>—</td><td><span class='tag aborted'>aborted</span></td><td>0</td></tr>
+<tr><td>Williams Racing</td><td><span class='tier midfield'>midfield</span></td><td>Alexander Albon</td><td>1</td><td>SetupValidation</td><td>4</td><td>4</td><td>91.41</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Williams Racing</td><td><span class='tier midfield'>midfield</span></td><td>Alexander Albon</td><td>2</td><td>SetupValidation</td><td>3</td><td>3</td><td>91.41</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Williams Racing</td><td><span class='tier midfield'>midfield</span></td><td>Alexander Albon</td><td>3</td><td>TyreDeg</td><td>6</td><td>5</td><td>91.65</td><td><span class='tag partial'>partial</span></td><td>0</td></tr>
+<tr><td>Stake F1 Team Kick Sauber</td><td><span class='tier backmarker'>backmarker</span></td><td>Nico Hülkenberg</td><td>1</td><td>SetupValidation</td><td>3</td><td>3</td><td>91.42</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Stake F1 Team Kick Sauber</td><td><span class='tier backmarker'>backmarker</span></td><td>Nico Hülkenberg</td><td>2</td><td>SetupValidation</td><td>5</td><td>5</td><td>91.42</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Stake F1 Team Kick Sauber</td><td><span class='tier backmarker'>backmarker</span></td><td>Nico Hülkenberg</td><td>3</td><td>TyreDeg</td><td>7</td><td>7</td><td>91.66</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Visa Cash App RB</td><td><span class='tier midfield'>midfield</span></td><td>Liam Lawson</td><td>1</td><td>SetupValidation</td><td>6</td><td>6</td><td>91.41</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Visa Cash App RB</td><td><span class='tier midfield'>midfield</span></td><td>Liam Lawson</td><td>2</td><td>SetupValidation</td><td>6</td><td>6</td><td>91.41</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Visa Cash App RB</td><td><span class='tier midfield'>midfield</span></td><td>Liam Lawson</td><td>3</td><td>TyreDeg</td><td>8</td><td>8</td><td>91.65</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>McLaren F1 Team</td><td><span class='tier top'>top</span></td><td>Lando Norris</td><td>1</td><td>SetupValidation</td><td>6</td><td>6</td><td>91.38</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>McLaren F1 Team</td><td><span class='tier top'>top</span></td><td>Lando Norris</td><td>2</td><td>SetupValidation</td><td>4</td><td>4</td><td>91.38</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>McLaren F1 Team</td><td><span class='tier top'>top</span></td><td>Lando Norris</td><td>3</td><td>TyreDeg</td><td>9</td><td>9</td><td>91.61</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>BWT Alpine F1 Team</td><td><span class='tier midfield'>midfield</span></td><td>Franco Colapinto</td><td>1</td><td>SetupValidation</td><td>4</td><td>4</td><td>91.42</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>BWT Alpine F1 Team</td><td><span class='tier midfield'>midfield</span></td><td>Franco Colapinto</td><td>2</td><td>SetupValidation</td><td>4</td><td>4</td><td>91.42</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>BWT Alpine F1 Team</td><td><span class='tier midfield'>midfield</span></td><td>Franco Colapinto</td><td>3</td><td>TyreDeg</td><td>7</td><td>7</td><td>91.66</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Scuderia Ferrari</td><td><span class='tier top'>top</span></td><td>Lewis Hamilton</td><td>1</td><td>SetupValidation</td><td>3</td><td>3</td><td>91.37</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Scuderia Ferrari</td><td><span class='tier top'>top</span></td><td>Lewis Hamilton</td><td>2</td><td>SetupValidation</td><td>3</td><td>3</td><td>91.37</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Scuderia Ferrari</td><td><span class='tier top'>top</span></td><td>Lewis Hamilton</td><td>3</td><td>TyreDeg</td><td>7</td><td>3</td><td>91.61</td><td><span class='tag partial'>partial</span></td><td>0</td></tr>
+<tr><td>Stake F1 Team Kick Sauber</td><td><span class='tier backmarker'>backmarker</span></td><td>Gabriel Bortoleto</td><td>1</td><td>SetupValidation</td><td>4</td><td>4</td><td>91.43</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Stake F1 Team Kick Sauber</td><td><span class='tier backmarker'>backmarker</span></td><td>Gabriel Bortoleto</td><td>2</td><td>SetupValidation</td><td>5</td><td>5</td><td>91.43</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Stake F1 Team Kick Sauber</td><td><span class='tier backmarker'>backmarker</span></td><td>Gabriel Bortoleto</td><td>3</td><td>TyreDeg</td><td>8</td><td>1</td><td>140.62</td><td><span class='tag partial'>partial</span></td><td>0</td></tr>
+<tr><td>Williams Racing</td><td><span class='tier midfield'>midfield</span></td><td>Carlos Sainz</td><td>1</td><td>SetupValidation</td><td>4</td><td>4</td><td>91.39</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Williams Racing</td><td><span class='tier midfield'>midfield</span></td><td>Carlos Sainz</td><td>2</td><td>SetupValidation</td><td>4</td><td>4</td><td>91.39</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Williams Racing</td><td><span class='tier midfield'>midfield</span></td><td>Carlos Sainz</td><td>3</td><td>TyreDeg</td><td>7</td><td>7</td><td>91.62</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Visa Cash App RB</td><td><span class='tier midfield'>midfield</span></td><td>Isack Hadjar</td><td>1</td><td>SetupValidation</td><td>4</td><td>4</td><td>91.43</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Visa Cash App RB</td><td><span class='tier midfield'>midfield</span></td><td>Isack Hadjar</td><td>2</td><td>SetupValidation</td><td>4</td><td>4</td><td>91.43</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Visa Cash App RB</td><td><span class='tier midfield'>midfield</span></td><td>Isack Hadjar</td><td>3</td><td>TyreDeg</td><td>6</td><td>6</td><td>91.66</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Mercedes-AMG PETRONAS</td><td><span class='tier top'>top</span></td><td>George Russell</td><td>1</td><td>SetupValidation</td><td>6</td><td>6</td><td>91.38</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Mercedes-AMG PETRONAS</td><td><span class='tier top'>top</span></td><td>George Russell</td><td>2</td><td>SetupValidation</td><td>6</td><td>6</td><td>91.38</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>Mercedes-AMG PETRONAS</td><td><span class='tier top'>top</span></td><td>George Russell</td><td>3</td><td>TyreDeg</td><td>9</td><td>9</td><td>91.62</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>McLaren F1 Team</td><td><span class='tier top'>top</span></td><td>Oscar Piastri</td><td>1</td><td>SetupValidation</td><td>3</td><td>3</td><td>91.39</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>McLaren F1 Team</td><td><span class='tier top'>top</span></td><td>Oscar Piastri</td><td>2</td><td>SetupValidation</td><td>3</td><td>3</td><td>91.39</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+<tr><td>McLaren F1 Team</td><td><span class='tier top'>top</span></td><td>Oscar Piastri</td><td>3</td><td>TyreDeg</td><td>8</td><td>8</td><td>91.62</td><td><span class='tag success'>success</span></td><td>0</td></tr>
+</tbody></table></body></html>

@@ -15,9 +15,9 @@ Definire come le auto AI cercano il setup ideale durante FP1–FP3 usando gli st
 
 | Team tier       | Simulator quality | Baseline score (FP1 start) | Avg runs to complete | Note |
 |-----------------|-------------------|----------------------------|----------------------|------|
-| Top             | 84–90             | ~7.4 – 9.4 (avg 8.2)      | ~2.5                 | Simulatori quasi perfetti, pochi aggiustamenti |
-| Midfield        | 68–76             | ~5.8 – 8.8 (avg 7.3)      | ~3.7                 | Necessarie 3-4 run di tuning |
-| Backmarker      | 56–64             | ~5.0 – 8.4 (avg 6.5)      | ~4.0                 | Simulatori poveri, dipendenza forte dai piloti |
+| Top             | 84–90             | ~5.5 – 9.0 (avg 7.0)      | ~2.6                 | Simulatori quasi perfetti, pochi aggiustamenti |
+| Midfield        | 68–76             | ~4.2 – 8.0 (avg 6.0)      | ~3.5                 | Necessarie 3-4 run di tuning |
+| Backmarker      | 56–64             | ~3.3 – 7.3 (avg 5.0)      | ~5.0                 | Simulatori poveri, dipendenza forte dai piloti |
 
 ### 2.2 Pilot Skill – “Ricerca Assetto”
 - Tabella skill piloti da rivedere e ampliare (0–100) in base alla forza reale.
@@ -33,10 +33,10 @@ Definire come le auto AI cercano il setup ideale durante FP1–FP3 usando gli st
 
 ### 2.4 Convergence Threshold per auto
 - Invece di target multipli per tier, usiamo una **soglia legata allo score UI** (scala 0–10).
-- Valore di riferimento: **8.5** (base threshold).
+- Valore di riferimento: **8.1** (base threshold).
 - Ogni auto AI ha un offset dovuto al tratto pilota "Perfezionismo" (1–100):
-  - Soglia effettiva = `8.5 + (perfezionismo - 60) / 280`.
-  - Perfezionismo 60 → 8.50, 75 → 8.55, 85 → 8.59, 95 → 8.63.
+  - Soglia effettiva = `8.1 + (perfezionismo - 60) / 280`.
+  - Perfezionismo 60 → 8.10, 75 → 8.15, 85 → 8.19, 95 → 8.23.
   - Piloti perfezionisti aspettano score più alto prima di fermarsi; altri accettano un assetto leggermente inferiore pur di risparmiare tempo.
 - Questo preserva un'unica metrica (setup score) ma rende la decisione individuale.
 
@@ -99,6 +99,6 @@ In questo modo l’AI segue lo stesso ciclo che seguirebbe un umano: prova un as
 - **`scripts/sim_setup_analysis_v2.py`** — Script di simulazione headless + report HTML.
 
 ### Risultati simulazione (seed 42)
-- **Top**: avg 2.5 runs (range 1–4), initial avg 8.20, final avg 9.14
-- **Mid**: avg 3.7 runs (range 1–6), initial avg 7.27, final avg 8.91
-- **Back**: avg 4.0 runs (range 3–5), initial avg 6.54, final avg 8.49
+- **Top**: avg 2.6 runs (range 1–3), initial avg 6.94, final avg 9.53
+- **Mid**: avg 3.5 runs (range 2–5), initial avg 5.96, final avg 9.41
+- **Back**: avg 5.0 runs (range 4–7), initial avg 4.92, final avg 9.14

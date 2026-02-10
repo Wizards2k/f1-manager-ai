@@ -101,10 +101,11 @@ def generate_baseline_setup(
         rng = random.Random()
 
     setup: Dict[str, int] = {}
-    # sim_quality 90 → noise_factor 0.35, 72 → 0.72, 60 → 0.96
-    # Quadratic scaling so top teams are noticeably closer to optimal
-    linear = 1.0 - (simulator_quality / 100.0)
-    noise_factor = linear * 2.4  # amplify: 0.10→0.24 ... 0.40→0.96
+    # Calibrated quadratic: sim_q → noise_mult (gaussian σ = tolerance * noise_mult)
+    # Produces avg baseline scores: top(88)≈7.0, mid(72)≈6.0, back(60)≈5.0
+    sq = float(simulator_quality)
+    noise_mult = 0.001920 * sq * sq - 0.343393 * sq + 16.462857
+    noise_mult = max(0.3, noise_mult)  # safety floor
 
     for field_name in DEFAULT_SETUP_CONFIG:
         params = _resolve_field_params(field_name)
@@ -112,9 +113,7 @@ def generate_baseline_setup(
         tolerance = params["tolerance"]
         field_range = params.get("range", (0, 100))
 
-        # Max deviation: top teams deviate ~0.5*tolerance, back ~2*tolerance
-        max_dev = tolerance * (0.5 + noise_factor * 1.8)
-        deviation = rng.gauss(0, max_dev * 0.6)
+        deviation = rng.gauss(0, tolerance * noise_mult)
         value = int(round(optimal + deviation))
         value = max(field_range[0], min(field_range[1], value))
         setup[field_name] = value
@@ -141,13 +140,13 @@ def compute_convergence_threshold(perfezionismo: int) -> float:
     """
     §2.4 — Convergence threshold per driver.
 
-    base_threshold = 8.5, offset by perfezionismo.
-    Perfezionismo 60 → 8.50  (pragmatic, accepts "good enough")
-    Perfezionismo 75 → 8.63
-    Perfezionismo 85 → 8.71
-    Perfezionismo 95 → 8.88  (perfectionist, wants near-optimal)
+    base_threshold = 8.1, offset by perfezionismo.
+    Perfezionismo 60 → 8.10  (pragmatic, accepts "good enough")
+    Perfezionismo 75 → 8.15
+    Perfezionismo 85 → 8.19
+    Perfezionismo 95 → 8.23  (perfectionist, wants near-optimal)
     """
-    return 8.5 + (perfezionismo - 60) / 280.0
+    return 8.1 + (perfezionismo - 60) / 280.0
 
 
 # ---------------------------------------------------------------------------
@@ -215,82 +214,50 @@ def adjust_setup_after_run(
     """
     AI pilot adjusts real setup sliders after a run.
 
-    1. Compute feedback indicators from current setup vs optimal
-    2. For each indicator, adjust mapped sliders using pilot skill
-    3. Apply precision multiplier, gaussian variance, and random errors
-    4. Return (new_setup, changes_dict)
+    Direct per-slider approach: each slider moves toward its optimal value.
+    The fraction of the gap closed per run depends on pilot skill category
+    (precision, variance, error probability).
+
+    Returns (new_setup, changes_dict).
     """
     if rng is None:
         rng = random.Random()
 
     cat_label, precision_mult, sigma, error_prob = _get_pilot_category(ricerca_assetto)
-    skill_mult = 0.6 + (ricerca_assetto / 100.0) * 0.8
+    # Base correction fraction: how much of the gap to optimal is closed per run
+    # Elite closes ~26%, Sperimentale ~20%
+    base_fraction = 0.25 * precision_mult
 
-    indicators = _compute_feedback_indicators(setup_values)
     new_setup = dict(setup_values)
     changes: Dict[str, float] = {}
 
-    # Track which sliders have been adjusted to avoid double-counting
-    adjusted: Dict[str, float] = {}
-
-    for indicator_name, intensity in indicators.items():
-        if abs(intensity) < 0.05:
-            continue  # No meaningful feedback
-
-        slider_names = _INDICATOR_SLIDER_MAP.get(indicator_name, [])
-        for slider in slider_names:
-            if slider not in DEFAULT_SETUP_CONFIG:
-                continue
-
-            params = _resolve_field_params(slider)
-            optimal = params["optimal"]
-            current = new_setup.get(slider, 50)
-            field_range = params.get("range", (0, 100))
-
-            # Direction: move toward optimal
-            raw_delta = optimal - current
-            if abs(raw_delta) < 1:
-                continue  # Already close enough
-
-            base_step = _BASE_STEP.get(slider, 1.0)
-
-            # Delta = base_step * |intensity| * skill_mult * precision
-            delta_mag = base_step * abs(intensity) * skill_mult * precision_mult
-
-            # Add gaussian noise (variance)
-            noise = rng.gauss(0, sigma) * base_step * 0.5
-            delta_mag += noise
-
-            # Direction: sign of raw_delta (toward optimal)
-            direction = 1.0 if raw_delta > 0 else -1.0
-
-            # Random error: with error_prob, flip direction or pick wrong slider
-            if rng.random() < error_prob:
-                if rng.random() < 0.5:
-                    direction *= -1  # Wrong direction
-                else:
-                    delta_mag *= rng.uniform(1.5, 2.5)  # Overshoot
-
-            delta = direction * max(0.5, abs(delta_mag))
-
-            # Accumulate (don't overshoot past optimal)
-            prev_accumulated = adjusted.get(slider, 0.0)
-            total_delta = prev_accumulated + delta
-            # Clamp so we don't overshoot optimal by too much
-            new_val = current + total_delta
-            new_val = max(field_range[0], min(field_range[1], new_val))
-            adjusted[slider] = new_val - current
-
-    # Apply accumulated changes
-    for slider, total_delta in adjusted.items():
-        old_val = setup_values.get(slider, 50)
-        new_val = int(round(old_val + total_delta))
+    for slider in DEFAULT_SETUP_CONFIG:
         params = _resolve_field_params(slider)
+        optimal = params["optimal"]
+        current = setup_values.get(slider, 50)
         field_range = params.get("range", (0, 100))
+
+        gap = optimal - current
+        if abs(gap) < 1:
+            continue  # Already at optimal
+
+        # Correction = fraction of gap + gaussian noise
+        correction = gap * base_fraction
+        noise = rng.gauss(0, sigma * abs(gap) * 0.15)
+        correction += noise
+
+        # Random error: with error_prob, flip direction or overshoot
+        if rng.random() < error_prob:
+            if rng.random() < 0.5:
+                correction = -correction  # Wrong direction
+            else:
+                correction *= rng.uniform(1.8, 3.0)  # Overshoot
+
+        new_val = int(round(current + correction))
         new_val = max(field_range[0], min(field_range[1], new_val))
         new_setup[slider] = new_val
-        if new_val != old_val:
-            changes[slider] = round(new_val - old_val, 1)
+        if new_val != current:
+            changes[slider] = float(new_val - current)
 
     return new_setup, changes
 
