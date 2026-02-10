@@ -55,11 +55,13 @@ def _load_json(path: Path) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 _KIND_MAP = {
-    "Straight":      SectionKind.STRAIGHT,
-    "MediumStraight": SectionKind.MEDIUM_STRAIGHT,
-    "SlowCorner":    SectionKind.SLOW_CORNER,
-    "MediumCorner":  SectionKind.MEDIUM_CORNER,
-    "FastCorner":    SectionKind.FAST_CORNER,
+    "Straight":         SectionKind.STRAIGHT,
+    "MediumStraight":   SectionKind.MEDIUM_STRAIGHT,
+    "VerySlowCorner":   SectionKind.VERY_SLOW_CORNER,
+    "SlowCorner":       SectionKind.SLOW_CORNER,
+    "MediumCorner":     SectionKind.MEDIUM_CORNER,
+    "FastCorner":       SectionKind.FAST_CORNER,
+    "UltraFastCorner":  SectionKind.ULTRA_FAST_CORNER,
 }
 
 
@@ -90,6 +92,13 @@ def _parse_section(raw: Dict[str, Any]) -> SectionContext:
         bumpiness_factor=raw.get("bumpiness", 0) or 0.0,
         heat_factor=heat_f,
         cool_factor=cool_f,
+        braking_energy_mj=raw.get("braking_energy_mj", 0) or 0.0,
+        drs_available=bool(raw.get("drs_active", False)),
+        dt_ref_s=raw.get("dt_ref_s", 0) or 0.0,
+        v_entry_kph=raw.get("v_entry_kph", 0) or 0.0,
+        v_exit_kph=raw.get("v_exit_kph", 0) or 0.0,
+        v_min_kph=raw.get("v_min_kph", 0) or 0.0,
+        v_max_kph=raw.get("v_max_kph", 0) or 0.0,
     )
 
 
@@ -290,6 +299,9 @@ def load_circuit_config(
     dmg_data = _load_json(dmg_path) if dmg_path.exists() else _load_json(global_damage)
     damage_coeffs = _parse_damage_coeffs(dmg_data)
 
+    ref_lap_time = telem.get("reference_lap", {}).get("lap_time", 0.0)
+    sum_dt_ref = sum(s.dt_ref_s for s in sections)
+
     return CircuitConfig(
         circuit_id=circuit_id,
         circuit_name=meta.get("circuit_name", circuit_id),
@@ -301,4 +313,5 @@ def load_circuit_config(
         pu_maps=pu_maps,
         pu_reliability=pu_reliability,
         damage_coeffs=damage_coeffs,
+        reference_lap_time_s=ref_lap_time if ref_lap_time > 0 else sum_dt_ref,
     )

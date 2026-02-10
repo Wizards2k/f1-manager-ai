@@ -17,6 +17,7 @@ from .data_types import (
     AeroSetup,
     CarState,
     CircuitConfig,
+    CORNER_KINDS,
     CURVE_FACTOR,
     DriverIntent,
     DriverSkills,
@@ -150,64 +151,127 @@ def update_section(
     all_events.extend(brake_events)
 
     # ===================================================================
-    # STEP 6 – Effective speed & dt (Passo 6)
+    # STEP 6 – Section time via dt_ref penalty model (Passo 6)
     # ===================================================================
-    curve_factor = CURVE_FACTOR.get(section.kind, 0.0)
-    is_corner = section.kind in (
-        SectionKind.SLOW_CORNER,
-        SectionKind.MEDIUM_CORNER,
-        SectionKind.FAST_CORNER,
-    )
+    is_corner = section.kind in CORNER_KINDS
 
-    if is_corner:
-        # --- Corner speed ---
-        curvature_factor = section.curve_profile.curvature_factor
-        if curvature_factor == 0.0:
-            curvature_factor = curve_factor
+    if section.dt_ref_s > 0:
+        # ---------------------------------------------------------------
+        # dt_ref penalty model: dt = dt_ref × (1 + baseline + Σ penalties)
+        # ---------------------------------------------------------------
 
+        # Δ_aero: aero contribution (corners: more DF = faster; straights: more drag = slower)
         df_available = aero_forces.df_front_eff + aero_forces.df_rear_eff
-        v_curve = v_base * (
-            1.0 + curvature_factor * config.k_df
-            * (df_available - config.df_ref) / max(config.df_ref, 1.0)
+        if is_corner:
+            delta_aero = config.k_aero_penalty * (1.0 - df_available / max(config.df_ref, 1.0))
+        else:
+            delta_aero = config.k_aero_penalty * (aero_forces.drag_eff / max(config.drag_ref, 1.0) - 1.0)
+        delta_aero -= config.k_aero_penalty * aero_forces.handling_penalty
+
+        # Δ_grip: tyre grip contribution
+        grip_avg = (eff_grip_front + eff_grip_rear) / 2.0
+        delta_grip = config.k_grip_penalty * (1.0 - grip_avg)
+
+        # Δ_brake: brake fade (only on sections with braking)
+        if section.braking_energy_mj > 0.05:
+            delta_brake = config.k_brake_penalty * (1.0 - braking_efficiency)
+        else:
+            delta_brake = 0.0
+
+        # Δ_fuel: fuel weight penalty (linear with fuel load)
+        delta_fuel = config.k_fuel_penalty * (car_state.pu.fuel_kg / max(config.fuel_max_kg, 1.0))
+
+        # Δ_driver: driver skill (pace_factor 1.0 = VER level = no penalty)
+        delta_driver = config.k_driver_penalty * (1.0 - driver_intent.pace_factor)
+
+        # Δ_power: power deficit on straights
+        if not is_corner:
+            delta_power = config.k_aero_penalty * (1.0 - total_power_kw / max(config.power_ref_kw, 1.0))
+        else:
+            delta_power = 0.0
+
+        # DRS bonus on straights (reduces time by ~0.3s per DRS zone)
+        drs_active = section.drs_available and not car_state.side_by_side
+        delta_drs = -0.005 if drs_active else 0.0
+
+        # Event penalties
+        delta_events = 0.0
+        for evt in all_events:
+            if evt.event_type == "tyre_overheat":
+                delta_events += 0.02
+            if evt.event_type == "ice_derating":
+                delta_events += 0.01
+
+        # Traffic constraint
+        delta_traffic = 0.0
+        if traffic_v_max_kph > 0 and v_base > 0:
+            traffic_ratio = traffic_v_max_kph / v_base
+            if traffic_ratio < 1.0:
+                delta_traffic = (1.0 / max(traffic_ratio, 0.5)) - 1.0
+
+        # Total penalty
+        total_penalty = (
+            config.baseline_delta
+            + delta_aero
+            + delta_grip
+            + delta_brake
+            + delta_fuel
+            + delta_driver
+            + delta_power
+            + delta_drs
+            + delta_events
+            + delta_traffic
         )
-        v_curve *= (1.0 - aero_forces.handling_penalty)
-        v_curve *= 1.0 + (driver_intent.pace_factor - 1.0) * driver_intent.aggression_curve_bonus
 
-        # Braking efficiency
-        drag_curve_penalty = config.k_drag_curve * (aero_forces.drag_eff - config.drag_ref)
-        v_curve = (v_curve * braking_efficiency) - drag_curve_penalty
+        # Clamp total penalty to reasonable range (-0.05 to +0.30)
+        total_penalty = clamp(total_penalty, -0.05, 0.30)
 
-        # Grip limit
-        grip_axis = eff_grip_front if curve_factor >= 0.5 else eff_grip_rear
-        v_grip_limited = v_curve * grip_axis
+        dt_s = section.dt_ref_s * (1.0 + total_penalty)
+        v_effective = (section.length_m / max(dt_s, 0.01)) * 3.6  # back-compute for reporting
 
-        v_effective = min(v_grip_limited, config.v_cap_kph)
     else:
-        # --- Straight speed ---
-        delta_power = config.k_power * (total_power_kw - config.power_ref_kw)
-        delta_drag = config.k_drag * (aero_forces.drag_eff - config.drag_ref)
-        v_straight = min(v_base + delta_power - delta_drag, config.v_cap_kph)
+        # ---------------------------------------------------------------
+        # Fallback: old v_effective model (for sections without dt_ref)
+        # ---------------------------------------------------------------
+        curve_factor = CURVE_FACTOR.get(section.kind, 0.0)
 
-        v_effective = v_straight
+        if is_corner:
+            curvature_factor = section.curve_profile.curvature_factor
+            if curvature_factor == 0.0:
+                curvature_factor = curve_factor
 
-    # Traffic constraint
-    if traffic_v_max_kph > 0:
-        v_effective = min(v_effective, traffic_v_max_kph)
+            df_available = aero_forces.df_front_eff + aero_forces.df_rear_eff
+            v_curve = v_base * (
+                1.0 + curvature_factor * config.k_df
+                * (df_available - config.df_ref) / max(config.df_ref, 1.0)
+            )
+            v_curve *= (1.0 - aero_forces.handling_penalty)
+            v_curve *= 1.0 + (driver_intent.pace_factor - 1.0) * driver_intent.aggression_curve_bonus
 
-    # Floor
-    v_effective = max(v_effective, config.v_min_kph)
+            drag_curve_penalty = config.k_drag_curve * (aero_forces.drag_eff - config.drag_ref)
+            v_curve = (v_curve * braking_efficiency) - drag_curve_penalty
 
-    # --- Penalty events ---
-    for evt in all_events:
-        if evt.event_type == "tyre_overheat":
-            v_effective *= 0.98
-        if evt.event_type == "ice_derating":
-            # Power already reduced in PU step; small additional speed penalty
-            v_effective *= 0.99
+            grip_axis = eff_grip_front if curve_factor >= 0.5 else eff_grip_rear
+            v_grip_limited = v_curve * grip_axis
+            v_effective = min(v_grip_limited, config.v_cap_kph)
+        else:
+            delta_power = config.k_power * (total_power_kw - config.power_ref_kw)
+            delta_drag = config.k_drag * (aero_forces.drag_eff - config.drag_ref)
+            v_straight = min(v_base + delta_power - delta_drag, config.v_cap_kph)
+            v_effective = v_straight
 
-    # --- Section time ---
-    v_ms = max(v_effective / 3.6, 1.0)
-    dt_s = section.length_m / v_ms
+        if traffic_v_max_kph > 0:
+            v_effective = min(v_effective, traffic_v_max_kph)
+        v_effective = max(v_effective, config.v_min_kph)
+
+        for evt in all_events:
+            if evt.event_type == "tyre_overheat":
+                v_effective *= 0.98
+            if evt.event_type == "ice_derating":
+                v_effective *= 0.99
+
+        v_ms = max(v_effective / 3.6, 1.0)
+        dt_s = section.length_m / v_ms
 
     # ===================================================================
     # STEP 7 – Internal state update (Passo 7)

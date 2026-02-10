@@ -21,9 +21,11 @@ from typing import Dict, List, Optional
 class SectionKind(str, Enum):
     STRAIGHT = "Straight"
     MEDIUM_STRAIGHT = "MediumStraight"
+    VERY_SLOW_CORNER = "VerySlowCorner"
     SLOW_CORNER = "SlowCorner"
     MEDIUM_CORNER = "MediumCorner"
     FAST_CORNER = "FastCorner"
+    ULTRA_FAST_CORNER = "UltraFastCorner"
 
 
 class TyreCompound(str, Enum):
@@ -89,6 +91,12 @@ class SectionContext:
     cool_factor: float = 1.0             # tyre cooling multiplier
     braking_energy_mj: float = 0.0       # reference braking energy for section
     drs_available: bool = False
+    # v2 fields (from regenerated telemetry sections)
+    dt_ref_s: float = 0.0                # reference time from telemetry integration
+    v_entry_kph: float = 0.0             # entry speed from telemetry
+    v_exit_kph: float = 0.0              # exit speed from telemetry
+    v_min_kph: float = 0.0               # min speed (apex) from telemetry
+    v_max_kph: float = 0.0               # max speed from telemetry
 
 
 @dataclass
@@ -485,6 +493,15 @@ class CircuitConfig:
     k_handling: float = 0.8
     v_min_kph: float = 50.0
     v_cap_kph: float = 370.0
+    # dt_ref penalty model coefficients
+    baseline_delta: float = 0.05         # +5% over VER 2024 Q for top team
+    k_aero_penalty: float = 0.03         # max aero contribution to dt penalty
+    k_grip_penalty: float = 0.05         # max grip contribution
+    k_brake_penalty: float = 0.03        # max brake fade contribution
+    k_fuel_penalty: float = 0.03         # max fuel weight contribution
+    k_driver_penalty: float = 0.05       # max driver skill contribution
+    fuel_max_kg: float = 110.0           # reference max fuel load
+    reference_lap_time_s: float = 0.0    # from telemetry (sum of dt_ref_s)
 
 
 # ---------------------------------------------------------------------------
@@ -502,18 +519,31 @@ def gaussian(temp: float, temp_opt: float, sigma: float) -> float:
 
 # Heat/cool factors per section kind (from TyreModel.md §6)
 SECTION_HEAT_COOL: Dict[SectionKind, tuple] = {
-    SectionKind.STRAIGHT:        (0.2, 1.2),
-    SectionKind.MEDIUM_STRAIGHT: (0.4, 1.0),
-    SectionKind.SLOW_CORNER:     (1.4, 0.4),
-    SectionKind.MEDIUM_CORNER:   (1.1, 0.6),
-    SectionKind.FAST_CORNER:     (0.9, 0.7),
+    SectionKind.STRAIGHT:          (0.2, 1.2),
+    SectionKind.MEDIUM_STRAIGHT:   (0.4, 1.0),
+    SectionKind.VERY_SLOW_CORNER:  (1.5, 0.3),
+    SectionKind.SLOW_CORNER:       (1.3, 0.4),
+    SectionKind.MEDIUM_CORNER:     (1.0, 0.6),
+    SectionKind.FAST_CORNER:       (0.8, 0.8),
+    SectionKind.ULTRA_FAST_CORNER: (0.5, 1.0),
 }
 
 # Curve factor per section kind (from spec §5)
 CURVE_FACTOR: Dict[SectionKind, float] = {
-    SectionKind.STRAIGHT:        0.0,
-    SectionKind.MEDIUM_STRAIGHT: 0.0,
-    SectionKind.SLOW_CORNER:     0.4,
-    SectionKind.MEDIUM_CORNER:   0.7,
-    SectionKind.FAST_CORNER:     1.0,
+    SectionKind.STRAIGHT:          0.0,
+    SectionKind.MEDIUM_STRAIGHT:   0.0,
+    SectionKind.VERY_SLOW_CORNER:  0.3,
+    SectionKind.SLOW_CORNER:       0.4,
+    SectionKind.MEDIUM_CORNER:     0.7,
+    SectionKind.FAST_CORNER:       1.0,
+    SectionKind.ULTRA_FAST_CORNER: 1.0,
+}
+
+# Section kinds that are corners (for penalty model)
+CORNER_KINDS = {
+    SectionKind.VERY_SLOW_CORNER,
+    SectionKind.SLOW_CORNER,
+    SectionKind.MEDIUM_CORNER,
+    SectionKind.FAST_CORNER,
+    SectionKind.ULTRA_FAST_CORNER,
 }
