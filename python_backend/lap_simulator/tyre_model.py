@@ -14,6 +14,7 @@ from typing import Dict, List, Tuple
 
 from .data_types import (
     AeroForces,
+    AeroSetup,
     CarState,
     CircuitConfig,
     DriverIntent,
@@ -51,6 +52,7 @@ def _update_single_tyre(
     driver: DriverIntent,
     dt_s: float,
     v_kph: float,
+    aero_setup: AeroSetup | None = None,
 ) -> List[SectionEvent]:
     """Update thermal state, wear and grip for one tyre. Returns events."""
     events: List[SectionEvent] = []
@@ -134,9 +136,26 @@ def _update_single_tyre(
 
     wear_factor = max(0.5, 1.0 - tyre.wear_pct / 100.0)
 
-    # Setup bonus from suspension/antiroll
+    # Setup bonus from suspension/antiroll/ride_height (§6.8)
     setup_bonus = 1.0
-    # (simplified: mechanical grip bonus from aero setup is small)
+    if aero_setup is not None:
+        if is_front:
+            susp = aero_setup.suspension_front
+            rh_dev = abs(aero_setup.ride_height_front_mm - aero_setup.ride_height_optimal_front_mm)
+            antiroll = aero_setup.antiroll_front_rigidity
+        else:
+            susp = aero_setup.suspension_rear
+            rh_dev = abs(aero_setup.ride_height_rear_mm - aero_setup.ride_height_optimal_rear_mm)
+            antiroll = aero_setup.antiroll_rear_rigidity
+
+        # Suspension efficiency: 0.8 default → 1.0 perfect → bonus up to +3%
+        susp_bonus = (susp.efficiency - 0.8) * 0.15  # 0.8→0, 1.0→+0.03
+        # Ride height: deviation from optimal penalises grip (10mm off → -1%)
+        rh_penalty = rh_dev * 0.001
+        # Antiroll: 0.5 = balanced, deviation penalises (too soft or stiff)
+        antiroll_penalty = abs(antiroll - 0.5) * 0.02
+
+        setup_bonus = clamp(1.0 + susp_bonus - rh_penalty - antiroll_penalty, 0.92, 1.05)
 
     tyre.effective_grip = params.base_grip * thermal_factor * wear_factor * setup_bonus
 
@@ -202,6 +221,7 @@ def update_tyres(
     config: CircuitConfig,
     dt_s: float,
     v_kph: float,
+    aero_setup: AeroSetup | None = None,
 ) -> Tuple[float, float, List[SectionEvent]]:
     """
     Update all four tyres and return effective grip per axis.
@@ -218,7 +238,7 @@ def update_tyres(
         params = config.tyre_params.get(tyre.compound)
         if params is None:
             params = config.tyre_params.get(TyreCompound.C3, TyreCompoundParams(compound=TyreCompound.C3))
-        evts = _update_single_tyre(tyre, params, section, env, aero, driver, dt_s, v_kph)
+        evts = _update_single_tyre(tyre, params, section, env, aero, driver, dt_s, v_kph, aero_setup)
         all_events.extend(evts)
 
     # Average grip per axis

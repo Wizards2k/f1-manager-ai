@@ -85,9 +85,22 @@ Posizionamento griglia (basato su F1 2025 reale, prime 4 gare):
 
 ---
 
+## ✅ Completato: Gap §6.7-6.10
+
+- **§6.7 Fuel weight**: `delta_fuel` con `corner_fuel_mult` (curve +30%)
+- **§6.8 Mechanical grip**: `setup_bonus` da suspension.efficiency, ride_height, antiroll (0.92–1.05)
+- **§6.9 Driver skills brakes**: `driver_brake_skill = (race_craft + aggression) / 200`
+- **§6.10 Overtake window**: `ow = base + drs + driver + grip + brake + aggression` (0–1)
+
+Risultati 3 circuiti (top team, baseline=+5%):
+- Monza L1: 108.3s (+7.1%), OW_max=0.78
+- Monaco L1: 76.5s (+6.5%), OW_max=0.78
+- Silverstone L1: 107.2s (+6.2%), OW_max=0.78
+
+---
+
 ## Prossimi passi
 
 1. Tuning coefficienti k_* su più circuiti
-2. Implementare gap §6.7-6.9 (fuel weight, mechanical grip, driver skills)
-3. Overtake window (§6.10)
-4. BattleResolver 2.0
+2. **⚡ BattleResolver 2.0** — logica sorpassi/difesa
+3. Practice Session Orchestrator

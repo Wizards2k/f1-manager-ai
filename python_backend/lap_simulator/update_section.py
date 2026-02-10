@@ -135,6 +135,7 @@ def update_section(
         config=config,
         dt_s=dt_estimate,
         v_kph=v_estimate,
+        aero_setup=aero_setup,
     )
     all_events.extend(tyre_events)
 
@@ -147,6 +148,7 @@ def update_section(
         config=config,
         dt_s=dt_estimate,
         v_kph=v_estimate,
+        driver_skills=driver_skills,
     )
     all_events.extend(brake_events)
 
@@ -178,8 +180,11 @@ def update_section(
         else:
             delta_brake = 0.0
 
-        # Δ_fuel: fuel weight penalty (linear with fuel load)
-        delta_fuel = config.k_fuel_penalty * (car_state.pu.fuel_kg / max(config.fuel_max_kg, 1.0))
+        # Δ_fuel: fuel weight penalty (§6.7)
+        # Heavier car is slower everywhere, but corners suffer more (mass → less cornering grip)
+        fuel_ratio = car_state.pu.fuel_kg / max(config.fuel_max_kg, 1.0)
+        corner_fuel_mult = 1.3 if is_corner else 1.0  # corners penalised 30% more
+        delta_fuel = config.k_fuel_penalty * fuel_ratio * corner_fuel_mult
 
         # Δ_driver: driver skill (pace_factor 1.0 = VER level = no penalty)
         delta_driver = config.k_driver_penalty * (1.0 - driver_intent.pace_factor)
@@ -302,6 +307,42 @@ def update_section(
         car_state.attack_cooldown -= 1
     if car_state.defense_reset > 0:
         car_state.defense_reset -= 1
+
+    # --- Overtake window (§6.10) ---
+    # Base opportunity from section type (straights = easy, slow corners = possible, fast corners = hard)
+    _OW_SECTION_BASE = {
+        SectionKind.STRAIGHT: 0.6,
+        SectionKind.MEDIUM_STRAIGHT: 0.4,
+        SectionKind.VERY_SLOW_CORNER: 0.15,
+        SectionKind.SLOW_CORNER: 0.10,
+        SectionKind.MEDIUM_CORNER: 0.05,
+        SectionKind.FAST_CORNER: 0.02,
+        SectionKind.ULTRA_FAST_CORNER: 0.01,
+    }
+    ow_base = _OW_SECTION_BASE.get(section.kind, 0.1)
+
+    # DRS bonus
+    ow_drs = 0.15 if (section.drs_available and not car_state.side_by_side) else 0.0
+
+    # Driver overtaking skill (0-100 → 0.0-0.15 bonus)
+    ow_driver = driver_skills.overtaking_skill / 100.0 * 0.15
+
+    # Tyre grip advantage (better grip = more overtake potential)
+    grip_avg = (eff_grip_front + eff_grip_rear) / 2.0
+    ow_grip = clamp((grip_avg - 0.85) * 0.5, -0.1, 0.1)
+
+    # Braking zone bonus (late braking = overtake opportunity)
+    ow_brake = 0.0
+    if section.braking_energy_mj > 0.5:
+        ow_brake = 0.1 * braking_efficiency  # better brakes = more chance
+
+    # Aggression bonus
+    ow_aggression = driver_intent.aggression_curve_bonus * 0.05
+
+    car_state.overtake_window = clamp(
+        ow_base + ow_drs + ow_driver + ow_grip + ow_brake + ow_aggression,
+        0.0, 1.0,
+    )
 
     # ===================================================================
     # STEP 8 – Return (Passo 8)

@@ -17,6 +17,7 @@ from .data_types import (
     CarState,
     CircuitConfig,
     DriverIntent,
+    DriverSkills,
     EnvContext,
     SectionContext,
     SectionEvent,
@@ -37,6 +38,7 @@ def update_brakes(
     config: CircuitConfig,
     dt_s: float,
     v_kph: float,
+    driver_skills: DriverSkills | None = None,
 ) -> Tuple[float, List[SectionEvent]]:
     """
     Update brake thermal state, fade, wear and return braking efficiency.
@@ -117,7 +119,10 @@ def update_brakes(
     else:
         brake_quality = 0.9 + bp.heat_quality / 200.0
         brake_health = 1.0 - clamp(brakes.fade_level + brakes.wear_front_pct / 100.0, 0.0, 0.8)
-        driver_brake_skill = 0.5  # neutral; real value from DriverSkills later
+        if driver_skills is not None:
+            driver_brake_skill = (driver_skills.race_craft + driver_skills.aggression) / 200.0
+        else:
+            driver_brake_skill = 0.5
 
         brake_opt_center = bp.fade_threshold_front_c * 0.85
         temp_delta = abs(brakes.temp_front_c - brake_opt_center) / max(brake_opt_center, 1.0)

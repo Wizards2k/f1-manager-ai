@@ -216,17 +216,23 @@ I file Telemetry hanno `drs_zones` con `detection_m/start_m/end_m` tutti null. L
 ### 6.6 Assenza di radius_m nelle sezioni
 Le sezioni curve hanno `radius_m: null`. Il `curvature_factor` viene calcolato dal tipo sezione (SlowCorner=0.4, FastCorner=1.0) invece che dalla geometria reale. **Azione**: estrarre radius dalla telemetria (coordinate x,y) o definire valori manuali.
 
-### 6.7 Fuel weight effect non implementato
-La spec menziona l'effetto peso carburante su accelerazione/frenata (§5.3 degradation doc), ma non è implementato. Con 100kg di fuel il lap time dovrebbe essere ~3s più lento che con 10kg. **Azione**: aggiungere `fuel_weight_penalty` nel calcolo velocità.
+### 6.7 ✅ RISOLTO — Fuel weight effect
+Implementato in `update_section.py` Step 6: `delta_fuel = k_fuel_penalty × (fuel_kg / fuel_max_kg) × corner_mult`. Le curve sono penalizzate 30% in più (massa → meno grip in curva). Il fuel si scarica progressivamente via PU step.
 
-### 6.8 Mechanical grip / setup_bonus non collegato
-Il `setup_bonus` nel calcolo grip gomme è fisso a 1.0. Dovrebbe derivare da ride_height, antiroll, suspension per asse. **Azione**: implementare la formula da spec §4 (grip_mech_eff).
+### 6.8 ✅ RISOLTO — Mechanical grip / setup_bonus
+Implementato in `tyre_model.py`: `setup_bonus` ora derivato da `suspension.efficiency` (+3% max), `ride_height` deviation (-0.1%/mm), `antiroll` deviation (-2% max). Passato `AeroSetup` a `update_tyres()` → `_update_single_tyre()`. Range: 0.92–1.05.
 
-### 6.9 DriverSkills non passate al BrakeSystem
-La `braking_efficiency` usa `driver_brake_skill = 0.5` hardcoded. Dovrebbe usare `(race_craft + aggression) / 200` dal DriverSkills. **Azione**: passare DriverSkills al brake step.
+### 6.9 ✅ RISOLTO — DriverSkills in BrakeSystem
+`brake_system.py`: aggiunto parametro `driver_skills` a `update_brakes()`. `driver_brake_skill = (race_craft + aggression) / 200` (0.0–1.0). Passato da `update_section.py`.
 
-### 6.10 Overtake window non calcolato
-Il `overtake_window` (0-1) descritto in §3.3.x non è implementato. È necessario per il BattleResolver. **Azione**: implementare basandosi su delta_v, gap, driver intent, section tags.
+### 6.10 ✅ RISOLTO — Overtake window
+Implementato in `update_section.py` Step 7: `overtake_window = ow_base + ow_drs + ow_driver + ow_grip + ow_brake + ow_aggression` (0–1).
+- `ow_base`: per section kind (Straight=0.6, SlowCorner=0.10, FastCorner=0.02)
+- `ow_drs`: +0.15 se DRS attivo
+- `ow_driver`: overtaking_skill/100 × 0.15
+- `ow_grip`: (grip_avg - 0.85) × 0.5, clamped ±0.1
+- `ow_brake`: 0.1 × braking_efficiency (solo con braking_energy ≥ 0.5)
+- Risultati: max ~0.78 (rettilineo+DRS), avg ~0.36. Pronto per BattleResolver.
 
 ### 6.11 ✅ RISOLTO — Sezioni telemetria con gap e avg_speed inaffidabile
 
@@ -325,7 +331,7 @@ Spec: `docs/telemetry-sections-v2-spec.md`. Branch `feature/telemetry-sections-v
 ## 9. Prossimi passi
 
 1. ✅ ~~Integrare sezioni v2 nel LapSimulator~~ — completato (modello dt_ref penalty)
-2. **Tuning coefficienti** — calibrare k_aero/grip/brake/fuel/driver per range realistico su tutti i circuiti
-3. **Implementare gap §6.7-6.9** — fuel weight, mechanical grip, driver skills in brakes
-4. **Overtake window** (§6.10) — prerequisito per BattleResolver
-5. **BattleResolver 2.0** — punto 2 della Fase B roadmap
+2. ✅ ~~Implementare gap §6.7-6.10~~ — fuel weight, mechanical grip, driver skills brakes, overtake window
+3. **Tuning coefficienti** — calibrare k_aero/grip/brake/fuel/driver per range realistico su tutti i circuiti
+4. **⚡ BattleResolver 2.0** — logica sorpassi/difesa basata su overtake_window + driver skills
+5. **Practice Session Orchestrator** — scheduling sessione, queue pitlane, run data
