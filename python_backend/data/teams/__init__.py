@@ -12,6 +12,8 @@ TEAMS = [
         forza_auto=91,
         power_unit="Honda RBPT",
         piloti_titolari=[PILOTS["VERSTAPPEN"], PILOTS["TSUNODA"]],
+        simulator_quality=90,
+        pitstop_skill=92,
     ),
     Team(
         nome_scuderia="Scuderia Ferrari",
@@ -21,6 +23,8 @@ TEAMS = [
         forza_auto=87,
         power_unit="Ferrari 066/10",
         piloti_titolari=[PILOTS["LECLERC"], PILOTS["HAMILTON"]],
+        simulator_quality=88,
+        pitstop_skill=90,
     ),
     Team(
         nome_scuderia="Mercedes-AMG PETRONAS",
@@ -30,6 +34,8 @@ TEAMS = [
         forza_auto=85,
         power_unit="Mercedes-AMG F1 M14",
         piloti_titolari=[PILOTS["RUSSELL"], PILOTS["ANTONELLI"]],
+        simulator_quality=86,
+        pitstop_skill=88,
     ),
     Team(
         nome_scuderia="McLaren F1 Team",
@@ -39,6 +45,8 @@ TEAMS = [
         forza_auto=95,
         power_unit="Mercedes-AMG",
         piloti_titolari=[PILOTS["NORRIS"], PILOTS["PIASTRI"]],
+        simulator_quality=84,
+        pitstop_skill=85,
     ),
     Team(
         nome_scuderia="Aston Martin Aramco",
@@ -48,6 +56,8 @@ TEAMS = [
         forza_auto=82,
         power_unit="Mercedes-AMG",
         piloti_titolari=[PILOTS["ALONSO"], PILOTS["STROLL"]],
+        simulator_quality=78,
+        pitstop_skill=80,
     ),
     Team(
         nome_scuderia="BWT Alpine F1 Team",
@@ -57,6 +67,8 @@ TEAMS = [
         forza_auto=79,
         power_unit="Renault E-Tech",
         piloti_titolari=[PILOTS["GASLY"], PILOTS["COLAPINTO"]],
+        simulator_quality=72,
+        pitstop_skill=75,
     ),
     Team(
         nome_scuderia="Williams Racing",
@@ -66,6 +78,8 @@ TEAMS = [
         forza_auto=76,
         power_unit="Mercedes-AMG",
         piloti_titolari=[PILOTS["ALBON"], PILOTS["SAINZ"]],
+        simulator_quality=70,
+        pitstop_skill=74,
     ),
     Team(
         nome_scuderia="Visa Cash App RB",
@@ -75,6 +89,8 @@ TEAMS = [
         forza_auto=77,
         power_unit="Honda RBPT",
         piloti_titolari=[PILOTS["LAWSON"], PILOTS["HADJAR"]],
+        simulator_quality=68,
+        pitstop_skill=72,
     ),
     Team(
         nome_scuderia="Stake F1 Team Kick Sauber",
@@ -84,6 +100,8 @@ TEAMS = [
         forza_auto=73,
         power_unit="Ferrari 066/10",
         piloti_titolari=[PILOTS["HULKENBERG"], PILOTS["BORTOLETO"]],
+        simulator_quality=64,
+        pitstop_skill=70,
     ),
     Team(
         nome_scuderia="MoneyGram Haas F1 Team",
@@ -93,6 +111,8 @@ TEAMS = [
         forza_auto=71,
         power_unit="Ferrari 066/10",
         piloti_titolari=[PILOTS["OCON"], PILOTS["BEARMAN"]],
+        simulator_quality=60,
+        pitstop_skill=68,
     ),
 ]
 

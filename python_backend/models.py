@@ -111,6 +111,7 @@ class Pilota:
         costanza: int = 50,
         gara: int = 50,
         gestione_carburante: int = 50,
+        perfezionismo: int = 50,
     ):
         self.nome = nome
         self.cognome = cognome
@@ -136,6 +137,7 @@ class Pilota:
         self._costanza = 50
         self._gara = 50
         self._gestione_carburante = 50
+        self._perfezionismo = 50
 
         self.velocita = velocita
         self.consumo_gomme = consumo_gomme
@@ -148,6 +150,7 @@ class Pilota:
         self.costanza = costanza
         self.gara = gara
         self.gestione_carburante = gestione_carburante
+        self.perfezionismo = perfezionismo
 
         nome_completo = f"{self.nome} {self.cognome}"
         self.abbreviazione = (
@@ -254,6 +257,14 @@ class Pilota:
     def gestione_carburante(self, value: int):
         self._gestione_carburante = MathUtils.clamp(value, 1, 100)
 
+    @property
+    def perfezionismo(self) -> int:
+        return self._perfezionismo
+
+    @perfezionismo.setter
+    def perfezionismo(self, value: int):
+        self._perfezionismo = MathUtils.clamp(value, 1, 100)
+
 
 class Gomma:
     BONUS_LAP_TIME = {
@@ -311,6 +322,8 @@ class Team:
         power_unit: str = "",
         sponsor_principale: str = "",
         piloti_titolari: Optional[List[Pilota]] = None,
+        simulator_quality: int = 70,
+        pitstop_skill: int = 70,
     ):
         self.nome_scuderia = nome_scuderia
         self.sigla_scuderia = sigla_scuderia
@@ -324,7 +337,9 @@ class Team:
         self.affidabilita = 75
         self.aerodinamica = 70
         self.meccanica = 70
-        self.efficienza_pit = 80
+        self.simulator_quality = MathUtils.clamp(simulator_quality, 1, 100)
+        self.pitstop_skill = MathUtils.clamp(pitstop_skill, 1, 100)
+        self.efficienza_pit = self.pitstop_skill
 
     def aggiungi_pilota(self, pilota: Pilota):
         self.piloti_titolari.append(pilota)

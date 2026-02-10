@@ -1,0 +1,2877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Setup Search Report v2</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+h1 { color: #fff; margin-bottom: 5px; }
+h2 { color: #aaa; margin: 30px 0 15px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+h3 { color: #ddd; margin-bottom: 10px; }
+.subtitle { color: #888; font-size: 14px; margin-bottom: 20px; }
+.tier-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; color: #fff; font-size: 11px; font-weight: bold; margin-right: 6px; }
+.skill { font-size: 12px; color: #888; font-weight: normal; margin-left: 15px; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+th { background: #16213e; color: #aaa; text-align: left; padding: 8px 10px; font-size: 12px; text-transform: uppercase; }
+td { padding: 6px 10px; border-bottom: 1px solid #2a2a4a; font-size: 13px; }
+tr:hover { background: #1f1f3a; }
+.num { text-align: center; }
+.highlight { color: #4FC3F7; font-weight: bold; }
+.detail { font-size: 11px; color: #888; max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-bg { display: inline-block; width: 80px; height: 12px; background: #333; border-radius: 6px; overflow: hidden; vertical-align: middle; }
+.bar-fill { height: 100%; border-radius: 6px; }
+.pct { font-size: 11px; margin-left: 4px; }
+.tier-card { background: #16213e; padding: 15px 20px; border-radius: 8px; margin-bottom: 12px; }
+.tier-stats { display: flex; gap: 30px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; }
+.tier-stats div { background: #1a1a2e; padding: 6px 12px; border-radius: 4px; }
+.car-detail { background: #16213e; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+.detail-table th { font-size: 11px; }
+.detail-table td { font-size: 12px; }
+.run-complete { background: rgba(76, 175, 80, 0.08); }
+.ref-box { background: #16213e; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 40px; flex-wrap: wrap; }
+.ref-box div { font-size: 13px; }
+.ref-box strong { color: #4FC3F7; }
+</style>
+</head>
+<body>
+<h1>🏎️ AI Setup Search Report v2</h1>
+<p class="subtitle">Generated 2026-02-11 00:29 — Real slider adjustments + score-based convergence</p>
+
+<div class="ref-box">
+    <div><strong>Baseline:</strong> from team simulator_quality (top ~90, mid ~72, back ~62)</div>
+    <div><strong>Score scale:</strong> 0–10 (from evaluate_setup_categories)</div>
+    <div><strong>Threshold:</strong> 7.5 + (perfezionismo - 50) / 200</div>
+    <div><strong>Expected:</strong> Top ≤3 runs | Mid 3-4 runs | Back 4-5 runs</div>
+</div>
+
+<h2>📊 Tier Summary</h2>
+
+        <div class="tier-card" style="border-left: 4px solid #4CAF50">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span> TOP (8 cars)</h3>
+            <div class="tier-stats">
+                <div><strong>Avg initial score:</strong> 8.20/10</div>
+                <div><strong>Avg final score:</strong> 9.14/10</div>
+                <div><strong>Avg runs to complete:</strong> 2.5</div>
+                <div><strong>Range:</strong> 1–4 runs</div>
+                <div><strong>Not completed:</strong> 2</div>
+                <div><strong>Session breakdown:</strong> FP1: 4, FP2: 2</div>
+            </div>
+        </div>
+        <div class="tier-card" style="border-left: 4px solid #FF9800">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span> MIDFIELD (8 cars)</h3>
+            <div class="tier-stats">
+                <div><strong>Avg initial score:</strong> 7.27/10</div>
+                <div><strong>Avg final score:</strong> 8.91/10</div>
+                <div><strong>Avg runs to complete:</strong> 3.7</div>
+                <div><strong>Range:</strong> 1–6 runs</div>
+                <div><strong>Not completed:</strong> 1</div>
+                <div><strong>Session breakdown:</strong> FP1: 4, FP2: 3</div>
+            </div>
+        </div>
+        <div class="tier-card" style="border-left: 4px solid #F44336">
+            <h3><span class="tier-badge" style="background:#F44336">BACK</span> BACKMARKER (4 cars)</h3>
+            <div class="tier-stats">
+                <div><strong>Avg initial score:</strong> 6.54/10</div>
+                <div><strong>Avg final score:</strong> 8.49/10</div>
+                <div><strong>Avg runs to complete:</strong> 4.0</div>
+                <div><strong>Range:</strong> 3–5 runs</div>
+                <div><strong>Not completed:</strong> 2</div>
+                <div><strong>Session breakdown:</strong> FP1: 1, FP2: 1</div>
+            </div>
+        </div>
+
+<h2>📋 All Cars — Setup Completion</h2>
+<table>
+<thead><tr>
+    <th>Tier</th><th>Team</th><th>Driver</th><th>Ric.Ass.</th><th>Category</th><th>Perf.</th>
+    <th>Sim.Q</th><th>Initial</th><th>Final</th><th>Threshold</th><th>Runs</th><th>Session</th>
+</tr></thead>
+<tbody>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>McLaren F1 Team</td>
+            <td><strong>#4</strong> Lando Norris</td>
+            <td class="num">82</td>
+            <td class="num">solido</td>
+            <td class="num">92</td>
+            <td class="num">84</td>
+            <td class="num">7.68</td>
+            <td class="num">9.12</td>
+            <td class="num">8.61</td>
+            <td class="num highlight">4</td>
+            <td>FP2</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>McLaren F1 Team</td>
+            <td><strong>#81</strong> Oscar Piastri</td>
+            <td class="num">85</td>
+            <td class="num">elite</td>
+            <td class="num">98</td>
+            <td class="num">84</td>
+            <td class="num">9.11</td>
+            <td class="num">9.55</td>
+            <td class="num">8.64</td>
+            <td class="num highlight">—</td>
+            <td>—</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>Mercedes-AMG PETRONA</td>
+            <td><strong>#12</strong> Andrea Kimi Antonelli</td>
+            <td class="num">60</td>
+            <td class="num">incostante</td>
+            <td class="num">80</td>
+            <td class="num">86</td>
+            <td class="num">8.21</td>
+            <td class="num">9.09</td>
+            <td class="num">8.57</td>
+            <td class="num highlight">1</td>
+            <td>FP1</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>Mercedes-AMG PETRONA</td>
+            <td><strong>#63</strong> George Russell</td>
+            <td class="num">88</td>
+            <td class="num">elite</td>
+            <td class="num">90</td>
+            <td class="num">86</td>
+            <td class="num">7.80</td>
+            <td class="num">9.03</td>
+            <td class="num">8.61</td>
+            <td class="num highlight">2</td>
+            <td>FP1</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>Oracle Red Bull Raci</td>
+            <td><strong>#1</strong> Max Verstappen</td>
+            <td class="num">85</td>
+            <td class="num">elite</td>
+            <td class="num">90</td>
+            <td class="num">90</td>
+            <td class="num">8.22</td>
+            <td class="num">9.19</td>
+            <td class="num">8.61</td>
+            <td class="num highlight">2</td>
+            <td>FP1</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>Oracle Red Bull Raci</td>
+            <td><strong>#22</strong> Yuki Tsunoda</td>
+            <td class="num">70</td>
+            <td class="num">solido</td>
+            <td class="num">75</td>
+            <td class="num">90</td>
+            <td class="num">7.74</td>
+            <td class="num">9.04</td>
+            <td class="num">8.55</td>
+            <td class="num highlight">4</td>
+            <td>FP2</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>Scuderia Ferrari</td>
+            <td><strong>#16</strong> Charles Leclerc</td>
+            <td class="num">80</td>
+            <td class="num">solido</td>
+            <td class="num">85</td>
+            <td class="num">88</td>
+            <td class="num">8.04</td>
+            <td class="num">9.13</td>
+            <td class="num">8.59</td>
+            <td class="num highlight">2</td>
+            <td>FP1</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#4CAF50">TOP</span></td>
+            <td>Scuderia Ferrari</td>
+            <td><strong>#44</strong> Lewis Hamilton</td>
+            <td class="num">95</td>
+            <td class="num">elite</td>
+            <td class="num">95</td>
+            <td class="num">88</td>
+            <td class="num">8.80</td>
+            <td class="num">8.98</td>
+            <td class="num">8.62</td>
+            <td class="num highlight">—</td>
+            <td>—</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>Aston Martin Aramco</td>
+            <td><strong>#14</strong> Fernando Alonso</td>
+            <td class="num">99</td>
+            <td class="num">elite</td>
+            <td class="num">90</td>
+            <td class="num">78</td>
+            <td class="num">7.63</td>
+            <td class="num">8.92</td>
+            <td class="num">8.61</td>
+            <td class="num highlight">3</td>
+            <td>FP1</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>Aston Martin Aramco</td>
+            <td><strong>#18</strong> Lance Stroll</td>
+            <td class="num">70</td>
+            <td class="num">solido</td>
+            <td class="num">60</td>
+            <td class="num">78</td>
+            <td class="num">7.37</td>
+            <td class="num">9.07</td>
+            <td class="num">8.50</td>
+            <td class="num highlight">3</td>
+            <td>FP1</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>BWT Alpine F1 Team</td>
+            <td><strong>#10</strong> Pierre Gasly</td>
+            <td class="num">75</td>
+            <td class="num">solido</td>
+            <td class="num">80</td>
+            <td class="num">72</td>
+            <td class="num">8.32</td>
+            <td class="num">9.29</td>
+            <td class="num">8.57</td>
+            <td class="num highlight">1</td>
+            <td>FP1</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>BWT Alpine F1 Team</td>
+            <td><strong>#43</strong> Franco Colapinto</td>
+            <td class="num">50</td>
+            <td class="num">sperimentale</td>
+            <td class="num">65</td>
+            <td class="num">72</td>
+            <td class="num">6.17</td>
+            <td class="num">8.29</td>
+            <td class="num">8.52</td>
+            <td class="num highlight">—</td>
+            <td>—</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>Visa Cash App RB</td>
+            <td><strong>#30</strong> Liam Lawson</td>
+            <td class="num">65</td>
+            <td class="num">incostante</td>
+            <td class="num">75</td>
+            <td class="num">68</td>
+            <td class="num">6.87</td>
+            <td class="num">8.81</td>
+            <td class="num">8.55</td>
+            <td class="num highlight">6</td>
+            <td>FP2</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>Visa Cash App RB</td>
+            <td><strong>#6</strong> Isack Hadjar</td>
+            <td class="num">60</td>
+            <td class="num">incostante</td>
+            <td class="num">75</td>
+            <td class="num">68</td>
+            <td class="num">7.92</td>
+            <td class="num">8.99</td>
+            <td class="num">8.55</td>
+            <td class="num highlight">3</td>
+            <td>FP1</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>Williams Racing</td>
+            <td><strong>#23</strong> Alexander Albon</td>
+            <td class="num">80</td>
+            <td class="num">solido</td>
+            <td class="num">85</td>
+            <td class="num">70</td>
+            <td class="num">7.38</td>
+            <td class="num">9.24</td>
+            <td class="num">8.59</td>
+            <td class="num highlight">4</td>
+            <td>FP2</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#FF9800">MID</span></td>
+            <td>Williams Racing</td>
+            <td><strong>#55</strong> Carlos Sainz</td>
+            <td class="num">98</td>
+            <td class="num">elite</td>
+            <td class="num">95</td>
+            <td class="num">70</td>
+            <td class="num">6.48</td>
+            <td class="num">8.67</td>
+            <td class="num">8.62</td>
+            <td class="num highlight">6</td>
+            <td>FP2</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#F44336">BACK</span></td>
+            <td>MoneyGram Haas F1 Te</td>
+            <td><strong>#31</strong> Esteban Ocon</td>
+            <td class="num">78</td>
+            <td class="num">solido</td>
+            <td class="num">85</td>
+            <td class="num">60</td>
+            <td class="num">7.06</td>
+            <td class="num">9.20</td>
+            <td class="num">8.59</td>
+            <td class="num highlight">5</td>
+            <td>FP2</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#F44336">BACK</span></td>
+            <td>MoneyGram Haas F1 Te</td>
+            <td><strong>#87</strong> Oliver Bearman</td>
+            <td class="num">65</td>
+            <td class="num">incostante</td>
+            <td class="num">78</td>
+            <td class="num">60</td>
+            <td class="num">5.61</td>
+            <td class="num">7.69</td>
+            <td class="num">8.56</td>
+            <td class="num highlight">—</td>
+            <td>—</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#F44336">BACK</span></td>
+            <td>Stake F1 Team Kick S</td>
+            <td><strong>#27</strong> Nico Hülkenberg</td>
+            <td class="num">90</td>
+            <td class="num">elite</td>
+            <td class="num">85</td>
+            <td class="num">64</td>
+            <td class="num">6.06</td>
+            <td class="num">7.75</td>
+            <td class="num">8.59</td>
+            <td class="num highlight">—</td>
+            <td>—</td>
+        </tr>
+        <tr>
+            <td><span class="tier-badge" style="background:#F44336">BACK</span></td>
+            <td>Stake F1 Team Kick S</td>
+            <td><strong>#5</strong> Gabriel Bortoleto</td>
+            <td class="num">70</td>
+            <td class="num">solido</td>
+            <td class="num">88</td>
+            <td class="num">64</td>
+            <td class="num">7.43</td>
+            <td class="num">9.32</td>
+            <td class="num">8.60</td>
+            <td class="num highlight">3</td>
+            <td>FP1</td>
+        </tr></tbody>
+</table>
+
+<h2>🔍 Per-Car Run Detail</h2>
+
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                McLaren F1 Team #4 Lando Norris
+                <span class="skill">ric_ass: 82 | perf: 92 | sim_q: 84 | threshold: 8.61</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.68</td>
+                <td class="num">8.24</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:82.4%;background:#2196F3"></div></div>
+                    <span class="pct">8.2/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td></td>
+                <td class="detail">front_wing: -5, rear_wing: +3, beam_wing: +2, suspension_front: -1, suspension_rear: +1, ride_height_front: +1, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.24</td>
+                <td class="num">8.39</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:83.9%;background:#2196F3"></div></div>
+                    <span class="pct">8.4/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td></td>
+                <td class="detail">front_wing: +1, beam_wing: +1, suspension_rear: +1, ride_height_front: -1, ride_height_rear: -2, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.39</td>
+                <td class="num">8.55</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:85.50000000000001%;background:#2196F3"></div></div>
+                    <span class="pct">8.6/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td></td>
+                <td class="detail">front_wing: +1, beam_wing: +1, suspension_rear: +1, ride_height_front: -1, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.55</td>
+                <td class="num">8.69</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:86.9%;background:#4CAF50"></div></div>
+                    <span class="pct">8.7/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: +1, ride_height_front: +1, ride_height_rear: +2, suspension_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.69</td>
+                <td class="num">8.83</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.3%;background:#4CAF50"></div></div>
+                    <span class="pct">8.8/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: +1, ride_height_front: +1, ride_height_rear: -2, suspension_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8.83</td>
+                <td class="num">8.98</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.8%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">ride_height_front: +1, ride_height_rear: +1, suspension_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.98</td>
+                <td class="num">9.03</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.3%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">suspension_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">9.03</td>
+                <td class="num">9.12</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:91.19999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">9.1/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: +1, ride_height_front: +1</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                McLaren F1 Team #81 Oscar Piastri
+                <span class="skill">ric_ass: 85 | perf: 98 | sim_q: 84 | threshold: 8.64</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="run-complete">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">9.11</td>
+                <td class="num">9.29</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:92.89999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">9.3/10</span>
+                </td>
+                <td class="num">8.64</td>
+                <td>✅</td>
+                <td class="detail">rear_wing: -1, suspension_front: +1, suspension_rear: +1, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">9.29</td>
+                <td class="num">9.32</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:93.2%;background:#4CAF50"></div></div>
+                    <span class="pct">9.3/10</span>
+                </td>
+                <td class="num">8.64</td>
+                <td>✅</td>
+                <td class="detail">suspension_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">9.32</td>
+                <td class="num">9.44</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:94.39999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">9.4/10</span>
+                </td>
+                <td class="num">8.64</td>
+                <td>✅</td>
+                <td class="detail">front_wing: -1, suspension_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">9.44</td>
+                <td class="num">9.55</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:95.5%;background:#4CAF50"></div></div>
+                    <span class="pct">9.6/10</span>
+                </td>
+                <td class="num">8.64</td>
+                <td>✅</td>
+                <td class="detail">front_wing: -1, suspension_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">9.55</td>
+                <td class="num">9.55</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:95.5%;background:#4CAF50"></div></div>
+                    <span class="pct">9.6/10</span>
+                </td>
+                <td class="num">8.64</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">9.55</td>
+                <td class="num">9.55</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:95.5%;background:#4CAF50"></div></div>
+                    <span class="pct">9.6/10</span>
+                </td>
+                <td class="num">8.64</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">9.55</td>
+                <td class="num">9.55</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:95.5%;background:#4CAF50"></div></div>
+                    <span class="pct">9.6/10</span>
+                </td>
+                <td class="num">8.64</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">9.55</td>
+                <td class="num">9.55</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:95.5%;background:#4CAF50"></div></div>
+                    <span class="pct">9.6/10</span>
+                </td>
+                <td class="num">8.64</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                Mercedes-AMG PETRONA #12 Andrea Kimi Antonelli
+                <span class="skill">ric_ass: 60 | perf: 80 | sim_q: 86 | threshold: 8.57</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="run-complete">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.21</td>
+                <td class="num">8.59</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:85.9%;background:#4CAF50"></div></div>
+                    <span class="pct">8.6/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">front_wing: -1, rear_wing: +1, beam_wing: +1, suspension_rear: +1, ride_height_front: +1, ride_height_rear: -1, antiroll_rear: +1, antiroll_front: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.59</td>
+                <td class="num">8.84</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.4%;background:#4CAF50"></div></div>
+                    <span class="pct">8.8/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">front_wing: -1, beam_wing: +1, suspension_rear: +1, ride_height_front: +1, ride_height_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.84</td>
+                <td class="num">8.91</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.1%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">ride_height_rear: -1, antiroll_front: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.91</td>
+                <td class="num">9.03</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.3%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">ride_height_rear: -2, antiroll_front: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">9.03</td>
+                <td class="num">9.03</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.3%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">suspension_rear: +1, antiroll_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">9.03</td>
+                <td class="num">9.09</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.9%;background:#4CAF50"></div></div>
+                    <span class="pct">9.1/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">suspension_rear: +1, antiroll_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">9.09</td>
+                <td class="num">9.11</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:91.1%;background:#4CAF50"></div></div>
+                    <span class="pct">9.1/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">suspension_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">9.11</td>
+                <td class="num">9.09</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.9%;background:#4CAF50"></div></div>
+                    <span class="pct">9.1/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">suspension_rear: -1</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                Mercedes-AMG PETRONA #63 George Russell
+                <span class="skill">ric_ass: 88 | perf: 90 | sim_q: 86 | threshold: 8.61</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.80</td>
+                <td class="num">8.46</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:84.60000000000001%;background:#2196F3"></div></div>
+                    <span class="pct">8.5/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td></td>
+                <td class="detail">front_wing: -2, rear_wing: +2, beam_wing: -2, suspension_front: -1, suspension_rear: +1, ride_height_front: +1, ride_height_rear: +2, antiroll_rear: +1, antiroll_front: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.46</td>
+                <td class="num">8.79</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:87.89999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">8.8/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">front_wing: -1, rear_wing: +1, beam_wing: -1, suspension_front: -1, suspension_rear: +1, ride_height_front: +1, antiroll_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.79</td>
+                <td class="num">8.89</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.9%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">ride_height_front: +1, ride_height_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.89</td>
+                <td class="num">8.89</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.9%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.89</td>
+                <td class="num">8.93</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.3%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">ride_height_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8.93</td>
+                <td class="num">8.98</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.8%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">ride_height_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.98</td>
+                <td class="num">8.98</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.8%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.98</td>
+                <td class="num">9.03</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.3%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">ride_height_front: +1</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                Oracle Red Bull Raci #1 Max Verstappen
+                <span class="skill">ric_ass: 85 | perf: 90 | sim_q: 90 | threshold: 8.61</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.22</td>
+                <td class="num">8.58</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:85.8%;background:#2196F3"></div></div>
+                    <span class="pct">8.6/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td></td>
+                <td class="detail">front_wing: -2, rear_wing: -1, suspension_front: +1, suspension_rear: +1, ride_height_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.58</td>
+                <td class="num">8.78</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:87.79999999999998%;background:#4CAF50"></div></div>
+                    <span class="pct">8.8/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">front_wing: -1, beam_wing: -1, suspension_rear: +1, ride_height_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.78</td>
+                <td class="num">8.98</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.8%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">front_wing: -1, beam_wing: -1, suspension_rear: +1, ride_height_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.98</td>
+                <td class="num">9.14</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:91.4%;background:#4CAF50"></div></div>
+                    <span class="pct">9.1/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">front_wing: -1, beam_wing: -1, suspension_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">9.14</td>
+                <td class="num">9.19</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:91.89999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">9.2/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">ride_height_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">9.19</td>
+                <td class="num">9.19</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:91.89999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">9.2/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">9.19</td>
+                <td class="num">9.19</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:91.89999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">9.2/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">9.19</td>
+                <td class="num">9.19</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:91.89999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">9.2/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                Oracle Red Bull Raci #22 Yuki Tsunoda
+                <span class="skill">ric_ass: 70 | perf: 75 | sim_q: 90 | threshold: 8.55</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.74</td>
+                <td class="num">8.01</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:80.1%;background:#2196F3"></div></div>
+                    <span class="pct">8.0/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td></td>
+                <td class="detail">front_wing: +1, rear_wing: -2, beam_wing: +2, suspension_front: -1, ride_height_rear: -1, antiroll_rear: -1</td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.01</td>
+                <td class="num">8.27</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:82.69999999999999%;background:#2196F3"></div></div>
+                    <span class="pct">8.3/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td></td>
+                <td class="detail">front_wing: +1, rear_wing: +1, suspension_front: -1, suspension_rear: +1, ride_height_rear: -1</td>
+            </tr>
+            <tr class="">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.27</td>
+                <td class="num">8.48</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:84.80000000000001%;background:#2196F3"></div></div>
+                    <span class="pct">8.5/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td></td>
+                <td class="detail">front_wing: +1, beam_wing: +1, suspension_rear: +1, ride_height_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.48</td>
+                <td class="num">8.68</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:86.8%;background:#4CAF50"></div></div>
+                    <span class="pct">8.7/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td>✅</td>
+                <td class="detail">front_wing: +1, beam_wing: +1, suspension_rear: +1, ride_height_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.68</td>
+                <td class="num">8.86</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.6%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td>✅</td>
+                <td class="detail">front_wing: +1, beam_wing: +1, ride_height_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8.86</td>
+                <td class="num">8.95</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.49999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: +1, ride_height_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.95</td>
+                <td class="num">8.99</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.9%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td>✅</td>
+                <td class="detail">ride_height_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.99</td>
+                <td class="num">9.04</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.39999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td>✅</td>
+                <td class="detail">ride_height_rear: -1</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                Scuderia Ferrari #16 Charles Leclerc
+                <span class="skill">ric_ass: 80 | perf: 85 | sim_q: 88 | threshold: 8.59</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.04</td>
+                <td class="num">8.47</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:84.7%;background:#2196F3"></div></div>
+                    <span class="pct">8.5/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">front_wing: +2, rear_wing: +2, beam_wing: +1, suspension_rear: +1, ride_height_front: +1, ride_height_rear: -2, antiroll_rear: -1, antiroll_front: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.47</td>
+                <td class="num">8.76</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:87.6%;background:#4CAF50"></div></div>
+                    <span class="pct">8.8/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">rear_wing: -1, beam_wing: +1, suspension_rear: +1, ride_height_front: +1, ride_height_rear: -1, antiroll_rear: -1, antiroll_front: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.76</td>
+                <td class="num">8.95</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.49999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: +1, ride_height_front: +1, ride_height_rear: -1, suspension_rear: +1, antiroll_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.95</td>
+                <td class="num">9.04</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.39999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: +1, ride_height_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">9.04</td>
+                <td class="num">9.15</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:91.5%;background:#4CAF50"></div></div>
+                    <span class="pct">9.2/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: +1, ride_height_front: +1, antiroll_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">9.15</td>
+                <td class="num">9.13</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:91.3%;background:#4CAF50"></div></div>
+                    <span class="pct">9.1/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">ride_height_front: -1, antiroll_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">9.13</td>
+                <td class="num">9.13</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:91.3%;background:#4CAF50"></div></div>
+                    <span class="pct">9.1/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">9.13</td>
+                <td class="num">9.13</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:91.3%;background:#4CAF50"></div></div>
+                    <span class="pct">9.1/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#4CAF50">TOP</span>
+                Scuderia Ferrari #44 Lewis Hamilton
+                <span class="skill">ric_ass: 95 | perf: 95 | sim_q: 88 | threshold: 8.62</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="run-complete">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.80</td>
+                <td class="num">8.98</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.8%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td>✅</td>
+                <td class="detail">rear_wing: +1, suspension_rear: +1, antiroll_rear: -1, ride_height_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.98</td>
+                <td class="num">8.98</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.8%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.98</td>
+                <td class="num">8.98</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.8%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.98</td>
+                <td class="num">8.98</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.8%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.98</td>
+                <td class="num">8.98</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.8%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8.98</td>
+                <td class="num">8.98</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.8%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.98</td>
+                <td class="num">8.98</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.8%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.98</td>
+                <td class="num">8.98</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.8%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                Aston Martin Aramco #14 Fernando Alonso
+                <span class="skill">ric_ass: 99 | perf: 90 | sim_q: 78 | threshold: 8.61</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.63</td>
+                <td class="num">8.07</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:80.7%;background:#2196F3"></div></div>
+                    <span class="pct">8.1/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td></td>
+                <td class="detail">front_wing: -3, rear_wing: +3, beam_wing: +2, suspension_front: +1, suspension_rear: +1, ride_height_front: -1, ride_height_rear: -1, antiroll_rear: +1, antiroll_front: -1</td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.07</td>
+                <td class="num">8.37</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:83.7%;background:#2196F3"></div></div>
+                    <span class="pct">8.4/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td></td>
+                <td class="detail">front_wing: -1, rear_wing: -1, beam_wing: +1, suspension_front: +1, suspension_rear: +1, ride_height_rear: -1, antiroll_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.37</td>
+                <td class="num">8.61</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:86.1%;background:#4CAF50"></div></div>
+                    <span class="pct">8.6/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">front_wing: -1, rear_wing: -1, beam_wing: +1, suspension_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.61</td>
+                <td class="num">8.76</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:87.6%;background:#4CAF50"></div></div>
+                    <span class="pct">8.8/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">front_wing: -1, beam_wing: +1, suspension_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.76</td>
+                <td class="num">8.92</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.2%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">front_wing: -1, beam_wing: +1, suspension_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8.92</td>
+                <td class="num">8.92</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.2%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.92</td>
+                <td class="num">8.92</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.2%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.92</td>
+                <td class="num">8.92</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.2%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.61</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                Aston Martin Aramco #18 Lance Stroll
+                <span class="skill">ric_ass: 70 | perf: 60 | sim_q: 78 | threshold: 8.50</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.37</td>
+                <td class="num">7.97</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:79.69999999999999%;background:#2196F3"></div></div>
+                    <span class="pct">8.0/10</span>
+                </td>
+                <td class="num">8.50</td>
+                <td></td>
+                <td class="detail">front_wing: +3, rear_wing: -3, beam_wing: +2, suspension_front: -1, suspension_rear: -2, ride_height_front: -1, ride_height_rear: +2, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.97</td>
+                <td class="num">8.44</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:84.39999999999999%;background:#2196F3"></div></div>
+                    <span class="pct">8.4/10</span>
+                </td>
+                <td class="num">8.50</td>
+                <td></td>
+                <td class="detail">front_wing: -1, rear_wing: -2, beam_wing: -1, suspension_front: +1, suspension_rear: -1, ride_height_front: -1, ride_height_rear: +2, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.44</td>
+                <td class="num">8.62</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:86.19999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">8.6/10</span>
+                </td>
+                <td class="num">8.50</td>
+                <td>✅</td>
+                <td class="detail">rear_wing: -1, suspension_front: -1, suspension_rear: -1, ride_height_front: +1, ride_height_rear: +1, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.62</td>
+                <td class="num">8.75</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:87.5%;background:#4CAF50"></div></div>
+                    <span class="pct">8.8/10</span>
+                </td>
+                <td class="num">8.50</td>
+                <td>✅</td>
+                <td class="detail">ride_height_rear: +1, suspension_rear: -1, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.75</td>
+                <td class="num">8.87</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.69999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.50</td>
+                <td>✅</td>
+                <td class="detail">ride_height_front: -1, suspension_rear: -1, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8.87</td>
+                <td class="num">8.97</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.7%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.50</td>
+                <td>✅</td>
+                <td class="detail">ride_height_front: -1, suspension_rear: -1, antiroll_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.97</td>
+                <td class="num">9.00</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.0%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.50</td>
+                <td>✅</td>
+                <td class="detail">suspension_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">9.00</td>
+                <td class="num">9.07</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.7%;background:#4CAF50"></div></div>
+                    <span class="pct">9.1/10</span>
+                </td>
+                <td class="num">8.50</td>
+                <td>✅</td>
+                <td class="detail">ride_height_front: -1, antiroll_rear: -1</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                BWT Alpine F1 Team #10 Pierre Gasly
+                <span class="skill">ric_ass: 75 | perf: 80 | sim_q: 72 | threshold: 8.57</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="run-complete">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.32</td>
+                <td class="num">8.62</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:86.19999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">8.6/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">front_wing: -1, suspension_rear: -1, ride_height_front: +1, ride_height_rear: -2, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.62</td>
+                <td class="num">8.88</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.80000000000001%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">front_wing: -1, suspension_rear: -1, ride_height_rear: -2, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.88</td>
+                <td class="num">9.00</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.0%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: +1, ride_height_rear: -1, suspension_rear: -1, antiroll_rear: -1, antiroll_front: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">9.00</td>
+                <td class="num">9.09</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.9%;background:#4CAF50"></div></div>
+                    <span class="pct">9.1/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">ride_height_rear: -1, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">9.09</td>
+                <td class="num">9.22</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:92.2%;background:#4CAF50"></div></div>
+                    <span class="pct">9.2/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">ride_height_rear: -1, suspension_rear: -1, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">9.22</td>
+                <td class="num">9.29</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:92.89999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">9.3/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">ride_height_rear: -1, suspension_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">9.29</td>
+                <td class="num">9.29</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:92.89999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">9.3/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">9.29</td>
+                <td class="num">9.29</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:92.89999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">9.3/10</span>
+                </td>
+                <td class="num">8.57</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                BWT Alpine F1 Team #43 Franco Colapinto
+                <span class="skill">ric_ass: 50 | perf: 65 | sim_q: 72 | threshold: 8.52</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6.17</td>
+                <td class="num">7.01</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:70.1%;background:#2196F3"></div></div>
+                    <span class="pct">7.0/10</span>
+                </td>
+                <td class="num">8.52</td>
+                <td></td>
+                <td class="detail">front_wing: -3, rear_wing: -3, beam_wing: -4, suspension_front: -1, suspension_rear: -1, ride_height_front: -3, ride_height_rear: +1, antiroll_rear: +1</td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.01</td>
+                <td class="num">7.61</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:76.1%;background:#2196F3"></div></div>
+                    <span class="pct">7.6/10</span>
+                </td>
+                <td class="num">8.52</td>
+                <td></td>
+                <td class="detail">rear_wing: -2, beam_wing: -3, suspension_front: -1, suspension_rear: -2, ride_height_front: -2, ride_height_rear: -3</td>
+            </tr>
+            <tr class="">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">7.61</td>
+                <td class="num">7.76</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:77.60000000000001%;background:#2196F3"></div></div>
+                    <span class="pct">7.8/10</span>
+                </td>
+                <td class="num">8.52</td>
+                <td></td>
+                <td class="detail">rear_wing: -1, beam_wing: -1, suspension_front: -1, ride_height_front: -1, ride_height_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">7.76</td>
+                <td class="num">8.04</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:80.39999999999999%;background:#2196F3"></div></div>
+                    <span class="pct">8.0/10</span>
+                </td>
+                <td class="num">8.52</td>
+                <td></td>
+                <td class="detail">rear_wing: -2, ride_height_front: -1, ride_height_rear: -1, antiroll_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.04</td>
+                <td class="num">8.20</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:82.0%;background:#2196F3"></div></div>
+                    <span class="pct">8.2/10</span>
+                </td>
+                <td class="num">8.52</td>
+                <td></td>
+                <td class="detail">beam_wing: -1, ride_height_front: -1, ride_height_rear: -1, antiroll_rear: +1</td>
+            </tr>
+            <tr class="">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8.20</td>
+                <td class="num">8.21</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:82.10000000000001%;background:#2196F3"></div></div>
+                    <span class="pct">8.2/10</span>
+                </td>
+                <td class="num">8.52</td>
+                <td></td>
+                <td class="detail">beam_wing: -1, ride_height_front: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.21</td>
+                <td class="num">8.24</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:82.4%;background:#2196F3"></div></div>
+                    <span class="pct">8.2/10</span>
+                </td>
+                <td class="num">8.52</td>
+                <td></td>
+                <td class="detail">antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.24</td>
+                <td class="num">8.29</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:82.89999999999999%;background:#2196F3"></div></div>
+                    <span class="pct">8.3/10</span>
+                </td>
+                <td class="num">8.52</td>
+                <td></td>
+                <td class="detail">ride_height_front: -1</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                Visa Cash App RB #30 Liam Lawson
+                <span class="skill">ric_ass: 65 | perf: 75 | sim_q: 68 | threshold: 8.55</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6.87</td>
+                <td class="num">7.37</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:73.7%;background:#2196F3"></div></div>
+                    <span class="pct">7.4/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td></td>
+                <td class="detail">front_wing: -1, rear_wing: -2, beam_wing: -1, suspension_front: -1, suspension_rear: +1, ride_height_front: +1, ride_height_rear: +3, antiroll_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.37</td>
+                <td class="num">8.00</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:80.0%;background:#2196F3"></div></div>
+                    <span class="pct">8.0/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td></td>
+                <td class="detail">front_wing: -3, rear_wing: -2, beam_wing: -1, ride_height_rear: +3, antiroll_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.00</td>
+                <td class="num">8.24</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:82.4%;background:#2196F3"></div></div>
+                    <span class="pct">8.2/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td></td>
+                <td class="detail">front_wing: -1, beam_wing: -1, ride_height_rear: +2, antiroll_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.24</td>
+                <td class="num">8.39</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:83.9%;background:#2196F3"></div></div>
+                    <span class="pct">8.4/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td></td>
+                <td class="detail">front_wing: -1, beam_wing: -1, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.39</td>
+                <td class="num">8.51</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:85.1%;background:#2196F3"></div></div>
+                    <span class="pct">8.5/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td></td>
+                <td class="detail">front_wing: -1, antiroll_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8.51</td>
+                <td class="num">8.66</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:86.6%;background:#4CAF50"></div></div>
+                    <span class="pct">8.7/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td>✅</td>
+                <td class="detail">front_wing: -1, beam_wing: -1, antiroll_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.66</td>
+                <td class="num">8.72</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:87.20000000000002%;background:#4CAF50"></div></div>
+                    <span class="pct">8.7/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: -1, antiroll_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.72</td>
+                <td class="num">8.81</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.1%;background:#4CAF50"></div></div>
+                    <span class="pct">8.8/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: -1, antiroll_rear: +1, antiroll_front: +1</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                Visa Cash App RB #6 Isack Hadjar
+                <span class="skill">ric_ass: 60 | perf: 75 | sim_q: 68 | threshold: 8.55</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.92</td>
+                <td class="num">8.23</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:82.30000000000001%;background:#2196F3"></div></div>
+                    <span class="pct">8.2/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td></td>
+                <td class="detail">front_wing: +1, rear_wing: +1, suspension_front: +1, suspension_rear: -2, ride_height_front: +1, ride_height_rear: -2, antiroll_rear: -1, antiroll_front: -1</td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.23</td>
+                <td class="num">8.48</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:84.80000000000001%;background:#2196F3"></div></div>
+                    <span class="pct">8.5/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td></td>
+                <td class="detail">front_wing: +1, beam_wing: +1, suspension_rear: +1, ride_height_rear: -2, antiroll_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.48</td>
+                <td class="num">8.61</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:86.1%;background:#4CAF50"></div></div>
+                    <span class="pct">8.6/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td>✅</td>
+                <td class="detail">front_wing: +1, ride_height_rear: -2, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.61</td>
+                <td class="num">8.75</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:87.5%;background:#4CAF50"></div></div>
+                    <span class="pct">8.8/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: +1, ride_height_rear: +1, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.75</td>
+                <td class="num">8.80</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.00000000000001%;background:#4CAF50"></div></div>
+                    <span class="pct">8.8/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td>✅</td>
+                <td class="detail">antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8.80</td>
+                <td class="num">8.85</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.5%;background:#4CAF50"></div></div>
+                    <span class="pct">8.8/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td>✅</td>
+                <td class="detail">antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.85</td>
+                <td class="num">8.89</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.9%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td>✅</td>
+                <td class="detail">antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.89</td>
+                <td class="num">8.99</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.9%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.55</td>
+                <td>✅</td>
+                <td class="detail">ride_height_front: +1, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                Williams Racing #23 Alexander Albon
+                <span class="skill">ric_ass: 80 | perf: 85 | sim_q: 70 | threshold: 8.59</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.38</td>
+                <td class="num">7.90</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:79.0%;background:#2196F3"></div></div>
+                    <span class="pct">7.9/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">front_wing: +2, rear_wing: -2, beam_wing: -1, suspension_front: +1, suspension_rear: +1, antiroll_rear: -1, ride_height_rear: +1, antiroll_front: -1</td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.90</td>
+                <td class="num">8.31</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:83.10000000000001%;background:#2196F3"></div></div>
+                    <span class="pct">8.3/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">front_wing: +1, rear_wing: -1, beam_wing: -1, suspension_front: +1, suspension_rear: +1, ride_height_rear: +2, antiroll_rear: -1, antiroll_front: -1</td>
+            </tr>
+            <tr class="">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.31</td>
+                <td class="num">8.56</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:85.60000000000001%;background:#2196F3"></div></div>
+                    <span class="pct">8.6/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">front_wing: +1, beam_wing: -1, suspension_rear: +1, ride_height_rear: +1, antiroll_rear: -1, antiroll_front: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.56</td>
+                <td class="num">8.83</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.3%;background:#4CAF50"></div></div>
+                    <span class="pct">8.8/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">front_wing: +1, beam_wing: -1, suspension_rear: +1, ride_height_rear: +2, antiroll_front: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.83</td>
+                <td class="num">9.00</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.0%;background:#4CAF50"></div></div>
+                    <span class="pct">9.0/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: -1, ride_height_front: +1, ride_height_rear: +1, antiroll_front: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">9.00</td>
+                <td class="num">9.09</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.9%;background:#4CAF50"></div></div>
+                    <span class="pct">9.1/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">ride_height_front: +1, ride_height_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">9.09</td>
+                <td class="num">9.16</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:91.60000000000001%;background:#4CAF50"></div></div>
+                    <span class="pct">9.2/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">ride_height_rear: +1, suspension_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">9.16</td>
+                <td class="num">9.24</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:92.4%;background:#4CAF50"></div></div>
+                    <span class="pct">9.2/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">ride_height_rear: +1, suspension_rear: +1</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#FF9800">MID</span>
+                Williams Racing #55 Carlos Sainz
+                <span class="skill">ric_ass: 98 | perf: 95 | sim_q: 70 | threshold: 8.62</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6.48</td>
+                <td class="num">7.30</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:73.0%;background:#2196F3"></div></div>
+                    <span class="pct">7.3/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td></td>
+                <td class="detail">front_wing: -3, rear_wing: -3, beam_wing: +2, suspension_front: +1, suspension_rear: +1, ride_height_front: -1, ride_height_rear: -2, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.30</td>
+                <td class="num">7.69</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:76.9%;background:#2196F3"></div></div>
+                    <span class="pct">7.7/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td></td>
+                <td class="detail">front_wing: -3, rear_wing: -3, beam_wing: +2, suspension_front: +1, suspension_rear: +1, ride_height_front: -2, ride_height_rear: -2</td>
+            </tr>
+            <tr class="">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">7.69</td>
+                <td class="num">8.21</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:82.10000000000001%;background:#2196F3"></div></div>
+                    <span class="pct">8.2/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td></td>
+                <td class="detail">front_wing: +2, rear_wing: -2, beam_wing: +1, suspension_front: +1, suspension_rear: +2, ride_height_front: -1, ride_height_rear: +1, antiroll_rear: -1</td>
+            </tr>
+            <tr class="">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.21</td>
+                <td class="num">8.38</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:83.80000000000001%;background:#2196F3"></div></div>
+                    <span class="pct">8.4/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td></td>
+                <td class="detail">rear_wing: -1, beam_wing: +1, suspension_rear: -1, antiroll_rear: -1</td>
+            </tr>
+            <tr class="">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.38</td>
+                <td class="num">8.52</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:85.2%;background:#2196F3"></div></div>
+                    <span class="pct">8.5/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td></td>
+                <td class="detail">rear_wing: -1, beam_wing: +1, antiroll_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8.52</td>
+                <td class="num">8.67</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:86.7%;background:#4CAF50"></div></div>
+                    <span class="pct">8.7/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td>✅</td>
+                <td class="detail">rear_wing: -1, beam_wing: +1, antiroll_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.67</td>
+                <td class="num">8.67</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:86.7%;background:#4CAF50"></div></div>
+                    <span class="pct">8.7/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.67</td>
+                <td class="num">8.67</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:86.7%;background:#4CAF50"></div></div>
+                    <span class="pct">8.7/10</span>
+                </td>
+                <td class="num">8.62</td>
+                <td>✅</td>
+                <td class="detail">—</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#F44336">BACK</span>
+                MoneyGram Haas F1 Te #31 Esteban Ocon
+                <span class="skill">ric_ass: 78 | perf: 85 | sim_q: 60 | threshold: 8.59</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.06</td>
+                <td class="num">7.75</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:77.5%;background:#2196F3"></div></div>
+                    <span class="pct">7.8/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">front_wing: +3, rear_wing: -3, beam_wing: +2, suspension_front: +1, suspension_rear: +2, ride_height_front: +1, ride_height_rear: +2, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.75</td>
+                <td class="num">8.10</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:81.0%;background:#2196F3"></div></div>
+                    <span class="pct">8.1/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">front_wing: -2, rear_wing: -2, beam_wing: +1, suspension_front: +1, suspension_rear: +2, ride_height_rear: +1, antiroll_rear: -1</td>
+            </tr>
+            <tr class="">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.10</td>
+                <td class="num">8.22</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:82.2%;background:#2196F3"></div></div>
+                    <span class="pct">8.2/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">beam_wing: +1, suspension_rear: +1, ride_height_rear: +1</td>
+            </tr>
+            <tr class="">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.22</td>
+                <td class="num">8.52</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:85.2%;background:#2196F3"></div></div>
+                    <span class="pct">8.5/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">rear_wing: -2, beam_wing: +1, suspension_front: +1, suspension_rear: +1, ride_height_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.52</td>
+                <td class="num">8.87</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.69999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">front_wing: +1, rear_wing: -2, suspension_front: +1, suspension_rear: +1, ride_height_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">8.87</td>
+                <td class="num">8.92</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:89.2%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: -1, ride_height_front: +1, ride_height_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.92</td>
+                <td class="num">9.06</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.60000000000001%;background:#4CAF50"></div></div>
+                    <span class="pct">9.1/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: +1, ride_height_front: +1, ride_height_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">9.06</td>
+                <td class="num">9.20</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:92.0%;background:#4CAF50"></div></div>
+                    <span class="pct">9.2/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: +1, ride_height_front: +1, ride_height_rear: +1</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#F44336">BACK</span>
+                MoneyGram Haas F1 Te #87 Oliver Bearman
+                <span class="skill">ric_ass: 65 | perf: 78 | sim_q: 60 | threshold: 8.56</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5.61</td>
+                <td class="num">5.84</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:58.4%;background:#2196F3"></div></div>
+                    <span class="pct">5.8/10</span>
+                </td>
+                <td class="num">8.56</td>
+                <td></td>
+                <td class="detail">rear_wing: +2, suspension_front: +1, suspension_rear: +1, ride_height_front: -1, ride_height_rear: -1, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">5.84</td>
+                <td class="num">6.09</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:60.9%;background:#2196F3"></div></div>
+                    <span class="pct">6.1/10</span>
+                </td>
+                <td class="num">8.56</td>
+                <td></td>
+                <td class="detail">front_wing: +2, suspension_rear: +1, ride_height_front: -1, ride_height_rear: -1, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">6.09</td>
+                <td class="num">6.32</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:63.2%;background:#2196F3"></div></div>
+                    <span class="pct">6.3/10</span>
+                </td>
+                <td class="num">8.56</td>
+                <td></td>
+                <td class="detail">rear_wing: +2, suspension_rear: +1, ride_height_front: -1, ride_height_rear: -1, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">6.32</td>
+                <td class="num">6.65</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:66.5%;background:#2196F3"></div></div>
+                    <span class="pct">6.7/10</span>
+                </td>
+                <td class="num">8.56</td>
+                <td></td>
+                <td class="detail">front_wing: +3, beam_wing: +1, suspension_rear: +1, ride_height_front: -1, ride_height_rear: -1</td>
+            </tr>
+            <tr class="">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">6.65</td>
+                <td class="num">6.83</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:68.30000000000001%;background:#2196F3"></div></div>
+                    <span class="pct">6.8/10</span>
+                </td>
+                <td class="num">8.56</td>
+                <td></td>
+                <td class="detail">front_wing: +1, beam_wing: +1, suspension_rear: +1, ride_height_rear: -1, antiroll_front: -1</td>
+            </tr>
+            <tr class="">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">6.83</td>
+                <td class="num">7.22</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:72.2%;background:#2196F3"></div></div>
+                    <span class="pct">7.2/10</span>
+                </td>
+                <td class="num">8.56</td>
+                <td></td>
+                <td class="detail">front_wing: +2, rear_wing: +1, beam_wing: +1, suspension_rear: +1, ride_height_front: -1, ride_height_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">7.22</td>
+                <td class="num">7.30</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:73.0%;background:#2196F3"></div></div>
+                    <span class="pct">7.3/10</span>
+                </td>
+                <td class="num">8.56</td>
+                <td></td>
+                <td class="detail">front_wing: +1, rear_wing: -1, ride_height_front: -1, ride_height_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.30</td>
+                <td class="num">7.69</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:76.9%;background:#2196F3"></div></div>
+                    <span class="pct">7.7/10</span>
+                </td>
+                <td class="num">8.56</td>
+                <td></td>
+                <td class="detail">front_wing: +1, rear_wing: +2, ride_height_front: -1, ride_height_rear: -1, antiroll_front: +2</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#F44336">BACK</span>
+                Stake F1 Team Kick S #27 Nico Hülkenberg
+                <span class="skill">ric_ass: 90 | perf: 85 | sim_q: 64 | threshold: 8.59</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6.06</td>
+                <td class="num">6.42</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:64.2%;background:#2196F3"></div></div>
+                    <span class="pct">6.4/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">front_wing: +1, rear_wing: +1, beam_wing: -1, suspension_rear: -2, ride_height_rear: +2, antiroll_rear: -1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">6.42</td>
+                <td class="num">6.69</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:66.9%;background:#2196F3"></div></div>
+                    <span class="pct">6.7/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">rear_wing: +1, beam_wing: -1, suspension_rear: -2, ride_height_rear: +2, antiroll_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">6.69</td>
+                <td class="num">6.96</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:69.6%;background:#2196F3"></div></div>
+                    <span class="pct">7.0/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">rear_wing: +1, beam_wing: -1, suspension_rear: -1, ride_height_rear: +2, antiroll_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">6.96</td>
+                <td class="num">7.20</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:72.0%;background:#2196F3"></div></div>
+                    <span class="pct">7.2/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">beam_wing: -1, ride_height_front: -1, ride_height_rear: +2, suspension_rear: -1, antiroll_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">7.20</td>
+                <td class="num">7.43</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:74.3%;background:#2196F3"></div></div>
+                    <span class="pct">7.4/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">beam_wing: -1, ride_height_front: -1, ride_height_rear: +2, antiroll_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">7.43</td>
+                <td class="num">7.56</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:75.6%;background:#2196F3"></div></div>
+                    <span class="pct">7.6/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">beam_wing: -1, ride_height_front: -1, antiroll_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">7.56</td>
+                <td class="num">7.70</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:77.0%;background:#2196F3"></div></div>
+                    <span class="pct">7.7/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">beam_wing: -1, ride_height_front: -1, antiroll_rear: +1, antiroll_front: +1</td>
+            </tr>
+            <tr class="">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.70</td>
+                <td class="num">7.75</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:77.5%;background:#2196F3"></div></div>
+                    <span class="pct">7.8/10</span>
+                </td>
+                <td class="num">8.59</td>
+                <td></td>
+                <td class="detail">antiroll_rear: +1, antiroll_front: +1</td>
+            </tr></tbody>
+            </table>
+        </div>
+        <div class="car-detail">
+            <h3><span class="tier-badge" style="background:#F44336">BACK</span>
+                Stake F1 Team Kick S #5 Gabriel Bortoleto
+                <span class="skill">ric_ass: 70 | perf: 88 | sim_q: 64 | threshold: 8.60</span>
+            </h3>
+            <table class="detail-table">
+                <thead><tr>
+                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
+                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
+                </tr></thead>
+                <tbody>
+            <tr class="">
+                <td>1</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">7.43</td>
+                <td class="num">8.14</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:81.4%;background:#2196F3"></div></div>
+                    <span class="pct">8.1/10</span>
+                </td>
+                <td class="num">8.60</td>
+                <td></td>
+                <td class="detail">front_wing: +3, rear_wing: -2, beam_wing: +2, suspension_front: +1, suspension_rear: -2, ride_height_front: -1, ride_height_rear: +1, antiroll_front: -1</td>
+            </tr>
+            <tr class="">
+                <td>2</td>
+                <td>FP1</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">8.14</td>
+                <td class="num">8.42</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:84.2%;background:#2196F3"></div></div>
+                    <span class="pct">8.4/10</span>
+                </td>
+                <td class="num">8.60</td>
+                <td></td>
+                <td class="detail">front_wing: +1, rear_wing: -1, beam_wing: +1, suspension_rear: -1, ride_height_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>3</td>
+                <td>FP1</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.42</td>
+                <td class="num">8.64</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:86.4%;background:#4CAF50"></div></div>
+                    <span class="pct">8.6/10</span>
+                </td>
+                <td class="num">8.60</td>
+                <td>✅</td>
+                <td class="detail">rear_wing: -1, beam_wing: +1, suspension_rear: -1, ride_height_rear: +1, antiroll_rear: -1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>4</td>
+                <td>FP2</td>
+                <td>TYRE_DEG</td>
+                <td class="num">8.64</td>
+                <td class="num">8.88</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:88.80000000000001%;background:#4CAF50"></div></div>
+                    <span class="pct">8.9/10</span>
+                </td>
+                <td class="num">8.60</td>
+                <td>✅</td>
+                <td class="detail">front_wing: +1, rear_wing: -1, ride_height_front: -1, ride_height_rear: +1, antiroll_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>5</td>
+                <td>FP2</td>
+                <td>QUALI_SIM</td>
+                <td class="num">8.88</td>
+                <td class="num">9.09</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:90.9%;background:#4CAF50"></div></div>
+                    <span class="pct">9.1/10</span>
+                </td>
+                <td class="num">8.60</td>
+                <td>✅</td>
+                <td class="detail">rear_wing: -1, beam_wing: +1, ride_height_front: -1, ride_height_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>6</td>
+                <td>FP2</td>
+                <td>RACE_TRIM</td>
+                <td class="num">9.09</td>
+                <td class="num">9.18</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:91.8%;background:#4CAF50"></div></div>
+                    <span class="pct">9.2/10</span>
+                </td>
+                <td class="num">8.60</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: +1, ride_height_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>7</td>
+                <td>FP3</td>
+                <td>QUALI_SIM</td>
+                <td class="num">9.18</td>
+                <td class="num">9.27</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:92.69999999999999%;background:#4CAF50"></div></div>
+                    <span class="pct">9.3/10</span>
+                </td>
+                <td class="num">8.60</td>
+                <td>✅</td>
+                <td class="detail">beam_wing: +1, ride_height_rear: +1</td>
+            </tr>
+            <tr class="run-complete">
+                <td>8</td>
+                <td>FP3</td>
+                <td>SETUP_VALIDATION</td>
+                <td class="num">9.27</td>
+                <td class="num">9.32</td>
+                <td>
+                    <div class="bar-bg"><div class="bar-fill" style="width:93.2%;background:#4CAF50"></div></div>
+                    <span class="pct">9.3/10</span>
+                </td>
+                <td class="num">8.60</td>
+                <td>✅</td>
+                <td class="detail">ride_height_rear: +1</td>
+            </tr></tbody>
+            </table>
+        </div>
+
+</body>
+</html>

@@ -23,6 +23,7 @@ from lap_simulator.ai_data_types import (
     RunProgram,
     SessionType,
 )
+from utils.ai_setup_search import AISetupState
 from lap_simulator.ai_driver_engine import AIDriverEngine
 from lap_simulator.config_loader import load_circuit_config
 from lap_simulator.data_types import (
@@ -299,6 +300,7 @@ class SessionBridge:
         self.battle_resolver = BattleResolver()
         self.battle_events: List[BattleEvent] = []       # events from last tick
         self._battle_cooldown: set = set()               # car_ids protected from min-gap this tick
+        self._ai_setup_states: Dict[str, AISetupState] = {}  # car_id → AI setup search state
 
     # ------------------------------------------------------------------
     # Initialization
@@ -371,10 +373,29 @@ class SessionBridge:
                     self.ai_engines[car_id] = engine
                     self._ai_teams_cars.setdefault(team_name, []).append(car_id)
 
-                    # Override setup_info_target for AI based on team sim quality
-                    sim_eff = team_cfg.simulation_efficiency
-                    car.setup_info_target = _ai_setup_target(sim_eff)
-                    car.setup_info_points = 0.0
+                    # AI Setup Search: create state with baseline from simulator_quality
+                    team_obj = getattr(car, 'team', None)
+                    sim_q = getattr(team_obj, 'simulator_quality', None) if team_obj else None
+                    if sim_q is None:
+                        # Fallback: derive from tier
+                        sim_q = 88 if tier == 'top' else 72 if tier == 'midfield' else 58
+                    ric_ass = getattr(car.pilot, 'ricerca_assetto', 50) if hasattr(car, 'pilot') else 50
+                    perf = getattr(car.pilot, 'perfezionismo', 50) if hasattr(car, 'pilot') else 50
+                    ai_ss = AISetupState(
+                        car_id=car_id,
+                        driver_name=car.driver_name,
+                        team_name=team_name,
+                        simulator_quality=sim_q,
+                        ricerca_assetto=ric_ass,
+                        perfezionismo=perf,
+                    )
+                    ai_ss.initialize(seed=hash(car_id) & 0xFFFFFFFF)
+                    self._ai_setup_states[car_id] = ai_ss
+                    logger.info(
+                        "AI %s setup baseline: score=%.2f, threshold=%.2f (sim_q=%d, ric=%d, perf=%d)",
+                        car_id, ai_ss.setup_score, ai_ss.threshold,
+                        sim_q, ric_ass, perf,
+                    )
 
         # Precompute section cumulative distances for fast lookup
         self._section_end_m: List[float] = []
@@ -659,21 +680,10 @@ class SessionBridge:
         race_car.last_lap_type = phase_to_state.get(ts.lap_phase, GameCarState.HOT_LAP)
         race_car.distance_traveled = 0
 
-        # Accumulate setup info points (all cars, player + AI)
+        # Accumulate setup info points (player only — AI uses ai_setup_search)
         ai_ready_for_box = False
-        if is_competitive and hasattr(race_car, '_accumulate_setup_info'):
+        if is_competitive and ts.is_player and hasattr(race_car, '_accumulate_setup_info'):
             race_car._accumulate_setup_info(GameCarState.HOT_LAP)
-            if (not ts.is_player
-                    and not ts.setup_data_complete
-                    and getattr(race_car, 'setup_feedback_ready', False)):
-                ts.setup_data_complete = True
-                ai_ready_for_box = True
-                logger.debug(
-                    "AI %s collected setup data (%.1f/%.1f) → boxing next lap",
-                    car_id,
-                    getattr(race_car, 'setup_info_points', 0.0),
-                    getattr(race_car, 'setup_info_target', 0.0),
-                )
 
         # Update session bests (only competitive laps)
         if is_competitive:
@@ -940,6 +950,25 @@ class SessionBridge:
                 car_id=car_id, laps_completed=laps_done,
                 best_lap_s=best_lap, km_driven=km_driven,
                 pit_work_duration_s=30.0,
+            )
+
+        # AI Setup Search: process run → adjust sliders → check convergence
+        ai_ss = self._ai_setup_states.get(car_id)
+        if ai_ss and not ai_ss.setup_complete:
+            run_plan_program = 'SETUP_VALIDATION'
+            engine = self.ai_engines.get(car_id)
+            if engine and engine.current_run_idx > 0:
+                idx = engine.current_run_idx - 1
+                if idx < len(engine.session_plan.runs):
+                    run_plan_program = engine.session_plan.runs[idx].program.value
+            session_name = self.pso.clock.session_type.value if self.pso else 'FP1'
+            result = ai_ss.process_run(session_name, run_plan_program)
+            logger.info(
+                "AI %s setup run %d: %.2f → %.2f (threshold=%.2f, complete=%s, changes=%s)",
+                car_id, result.run_index,
+                result.score_before, result.score_after,
+                result.threshold, result.setup_complete,
+                result.slider_changes,
             )
 
         # Complete in AI engine (simplified — pass empty results)
