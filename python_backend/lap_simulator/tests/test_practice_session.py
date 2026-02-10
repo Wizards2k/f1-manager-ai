@@ -261,7 +261,7 @@ class TestOrchestratorRuns:
         alloc = {TyreCompound.C3: 5, TyreCompound.C4: 3}
         orch.register_team("team_a", ["car_1", "car_2"],
                            ["Driver A", "Driver B"],
-                           player_car_id="car_1",
+                           player_car_ids={"car_1"},
                            allocation=alloc)
         orch.start_session()
         return orch

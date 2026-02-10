@@ -486,10 +486,11 @@ class PracticeSessionOrchestrator:
         team_id: str,
         car_ids: List[str],
         driver_names: Optional[List[str]] = None,
-        player_car_id: Optional[str] = None,
+        player_car_ids: Optional[set] = None,
         allocation: Optional[Dict[TyreCompound, int]] = None,
     ) -> None:
         """Register a team with its cars and tyre inventory."""
+        _player_ids = player_car_ids or set()
         inv = TyreInventory(team_id, allocation=allocation)
         self.inventories[team_id] = inv
 
@@ -499,7 +500,7 @@ class PracticeSessionOrchestrator:
                 car_id=car_id,
                 team_id=team_id,
                 driver_name=names[i] if i < len(names) else f"Driver_{i}",
-                is_player=(car_id == player_car_id),
+                is_player=(car_id in _player_ids),
             )
 
     # ------------------------------------------------------------------

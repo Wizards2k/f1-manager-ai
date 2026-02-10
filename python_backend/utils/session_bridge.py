@@ -315,14 +315,11 @@ class SessionBridge:
         for team_name, cars in teams.items():
             car_ids = [str(c.driver_number) for c in cars]
             driver_names = [c.driver_name for c in cars]
-            player_car_id = None
-            for c in cars:
-                if c.is_player_controlled:
-                    player_car_id = str(c.driver_number)
+            player_car_ids = {str(c.driver_number) for c in cars if c.is_player_controlled}
 
             self.pso.register_team(
                 team_id=team_name, car_ids=car_ids,
-                driver_names=driver_names, player_car_id=player_car_id,
+                driver_names=driver_names, player_car_ids=player_car_ids,
                 allocation=alloc,
             )
 

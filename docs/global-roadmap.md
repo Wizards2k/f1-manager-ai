@@ -71,11 +71,11 @@ Portare il gioco a una release pubblica in cui:
 > **Spec tecnica di riferimento**: `docs/race-engine-integration-spec.md`
 
 Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio motore semplificato.
-1. **Adapter RaceCar ↔ CarEntry**: traduzione bidirezionale tra modello gioco e modello LapSimulator.
-2. **Session Bridge**: wrappa PSO + LapSimulator + AIDriverEngine + BattleResolver in un loop compatibile con il backend esistente.
-3. **Backend integration**: modifiche minime a `game_logic.py` e `api.py` per usare il nuovo motore con fallback al vecchio.
-4. **Socket/frontend compatibility**: garantire che tutti i campi letti dal frontend siano popolati correttamente.
-5. **Test end-to-end**: simulazione FP1 completa con 20 auto su Monza via nuovo motore.
+1. ✅ **Adapter RaceCar ↔ CarEntry**: traduzione bidirezionale via `session_bridge.py` (`_build_car_entry`, `_commit_lap`).
+2. ✅ **Session Bridge**: wrappa PSO + LapSimulator + AIDriverEngine in un loop compatibile. Batch scheduling randomizzato (blocchi da 8), cooldown 45s nativo, inter-run gap 75-150s.
+3. ✅ **Backend integration**: `f1_manager_ai.py` usa SessionBridge v2 con fallback V1. Flag system (green/yellow/red banner + blue flag per-car).
+4. ✅ **Socket/frontend compatibility**: tutti i campi frontend mappati 1:1 con payload `race_update`. `player_car_ids` set per team multi-player. Banner flag + blue-flag-bar in timing UI.
+5. ✅ **Test end-to-end**: FP1 Suzuka, 20 auto (2 player + 18 AI), 54/54 AI runs completati, 0.5s wall time.
 
 ## 5. Implementazione – Fase D (AI & Experience — `docs/ai-driver-engine-spec.md`, `docs/setup-ui-plan.md`)
 1. ✅ **AI Driver Engine**: implementato in `python_backend/lap_simulator/ai_driver_engine.py`. Setup seed, session planning, run config, refinement loop. 105/105 test.
