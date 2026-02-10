@@ -157,8 +157,16 @@ def generate_output(
     pu_state.fuel_burn_rate_kg_per_s = fuel_burn_rate
 
     # --- Wear ---
-    pu_state.ice_wear_pct += rel.ice_wear_coeff * ice_power_kw * dt_estimate_s / 100.0
-    pu_state.ers_wear_pct += rel.ers_wear_coeff * ers_output_kw * dt_estimate_s / 100.0
+    # Over-rev factor: high torque_ramp maps stress the ICE/ERS more
+    overrev_ice = rel.ice_overrev_factor if map_params.torque_ramp > 0.85 else 1.0
+    overrev_ers = rel.ers_overrev_factor if map_params.torque_ramp > 0.85 else 1.0
+    # Shock factor: kerb impacts and bumps cause extra mechanical stress
+    shock_level = aero_forces.kerb_severity + aero_forces.bump_penalty
+    shock_ice = 1.0 + (rel.ice_shock_factor - 1.0) * shock_level
+    shock_ers = 1.0 + (rel.ers_shock_factor - 1.0) * shock_level
+
+    pu_state.ice_wear_pct += rel.ice_wear_coeff * ice_power_kw * dt_estimate_s * overrev_ice * shock_ice / 100.0
+    pu_state.ers_wear_pct += rel.ers_wear_coeff * ers_output_kw * dt_estimate_s * overrev_ers * shock_ers / 100.0
 
     # --- Cooling margin (for AeroForces update) ---
     cooling_demand = map_params.heat_load_kw / 1000.0

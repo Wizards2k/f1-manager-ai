@@ -54,10 +54,13 @@ Portare il gioco a una release pubblica in cui:
    > ✅ **Telemetry Sections v2** completato e merged: 24/24 circuiti rigenerati con copertura 100%, dt_ref, braking_energy, DRS, radius, classificazione 5-tier. Spec: `docs/telemetry-sections-v2-spec.md`.
    > ✅ **Modello dt_ref** integrato: `dt = dt_ref × (1 + baseline + Σ penalties)`. Monza Lap 1 = 108.1s (+6.9% vs VER 2024 Q). Baseline +5% = top team inizio 2025.
    > ✅ **Gap §6.7-§6.10** completati: fuel weight, mechanical grip (setup_bonus), driver skills nei freni, overtake window (OW max ~0.78 nelle zone DRS).
-   > **Da completare breve termine:** tuning coefficienti multi-circuito (k_aero/grip/fuel/etc.) + calibrazione OW/penalties.
-   > **Step successivi:** (1) AI Driver Engine (gestione auto player/AI in practice) → (2) BattleResolver 2.0 (consumer di OW) → (3) Practice Session Orchestrator.
+   > ✅ **Tuning multi-circuito** completato: baseline 0.07, k_grip 0.02, k_brake 0.015, k_fuel 0.015, k_driver 0.03, thermal floor 0.82. L1 avg=+5.7%, 22/24 nel target [4.5–7.5%]. Degrado L5 rimandato a TyreModel v2.
+   > ✅ **PU over_rev/shock** fix: usura ICE/ERS ora tiene conto di `overrev_factor` (mappe aggressive) e `shock_factor` (kerb/bump).
+   > **Copertura `degradation-and-consumption.md`**: §5.2 Brakes ✅, §5.3 Fuel ✅, §5.4 PU ✅, §5.1 Tyres 🟡 (manca compound C1-C6, graining, heat-cycle → TyreModel v2), §5.5 Damage 🟡 (struttura presente, dettagli da completare).
+   > **Step successivi:** (1) AI Driver Engine → (2) BattleResolver 2.0 → (3) Practice Session Orchestrator → (4) TyreModel v2 (compound + graining/blistering).
 2. **BattleResolver 2.0**: codice allineato alla nuova spec (cooldown, side-by-side, metriche HUD/telemetria).
 3. **Practice Session Orchestrator**: scheduling tempo sessione, queue pitlane, gestione run e persistenza run data/log.
+4. **TyreModel v2**: compound C1-C6, graining/blistering trigger, heat-cycle penalty, puncture risk. Completa copertura `docs/degradation-and-consumption.md` §5.1.
 
 ## 4. Implementazione – Fase C (AI & Experience — `docs/ai-driver-engine-spec.md`, `docs/setup-ui-plan.md`)
 1. **AI Driver Engine**: loop decisionale per run plan, fuel/ERS, strategie box e ricerca setup.
