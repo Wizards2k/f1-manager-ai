@@ -349,7 +349,8 @@ Spec: `docs/telemetry-sections-v2-spec.md`. Branch `feature/telemetry-sections-v
 | test_integration_lap | 12 | ✅ PASS |
 | test_ai_driver | 29 | ✅ PASS |
 | test_battle_resolver | 29 | ✅ PASS |
-| **Totale** | **152** | **✅ ALL PASS** |
+| test_practice_session | 37 | ✅ PASS |
+| **Totale** | **189** | **✅ ALL PASS** |
 
 ## 8. Risultati simulazione Monza
 
@@ -397,7 +398,7 @@ Risultati L1 (top team, raw_pace=85):
 4. ✅ ~~PU over_rev/shock~~ — usura ICE/ERS ora usa overrev_factor + shock_factor
 5. ✅ ~~AI Driver Engine~~ — setup seed, session planning (FP1/2/3), run config, post-run analysis, refinement loop. 20 test.
 6. ✅ ~~BattleResolver 2.0~~ — proximity detection, dirty air, scenario tagging, attack chance, resolve pair (overtake/blocked/side-by-side/collision), radio messages, integrazione LapSimulator multi-car. 29 test.
-7. **Practice Session Orchestrator** — scheduling sessione, queue pitlane, run data
+7. ✅ ~~Practice Session Orchestrator~~ — SessionClock, PitlaneQueue, TyreInventory (check-out/check-in/EOL), PracticeSessionOrchestrator (tick loop, run management, red flag abort, leaderboard). 37 test.
 8. ✅ ~~TyreModel v2~~ — compound C1-C6 con degradation_rate_multiplier + slip_sensitivity, graining/blistering temporali, heat-cycle penalty. 9 nuovi test.
 
 ### 9.1 Copertura `degradation-and-consumption.md`

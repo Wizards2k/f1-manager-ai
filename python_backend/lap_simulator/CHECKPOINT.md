@@ -162,6 +162,27 @@ Modulo `battle_resolver.py` (29 test, 152/152 totali):
 
 ---
 
+## ✅ Completato: Practice Session Orchestrator
+
+Modulo `practice_session.py` (37 test, 189/189 totali):
+
+- **TyreInventory**: check-out/check-in set, heat_cycles tracking, EOL threshold, prefer_new logic, summary per UI
+- **SessionClock**: timer 60min, pause/resume, fast-forward (×1-×6), flag (green/yellow/red), remaining_s
+- **PitlaneQueue**: priority (player > AI critical > AI standard), cooldown 120s, queue delay 7s/car, max 4 slot
+- **PracticeRunRecord**: log completo per run (program, compound, tyre_set_id, laps, outcome, timing)
+- **CarSessionState**: fase (in_garage, pit_queue, pit_exit, on_track, pit_entry, pit_work)
+- **PracticeSessionOrchestrator**: register_team, start_session, tick loop, request_run, complete_run, red flag abort, leaderboard, session_summary
+- **PracticeEvent**: 9 tipi evento (RUN_START/END/ABORT, FLAG_CHANGE, TYRE_INVENTORY_UPDATE, SESSION_START/END, CAR_EXIT/ENTER_PIT)
+
+---
+
 ## Prossimi passi
 
-1. **⚡ Practice Session Orchestrator** — scheduling sessione, queue pitlane, tyre inventory, run data
+Tutti i moduli core del LapSimulator sono completati:
+1. ✅ LapSimulator v0.2 (dt_ref penalty model, 24 circuiti)
+2. ✅ AI Driver Engine (setup seed, session planning, refinement)
+3. ✅ TyreModel v2 (compound-specific, heat-cycle, graining/blistering)
+4. ✅ BattleResolver 2.0 (multi-car, dirty air, 7 scenari)
+5. ✅ Practice Session Orchestrator (clock, pitlane, tyre inventory)
+
+**Prossima fase**: integrazione end-to-end, Telemetria & HUD, UI Garage 2.0, FastF1 toolchain

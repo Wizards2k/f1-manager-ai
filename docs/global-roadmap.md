@@ -60,9 +60,10 @@ Portare il gioco a una release pubblica in cui:
    > ✅ **AI Driver Engine** implementato: setup seed, session planning (FP1/2/3), run config, post-run analysis con refinement loop, 20 test. Spec: `docs/ai-driver-engine-spec.md`.
    > ✅ **TyreModel v2** completato: compound C1-C6+Inter+Wet con degradation_rate_multiplier, slip_sensitivity, heat-cycle penalty, graining/blistering temporali. 9 nuovi test (123/123 totali).
    > ✅ **BattleResolver 2.0** completato: proximity detection, dirty air, 7 scenari, attack/blocked/side-by-side/collision, radio messages, LapSimulator multi-car. 29 test (152/152 totali).
-   > **Step successivi:** (1) Practice Session Orchestrator.
+   > ✅ **Practice Session Orchestrator** completato: SessionClock, PitlaneQueue, TyreInventory, run management, red flag abort, leaderboard. 37 test (189/189 totali).
+   > **Tutti i moduli core completati.** Prossimo: integrazione end-to-end e Fase C/D.
 2. ✅ **BattleResolver 2.0**: proximity detection, dirty air, scenario tagging (7 scenari), attack chance, resolve pair (overtake/blocked/side-by-side/collision), radio messages, integrazione LapSimulator multi-car (`_run_lap_multi`). 29 test, 152/152 totali.
-3. **Practice Session Orchestrator**: scheduling tempo sessione, queue pitlane, gestione run e persistenza run data/log.
+3. ✅ **Practice Session Orchestrator**: SessionClock (60min, pause, fast-forward), PitlaneQueue (priority, cooldown, max slots), TyreInventory (check-out/check-in, heat cycles, EOL), PracticeSessionOrchestrator (tick loop, run management, red flag abort, leaderboard). 37 test, 189/189 totali.
 4. ✅ **TyreModel v2**: compound C1-C6+Inter+Wet, degradation_rate_multiplier, slip_sensitivity, heat-cycle penalty, graining/blistering temporali. 123/123 test.
 
 ## 4. Implementazione – Fase C (AI & Experience — `docs/ai-driver-engine-spec.md`, `docs/setup-ui-plan.md`)
