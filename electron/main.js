@@ -79,6 +79,13 @@ function startPythonBackend() {
         ELECTRON_MODE: 'true',
         FLASK_ENV: 'production'
     };
+
+    // Activate venv environment if present
+    const venvDir = path.join(__dirname, '..', '.venv');
+    if (fs.existsSync(path.join(venvDir, 'bin', 'python3'))) {
+        env.VIRTUAL_ENV = venvDir;
+        env.PATH = path.join(venvDir, 'bin') + path.delimiter + (env.PATH || '');
+    }
     
     pythonProcess = spawn(pythonPath, [mainScript], {
         cwd: backendPath,
