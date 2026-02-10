@@ -56,7 +56,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 SESSION_DURATION_S = 3600
-AI_RUN_INTERVAL_S = 30
 OUT_LAP_SPEED_FACTOR = 0.65     # out lap ~65% of reference speed
 IN_LAP_SPEED_FACTOR = 0.70      # in lap ~70% of reference speed
 SLOW_LAP_SPEED_FACTOR = 0.75    # slow/cooldown lap
@@ -95,19 +94,143 @@ class CarTrackState:
 
 
 # ---------------------------------------------------------------------------
+# Team Session Plan (spec: practice-session-orchestrator.md §3.4)
+# ---------------------------------------------------------------------------
+
+# Exit window ranges by tier (min_s, max_s)
+_EXIT_WINDOW_BY_TIER = {
+    "top":        (30, 180),
+    "midfield":   (60, 240),
+    "backmarker": (90, 300),
+}
+
+# Inter-run gap range (seconds between end of run N and start of run N+1)
+_INTER_RUN_GAP_RANGE = (120, 360)
+
+# Intra-team gap between the two pilots (seconds)
+_INTRA_TEAM_GAP_RANGE = (5, 20)
+
+
+@dataclass
+class ScheduledRun:
+    """A single scheduled AI run with a target start time."""
+    car_id: str
+    planned_start_s: float       # session time at which this run should start
+    dispatched: bool = False     # True once we've sent the car out
+
+
+@dataclass
+class TeamSessionPlan:
+    """Randomized work plan for one AI team in a session."""
+    team_id: str
+    tier: str
+    first_exit_window_s: float
+    inter_run_gap_s: float
+    pilot_order: list = field(default_factory=list)  # car_ids, randomized
+    scheduled_runs: list = field(default_factory=list)  # List[ScheduledRun]
+
+
+def _build_team_plans(
+    ai_engines: Dict[str, AIDriverEngine],
+    teams_cars: Dict[str, List[str]],
+) -> Dict[str, TeamSessionPlan]:
+    """
+    Generate a randomized TeamSessionPlan for each AI team.
+    Called once at init_session.
+    """
+    plans: Dict[str, TeamSessionPlan] = {}
+
+    for team_name, car_ids in teams_cars.items():
+        tier = _get_team_tier(team_name)
+        lo, hi = _EXIT_WINDOW_BY_TIER.get(tier, (60, 240))
+        first_exit = random.uniform(lo, hi)
+        inter_gap = random.uniform(*_INTER_RUN_GAP_RANGE)
+
+        # Randomize pilot order
+        pilot_order = list(car_ids)
+        random.shuffle(pilot_order)
+
+        # Build scheduled runs for each pilot
+        scheduled: List[ScheduledRun] = []
+        for pilot_idx, car_id in enumerate(pilot_order):
+            engine = ai_engines.get(car_id)
+            if engine is None:
+                continue
+            n_runs = len(engine.session_plan.runs)
+            intra_gap = random.uniform(*_INTRA_TEAM_GAP_RANGE)
+
+            for run_idx in range(n_runs):
+                if run_idx == 0:
+                    # First run: team exit window + intra-team gap for 2nd pilot
+                    start_s = first_exit + pilot_idx * intra_gap
+                else:
+                    # Subsequent runs: estimate previous run duration + inter-run gap
+                    prev_run = engine.session_plan.runs[run_idx - 1]
+                    est_run_duration = prev_run.laps_planned * 100.0 + 30.0
+                    # Find this pilot's last scheduled run
+                    pilot_runs = [r for r in scheduled if r.car_id == car_id]
+                    prev_start = pilot_runs[-1].planned_start_s if pilot_runs else first_exit
+                    start_s = prev_start + est_run_duration + inter_gap + random.uniform(-20, 20)
+
+                scheduled.append(ScheduledRun(
+                    car_id=car_id,
+                    planned_start_s=max(10.0, start_s),
+                ))
+
+        # Sort by planned start time
+        scheduled.sort(key=lambda r: r.planned_start_s)
+
+        # Anti-collision: ensure no two runs start within 5s of each other
+        for i in range(1, len(scheduled)):
+            if scheduled[i].planned_start_s - scheduled[i-1].planned_start_s < 5.0:
+                scheduled[i].planned_start_s = scheduled[i-1].planned_start_s + random.uniform(5.0, 8.0)
+
+        plans[team_name] = TeamSessionPlan(
+            team_id=team_name,
+            tier=tier,
+            first_exit_window_s=first_exit,
+            inter_run_gap_s=inter_gap,
+            pilot_order=pilot_order,
+            scheduled_runs=scheduled,
+        )
+
+    return plans
+
+
+# ---------------------------------------------------------------------------
 # Team tier mapping
 # ---------------------------------------------------------------------------
 
 _TEAM_TIERS = {
-    "Ferrari": "top", "Red Bull Racing": "top", "McLaren": "top",
-    "Mercedes": "top", "Aston Martin": "midfield", "Alpine": "midfield",
-    "Williams": "midfield", "RB": "midfield",
-    "Kick Sauber": "backmarker", "Haas": "backmarker",
+    "Oracle Red Bull Racing": "top",
+    "Scuderia Ferrari": "top",
+    "Mercedes-AMG PETRONAS": "top",
+    "McLaren F1 Team": "top",
+    "Aston Martin Aramco": "midfield",
+    "BWT Alpine F1 Team": "midfield",
+    "Williams Racing": "midfield",
+    "Visa Cash App RB": "midfield",
+    "Stake F1 Team Kick Sauber": "backmarker",
+    "MoneyGram Haas F1 Team": "backmarker",
+}
+
+# Substring fallback keywords
+_TIER_KEYWORDS = {
+    "top": ["red bull", "ferrari", "mercedes", "mclaren"],
+    "midfield": ["aston", "alpine", "williams", "rb"],
+    "backmarker": ["sauber", "haas", "kick"],
 }
 
 
 def _get_team_tier(team_name: str) -> str:
-    return _TEAM_TIERS.get(team_name, "midfield")
+    tier = _TEAM_TIERS.get(team_name)
+    if tier:
+        return tier
+    lower = team_name.lower()
+    for t, keywords in _TIER_KEYWORDS.items():
+        if any(kw in lower for kw in keywords):
+            return t
+    return "midfield"
 
 
 # ---------------------------------------------------------------------------
@@ -132,9 +255,9 @@ class SessionBridge:
         self.ai_engines: Dict[str, AIDriverEngine] = {}
         self.race_cars_map: Dict[str, Any] = {}
         self._track_states: Dict[str, CarTrackState] = {}
-        self._ai_last_check_s: float = 0.0
         self._accumulated_time_s: float = 0.0
-        self._stagger_counter: int = 0  # increments per car scheduled, for stagger
+        self._team_plans: Dict[str, TeamSessionPlan] = {}
+        self._ai_teams_cars: Dict[str, List[str]] = {}  # team_name → [car_ids]
 
     # ------------------------------------------------------------------
     # Initialization
@@ -208,6 +331,7 @@ class SessionBridge:
                     )
                     engine.start_session(st)
                     self.ai_engines[car_id] = engine
+                    self._ai_teams_cars.setdefault(team_name, []).append(car_id)
 
         # Precompute section cumulative distances for fast lookup
         self._section_end_m: List[float] = []
@@ -228,8 +352,15 @@ class SessionBridge:
         self.pso.start_session()
         self.active = True
         self._accumulated_time_s = 0.0
-        self._ai_last_check_s = 0.0
         self._track_states = {}
+
+        # Generate randomized team session plans
+        self._team_plans = _build_team_plans(self.ai_engines, self._ai_teams_cars)
+        total_scheduled = sum(len(p.scheduled_runs) for p in self._team_plans.values())
+        logger.info("Generated %d team plans with %d scheduled runs", len(self._team_plans), total_scheduled)
+        for tn, plan in self._team_plans.items():
+            for sr in plan.scheduled_runs:
+                logger.debug("  %s car %s: planned at %.0fs", tn, sr.car_id, sr.planned_start_s)
 
         logger.info(
             "SessionBridge v2 initialized: %s on %s (%d cars, %d AI, %d sections)",
@@ -254,9 +385,7 @@ class SessionBridge:
         self._accumulated_time_s += sim_dt
 
         # ── FASE 1: ADVANCE TIME ──
-        if self._accumulated_time_s - self._ai_last_check_s >= AI_RUN_INTERVAL_S:
-            self._schedule_ai_runs()
-            self._ai_last_check_s = self._accumulated_time_s
+        self._schedule_ai_runs()
 
         self.pso.tick(sim_dt)
 
@@ -626,47 +755,64 @@ class SessionBridge:
     # ------------------------------------------------------------------
 
     def _schedule_ai_runs(self) -> None:
+        """Check TeamSessionPlans and dispatch runs whose planned_start_s has arrived."""
         if self.pso is None or self.circuit_config is None:
             return
 
-        self._stagger_counter = 0  # reset per scheduling batch
+        session_time = self._accumulated_time_s
 
-        for car_id, engine in self.ai_engines.items():
-            if car_id in self._track_states:
-                continue
-            if not self.pso.car_can_run(car_id):
-                continue
-            if not engine.has_next_run():
-                continue
+        for plan in self._team_plans.values():
+            for sr in plan.scheduled_runs:
+                if sr.dispatched:
+                    continue
+                if session_time < sr.planned_start_s:
+                    continue
 
-            car_entry = engine.configure_current_run()
-            if car_entry is None:
-                continue
+                car_id = sr.car_id
+                if car_id in self._track_states:
+                    continue
+                engine = self.ai_engines.get(car_id)
+                if engine is None or not engine.has_next_run():
+                    sr.dispatched = True  # skip, no more runs
+                    continue
+                if not self.pso.car_can_run(car_id):
+                    continue
 
-            car_entry.car_id = car_id
-            car_entry.state.car_id = car_id
+                car_entry = engine.configure_current_run()
+                if car_entry is None:
+                    sr.dispatched = True
+                    continue
 
-            run_idx = engine.current_run_idx
-            if run_idx >= len(engine.session_plan.runs):
-                continue
-            run_plan = engine.session_plan.runs[run_idx]
+                car_entry.car_id = car_id
+                car_entry.state.car_id = car_id
 
-            record = self.pso.request_run(
-                car_id=car_id, program=run_plan.program,
-                compound=run_plan.compound, fuel_kg=run_plan.fuel_kg,
-                laps_planned=run_plan.laps_planned,
-            )
+                run_idx = engine.current_run_idx
+                if run_idx >= len(engine.session_plan.runs):
+                    sr.dispatched = True
+                    continue
+                run_plan = engine.session_plan.runs[run_idx]
 
-            if record is not None:
-                # Stagger delay: 3-8s base + 5s per car in this batch
-                stagger = 3.0 + self._stagger_counter * 5.0 + random.uniform(0, 3.0)
-                self._stagger_counter += 1
-                self._track_states[car_id] = CarTrackState(
-                    car_id=car_id, car_entry=car_entry,
+                record = self.pso.request_run(
+                    car_id=car_id, program=run_plan.program,
+                    compound=run_plan.compound, fuel_kg=run_plan.fuel_kg,
                     laps_planned=run_plan.laps_planned,
-                    pit_exit_delay_s=stagger,
                 )
-                logger.debug("AI %s: starting %s run (stagger %.1fs)", car_id, run_plan.program.value, stagger)
+
+                if record is not None:
+                    sr.dispatched = True
+                    # Small pit exit delay (pitlane traversal)
+                    pit_exit = random.uniform(2.0, 5.0)
+                    self._track_states[car_id] = CarTrackState(
+                        car_id=car_id, car_entry=car_entry,
+                        laps_planned=run_plan.laps_planned,
+                        pit_exit_delay_s=pit_exit,
+                    )
+                    logger.info(
+                        "AI %s (%s): run %d/%d [%s] dispatched at t=%.0fs (planned %.0fs)",
+                        car_id, plan.team_id, run_idx + 1,
+                        len(engine.session_plan.runs),
+                        run_plan.program.value, session_time, sr.planned_start_s,
+                    )
 
     # ------------------------------------------------------------------
     # Internal: complete run
