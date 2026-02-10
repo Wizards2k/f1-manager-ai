@@ -65,88 +65,16 @@ def generate_html(results: List[AISetupState]) -> str:
     """Generate a self-contained HTML report."""
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    tier_colors = {"top": "#4CAF50", "midfield": "#FF9800", "backmarker": "#F44336"}
+    tier_colors = {"top": "#c084fc", "midfield": "#7dd3fc", "backmarker": "#fcd34d"}
+    tier_bg = {"top": "#2a1a3a", "midfield": "#1a2a3a", "backmarker": "#2a2a1a"}
     tier_labels = {"top": "TOP", "midfield": "MID", "backmarker": "BACK"}
     tier_order = {"top": 0, "midfield": 1, "backmarker": 2}
+    tier_target = {"top": "2-3", "midfield": "3-4", "backmarker": "4-5"}
 
-    # Sort by tier then team
     results.sort(key=lambda r: (tier_order.get(_get_team_tier(r.team_name), 1), r.team_name, r.car_id))
 
-    # ── Summary table ──
-    summary_rows = ""
-    for r in results:
-        tier = _get_team_tier(r.team_name)
-        tc = tier_colors.get(tier, "#999")
-        tl = tier_labels.get(tier, "?")
-        cat_label, _, _, _ = _get_pilot_category(r.ricerca_assetto)
-        comp_run = r.completion_run or "—"
-        comp_sess = r.completion_session or "—"
-        initial_score = r.run_history[0].score_before if r.run_history else 0
-        final_score = r.setup_score
-
-        summary_rows += f"""
-        <tr>
-            <td><span class="tier-badge" style="background:{tc}">{tl}</span></td>
-            <td>{r.team_name[:20]}</td>
-            <td><strong>#{r.car_id}</strong> {r.driver_name}</td>
-            <td class="num">{r.ricerca_assetto}</td>
-            <td class="num">{cat_label}</td>
-            <td class="num">{r.perfezionismo}</td>
-            <td class="num">{r.simulator_quality}</td>
-            <td class="num">{initial_score:.2f}</td>
-            <td class="num">{final_score:.2f}</td>
-            <td class="num">{r.threshold:.2f}</td>
-            <td class="num highlight">{comp_run}</td>
-            <td>{comp_sess}</td>
-        </tr>"""
-
-    # ── Per-car run detail ──
-    detail_sections = ""
-    for r in results:
-        tier = _get_team_tier(r.team_name)
-        tc = tier_colors.get(tier, "#999")
-        tl = tier_labels.get(tier, "?")
-
-        run_rows = ""
-        for rr in r.run_history:
-            bar_w = min(100, rr.score_after / 10.0 * 100)
-            bar_color = "#4CAF50" if rr.setup_complete else "#2196F3"
-            ready_icon = "✅" if rr.setup_complete else ""
-            changes_str = ", ".join(f"{k}: {v:+.0f}" for k, v in rr.slider_changes.items()) if rr.slider_changes else "—"
-
-            run_rows += f"""
-            <tr class="{'run-complete' if rr.setup_complete else ''}">
-                <td>{rr.run_index}</td>
-                <td>{rr.session}</td>
-                <td>{rr.program}</td>
-                <td class="num">{rr.score_before:.2f}</td>
-                <td class="num">{rr.score_after:.2f}</td>
-                <td>
-                    <div class="bar-bg"><div class="bar-fill" style="width:{bar_w}%;background:{bar_color}"></div></div>
-                    <span class="pct">{rr.score_after:.1f}/10</span>
-                </td>
-                <td class="num">{rr.threshold:.2f}</td>
-                <td>{ready_icon}</td>
-                <td class="detail">{changes_str}</td>
-            </tr>"""
-
-        detail_sections += f"""
-        <div class="car-detail">
-            <h3><span class="tier-badge" style="background:{tc}">{tl}</span>
-                {r.team_name[:20]} #{r.car_id} {r.driver_name}
-                <span class="skill">ric_ass: {r.ricerca_assetto} | perf: {r.perfezionismo} | sim_q: {r.simulator_quality} | threshold: {r.threshold:.2f}</span>
-            </h3>
-            <table class="detail-table">
-                <thead><tr>
-                    <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th>
-                    <th>Progress</th><th>Threshold</th><th>Done</th><th>Slider Changes</th>
-                </tr></thead>
-                <tbody>{run_rows}</tbody>
-            </table>
-        </div>"""
-
-    # ── Tier summary ──
-    tier_summary = ""
+    # ── Tier summary cards ──
+    tier_cards = ""
     for tier_name in ["top", "midfield", "backmarker"]:
         cars = [r for r in results if _get_team_tier(r.team_name) == tier_name]
         if not cars:
@@ -156,97 +84,221 @@ def generate_html(results: List[AISetupState]) -> str:
         min_runs = min(runs_list) if runs_list else 0
         max_runs = max(runs_list) if runs_list else 0
         not_done = len(cars) - len(runs_list)
-        tc = tier_colors[tier_name]
-        tl = tier_labels[tier_name]
-
         initial_scores = [r.run_history[0].score_before for r in cars if r.run_history]
         avg_initial = sum(initial_scores) / len(initial_scores) if initial_scores else 0
-        final_scores = [r.setup_score for r in cars]
-        avg_final = sum(final_scores) / len(final_scores) if final_scores else 0
+        avg_final = sum(r.setup_score for r in cars) / len(cars)
+        tc = tier_colors[tier_name]
+        tbg = tier_bg[tier_name]
+        tl = tier_labels[tier_name]
+        tgt = tier_target[tier_name]
+        status = "pass" if not_done == 0 else "warn"
+        status_icon = "&#10003;" if not_done == 0 else f"&#9888; {not_done} incomplete"
 
-        sessions = [r.completion_session for r in cars if r.completion_session]
-        session_counts = {}
-        for s in sessions:
-            session_counts[s] = session_counts.get(s, 0) + 1
-        session_str = ", ".join(f"{k}: {v}" for k, v in sorted(session_counts.items()))
-
-        tier_summary += f"""
-        <div class="tier-card" style="border-left: 4px solid {tc}">
-            <h3><span class="tier-badge" style="background:{tc}">{tl}</span> {tier_name.upper()} ({len(cars)} cars)</h3>
-            <div class="tier-stats">
-                <div><strong>Avg initial score:</strong> {avg_initial:.2f}/10</div>
-                <div><strong>Avg final score:</strong> {avg_final:.2f}/10</div>
-                <div><strong>Avg runs to complete:</strong> {avg_runs:.1f}</div>
-                <div><strong>Range:</strong> {min_runs}–{max_runs} runs</div>
-                <div><strong>Not completed:</strong> {not_done}</div>
-                <div><strong>Session breakdown:</strong> {session_str}</div>
-            </div>
+        tier_cards += f"""
+        <div class="tier-card" style="border-left:4px solid {tc}">
+          <div class="tier-header">
+            <span class="tier" style="background:{tbg};color:{tc}">{tl}</span>
+            <span class="tier-title">{tier_name.upper()}</span>
+            <span class="tier-count">{len(cars)} cars</span>
+          </div>
+          <div class="tier-grid">
+            <div class="metric"><div class="metric-val">{avg_initial:.1f}</div><div class="metric-lbl">Avg Initial</div></div>
+            <div class="metric"><div class="metric-val">{avg_final:.1f}</div><div class="metric-lbl">Avg Final</div></div>
+            <div class="metric"><div class="metric-val">{avg_runs:.1f}</div><div class="metric-lbl">Avg Runs</div></div>
+            <div class="metric"><div class="metric-val">{min_runs}–{max_runs}</div><div class="metric-lbl">Range</div></div>
+            <div class="metric"><div class="metric-val">{tgt}</div><div class="metric-lbl">Target</div></div>
+            <div class="metric {'metric-ok' if not_done==0 else 'metric-warn'}"><div class="metric-val">{status_icon}</div><div class="metric-lbl">Status</div></div>
+          </div>
         </div>"""
 
-    html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>AI Setup Search Report v2</title>
-<style>
-* {{ margin: 0; padding: 0; box-sizing: border-box; }}
-body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 20px; }}
-h1 {{ color: #fff; margin-bottom: 5px; }}
-h2 {{ color: #aaa; margin: 30px 0 15px; border-bottom: 1px solid #333; padding-bottom: 5px; }}
-h3 {{ color: #ddd; margin-bottom: 10px; }}
-.subtitle {{ color: #888; font-size: 14px; margin-bottom: 20px; }}
-.tier-badge {{ display: inline-block; padding: 2px 8px; border-radius: 4px; color: #fff; font-size: 11px; font-weight: bold; margin-right: 6px; }}
-.skill {{ font-size: 12px; color: #888; font-weight: normal; margin-left: 15px; }}
-table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
-th {{ background: #16213e; color: #aaa; text-align: left; padding: 8px 10px; font-size: 12px; text-transform: uppercase; }}
-td {{ padding: 6px 10px; border-bottom: 1px solid #2a2a4a; font-size: 13px; }}
-tr:hover {{ background: #1f1f3a; }}
-.num {{ text-align: center; }}
-.highlight {{ color: #4FC3F7; font-weight: bold; }}
-.detail {{ font-size: 11px; color: #888; max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
-.bar-bg {{ display: inline-block; width: 80px; height: 12px; background: #333; border-radius: 6px; overflow: hidden; vertical-align: middle; }}
-.bar-fill {{ height: 100%; border-radius: 6px; }}
-.pct {{ font-size: 11px; margin-left: 4px; }}
-.tier-card {{ background: #16213e; padding: 15px 20px; border-radius: 8px; margin-bottom: 12px; }}
-.tier-stats {{ display: flex; gap: 30px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; }}
-.tier-stats div {{ background: #1a1a2e; padding: 6px 12px; border-radius: 4px; }}
-.car-detail {{ background: #16213e; padding: 15px; border-radius: 8px; margin-bottom: 15px; }}
-.detail-table th {{ font-size: 11px; }}
-.detail-table td {{ font-size: 12px; }}
-.run-complete {{ background: rgba(76, 175, 80, 0.08); }}
-.ref-box {{ background: #16213e; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 40px; flex-wrap: wrap; }}
-.ref-box div {{ font-size: 13px; }}
-.ref-box strong {{ color: #4FC3F7; }}
-</style>
-</head>
-<body>
-<h1>🏎️ AI Setup Search Report v2</h1>
-<p class="subtitle">Generated {now} — Real slider adjustments + score-based convergence</p>
+    # ── Main driver table ──
+    driver_rows = ""
+    for r in results:
+        tier = _get_team_tier(r.team_name)
+        tc = tier_colors.get(tier, "#999")
+        tbg = tier_bg.get(tier, "#222")
+        tl = tier_labels.get(tier, "?")
+        cat_label, _, _, _ = _get_pilot_category(r.ricerca_assetto)
+        comp_run = r.completion_run or "—"
+        comp_sess = r.completion_session or "—"
+        initial_score = r.run_history[0].score_before if r.run_history else 0
+        final_score = r.setup_score
+        gain = final_score - initial_score
 
-<div class="ref-box">
-    <div><strong>Baseline:</strong> from team simulator_quality (top ~90, mid ~72, back ~62)</div>
-    <div><strong>Score scale:</strong> 0–10 (from evaluate_setup_categories)</div>
-    <div><strong>Threshold:</strong> 7.5 + (perfezionismo - 50) / 200</div>
-    <div><strong>Expected:</strong> Top ≤3 runs | Mid 3-4 runs | Back 4-5 runs</div>
+        bar_init = min(100, initial_score / 10.0 * 100)
+        bar_final = min(100, final_score / 10.0 * 100)
+        done_cls = "row-done" if r.completion_run else "row-pending"
+
+        driver_rows += f"""
+        <tr class="{done_cls}">
+          <td><span class="tier" style="background:{tbg};color:{tc}">{tl}</span></td>
+          <td>{r.team_name}</td>
+          <td><strong>{r.driver_name}</strong></td>
+          <td class="num">{r.ricerca_assetto}</td>
+          <td class="num"><span class="cat-tag cat-{cat_label}">{cat_label}</span></td>
+          <td class="num">{r.perfezionismo}</td>
+          <td class="num">{r.simulator_quality}</td>
+          <td class="num">
+            <div class="score-cell">
+              <div class="mini-bar"><div class="mini-fill" style="width:{bar_init}%;background:#5b7db1"></div></div>
+              {initial_score:.2f}
+            </div>
+          </td>
+          <td class="num">
+            <div class="score-cell">
+              <div class="mini-bar"><div class="mini-fill" style="width:{bar_final}%;background:#63d59f"></div></div>
+              {final_score:.2f}
+            </div>
+          </td>
+          <td class="num gain">+{gain:.2f}</td>
+          <td class="num">{r.threshold:.2f}</td>
+          <td class="num runs-cell">{comp_run}</td>
+          <td class="num">{comp_sess}</td>
+        </tr>"""
+
+    # ── Per-car run detail (collapsible) ──
+    detail_blocks = ""
+    for idx, r in enumerate(results):
+        tier = _get_team_tier(r.team_name)
+        tc = tier_colors.get(tier, "#999")
+        tbg = tier_bg.get(tier, "#222")
+        tl = tier_labels.get(tier, "?")
+        initial_score = r.run_history[0].score_before if r.run_history else 0
+
+        run_rows = ""
+        for rr in r.run_history:
+            gain = rr.score_after - rr.score_before
+            gain_cls = "gain-pos" if gain > 0.01 else ("gain-neg" if gain < -0.01 else "gain-zero")
+            bar_w = min(100, rr.score_after / 10.0 * 100)
+            bar_color = "#63d59f" if rr.setup_complete else "#5b7db1"
+            done_icon = "<span class='done-check'>&#10003;</span>" if rr.setup_complete else ""
+            changes = rr.slider_changes or {}
+            changes_parts = []
+            for k, v in sorted(changes.items()):
+                cls = "chg-pos" if v > 0 else "chg-neg"
+                changes_parts.append(f"<span class='{cls}'>{k.replace('_',' ')}: {v:+.0f}</span>")
+            changes_str = " ".join(changes_parts) if changes_parts else "<span class='no-chg'>no changes</span>"
+
+            run_rows += f"""
+            <tr class="{'rr-done' if rr.setup_complete else ''}">
+              <td class="num">{rr.run_index}</td>
+              <td>{rr.session}</td>
+              <td><span class="prog-tag">{rr.program}</span></td>
+              <td class="num">{rr.score_before:.2f}</td>
+              <td class="num">{rr.score_after:.2f}</td>
+              <td class="num {gain_cls}">{gain:+.2f}</td>
+              <td>
+                <div class="bar-bg"><div class="bar-fill" style="width:{bar_w}%;background:{bar_color}"></div></div>
+              </td>
+              <td class="num">{done_icon}</td>
+              <td class="changes-cell">{changes_str}</td>
+            </tr>"""
+
+        detail_blocks += f"""
+        <details class="driver-detail" id="detail-{idx}">
+          <summary>
+            <span class="tier" style="background:{tbg};color:{tc}">{tl}</span>
+            <strong>{r.driver_name}</strong>
+            <span class="detail-meta">{r.team_name} | sim_q: {r.simulator_quality} | ric: {r.ricerca_assetto} | perf: {r.perfezionismo} | init: {initial_score:.2f} &rarr; {r.setup_score:.2f} | threshold: {r.threshold:.2f} | runs: {r.completion_run or '—'}</span>
+          </summary>
+          <table class="run-table">
+            <thead><tr>
+              <th>Run</th><th>Session</th><th>Program</th><th>Score In</th><th>Score Out</th><th>Gain</th><th>Progress</th><th>Done</th><th>Slider Changes</th>
+            </tr></thead>
+            <tbody>{run_rows}</tbody>
+          </table>
+        </details>"""
+
+    # ── Global stats ──
+    total_cars = len(results)
+    total_done = sum(1 for r in results if r.completion_run)
+    total_runs = sum(r.total_runs for r in results)
+    avg_all = sum(r.completion_run for r in results if r.completion_run) / max(1, total_done)
+
+    html = f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<title>AI Setup Search Report</title>
+<style>
+body{{font-family:"Segoe UI",Arial,sans-serif;background:#0d0d0d;color:#e0e0e0;padding:24px;max-width:1400px;margin:0 auto}}
+h1{{color:#ff6b35;margin-bottom:4px}}
+.meta{{color:#888;margin-bottom:20px;font-size:.95em}}
+.stats{{display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap}}
+.stat-box{{background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:12px 20px;min-width:120px}}
+.stat-box .val{{font-size:1.6em;font-weight:bold;color:#63d59f}}.stat-box .label{{font-size:.82em;color:#888}}
+
+.tier-card{{background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:14px 18px;margin-bottom:10px}}
+.tier-header{{display:flex;align-items:center;gap:10px;margin-bottom:10px}}
+.tier-title{{font-weight:700;font-size:1.05em}}.tier-count{{color:#888;font-size:.85em}}
+.tier-grid{{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}}
+.metric{{background:#111;border-radius:6px;padding:8px 12px;text-align:center}}
+.metric-val{{font-size:1.3em;font-weight:700;color:#e0e0e0}}.metric-lbl{{font-size:.75em;color:#888;margin-top:2px}}
+.metric-ok .metric-val{{color:#63d59f}}.metric-warn .metric-val{{color:#f5d56a}}
+
+.tier{{padding:2px 8px;border-radius:3px;font-size:.8em;font-weight:600}}
+table{{border-collapse:collapse;width:100%;font-size:.9em;margin-bottom:20px}}
+th{{background:#1a1a1a;padding:8px 10px;text-align:left;border-bottom:2px solid #333;position:sticky;top:0;font-size:.82em;text-transform:uppercase;color:#888}}
+td{{padding:7px 10px;border-bottom:1px solid #1f1f1f}}
+tr:hover{{background:#1a1a1a}}
+.num{{text-align:center}}
+.gain{{color:#63d59f;font-weight:600}}
+.runs-cell{{font-weight:700;color:#7dd3fc;font-size:1.05em}}
+.row-done{{}}
+.row-pending td{{opacity:.6}}
+
+.score-cell{{display:flex;align-items:center;gap:6px;justify-content:center}}
+.mini-bar{{width:50px;height:6px;background:#222;border-radius:3px;overflow:hidden}}
+.mini-fill{{height:100%;border-radius:3px}}
+
+.cat-tag{{padding:2px 6px;border-radius:3px;font-size:.78em;font-weight:600}}
+.cat-elite{{background:#174b2f;color:#63d59f}}
+.cat-solido{{background:#1a2a3a;color:#7dd3fc}}
+.cat-incostante{{background:#3d3520;color:#f5d56a}}
+.cat-sperimentale{{background:#522;color:#ff8787}}
+
+h2{{color:#ccc;margin:28px 0 12px;border-bottom:1px solid #333;padding-bottom:6px;font-size:1.1em}}
+
+.driver-detail{{background:#1a1a1a;border:1px solid #333;border-radius:8px;margin-bottom:8px}}
+.driver-detail summary{{padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:.9em}}
+.driver-detail summary:hover{{background:#222}}
+.detail-meta{{color:#888;font-size:.85em;margin-left:auto}}
+.run-table{{margin:0;font-size:.85em}}
+.run-table th{{font-size:.78em;background:#111}}
+.run-table td{{padding:5px 8px;border-bottom:1px solid #1a1a1a}}
+.rr-done{{background:rgba(99,213,159,.06)}}
+.done-check{{color:#63d59f;font-weight:700}}
+.gain-pos{{color:#63d59f}}.gain-neg{{color:#ff8787}}.gain-zero{{color:#666}}
+.bar-bg{{display:inline-block;width:70px;height:8px;background:#222;border-radius:4px;overflow:hidden;vertical-align:middle}}
+.bar-fill{{height:100%;border-radius:4px}}
+.prog-tag{{background:#222;padding:2px 6px;border-radius:3px;font-size:.82em;color:#aaa}}
+.changes-cell{{font-size:.8em;max-width:350px}}
+.chg-pos{{color:#63d59f;margin-right:6px}}.chg-neg{{color:#ff8787;margin-right:6px}}.no-chg{{color:#555}}
+</style></head><body>
+
+<h1>AI Setup Search Report</h1>
+<div class="meta">Generated: <strong>{now}</strong> | Score scale: 0–10 | Threshold: 8.1 + perfezionismo offset | Baseline from simulator_quality</div>
+
+<div class="stats">
+  <div class="stat-box"><div class="val">{total_cars}</div><div class="label">Total Cars</div></div>
+  <div class="stat-box"><div class="val">{total_done}/{total_cars}</div><div class="label">Completed</div></div>
+  <div class="stat-box"><div class="val">{total_runs}</div><div class="label">Total Runs</div></div>
+  <div class="stat-box"><div class="val">{avg_all:.1f}</div><div class="label">Avg Runs to Complete</div></div>
 </div>
 
-<h2>📊 Tier Summary</h2>
-{tier_summary}
+<h2>Tier Summary</h2>
+{tier_cards}
 
-<h2>📋 All Cars — Setup Completion</h2>
+<h2>All Drivers</h2>
 <table>
 <thead><tr>
-    <th>Tier</th><th>Team</th><th>Driver</th><th>Ric.Ass.</th><th>Category</th><th>Perf.</th>
-    <th>Sim.Q</th><th>Initial</th><th>Final</th><th>Threshold</th><th>Runs</th><th>Session</th>
+  <th>Tier</th><th>Team</th><th>Driver</th><th>Ric.Ass.</th><th>Category</th><th>Perf.</th>
+  <th>Sim.Q</th><th>Initial Score</th><th>Final Score</th><th>Gain</th><th>Threshold</th><th>Runs</th><th>Session</th>
 </tr></thead>
-<tbody>{summary_rows}</tbody>
+<tbody>{driver_rows}</tbody>
 </table>
 
-<h2>🔍 Per-Car Run Detail</h2>
-{detail_sections}
+<h2>Run Detail (click to expand)</h2>
+{detail_blocks}
 
-</body>
-</html>"""
+</body></html>"""
     return html
 
 

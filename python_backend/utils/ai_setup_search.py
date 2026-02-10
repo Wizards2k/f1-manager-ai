@@ -317,15 +317,17 @@ class AISetupState:
         """
         self.total_runs += 1
         score_before = self.setup_score
+        changes: Dict[str, float] = {}
 
-        # Adjust sliders
-        new_setup, changes = adjust_setup_after_run(
-            self.setup_config,
-            self.ricerca_assetto,
-            self._rng,
-        )
-        self.setup_config = new_setup
-        self.setup_score = compute_setup_score(self.setup_config)
+        # Only adjust sliders if setup is not yet complete
+        if not self.setup_complete:
+            new_setup, changes = adjust_setup_after_run(
+                self.setup_config,
+                self.ricerca_assetto,
+                self._rng,
+            )
+            self.setup_config = new_setup
+            self.setup_score = compute_setup_score(self.setup_config)
 
         # Check convergence
         if not self.setup_complete and self.setup_score >= self.threshold:
