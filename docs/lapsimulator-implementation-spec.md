@@ -228,6 +228,48 @@ La `braking_efficiency` usa `driver_brake_skill = 0.5` hardcoded. Dovrebbe usare
 ### 6.10 Overtake window non calcolato
 Il `overtake_window` (0-1) descritto in §3.3.x non è implementato. È necessario per il BattleResolver. **Azione**: implementare basandosi su delta_v, gap, driver intent, section tags.
 
+### 6.11 ⚠️ BLOCCANTE — Sezioni telemetria con gap e avg_speed inaffidabile
+
+**Scoperto durante calibrazione il 2026-02-10.** Questo è il problema più critico e blocca la calibrazione del LapSimulator.
+
+#### Problema 1: Gap di copertura
+Le sezioni nel Telemetry JSON (es. Monza) non coprono il 100% del circuito:
+- Circuito: 5725m, coperto da sezioni: 4869m → **856m non coperti (15%)**
+- Gap principale: 856m tra "Main Straight Start-1" (end=132m) e "Turn 1-2" (start=988m)
+- Quel gap contiene la **zona di frenata più pesante** del circuito (da 339 a 81 kph)
+
+#### Problema 2: avg_speed non è la velocità media reale
+Il campo `avg_speed` nelle sezioni non corrisponde alla media dei punti telemetrici nella sezione:
+| Sezione | avg_speed | v reale @start | v reale @end | Media punti |
+|---------|-----------|---------------|-------------|-------------|
+| Turn 1-2 (SlowCorner) | 81 | 284 | 294 | 291 |
+| Medium Straight 3-4 | 280 | 142 | 134 | 149 |
+| Turn 6-7 (FastCorner) | 223 | 153 | 114 | 136 |
+
+`avg_speed` sembra essere la velocità **caratteristica** (apex per curve, punta per rettilinei), non la media reale.
+
+#### Problema 3: Confini sezione non allineati alla fisica
+I confini delle sezioni non corrispondono ai punti naturali del profilo velocità:
+- La frenata per Turn 1 avviene **fuori** dalla sezione Turn 1-2 (nel gap 132-988m)
+- "Medium Straight 3-4" contiene una frenata pesante (v scende da 142 a 134)
+- Le sezioni curve sono troppo corte (58m, 57m) e non catturano il profilo completo
+
+#### Conseguenza
+- `dt = length / v_base` produce tempi irrealistici (somma 72s vs 101s reali)
+- Il LapSimulator non può calibrare correttamente senza `dt_ref` affidabili per sezione
+- I dati mancanti (braking_energy, DRS, radius) dipendono dalla corretta segmentazione
+
+#### Azione
+**Rigenerare le sezioni** dai 778 punti telemetrici (che sono corretti e coprono 0-101.117s):
+1. Copertura 100% del circuito (nessun gap)
+2. Confini ai punti naturali (inizio frenata, apex, uscita curva)
+3. `avg_speed` = vera media dei punti nella sezione
+4. `dt_ref` = integrazione `Σ(ds/v)` dei punti nella sezione
+5. `braking_energy_mj` calcolata dai punti brake
+6. DRS zones mappate alle sezioni
+
+Questo lavoro è tracciato nel branch dedicato `feature/telemetry-sections-v2` e nella spec `docs/telemetry-sections-v2-spec.md`.
+
 ## 7. Stato test
 
 | Suite | Test | Stato |
@@ -251,16 +293,19 @@ Il `overtake_window` (0-1) descritto in §3.3.x non è implementato. È necessar
 | 4 | 84.0s | 93.9 kg | 4.30% | 58.4°C | |
 | 5 | 84.3s | 92.4 kg | 5.36% | 57.9°C | |
 
-**Gap**: ~20s più veloce del riferimento. Cause principali:
-- Grip troppo basso (~0.74) penalizza curve ma non abbastanza i rettilinei
-- braking_energy = 0 su tutte le sezioni (dato mancante)
-- Fuel weight effect assente
-- Coefficienti k_* non calibrati
+**Gap**: ~20s più veloce del riferimento. Causa principale identificata: **le sezioni telemetria sono difettose** (§6.11).
+- Le sezioni coprono solo 85% del circuito (gap di 856m a Monza)
+- `avg_speed` non è la velocità media reale ma la velocità caratteristica (apex/punta)
+- `dt = length / v_base` produce 72s vs 101s reali → impossibile calibrare
+- I gap §6.2-6.6 (braking_energy, DRS, radius, bumpiness) dipendono dalla corretta segmentazione
 
 ## 9. Prossimi passi
 
-1. **Tuning rapido coefficienti** — allineare lap time a ±5s dal riferimento
-2. **Popolare dati mancanti** — braking_energy, bumpiness, kerb_severity, DRS zones, radius_m
+> ⚠️ **BLOCCANTE**: risolvere §6.11 prima di qualsiasi calibrazione o tuning.
+
+1. **⚡ Rigenerare sezioni telemetria** (branch `feature/telemetry-sections-v2`, spec `docs/telemetry-sections-v2-spec.md`)
+   - Copertura 100%, confini naturali, avg_speed reale, dt_ref integrato, braking_energy, DRS
+2. **Tuning coefficienti** — allineare lap time a ±5s dal riferimento (dopo rigenerazione)
 3. **Implementare gap §6.7-6.9** — fuel weight, mechanical grip, driver skills in brakes
 4. **Overtake window** (§6.10) — prerequisito per BattleResolver
 5. **BattleResolver 2.0** — punto 2 della Fase B roadmap
