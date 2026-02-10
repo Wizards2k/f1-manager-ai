@@ -5,6 +5,10 @@ import threading
 from typing import Optional
 from config import circuit_sectors, SESSION_DURATION
 
+# --- V2 Engine flag ---
+USE_NEW_ENGINE = True
+session_bridge = None  # SessionBridge instance (lazy init)
+
 # Lock per sincronizzare accessi alle variabili globali
 state_lock = threading.Lock()
 
@@ -60,6 +64,7 @@ def start_session_for_circuit():
     """Resetta lo stato partendo dal circuito appena caricato e avvia la sessione."""
     global session_start_time, session_start_real_time, accumulated_game_time
     global last_speed_change_time, pause_start_time, is_paused, simulation_ready
+    global session_bridge
 
     start_time = time.time()
     with state_lock:
@@ -72,6 +77,23 @@ def start_session_for_circuit():
         simulation_ready = True
 
     reset_cars_for_session(start_time)
+
+    # Initialize V2 engine if enabled
+    if USE_NEW_ENGINE:
+        try:
+            import config as cfg
+            circuit_id = getattr(cfg, 'current_circuit', None)
+            if circuit_id:
+                from utils.session_bridge import SessionBridge
+                session_bridge = SessionBridge()
+                ok = session_bridge.init_session(circuit_id, race_cars, session_type="FP1")
+                if not ok:
+                    session_bridge = None
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("V2 engine init failed: %s", e)
+            session_bridge = None
+
     return start_time
 
 
@@ -283,3 +305,13 @@ def get_session_bests():
         'best_lap': session_best_lap,
         'best_sectors': session_best_sectors.copy()
     }
+
+
+def get_session_bridge():
+    """Return the active SessionBridge (V2 engine) or None."""
+    return session_bridge
+
+
+def is_v2_engine_active() -> bool:
+    """Check if V2 engine is active and running."""
+    return session_bridge is not None and session_bridge.active

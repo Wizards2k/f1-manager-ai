@@ -15,7 +15,7 @@ from utils import (
     race_cars, get_session_time_remaining, format_session_time,
     update_car_position, get_car_position, is_simulation_ready
 )
-from utils.game_logic import get_game_speed, get_pause_state, get_session_bests, mark_simulation_pending
+from utils.game_logic import get_game_speed, get_pause_state, get_session_bests, mark_simulation_pending, is_v2_engine_active, get_session_bridge
 
 app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -38,13 +38,21 @@ def race_simulation():
         if not is_simulation_ready():
             continue
 
-        # Aggiorna posizioni auto
-        for car in race_cars:
-            update_car_position(car, dt)
-        
-        # Invia aggiornamenti ai client
-        session_remaining = get_session_time_remaining()
         current_pause_state = get_pause_state()
+
+        # Aggiorna posizioni auto
+        bridge = get_session_bridge()
+        if bridge and bridge.active:
+            # V2 engine: delegate to SessionBridge
+            if not current_pause_state:
+                sim_dt = dt * get_game_speed()
+                bridge.tick(sim_dt)
+            session_remaining = bridge.session_time_remaining
+        else:
+            # V1 engine: legacy update
+            for car in race_cars:
+                update_car_position(car, dt)
+            session_remaining = get_session_time_remaining()
         
         cars_data = []
         for car in race_cars:

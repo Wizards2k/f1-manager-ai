@@ -540,9 +540,24 @@ def register_routes(app):
         car.ers_mode = config.get('ers_mode', car.ers_mode)
         car.stint_target_laps = target_laps
         car.stint_laps_remaining = target_laps
-        car.state = CarState.BOX
-        car.box_time_until = car.session_start_time or time.time()
-        car.exit_box()
+
+        # V2 engine: delegate to SessionBridge
+        from utils.game_logic import get_session_bridge
+        bridge = get_session_bridge()
+        if bridge and bridge.active:
+            ok = bridge.player_send_out(
+                car,
+                compound=str(config.get('tyre_compound', car.current_tire.value)).lower(),
+                fuel_percent=fuel_percent,
+                stint_laps=target_laps,
+            )
+            if not ok:
+                return _error_response('V2 engine: car cannot go out now', 409)
+        else:
+            # V1 engine: legacy
+            car.state = CarState.BOX
+            car.box_time_until = car.session_start_time or time.time()
+            car.exit_box()
 
         return jsonify({
             'message': 'Car sent out',
@@ -558,8 +573,14 @@ def register_routes(app):
         if car.state == CarState.BOX:
             return jsonify({'message': 'Car already in BOX', 'car': _serialize_player_car(car)})
 
-        car.state = CarState.IN_LAP
-        car.stint_laps_remaining = 0
+        # V2 engine: delegate to SessionBridge
+        from utils.game_logic import get_session_bridge
+        bridge = get_session_bridge()
+        if bridge and bridge.active:
+            bridge.player_box_now(car)
+        else:
+            car.state = CarState.IN_LAP
+            car.stint_laps_remaining = 0
 
         return jsonify({
             'message': 'Box request acknowledged',

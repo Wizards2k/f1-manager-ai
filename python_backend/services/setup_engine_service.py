@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 import json
 
-from python_backend.models.models import DEFAULT_SETUP_CONFIG
-from python_backend.utils.setup_engine import evaluate_setup, evaluate_setup_categories
+from models import DEFAULT_SETUP_CONFIG
+from utils.setup_engine import evaluate_setup, evaluate_setup_categories
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
