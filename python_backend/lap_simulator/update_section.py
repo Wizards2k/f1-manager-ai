@@ -170,9 +170,12 @@ def update_section(
             delta_aero = config.k_aero_penalty * (aero_forces.drag_eff / max(config.drag_ref, 1.0) - 1.0)
         delta_aero -= config.k_aero_penalty * aero_forces.handling_penalty
 
-        # Δ_grip: tyre grip contribution
+        # Δ_grip: tyre grip contribution (§6.8 tuned)
+        # Reference grip ~0.7 = neutral (new tyres at operating temp).
+        # Only penalise when grip drops below reference; reward when above.
         grip_avg = (eff_grip_front + eff_grip_rear) / 2.0
-        delta_grip = config.k_grip_penalty * (1.0 - grip_avg)
+        grip_ref = 0.70
+        delta_grip = config.k_grip_penalty * (grip_ref - grip_avg) / grip_ref
 
         # Δ_brake: brake fade (only on sections with braking)
         if section.braking_energy_mj > 0.05:

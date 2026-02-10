@@ -494,12 +494,12 @@ class CircuitConfig:
     v_min_kph: float = 50.0
     v_cap_kph: float = 370.0
     # dt_ref penalty model coefficients
-    baseline_delta: float = 0.05         # +5% over VER 2024 Q for top team
+    baseline_delta: float = 0.07         # +7% baseline, net ~+5.5% after grip bonus
     k_aero_penalty: float = 0.03         # max aero contribution to dt penalty
-    k_grip_penalty: float = 0.05         # max grip contribution
-    k_brake_penalty: float = 0.03        # max brake fade contribution
-    k_fuel_penalty: float = 0.03         # max fuel weight contribution
-    k_driver_penalty: float = 0.05       # max driver skill contribution
+    k_grip_penalty: float = 0.02         # max grip contribution
+    k_brake_penalty: float = 0.015        # max brake fade contribution
+    k_fuel_penalty: float = 0.015         # max fuel weight contribution
+    k_driver_penalty: float = 0.03       # max driver skill contribution
     fuel_max_kg: float = 110.0           # reference max fuel load
     reference_lap_time_s: float = 0.0    # from telemetry (sum of dt_ref_s)
 

@@ -53,7 +53,9 @@ Portare il gioco a una release pubblica in cui:
    > Modulo standalone in `python_backend/lap_simulator/` — 8 passi update_section, config loader, test integrazione Monza.
    > ✅ **Telemetry Sections v2** completato e merged: 24/24 circuiti rigenerati con copertura 100%, dt_ref, braking_energy, DRS, radius, classificazione 5-tier. Spec: `docs/telemetry-sections-v2-spec.md`.
    > ✅ **Modello dt_ref** integrato: `dt = dt_ref × (1 + baseline + Σ penalties)`. Monza Lap 1 = 108.1s (+6.9% vs VER 2024 Q). Baseline +5% = top team inizio 2025.
-   > **Da completare:** tuning coefficienti multi-circuito, fuel weight, mechanical grip, overtake_window.
+   > ✅ **Gap §6.7-§6.10** completati: fuel weight, mechanical grip (setup_bonus), driver skills nei freni, overtake window (OW max ~0.78 nelle zone DRS).
+   > **Da completare breve termine:** tuning coefficienti multi-circuito (k_aero/grip/fuel/etc.) + calibrazione OW/penalties.
+   > **Step successivi:** (1) AI Driver Engine (gestione auto player/AI in practice) → (2) BattleResolver 2.0 (consumer di OW) → (3) Practice Session Orchestrator.
 2. **BattleResolver 2.0**: codice allineato alla nuova spec (cooldown, side-by-side, metriche HUD/telemetria).
 3. **Practice Session Orchestrator**: scheduling tempo sessione, queue pitlane, gestione run e persistenza run data/log.
 

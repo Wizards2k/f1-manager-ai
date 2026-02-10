@@ -99,8 +99,26 @@ Risultati 3 circuiti (top team, baseline=+5%):
 
 ---
 
+## ✅ Completato: Tuning coefficienti multi-circuito
+
+3 round di calibrazione su 24/24 circuiti:
+- `baseline_delta`: 0.05 → 0.07 (netto ~+5.5% dopo grip bonus)
+- `k_grip_penalty`: 0.05 → 0.02, formula normalizzata su `grip_ref=0.70`
+- `k_brake_penalty`: 0.03 → 0.015
+- `k_fuel_penalty`: 0.03 → 0.015
+- `k_driver_penalty`: 0.05 → 0.03
+- `thermal_factor` floor: 0.70 → 0.82 (gomme fredde meno penalizzanti)
+
+Risultati L1 (top team, 24 circuiti):
+- Media: +5.7% vs ref | Range: 4.7%–8.8% | 22/24 nel target [4.5–7.5%]
+- Outlier alti: Imola +8.8% (23 sez, 12 curve), Austin +7.6% (17 sez) — giustificato dalla natura tecnica
+- Degrado L5 su circuiti tecnici: da riaffrontare con TyreModel v2
+
+---
+
 ## Prossimi passi
 
-1. Tuning coefficienti k_* su più circuiti
-2. **⚡ BattleResolver 2.0** — logica sorpassi/difesa
+1. **⚡ AI Driver Engine** — loop decisionale per run plan, fuel/ERS, strategie box
+2. BattleResolver 2.0 — logica sorpassi/difesa
 3. Practice Session Orchestrator
+4. TyreModel v2 — modello termico completo (risolverà degrado L5)

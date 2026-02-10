@@ -132,7 +132,7 @@ def _update_single_tyre(
     )
     # Combined thermal factor (surface-weighted)
     thermal_factor = 0.6 * thermal_factor_surface + 0.4 * thermal_factor_core
-    thermal_factor = clamp(thermal_factor, 0.7, 1.1)
+    thermal_factor = clamp(thermal_factor, 0.82, 1.1)
 
     wear_factor = max(0.5, 1.0 - tyre.wear_pct / 100.0)
 
