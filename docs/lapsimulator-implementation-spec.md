@@ -228,9 +228,9 @@ La `braking_efficiency` usa `driver_brake_skill = 0.5` hardcoded. Dovrebbe usare
 ### 6.10 Overtake window non calcolato
 Il `overtake_window` (0-1) descritto in §3.3.x non è implementato. È necessario per il BattleResolver. **Azione**: implementare basandosi su delta_v, gap, driver intent, section tags.
 
-### 6.11 ⚠️ BLOCCANTE — Sezioni telemetria con gap e avg_speed inaffidabile
+### 6.11 ✅ RISOLTO — Sezioni telemetria con gap e avg_speed inaffidabile
 
-**Scoperto durante calibrazione il 2026-02-10.** Questo è il problema più critico e blocca la calibrazione del LapSimulator.
+**Scoperto durante calibrazione il 2026-02-10. Risolto il 2026-02-10** con `scripts/regenerate_telemetry_sections.py`.
 
 #### Problema 1: Gap di copertura
 Le sezioni nel Telemetry JSON (es. Monza) non coprono il 100% del circuito:
@@ -259,16 +259,24 @@ I confini delle sezioni non corrispondono ai punti naturali del profilo velocit�
 - Il LapSimulator non può calibrare correttamente senza `dt_ref` affidabili per sezione
 - I dati mancanti (braking_energy, DRS, radius) dipendono dalla corretta segmentazione
 
-#### Azione
-**Rigenerare le sezioni** dai 778 punti telemetrici (che sono corretti e coprono 0-101.117s):
-1. Copertura 100% del circuito (nessun gap)
-2. Confini ai punti naturali (inizio frenata, apex, uscita curva)
-3. `avg_speed` = vera media dei punti nella sezione
-4. `dt_ref` = integrazione `Σ(ds/v)` dei punti nella sezione
-5. `braking_energy_mj` calcolata dai punti brake
-6. DRS zones mappate alle sezioni
+#### Risoluzione
+Rigenerati tutti i 24 circuiti con `scripts/regenerate_telemetry_sections.py`:
+1. ✅ Copertura 100% del circuito (nessun gap)
+2. ✅ Confini ai punti naturali (inizio frenata, apex, uscita curva)
+3. ✅ `avg_speed` = vera media pesata per distanza
+4. ✅ `dt_ref_s` = integrazione `Σ(ds/v)` (delta < 0.1s vs lap_time reale)
+5. ✅ `braking_energy_mj` calcolata da ΔKE
+6. ✅ DRS zones mappate da codici FastF1
+7. ✅ `radius_m` calcolato via circle fit
+8. ✅ Classificazione 5-tier allineata a `derive_setup_clusters.py`:
+   - VerySlowCorner (< 80 kph): 24 sezioni
+   - SlowCorner (80-130 kph): 76 sezioni
+   - MediumCorner (130-200 kph): 59 sezioni
+   - FastCorner (200-270 kph): 17 sezioni
 
-Questo lavoro è tracciato nel branch dedicato `feature/telemetry-sections-v2` e nella spec `docs/telemetry-sections-v2-spec.md`.
+Nuovi campi per sezione: `v_entry_kph`, `v_exit_kph`, `v_min_kph`, `v_max_kph`, `dt_ref_s`, `braking_energy_mj`, `drs_active`, `radius_m`.
+
+Spec: `docs/telemetry-sections-v2-spec.md`. Branch `feature/telemetry-sections-v2` merged in `feature/lapsimulator-runtime`.
 
 ## 7. Stato test
 
@@ -293,19 +301,14 @@ Questo lavoro è tracciato nel branch dedicato `feature/telemetry-sections-v2` e
 | 4 | 84.0s | 93.9 kg | 4.30% | 58.4°C | |
 | 5 | 84.3s | 92.4 kg | 5.36% | 57.9°C | |
 
-**Gap**: ~20s più veloce del riferimento. Causa principale identificata: **le sezioni telemetria sono difettose** (§6.11).
-- Le sezioni coprono solo 85% del circuito (gap di 856m a Monza)
-- `avg_speed` non è la velocità media reale ma la velocità caratteristica (apex/punta)
-- `dt = length / v_base` produce 72s vs 101s reali → impossibile calibrare
-- I gap §6.2-6.6 (braking_energy, DRS, radius, bumpiness) dipendono dalla corretta segmentazione
+**Gap**: ~20s più veloce del riferimento. Causa principale era §6.11 (sezioni difettose), ora **risolto**.
+Con le sezioni v2, i dati di base sono corretti (dt_ref ≈ lap_time, braking_energy > 0, DRS mappato).
+Resta da integrare i nuovi campi nel LapSimulator e calibrare i coefficienti.
 
 ## 9. Prossimi passi
 
-> ⚠️ **BLOCCANTE**: risolvere §6.11 prima di qualsiasi calibrazione o tuning.
-
-1. **⚡ Rigenerare sezioni telemetria** (branch `feature/telemetry-sections-v2`, spec `docs/telemetry-sections-v2-spec.md`)
-   - Copertura 100%, confini naturali, avg_speed reale, dt_ref integrato, braking_energy, DRS
-2. **Tuning coefficienti** — allineare lap time a ±5s dal riferimento (dopo rigenerazione)
+1. **⚡ Integrare sezioni v2 nel LapSimulator** — aggiornare `SectionContext`, `config_loader`, `update_section` per usare `dt_ref_s` come ancora e i nuovi campi
+2. **Tuning coefficienti** — allineare lap time a ±5s dal riferimento con dt_ref affidabili
 3. **Implementare gap §6.7-6.9** — fuel weight, mechanical grip, driver skills in brakes
 4. **Overtake window** (§6.10) — prerequisito per BattleResolver
 5. **BattleResolver 2.0** — punto 2 della Fase B roadmap

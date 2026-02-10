@@ -51,7 +51,8 @@ Portare il gioco a una release pubblica in cui:
 1. **LapSimulator runtime**: implementare il loop InputMixer → update_section parallelo → BattleResolver 2.0 → StateCommit.
    > **Stato:** 🔧 v0.1 implementata il 2026-02-10 (branch `feature/lapsimulator-runtime`, 85/85 test).
    > Modulo standalone in `python_backend/lap_simulator/` — 8 passi update_section, config loader, test integrazione Monza.
-   > **Da completare:** calibrazione coefficienti, dati sezione mancanti (braking_energy, DRS, radius), fuel weight, mechanical grip, overtake_window.
+   > ✅ **Telemetry Sections v2** completato e merged: 24/24 circuiti rigenerati con copertura 100%, dt_ref, braking_energy, DRS, radius, classificazione 5-tier. Spec: `docs/telemetry-sections-v2-spec.md`.
+   > **Da completare:** integrare sezioni v2 nel LapSimulator (dt_ref come ancora), calibrazione coefficienti, fuel weight, mechanical grip, overtake_window.
 2. **BattleResolver 2.0**: codice allineato alla nuova spec (cooldown, side-by-side, metriche HUD/telemetria).
 3. **Practice Session Orchestrator**: scheduling tempo sessione, queue pitlane, gestione run e persistenza run data/log.
 

@@ -2,7 +2,7 @@
 
 ## Branch: `feature/lapsimulator-runtime`
 
-## Stato: ⏸️ IN PAUSA — bloccato da problema dati telemetria
+## Stato: 🔧 IN CORSO — telemetry sections v2 risolto, integrazione in corso
 
 ---
 
