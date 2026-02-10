@@ -152,7 +152,7 @@ RUN_PROGRAM_DEFAULTS: Dict[RunProgram, dict] = {
         objective="Validate setup seed vs real data",
     ),
     RunProgram.TYRE_DEG: dict(
-        laps_range=(6, 10),
+        laps_range=(6, 9),
         fuel_kg=75.0,
         engine_map=EngineMapName.STANDARD,
         ers_mode=ERSModeName.HARVEST,
@@ -190,6 +190,7 @@ SESSION_PROGRAMS: Dict[SessionType, List[RunProgram]] = {
     SessionType.FP1: [
         RunProgram.SETUP_VALIDATION,
         RunProgram.SETUP_VALIDATION,
+        RunProgram.TYRE_DEG,
     ],
     SessionType.FP2: [
         RunProgram.TYRE_DEG,

@@ -49,16 +49,13 @@ All'inizio di ogni sessione, il `SessionBridge` genera un **Team Session Plan** 
    - FP1: 2× SetupValidation
    - FP2: TyreDeg + QualiSim + RaceTrim
    - FP3: QualiSim + SetupValidation
-2. **Finestra di uscita** (`first_exit_window_s`): tempo simulato in cui la squadra inizia il primo run
-   - Range: **30s – 300s** (da 30 secondi a 5 minuti dall'inizio sessione)
-   - Generato con `random.uniform()` per ogni squadra, diverso ad ogni sessione
-   - Squadre top tendono ad uscire prima (range 30–180s), backmarker più tardi (60–300s)
+2. **Batch di uscita iniziale** (nuovo modello 2026-02-10)
+   - Tutte le auto AI vengono mescolate e suddivise in blocchi da **8 vetture** (pari al `MAX_PITLANE_SLOTS` del PSO)
+   - Ogni blocco riceve una finestra casuale **10–60s** dall'inizio sessione + uno **stagger di 8s** tra i blocchi
+   - All'interno del blocco ogni vettura ha un jitter 0–3s; se i due compagni sono nello stesso blocco, il secondo riceve un offset aggiuntivo di **3–8s**
 3. **Gap tra run** (`inter_run_gap_s`): pausa tra la fine di un run e l'inizio del successivo
-   - Range: **120s – 360s** (2–6 minuti)
-   - Include pit work + analisi dati + modifiche setup
-4. **Ordine piloti nel team**: chi esce per primo tra i due piloti
-   - Randomizzato: 50/50 per ogni run
-   - Gap tra i due piloti dello stesso team: **5s – 20s**
+   - Range: **75s – 150s** (comprende rientro, cambio gomme e micro-regolazioni)
+4. **Cooldown pitlane** (PSO): **45s** minimi tra due run che richiedono intervento al box; `PITLANE_QUEUE_DELAY_S = 7s`, `MIN_PIT_EXIT_GAP_S = 5s`, `MAX_PITLANE_SLOTS = 8`
 
 ```python
 @dataclass
@@ -72,13 +69,11 @@ class TeamSessionPlan:
 
 Esempio per una sessione FP1 con 10 team:
 
-| Team | first_exit | Pilota 1 esce a | Pilota 2 esce a |
-|---|---|---|---|
-| Ferrari | 45s | 45s | 57s |
-| Red Bull | 152s | 152s | 163s |
-| McLaren | 78s | 78s | 91s |
-| Mercedes | 210s | 210s | 225s |
-| ... | ... | ... | ... |
+| Batch | Window (s) | Auto 1 | Auto 2 | ... |
+|---|---|---|---|---|
+| 1 | 18–30 | RB #1 | Williams #2 | ... |
+| 2 | 26–40 | Ferrari #1 | Alpine #1 | ... |
+| 3 | 34–50 | Mercedes #2 | RB #2 | ... |
 
 Ogni sessione i valori sono diversi → il giocatore vede un ordine di uscita sempre nuovo.
 
@@ -150,8 +145,8 @@ SessionBridge.tick(sim_dt)
 | Input programma AI (§3.1) | ✅ | `AIDriverEngine.start_session()` genera `SessionPlan` |
 | Cooldown tra run (§3.2) | ⬜ | Solo `pit_work_duration_s` base |
 | Tyre inventory (§3.3) | ✅ | Allocazione per team, consumo set |
-| **Team Session Plan (§3.4)** | ⬜ | **Da implementare** — scheduling fisso ogni 30s |
-| **Staggered exit (§3.5)** | 🟡 | Stagger per indice (3+5×i), non randomico per squadra |
+| **Team Session Plan (§3.4)** | ✅ | Scheduling batch randomizzato (blocchi da 8, jitter intra-team) |
+| **Staggered exit (§3.5)** | ✅ | Random batches + teammate offset + anti-collision 5–8s |
 | Run log (§4.1) | ✅ | `PracticeRunRecord` nel PSO |
 | Export API (§4.2) | ⬜ | |
 | SetupEngine integration (§5.1) | ⬜ | |

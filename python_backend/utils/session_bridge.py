@@ -97,18 +97,12 @@ class CarTrackState:
 # Team Session Plan (spec: practice-session-orchestrator.md §3.4)
 # ---------------------------------------------------------------------------
 
-# Exit window ranges by tier (min_s, max_s)
-_EXIT_WINDOW_BY_TIER = {
-    "top":        (30, 180),
-    "midfield":   (60, 240),
-    "backmarker": (90, 300),
-}
-
-# Inter-run gap range (seconds between end of run N and start of run N+1)
-_INTER_RUN_GAP_RANGE = (120, 360)
-
-# Intra-team gap between the two pilots (seconds)
-_INTRA_TEAM_GAP_RANGE = (5, 20)
+# Batch scheduling constants (no tier differentiation)
+_FIRST_EXIT_WINDOW = (10, 60)         # all cars: first run within 10-60s
+_BATCH_STAGGER_S = 8.0                # seconds between consecutive batches
+_TEAMMATE_OFFSET = (3, 8)             # offset between teammates in same batch
+_INTER_RUN_GAP_RANGE = (75, 150)      # gap between consecutive runs (same car)
+_BATCH_SIZE = 8                       # cars per batch (matches MAX_PITLANE_SLOTS)
 
 
 @dataclass
@@ -124,9 +118,6 @@ class TeamSessionPlan:
     """Randomized work plan for one AI team in a session."""
     team_id: str
     tier: str
-    first_exit_window_s: float
-    inter_run_gap_s: float
-    pilot_order: list = field(default_factory=list)  # car_ids, randomized
     scheduled_runs: list = field(default_factory=list)  # List[ScheduledRun]
 
 
@@ -135,42 +126,71 @@ def _build_team_plans(
     teams_cars: Dict[str, List[str]],
 ) -> Dict[str, TeamSessionPlan]:
     """
-    Generate a randomized TeamSessionPlan for each AI team.
-    Called once at init_session.
+    Generate randomized batch-based scheduling for all AI cars.
+
+    All cars are shuffled into random batches of _BATCH_SIZE.
+    Each batch gets a staggered start time within _FIRST_EXIT_WINDOW.
+    Teammates within the same batch get a small offset (_TEAMMATE_OFFSET).
+    Subsequent runs are scheduled based on estimated run duration + inter-run gap.
     """
+    # Collect all car_ids with their team
+    all_cars: List[tuple] = []  # (car_id, team_name)
+    for team_name, car_ids in teams_cars.items():
+        for cid in car_ids:
+            if cid in ai_engines:
+                all_cars.append((cid, team_name))
+
+    # Shuffle all cars randomly
+    random.shuffle(all_cars)
+
+    # Split into batches of _BATCH_SIZE
+    batches: List[List[tuple]] = []
+    for i in range(0, len(all_cars), _BATCH_SIZE):
+        batches.append(all_cars[i:i + _BATCH_SIZE])
+
+    # Assign first-run start times per batch
+    # Each batch starts at a base time, cars within batch get small jitter
+    per_car_first_start: Dict[str, float] = {}
+    seen_teams_in_batch: Dict[int, Dict[str, str]] = {}  # batch_idx → {team → first_car_id}
+
+    for batch_idx, batch in enumerate(batches):
+        batch_base = random.uniform(*_FIRST_EXIT_WINDOW) + batch_idx * _BATCH_STAGGER_S
+        for slot_idx, (car_id, team_name) in enumerate(batch):
+            jitter = random.uniform(0, 3.0)
+            start = batch_base + slot_idx * 3.0 + jitter
+
+            # If teammate already in this batch, add offset
+            if batch_idx not in seen_teams_in_batch:
+                seen_teams_in_batch[batch_idx] = {}
+            if team_name in seen_teams_in_batch[batch_idx]:
+                start += random.uniform(*_TEAMMATE_OFFSET)
+            seen_teams_in_batch[batch_idx][team_name] = car_id
+
+            per_car_first_start[car_id] = max(10.0, start)
+
+    # Build per-team plans with all scheduled runs
     plans: Dict[str, TeamSessionPlan] = {}
 
     for team_name, car_ids in teams_cars.items():
         tier = _get_team_tier(team_name)
-        lo, hi = _EXIT_WINDOW_BY_TIER.get(tier, (60, 240))
-        first_exit = random.uniform(lo, hi)
-        inter_gap = random.uniform(*_INTER_RUN_GAP_RANGE)
-
-        # Randomize pilot order
-        pilot_order = list(car_ids)
-        random.shuffle(pilot_order)
-
-        # Build scheduled runs for each pilot
         scheduled: List[ScheduledRun] = []
-        for pilot_idx, car_id in enumerate(pilot_order):
+
+        for car_id in car_ids:
             engine = ai_engines.get(car_id)
             if engine is None:
                 continue
             n_runs = len(engine.session_plan.runs)
-            intra_gap = random.uniform(*_INTRA_TEAM_GAP_RANGE)
+            inter_gap = random.uniform(*_INTER_RUN_GAP_RANGE)
 
             for run_idx in range(n_runs):
                 if run_idx == 0:
-                    # First run: team exit window + intra-team gap for 2nd pilot
-                    start_s = first_exit + pilot_idx * intra_gap
+                    start_s = per_car_first_start.get(car_id, 30.0)
                 else:
-                    # Subsequent runs: estimate previous run duration + inter-run gap
                     prev_run = engine.session_plan.runs[run_idx - 1]
                     est_run_duration = prev_run.laps_planned * 100.0 + 30.0
-                    # Find this pilot's last scheduled run
                     pilot_runs = [r for r in scheduled if r.car_id == car_id]
-                    prev_start = pilot_runs[-1].planned_start_s if pilot_runs else first_exit
-                    start_s = prev_start + est_run_duration + inter_gap + random.uniform(-20, 20)
+                    prev_start = pilot_runs[-1].planned_start_s if pilot_runs else 30.0
+                    start_s = prev_start + est_run_duration + inter_gap + random.uniform(-15, 15)
 
                 scheduled.append(ScheduledRun(
                     car_id=car_id,
@@ -188,9 +208,6 @@ def _build_team_plans(
         plans[team_name] = TeamSessionPlan(
             team_id=team_name,
             tier=tier,
-            first_exit_window_s=first_exit,
-            inter_run_gap_s=inter_gap,
-            pilot_order=pilot_order,
             scheduled_runs=scheduled,
         )
 

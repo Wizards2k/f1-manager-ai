@@ -136,14 +136,6 @@ def plan_session(
     if session_type == SessionType.FP3 and setup_converged and len(programs) > 1:
         programs = [programs[0]]  # just quali sim
 
-    # Top teams get an extra run
-    if team_config.budget_tier == "top" and len(programs) < team_config.max_runs_per_session:
-        if session_type == SessionType.FP1:
-            programs.append(RunProgram.TYRE_DEG)
-        elif session_type == SessionType.FP2:
-            # Already has 3 runs
-            pass
-
     runs: List[RunPlan] = []
     for i, prog in enumerate(programs):
         run = _create_run_plan(prog, session_type, i + 1)

@@ -36,10 +36,11 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 SESSION_DURATION_S = 3600             # 60 minutes
-PITLANE_COOLDOWN_S = 120             # min time between runs with changes
+PITLANE_COOLDOWN_S = 45              # min time between runs (tyre change + minor setup)
 PITLANE_QUEUE_DELAY_S = 7            # avg delay per queued car
-MAX_PITLANE_SLOTS = 4                # max cars exiting simultaneously
-PITLANE_TRAVEL_S = 25                # time to traverse pitlane (in + out)
+MAX_PITLANE_SLOTS = 8                # max cars exiting simultaneously
+PITLANE_TRAVEL_S = 20                # time to traverse pitlane (in + out)
+MIN_PIT_EXIT_GAP_S = 5.0             # enforce at least 5s between pit releases
 
 
 # ---------------------------------------------------------------------------
@@ -279,6 +280,7 @@ class PitlaneQueue:
         self.queue: List[PitlaneRequest] = []
         self.active_exits: List[PitlaneRequest] = []
         self.next_slot_time: Dict[str, float] = {}  # car_id → earliest next exit
+        self._last_release_time: float = 0.0
 
     def request_exit(
         self,
@@ -319,9 +321,15 @@ class PitlaneQueue:
         remaining: List[PitlaneRequest] = []
 
         for req in self.queue:
-            if req.release_at_s <= current_time_s and len(self.active_exits) < MAX_PITLANE_SLOTS:
+            can_release = (
+                req.release_at_s <= current_time_s
+                and len(self.active_exits) < MAX_PITLANE_SLOTS
+                and (current_time_s - self._last_release_time) >= MIN_PIT_EXIT_GAP_S
+            )
+            if can_release:
                 released.append(req)
                 self.active_exits.append(req)
+                self._last_release_time = current_time_s
             else:
                 remaining.append(req)
 
