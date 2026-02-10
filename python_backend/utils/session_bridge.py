@@ -723,10 +723,27 @@ class SessionBridge:
         fuel_percent: int = 100, stint_laps: int = 5,
     ) -> bool:
         if not self.active or self.pso is None:
+            logger.warning("player_send_out: bridge not active or no PSO")
             return False
 
         car_id = str(car.driver_number)
-        if not self.pso.car_can_run(car_id):
+        css = self.pso.cars.get(car_id)
+        if css is None:
+            logger.warning("player_send_out: car %s not registered in PSO", car_id)
+            return False
+
+        # Relaxed check for player: allow during YELLOW, only block on RED
+        if css.phase not in (CarPhase.IN_GARAGE,):
+            logger.warning(
+                "player_send_out: car %s phase=%s (need IN_GARAGE)",
+                car_id, css.phase,
+            )
+            return False
+        if self.pso.clock.is_finished:
+            logger.warning("player_send_out: session finished")
+            return False
+        if self.pso.clock.flag == SessionFlag.RED:
+            logger.warning("player_send_out: RED flag active")
             return False
 
         sim_compound = game_compound_to_sim(compound)
@@ -737,6 +754,11 @@ class SessionBridge:
             compound=sim_compound, fuel_kg=fuel_kg, laps_planned=stint_laps,
         )
         if record is None:
+            logger.warning(
+                "player_send_out: PSO request_run returned None for %s "
+                "(compound=%s, fuel=%.0f, laps=%d)",
+                car_id, sim_compound, fuel_kg, stint_laps,
+            )
             return False
 
         entry = racecar_to_car_entry(car)
@@ -995,42 +1017,24 @@ class SessionBridge:
             )
 
             # ── Apply outcomes ──
+            # Overtakes: NO distance manipulation — let the faster car
+            # naturally overtake over subsequent ticks (visual overlap is OK).
+            # Only BLOCKED and COLLISION have physical effects.
             for pair in result.pairs:
                 if pair.outcome == BattleOutcome.OVERTAKE_SUCCESS:
-                    # Nudge attacker just ahead of defender (no full swap)
-                    ts_att = self._track_states.get(pair.attacker_id)
-                    ts_def = self._track_states.get(pair.defender_id)
-                    rc_att = self.race_cars_map.get(pair.attacker_id)
-                    rc_def = self.race_cars_map.get(pair.defender_id)
-                    if ts_att and ts_def and rc_att and rc_def:
-                        def_dist = ts_def.distance_in_lap
-                        # Place attacker just ahead of defender
-                        new_att_dist = def_dist + MIN_CAR_GAP_M
-                        if new_att_dist > circuit_m:
-                            new_att_dist -= circuit_m
-                        delta_att = new_att_dist - ts_att.distance_in_lap
-                        ts_att.distance_in_lap = new_att_dist
-                        rc_att.distance_traveled += delta_att
-                        # Slow defender slightly
-                        ts_def.distance_in_lap = max(0, def_dist - 2.0)
-                        rc_def.distance_traveled = max(0, rc_def.distance_traveled - 2.0)
-                        # Protect both from _enforce_min_gap this tick
-                        self._battle_cooldown.add(pair.attacker_id)
-                        self._battle_cooldown.add(pair.defender_id)
+                    # Event-only: the attacker is already faster and will
+                    # pass the defender naturally in the next ticks.
+                    self._battle_cooldown.add(pair.attacker_id)
+                    self._battle_cooldown.add(pair.defender_id)
 
                 elif pair.outcome == BattleOutcome.BLOCKED:
-                    # Slow the attacker slightly
+                    # Small time penalty: attacker loses ~1m
                     ts_att = self._track_states.get(pair.attacker_id)
-                    if ts_att:
-                        ts_att.distance_in_lap = max(
-                            0, ts_att.distance_in_lap - 2.0
-                        )
-                        rc_att = self.race_cars_map.get(pair.attacker_id)
-                        if rc_att:
-                            rc_att.distance_traveled = max(
-                                0, rc_att.distance_traveled - 2.0
-                            )
-                        self._battle_cooldown.add(pair.attacker_id)
+                    rc_att = self.race_cars_map.get(pair.attacker_id)
+                    if ts_att and rc_att:
+                        ts_att.distance_in_lap = max(0, ts_att.distance_in_lap - 1.0)
+                        rc_att.distance_traveled = max(0, rc_att.distance_traveled - 1.0)
+                    self._battle_cooldown.add(pair.attacker_id)
 
                 elif pair.outcome == BattleOutcome.COLLISION:
                     # Trigger yellow flag (red for severe — future: check damage)

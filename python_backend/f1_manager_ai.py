@@ -122,7 +122,7 @@ def race_simulation():
             'cars': cars_data,
             'session_time_remaining': session_remaining,
             'session_time_formatted': format_session_time(session_remaining),
-            'game_speed': get_game_speed(),
+            'game_speed': {1.0: 1, 5.0: 2, 15.0: 4, 30.0: 6}.get(get_game_speed(), get_game_speed()),
             'is_paused': current_pause_state,
             'session_bests': get_session_bests(),
             'session_flag': session_flag,
