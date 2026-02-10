@@ -25,6 +25,16 @@ from .update_section import update_section
 
 logger = logging.getLogger(__name__)
 
+# Lazy import to avoid circular dependency
+_BattleResolver = None
+
+def _get_battle_resolver_class():
+    global _BattleResolver
+    if _BattleResolver is None:
+        from .battle_resolver import BattleResolver as BR
+        _BattleResolver = BR
+    return _BattleResolver
+
 
 # ---------------------------------------------------------------------------
 # Car entry – bundles immutable config with mutable state
@@ -53,6 +63,7 @@ class LapResult:
     sector_times_s: List[float] = field(default_factory=list)
     section_results: List[SectionResult] = field(default_factory=list)
     events: List[SectionEvent] = field(default_factory=list)
+    battle_events: list = field(default_factory=list)  # BattleEvent list
     # final state snapshot
     fuel_kg: float = 0.0
     ers_energy_mj: float = 0.0
@@ -77,10 +88,15 @@ class LapSimulator:
     ```
     """
 
-    def __init__(self, config: CircuitConfig, env: EnvContext):
+    def __init__(self, config: CircuitConfig, env: EnvContext, enable_battles: bool = False):
         self.config = config
         self.env = env
         self.cars: Dict[str, CarEntry] = {}
+        self.battle_resolver = None
+        self._dirty_air_cache: Dict[str, float] = {}
+        if enable_battles:
+            BR = _get_battle_resolver_class()
+            self.battle_resolver = BR()
 
     # ------------------------------------------------------------------
     # Registration
@@ -102,10 +118,9 @@ class LapSimulator:
         Compute dirty-air penalty based on proximity to car ahead.
 
         For single-car simulation this returns 0.
-        Multi-car: based on gap to car ahead in same section.
+        Multi-car: uses dirty_air_cache populated by BattleResolver.
         """
-        # TODO: implement multi-car proximity logic
-        return 0.0
+        return self._dirty_air_cache.get(car_id, 0.0)
 
     def _compute_traffic_constraint(self, car_id: str) -> float:
         """
@@ -210,11 +225,154 @@ class LapSimulator:
         """
         Run one lap for all registered cars.
 
+        If battle_resolver is enabled and >1 car, runs multi-car mode
+        with per-section battle resolution. Otherwise single-car mode.
+
         Returns a dict of car_id → LapResult.
         """
+        if self.battle_resolver and len(self.cars) > 1:
+            return self._run_lap_multi()
         results: Dict[str, LapResult] = {}
         for car_id, entry in self.cars.items():
             results[car_id] = self._run_lap_single(entry)
+        return results
+
+    def _run_lap_multi(self) -> Dict[str, LapResult]:
+        """
+        Run one lap for all cars with BattleResolver per section.
+
+        Each section: physics for all cars → BattleResolver → apply outcomes.
+        """
+        from .battle_resolver import BattleEvent
+
+        # Init per-car accumulators
+        car_section_results: Dict[str, List[SectionResult]] = {cid: [] for cid in self.cars}
+        car_events: Dict[str, List[SectionEvent]] = {cid: [] for cid in self.cars}
+        car_battle_events: Dict[str, list] = {cid: [] for cid in self.cars}
+
+        # Reset lap state
+        for entry in self.cars.values():
+            entry.state.lap_time_acc_s = 0.0
+            entry.state.current_section_idx = 0
+
+        # Sector tracking per car
+        sector_data: Dict[str, dict] = {
+            cid: {"times": [], "start": 0.0, "idx": 0, "dist": 0.0}
+            for cid in self.cars
+        }
+
+        sections = self.config.sections
+        if not sections:
+            return {
+                cid: LapResult(car_id=cid, lap_number=entry.state.lap_number)
+                for cid, entry in self.cars.items()
+            }
+
+        # Ordering: sorted by lap_time_acc (fastest = leader)
+        ordering = list(self.cars.keys())
+
+        for i, section in enumerate(sections):
+            section_results: Dict[str, SectionResult] = {}
+
+            # Phase 1: physics for each car
+            for car_id in ordering:
+                entry = self.cars[car_id]
+                entry.state.current_section_idx = i
+
+                airflow = self._compute_airflow_penalty(car_id)
+                traffic = self._compute_traffic_constraint(car_id)
+
+                result = update_section(
+                    car_state=entry.state,
+                    aero_setup=entry.aero_setup,
+                    driver_skills=entry.driver_skills,
+                    section=section,
+                    env=self.env,
+                    config=self.config,
+                    push_level=entry.push_level,
+                    airflow_penalty=airflow,
+                    traffic_v_max_kph=traffic,
+                )
+                section_results[car_id] = result
+                car_section_results[car_id].append(result)
+                car_events[car_id].extend(result.events)
+
+            # Phase 2: BattleResolver
+            # Build cars_in_section sorted by position (leader first)
+            # Gap = difference in lap_time_acc converted to distance
+            times = [(cid, self.cars[cid].state.lap_time_acc_s) for cid in ordering]
+            times.sort(key=lambda x: x[1])  # fastest first = leader
+
+            cars_in_section = []
+            for j, (cid, t) in enumerate(times):
+                if j == 0:
+                    gap_m = 0.0
+                else:
+                    dt = t - times[j - 1][1]
+                    v_avg = section_results[cid].v_effective_kph / 3.6
+                    gap_m = max(dt * v_avg, 0.0)
+                v_eff = section_results[cid].v_effective_kph
+                cars_in_section.append((cid, gap_m, v_eff))
+
+            battle_result = self.battle_resolver.resolve_section(
+                cars_in_section, section, self.cars, section_results
+            )
+
+            # Apply dirty air for next section
+            self._dirty_air_cache = battle_result.dirty_air_penalties
+
+            # Collect battle events per car
+            for evt in battle_result.events:
+                car_battle_events.setdefault(evt.attacker_id, []).append(evt)
+                car_battle_events.setdefault(evt.defender_id, []).append(evt)
+
+            # Apply ordering changes
+            for attacker, defender in battle_result.ordering_changes:
+                if attacker in ordering and defender in ordering:
+                    ai = ordering.index(attacker)
+                    di = ordering.index(defender)
+                    if ai > di:  # attacker was behind, now ahead
+                        ordering[ai], ordering[di] = ordering[di], ordering[ai]
+
+            # Sector tracking
+            for cid, entry in self.cars.items():
+                sd = sector_data[cid]
+                sd["dist"] += section.length_m
+                if (sd["idx"] < len(self.config.sector_markers_m) - 1
+                        and sd["dist"] >= self.config.sector_markers_m[sd["idx"] + 1]):
+                    sector_time = entry.state.lap_time_acc_s - sd["start"]
+                    sd["times"].append(sector_time)
+                    sd["start"] = entry.state.lap_time_acc_s
+                    sd["idx"] += 1
+
+        # Build results
+        results: Dict[str, LapResult] = {}
+        for cid, entry in self.cars.items():
+            state = entry.state
+            sd = sector_data[cid]
+            sd["times"].append(state.lap_time_acc_s - sd["start"])
+
+            tyre_wears = [t.wear_pct for t in state.tyres.values()]
+            tyre_temps = [t.surface_temp_c for t in state.tyres.values()]
+
+            for t in state.tyres.values():
+                t.lap_age += 1
+
+            results[cid] = LapResult(
+                car_id=cid,
+                lap_number=state.lap_number,
+                lap_time_s=state.lap_time_acc_s,
+                sector_times_s=sd["times"],
+                section_results=car_section_results[cid],
+                events=car_events[cid],
+                battle_events=car_battle_events.get(cid, []),
+                fuel_kg=state.pu.fuel_kg,
+                ers_energy_mj=state.pu.ers_energy_mj,
+                avg_tyre_wear_pct=sum(tyre_wears) / max(len(tyre_wears), 1),
+                avg_tyre_temp_surface_c=sum(tyre_temps) / max(len(tyre_temps), 1),
+            )
+            state.lap_number += 1
+
         return results
 
     def run_laps(self, n_laps: int) -> Dict[str, List[LapResult]]:

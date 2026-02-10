@@ -147,7 +147,21 @@ JSON config aggiornato per tutti gli 8 compound (C1-C6 + Inter + Wet).
 
 ---
 
+## ✅ Completato: BattleResolver 2.0
+
+Modulo `battle_resolver.py` (29 test, 152/152 totali):
+
+- **Tipi**: BattleOutcome (6 stati), ScenarioTag (7 scenari), BattlePair, BattleEvent, BattleResult
+- **Proximity detection**: soglie per scenario (straight 60m, braking 25m, corner 10m, exit 20m)
+- **Dirty air**: penalty lineare con distanza (max 0.15), peggiore in curva (×1.5), minima su rettilineo (×0.3)
+- **Scenario tagging**: straight, heavy_braking, corner, corner_exit, start_restart, blue_flag, team_order
+- **Attack chance**: delta-v + grip advantage + DRS + driver skill + overtake_window - dirty_air, modulato per scenario
+- **Resolution**: overtake (chance ≥0.65), side-by-side (≥0.4), blocked (<0.4), collision (risk da aggression)
+- **Radio messages**: per scenario × outcome (attacker + defender)
+- **LapSimulator integration**: `enable_battles=True` → `_run_lap_multi()` con per-section battle resolution, dirty air cache, ordering changes
+
+---
+
 ## Prossimi passi
 
-1. **⚡ BattleResolver 2.0** — logica sorpassi/difesa basata su overtake_window + driver skills
-2. Practice Session Orchestrator — scheduling sessione, queue pitlane, run data
+1. **⚡ Practice Session Orchestrator** — scheduling sessione, queue pitlane, tyre inventory, run data

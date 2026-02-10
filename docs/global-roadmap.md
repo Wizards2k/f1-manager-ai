@@ -59,8 +59,9 @@ Portare il gioco a una release pubblica in cui:
    > **Copertura `degradation-and-consumption.md`**: §5.1 Tyres ✅, §5.2 Brakes ✅, §5.3 Fuel ✅, §5.4 PU ✅, §5.5 Damage 🟡 (struttura presente, dettagli da completare).
    > ✅ **AI Driver Engine** implementato: setup seed, session planning (FP1/2/3), run config, post-run analysis con refinement loop, 20 test. Spec: `docs/ai-driver-engine-spec.md`.
    > ✅ **TyreModel v2** completato: compound C1-C6+Inter+Wet con degradation_rate_multiplier, slip_sensitivity, heat-cycle penalty, graining/blistering temporali. 9 nuovi test (123/123 totali).
-   > **Step successivi:** (1) BattleResolver 2.0 → (2) Practice Session Orchestrator.
-2. **BattleResolver 2.0**: codice allineato alla nuova spec (cooldown, side-by-side, metriche HUD/telemetria).
+   > ✅ **BattleResolver 2.0** completato: proximity detection, dirty air, 7 scenari, attack/blocked/side-by-side/collision, radio messages, LapSimulator multi-car. 29 test (152/152 totali).
+   > **Step successivi:** (1) Practice Session Orchestrator.
+2. ✅ **BattleResolver 2.0**: proximity detection, dirty air, scenario tagging (7 scenari), attack chance, resolve pair (overtake/blocked/side-by-side/collision), radio messages, integrazione LapSimulator multi-car (`_run_lap_multi`). 29 test, 152/152 totali.
 3. **Practice Session Orchestrator**: scheduling tempo sessione, queue pitlane, gestione run e persistenza run data/log.
 4. ✅ **TyreModel v2**: compound C1-C6+Inter+Wet, degradation_rate_multiplier, slip_sensitivity, heat-cycle penalty, graining/blistering temporali. 123/123 test.
 
