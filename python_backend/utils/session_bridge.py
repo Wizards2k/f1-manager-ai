@@ -90,6 +90,8 @@ class CarTrackState:
     lap_phase: str = LapPhase.OUT_LAP       # current lap type
     pit_exit_delay_s: float = 0.0           # stagger delay before going on track
     pit_exit_waited_s: float = 0.0          # time waited so far
+    current_sector: int = 0                 # 0=S1, 1=S2, 2=S3
+    sector_dt_acc: float = 0.0             # accumulated dt_s in current sector
 
 
 # ---------------------------------------------------------------------------
@@ -207,6 +209,22 @@ class SessionBridge:
                     engine.start_session(st)
                     self.ai_engines[car_id] = engine
 
+        # Precompute section cumulative distances for fast lookup
+        self._section_end_m: List[float] = []
+        cum = 0.0
+        for s in self.sections:
+            cum += s.length_m
+            self._section_end_m.append(cum)
+
+        # Precompute sector boundaries from sector_markers_m
+        # sector_markers_m = [0, S1_end_m, S2_end_m] → S3 ends at circuit_length
+        markers = self.circuit_config.sector_markers_m
+        if len(markers) >= 2:
+            self._sector_end_m = [markers[1], markers[2] if len(markers) > 2 else self.circuit_config.circuit_length_m, self.circuit_config.circuit_length_m]
+        else:
+            third = self.circuit_config.circuit_length_m / 3.0
+            self._sector_end_m = [third, third * 2, self.circuit_config.circuit_length_m]
+
         self.pso.start_session()
         self.active = True
         self._accumulated_time_s = 0.0
@@ -311,9 +329,7 @@ class SessionBridge:
             fraction = min(ts.section_time_acc / effective_dt_ref, 1.0)
 
             dist_in_section = fraction * section.length_m
-            section_start_m = sum(
-                s.length_m for s in self.sections[:ts.current_section_idx]
-            )
+            section_start_m = self._section_end_m[ts.current_section_idx] - section.length_m if ts.current_section_idx < len(self._section_end_m) else 0
             ts.distance_in_lap = section_start_m + dist_in_section
 
             # Speed interpolation (v_entry → v_exit) scaled by phase
@@ -347,7 +363,33 @@ class SessionBridge:
                     logger.error("update_section error for %s: %s", car_id, e)
                     result = SectionResult(dt_s=dt_ref, v_exit_kph=speed_kph)
 
+                # Apply out lap / in lap penalty to the recorded dt_s
+                from dataclasses import replace as _dc_replace
+                if ts.lap_phase == LapPhase.OUT_LAP:
+                    result = _dc_replace(result, dt_s=result.dt_s / OUT_LAP_SPEED_FACTOR)
+                elif ts.lap_phase == LapPhase.IN_LAP:
+                    result = _dc_replace(result, dt_s=result.dt_s / IN_LAP_SPEED_FACTOR)
+
                 ts.lap_section_results.append(result)
+
+                # Track sector time accumulation
+                ts.sector_dt_acc += result.dt_s
+
+                # Check sector crossing
+                section_end_m = self._section_end_m[ts.current_section_idx] if ts.current_section_idx < len(self._section_end_m) else 0
+                if ts.current_sector < len(self._sector_end_m) and section_end_m >= self._sector_end_m[ts.current_sector]:
+                    sector_key = f"sector{ts.current_sector + 1}"
+                    sector_time = ts.sector_dt_acc
+                    if not hasattr(race_car, 'current_lap_sectors') or race_car.current_lap_sectors is None:
+                        race_car.current_lap_sectors = {}
+                    race_car.current_lap_sectors[sector_key] = sector_time
+                    # Update personal best sectors live (only during HOT_LAP)
+                    if ts.lap_phase == LapPhase.HOT_LAP:
+                        best = race_car.best_sectors.get(sector_key)
+                        if best is None or sector_time < best:
+                            race_car.best_sectors[sector_key] = sector_time
+                    ts.current_sector += 1
+                    ts.sector_dt_acc = 0.0
 
                 # Update RaceCar with section data
                 self._apply_section_to_racecar(race_car, entry, result)
@@ -363,6 +405,11 @@ class SessionBridge:
                     ts.current_section_idx = 0
                     entry.state.current_section_idx = 0
                     ts.section_time_acc = 0.0
+
+                    # Reset sector tracking for next lap
+                    ts.current_sector = 0
+                    ts.sector_dt_acc = 0.0
+                    race_car.current_lap_sectors = {}
 
                     # Update lap phase for next lap
                     if ts.laps_done_in_run >= ts.laps_planned:
@@ -396,31 +443,48 @@ class SessionBridge:
         race_car.tire_age += 1
         race_car.stint_laps_remaining = max(0, race_car.stint_laps_remaining - 1)
 
-        # Best lap
-        if not hasattr(race_car, "best_lap_time") or lap_time < getattr(race_car, "best_lap_time", float("inf")):
-            race_car.best_lap_time = lap_time
+        is_competitive = (ts.lap_phase == LapPhase.HOT_LAP)
 
-        # Sector times (split section results by sector markers)
-        sector_times = self._compute_sector_times(ts.lap_section_results)
-        if len(sector_times) >= 3:
-            race_car.current_lap_sectors = {
-                "sector1": sector_times[0],
-                "sector2": sector_times[1],
-                "sector3": sector_times[2],
-            }
-            race_car.last_sector_times = dict(race_car.current_lap_sectors)
-            for key, val in race_car.current_lap_sectors.items():
-                best = race_car.best_sectors.get(key)
-                if best is None or val < best:
-                    race_car.best_sectors[key] = val
-            if lap_time <= getattr(race_car, "best_lap_time", float("inf")):
-                race_car.best_lap_sectors = dict(race_car.current_lap_sectors)
+        # Best lap (only competitive laps)
+        if is_competitive:
+            if not hasattr(race_car, "best_lap_time") or lap_time < getattr(race_car, "best_lap_time", float("inf")):
+                race_car.best_lap_time = lap_time
 
-        race_car.last_lap_type = GameCarState.HOT_LAP
+        # Flush remaining sector time (S3 ends at finish line, not at a sector marker)
+        if ts.sector_dt_acc > 0 and ts.current_sector < 3:
+            sector_key = f"sector{ts.current_sector + 1}"
+            if not hasattr(race_car, 'current_lap_sectors') or race_car.current_lap_sectors is None:
+                race_car.current_lap_sectors = {}
+            race_car.current_lap_sectors[sector_key] = ts.sector_dt_acc
+            if is_competitive:
+                best = race_car.best_sectors.get(sector_key)
+                if best is None or ts.sector_dt_acc < best:
+                    race_car.best_sectors[sector_key] = ts.sector_dt_acc
+
+        # Use live-tracked sector times
+        sectors = getattr(race_car, 'current_lap_sectors', {}) or {}
+        if sectors:
+            race_car.last_sector_times = dict(sectors)
+            if is_competitive:
+                for key, val in sectors.items():
+                    best = race_car.best_sectors.get(key)
+                    if best is None or val < best:
+                        race_car.best_sectors[key] = val
+                if lap_time <= getattr(race_car, "best_lap_time", float("inf")):
+                    race_car.best_lap_sectors = dict(sectors)
+
+        # Set last_lap_type to actual phase
+        phase_to_state = {
+            LapPhase.OUT_LAP: GameCarState.OUT_LAP,
+            LapPhase.HOT_LAP: GameCarState.HOT_LAP,
+            LapPhase.IN_LAP: GameCarState.IN_LAP,
+        }
+        race_car.last_lap_type = phase_to_state.get(ts.lap_phase, GameCarState.HOT_LAP)
         race_car.distance_traveled = 0
 
-        # Update session bests (for timing panel colors)
-        update_session_bests(race_car)
+        # Update session bests (only competitive laps)
+        if is_competitive:
+            update_session_bests(race_car)
 
         # Reset section results for next lap
         ts.lap_section_results = []
