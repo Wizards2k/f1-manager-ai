@@ -541,6 +541,9 @@ class SessionBridge:
                         best = race_car.best_sectors.get(sector_key)
                         if best is None or sector_time < best:
                             race_car.best_sectors[sector_key] = sector_time
+                        # Update session bests immediately so frontend can show purple/green
+                        from utils.game_logic import update_session_bests
+                        update_session_bests(race_car)
                     ts.current_sector += 1
                     ts.sector_dt_acc = 0.0
 
@@ -881,6 +884,12 @@ class SessionBridge:
         ts = self._track_states.pop(car_id, None)
         if ts is None:
             return
+
+        # Clear blue flag when car returns to box
+        if self.pso:
+            css = self.pso.cars.get(car_id)
+            if css and css.blue_flag:
+                self.pso.set_blue_flag(car_id, False)
 
         race_car = self.race_cars_map.get(car_id)
         laps_done = ts.laps_done_in_run

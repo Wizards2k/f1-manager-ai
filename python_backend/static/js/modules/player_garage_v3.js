@@ -890,6 +890,8 @@ export class PlayerGarageV3 {
                 this.setStatus('Car already on track. Box first to change tyres/fuel.', 'error');
                 return;
             }
+            // Disable button immediately to prevent double-press
+            actionBtn.disabled = true;
             const payload = this.collectCardPayload(card);
             console.log('[GarageV3] Sending config:', payload);
             this.sendPlayerConfig(driverNumber, payload, state).then(configured => {
@@ -899,6 +901,8 @@ export class PlayerGarageV3 {
                     this.sendPlayerCarOut(driverNumber).then(result => {
                         console.log('[GarageV3] Send out result:', result);
                     });
+                } else {
+                    actionBtn.disabled = false; // Re-enable on config failure
                 }
             });
         } else if (action === 'box') {
