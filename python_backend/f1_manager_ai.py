@@ -5,8 +5,15 @@ from flask_socketio import SocketIO, emit
 import time
 import logging
 
-# Configura logging per vedere INFO
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+# Configura logging: console + file
+import os
+_log_dir = os.path.join(os.path.dirname(__file__), 'logs')
+os.makedirs(_log_dir, exist_ok=True)
+_log_fmt = '%(asctime)s [%(levelname)s] %(message)s'
+logging.basicConfig(level=logging.INFO, format=_log_fmt, handlers=[
+    logging.StreamHandler(),
+    logging.FileHandler(os.path.join(_log_dir, 'server.log'), mode='w', encoding='utf-8'),
+])
 
 # Importa moduli specializzati
 from config import SECRET_KEY, SOCKETIO_CORS_ORIGINS

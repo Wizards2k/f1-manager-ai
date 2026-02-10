@@ -383,6 +383,7 @@ class SessionBridge:
     def _commit_lap(self, car_id: str, ts: CarTrackState, race_car) -> None:
         """Commit a completed lap: update RaceCar with lap time, sectors, etc."""
         from models import CarState as GameCarState
+        from utils.game_logic import update_session_bests
 
         lap_time = sum(r.dt_s for r in ts.lap_section_results)
         ts.laps_done_in_run += 1
@@ -417,6 +418,9 @@ class SessionBridge:
 
         race_car.last_lap_type = GameCarState.HOT_LAP
         race_car.distance_traveled = 0
+
+        # Update session bests (for timing panel colors)
+        update_session_bests(race_car)
 
         # Reset section results for next lap
         ts.lap_section_results = []
