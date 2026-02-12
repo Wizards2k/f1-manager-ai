@@ -68,6 +68,8 @@ OUT_LAP_SPEED_FACTOR = 0.65     # out lap ~65% of reference speed
 IN_LAP_SPEED_FACTOR = 0.70      # in lap ~70% of reference speed
 SLOW_LAP_SPEED_FACTOR = 0.75    # slow/cooldown lap
 MIN_CAR_GAP_M = 40.0            # minimum gap between cars on track (metres)
+BLUE_FLAG_CLEAR_TICKS = 5
+BLUE_FLAG_PROXIMITY_THRESHOLD_M = 250.0
 
 
 # ---------------------------------------------------------------------------
@@ -1025,19 +1027,36 @@ class SessionBridge:
 
         # ── Detect lapped cars (blue flag candidates) ──
         blue_flag_car_ids: List[str] = []
-        lap_counts = {}
+        on_track_ids: set[str] = set()
+        on_track_progress: List[Tuple[str, CarTrackState, float]] = []
+
         for car_id, ts in self._track_states.items():
-            lap_counts[car_id] = ts.lap_number
+            css = self.pso.cars.get(car_id) if self.pso else None
+            if css and css.phase == CarPhase.ON_TRACK:
+                total_progress = ts.lap_number * circuit_m + ts.distance_in_lap
+                on_track_ids.add(car_id)
+                on_track_progress.append((car_id, ts, total_progress))
+            elif css and css.blue_flag:
+                # Ensure any off-track car has blue flag cleared immediately
+                self.pso.set_blue_flag(car_id, False)
 
-        if lap_counts:
-            max_laps = max(lap_counts.values())
-            for car_id, laps in lap_counts.items():
-                if max_laps - laps >= 1:
+        # Player/AI receives blue flag only if a faster car (lap diff >= 1)
+        # is within the physical proximity threshold in front of them.
+        for car_id, ts, progress in on_track_progress:
+            for other_id, other_ts, other_progress in on_track_progress:
+                if other_id == car_id:
+                    continue
+                lap_diff = other_ts.lap_number - ts.lap_number
+                if lap_diff < 1:
+                    continue
+                gap = (other_progress - progress) % circuit_m
+                if 0 < gap <= BLUE_FLAG_PROXIMITY_THRESHOLD_M:
                     blue_flag_car_ids.append(car_id)
+                    break
 
-        # Update PSO blue flags
+        # Update PSO blue flags (only cars currently on track can receive blue flags)
         if self.pso:
-            for car_id in self._track_states:
+            for car_id in on_track_ids:
                 is_blue = car_id in blue_flag_car_ids
                 css = self.pso.cars.get(car_id)
                 if css and css.blue_flag != is_blue:
