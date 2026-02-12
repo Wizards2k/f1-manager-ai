@@ -1,10 +1,11 @@
 """Centralized debug logging for temporary diagnostics."""
 import json
 import os
+import tempfile
 import threading
 import time
 
-LOG_PATH = os.environ.get('F1_DEBUG_LOG', '/tmp/f1_setup_debug.log')
+LOG_PATH = os.environ.get('F1_DEBUG_LOG') or os.path.join(tempfile.gettempdir(), 'f1_setup_debug.log')
 _log_lock = threading.Lock()
 
 def log_debug_event(event, **fields):
@@ -22,5 +23,6 @@ def log_debug_event(event, **fields):
 
     line = json.dumps(record, ensure_ascii=False)
     with _log_lock:
+        os.makedirs(os.path.dirname(LOG_PATH) or '.', exist_ok=True)
         with open(LOG_PATH, 'a', encoding='utf-8') as handle:
             handle.write(line + '\n')
