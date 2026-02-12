@@ -32,7 +32,61 @@ Questo piano descrive come introdurre subito una ricerca setup funzionante usand
 - Test end-to-end REST + SocketIO (simulare run, verificare feedback UI).
 - Harness: confronto contro range attesi, generazione report PASS/FAIL.
 
+## Fuel Learning Mechanic (Next Development)
+### Obiettivi
+1. Tracciare il consumo reale di carburante durante i giri hot
+2. Stimare il numero massimo di giri stint basandosi sul carburante attuale
+3. Fornire avvisi quando il pilota imposta stint target superiori alla stima
+4. Integrare il sistema con il setup feedback e la UI del garage
+
+### Implementazione tecnica
+**Backend (`models/models.py`)**
+- Estendere `RaceCar` con attributi fuel learning:
+  - `fuel_learning_samples: List[float]` - consumi per giro
+  - `fuel_learning_hot_laps: int` - contatore giri hot
+  - `fuel_consumption_per_lap: Optional[float]` - media consumi
+  - `fuel_estimate_laps_at_100: Optional[int]` - stima giri al 100%
+- Modificare `consume_fuel()` per chiamare `_track_fuel_learning()` solo su HOT LAP
+- Implementare `_track_fuel_learning()` per raccogliere campioni e calcolare media
+- Aggiungere `reset_fuel_learning()` per reset su cambiamenti significativi setup
+- Esporre campi in socket payload: `fuel_learning_hot_laps`, `fuel_estimate_ready`, `fuel_estimate_laps_at_100`
+
+**Frontend (`player_garage_v3.js`)**
+- Aggiungere logica UI per stato "Learning" vs "Ready"
+- Mostrare contatore progress: `Fuel learning 3/5`
+- Visualizzare stinta massima: `Est. max 12 laps with 85% fuel`
+- Implementare warning per stint target eccessivo
+- Aggiornare fingerprint rendering per includere fuel learning fields
+
+**Stile (`dashboard-v3.css`)**
+- Classi per `.fuel-pill-v3`, `.fuel-pill-ready`, `.fuel-pill-learning`
+- Stili per `.stint-helper-v3`, `.stint-warning-v3`
+- Evidenziazione input quando warning attivo
+
+### Logica di funzionamento
+1. **Fase learning (primi 5 giri hot)**:
+   - Ogni giro hot registra consumo percentuale
+   - UI mostra进度 "Fuel learning X/5"
+   - Input stint limitato a 99 (nessun limite ancora)
+
+2. **Fase ready (dopo 5 giri)**:
+   - Calcola media consumi e stima giri massimi
+   - UI mostra "Fuel est. ready – max 12 laps"
+   - Input stint limitato al valore stimato
+   - Warning se pilota supera limite
+
+3. **Reset conditions**:
+   - Cambiamento ≥3 slider setup con delta ≥5
+   - Cambio mappatura ICE
+   - Non resetta su ERS o fuel percent changes
+
+### Debug e logging
+- Backend: log `fuel_burn` events con `learn_hot_laps`, `learn_samples`, `learn_ready`
+- Frontend: console log player team e fuel learning status
+- Verifica `is_player_controlled` flag correttamente impostato
+
 ## Rischi e mitigazioni
 1. **Coefficiente poco realistico** → iniziare con valori conservative, prevedere file configurabili.
 2. **UI sovraccarica** → introdurre slider solo dopo payload stabile, usare tooltips per messaggi estesi.
 3. **Prestazioni harness** → limitare la griglia (es. step 5) e supportare campionamento random.
+4. **Fuel learning accuracy** → implementare finestra mobile (12 campioni) per evitare valori obsoleti.
