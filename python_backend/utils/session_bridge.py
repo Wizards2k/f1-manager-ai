@@ -610,7 +610,7 @@ class SessionBridge:
                     # Update lap phase for next lap
                     if ts.laps_done_in_run >= ts.laps_planned:
                         completed_runs.append(car_id)
-                    elif ai_ready_for_box or (ts.setup_data_complete and not ts.is_player):
+                    elif ts.setup_data_complete and not ts.is_player:
                         ts.lap_phase = LapPhase.IN_LAP
                     elif ts.laps_done_in_run >= ts.laps_planned - 1:
                         ts.lap_phase = LapPhase.IN_LAP
@@ -961,7 +961,9 @@ class SessionBridge:
                 idx = engine.current_run_idx - 1
                 if idx < len(engine.session_plan.runs):
                     run_plan_program = engine.session_plan.runs[idx].program.value
-            session_name = self.pso.clock.session_type.value if self.pso else 'FP1'
+            session_name = getattr(getattr(self.pso, 'session_type', None), 'value', None) if self.pso else None
+            if not session_name:
+                session_name = 'FP1'
             result = ai_ss.process_run(session_name, run_plan_program)
             logger.info(
                 "AI %s setup run %d: %.2f → %.2f (threshold=%.2f, complete=%s, changes=%s)",
@@ -1173,6 +1175,9 @@ class SessionBridge:
         for car_id, pso_car in self.pso.cars.items():
             race_car = self.race_cars_map.get(car_id)
             if race_car is None:
+                continue
+            if pso_car.phase != CarPhase.ON_TRACK:
+                set_racecar_phase(race_car, pso_car.phase.value)
                 continue
             if car_id not in self._track_states:
                 set_racecar_phase(race_car, pso_car.phase.value)
