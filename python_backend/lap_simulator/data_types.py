@@ -82,6 +82,10 @@ class SectionContext:
     kind: SectionKind
     length_m: float
     v_base_kph: float                    # reference avg speed from telemetry
+    v_entry_kph: float = 0.0
+    v_exit_kph: float = 0.0
+    v_min_kph: float = 0.0
+    v_max_kph: float = 0.0
     corner_number: int = 0
     curve_profile: CurveProfile = field(default_factory=CurveProfile)
     # track surface modifiers
@@ -91,12 +95,7 @@ class SectionContext:
     cool_factor: float = 1.0             # tyre cooling multiplier
     braking_energy_mj: float = 0.0       # reference braking energy for section
     drs_available: bool = False
-    # v2 fields (from regenerated telemetry sections)
     dt_ref_s: float = 0.0                # reference time from telemetry integration
-    v_entry_kph: float = 0.0             # entry speed from telemetry
-    v_exit_kph: float = 0.0              # exit speed from telemetry
-    v_min_kph: float = 0.0               # min speed (apex) from telemetry
-    v_max_kph: float = 0.0               # max speed from telemetry
 
 
 @dataclass

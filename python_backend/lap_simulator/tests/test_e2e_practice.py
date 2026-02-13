@@ -160,6 +160,12 @@ class TestE2EPracticeSession:
             # Register car in simulator
             sim.register_car(car_entry)
 
+        # Advance PSO clock until queued cars leave the pits (deterministic release)
+        for _ in range(120):  # up to 120 simulated seconds
+            if all(pso.cars[cid].phase == CarPhase.ON_TRACK for cid in ai_engines):
+                break
+            pso.tick(1.0)
+
         # --- Run laps ---
         n_laps = 3  # short run for test
         all_lap_results = sim.run_laps(n_laps)

@@ -78,27 +78,42 @@ def _parse_section(raw: Dict[str, Any]) -> SectionContext:
     if radius and radius > 0:
         curvature_factor = 1.0 / radius * 100  # normalised
 
+    v_entry = raw.get("v_entry_kph", raw.get("v_entry", 0.0))
+    v_exit = raw.get("v_exit_kph", raw.get("v_exit", 0.0))
+    v_min = raw.get("v_min_kph", raw.get("v_min", 0.0))
+    v_max = raw.get("v_max_kph", raw.get("v_max", 0.0))
+    avg_speed = raw.get("avg_speed_kph", raw.get("avg_speed", 200))
+    braking_energy = raw.get("braking_energy_mj", raw.get("braking_energy", 0.0))
+    bumpiness = raw.get("bumpiness_factor", raw.get("bumpiness", 0.0)) or 0.0
+    kerb = raw.get("kerb_severity", raw.get("kerb", 0.0)) or 0.0
+    dt_ref = raw.get("dt_ref_s", 0.0)
+    if dt_ref <= 0:
+        # fallback: approximate from length / avg_speed
+        avg_ms = max(avg_speed / 3.6, 1.0)
+        dt_ref = length / avg_ms
+
     return SectionContext(
         section_id=raw.get("id", ""),
         name=raw.get("name", ""),
         kind=kind,
         length_m=length,
-        v_base_kph=raw.get("avg_speed", 200),
+        v_base_kph=avg_speed,
+        v_entry_kph=v_entry,
+        v_exit_kph=v_exit,
+        v_min_kph=v_min,
+        v_max_kph=v_max,
         corner_number=int(raw.get("corner_number", 0) or 0),
         curve_profile=CurveProfile(
             radius_m=radius,
             curvature_factor=curvature_factor,
         ),
-        bumpiness_factor=raw.get("bumpiness", 0) or 0.0,
-        heat_factor=heat_f,
-        cool_factor=cool_f,
-        braking_energy_mj=raw.get("braking_energy_mj", 0) or 0.0,
-        drs_available=bool(raw.get("drs_active", False)),
-        dt_ref_s=raw.get("dt_ref_s", 0) or 0.0,
-        v_entry_kph=raw.get("v_entry_kph", 0) or 0.0,
-        v_exit_kph=raw.get("v_exit_kph", 0) or 0.0,
-        v_min_kph=raw.get("v_min_kph", 0) or 0.0,
-        v_max_kph=raw.get("v_max_kph", 0) or 0.0,
+        bumpiness_factor=bumpiness,
+        kerb_severity=kerb,
+        heat_factor=raw.get("heat_factor", heat_f),
+        cool_factor=raw.get("cool_factor", cool_f),
+        braking_energy_mj=braking_energy,
+        drs_available=raw.get("drs_active", raw.get("drs_available", False)),
+        dt_ref_s=dt_ref,
     )
 
 

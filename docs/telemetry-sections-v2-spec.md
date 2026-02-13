@@ -1,13 +1,18 @@
 ---
 title: Telemetry Sections v2 – Regeneration Spec
-version: 0.1
-last_updated: 2026-02-10
-status: in_progress
+version: 1.0
+last_updated: 2026-02-13
+status: completed
 branch: feature/telemetry-sections-v2
 scope: "Rigenerare le sezioni circuito dai punti telemetrici raw per ottenere copertura 100%, confini fisici corretti e dati derivati affidabili"
 parent_spec: docs/lapsimulator-implementation-spec.md
 blocking: "LapSimulator calibration (§6.11)"
----
+
+## 0. Stato
+
+- 24/24 circuiti rigenerati con dataset v2 (copertura 100%, dt_ref_s, braking_energy, DRS, radius, heat/cool reali).
+- LapSimulator aggiorna `SectionContext`/`config_loader` per leggere i nuovi campi con fallback.
+- `update_section()` usa il modello `dt_ref` per tutte le sezioni e i test `python_backend/lap_simulator/tests/test_e2e_practice.py` passano con la telemetria v2.
 
 ## 1. Problema
 
