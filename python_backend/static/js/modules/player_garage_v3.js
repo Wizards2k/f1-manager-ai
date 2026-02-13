@@ -282,8 +282,13 @@ export class PlayerGarageV3 {
         const telemetry = this.buildTelemetryStrip(car);
         const tyreTemps = this.buildTyreTempsSection(car);
         const infoPct = car.setup_info_percent ?? 0;
-        const infoChipColor = infoPct >= 67 ? 'setup-chip-green' : infoPct >= 34 ? 'setup-chip-yellow' : 'setup-chip-red';
+        const thresholds = car.is_player_controlled
+            ? { green: 67, yellow: 34 }
+            : { green: 80, yellow: 40 };
         const infoChipBlink = infoPct >= 100 ? 'setup-chip-blink' : '';
+        let infoChipColor = 'setup-chip-red';
+        if (infoPct >= thresholds.green) infoChipColor = 'setup-chip-green';
+        else if (infoPct >= thresholds.yellow) infoChipColor = 'setup-chip-yellow';
 
         return `
             <div class="car-card-v3" data-driver="${car.driver_number}" data-state="${currentState}">
@@ -654,9 +659,12 @@ export class PlayerGarageV3 {
             const chip = card.querySelector('.setup-chip-v3');
             if (!chip) return;
             const pct = car.setup_info_percent ?? 0;
+            const thresholds = car.is_player_controlled
+                ? { green: 67, yellow: 34 }
+                : { green: 80, yellow: 40 };
             chip.classList.remove('setup-chip-red', 'setup-chip-yellow', 'setup-chip-green', 'setup-chip-blink');
-            if (pct >= 67) chip.classList.add('setup-chip-green');
-            else if (pct >= 34) chip.classList.add('setup-chip-yellow');
+            if (pct >= thresholds.green) chip.classList.add('setup-chip-green');
+            else if (pct >= thresholds.yellow) chip.classList.add('setup-chip-yellow');
             else chip.classList.add('setup-chip-red');
             if (pct >= 100) chip.classList.add('setup-chip-blink');
         });

@@ -373,6 +373,11 @@ DEFAULT_SETUP_CONFIG = {
     'brake_duct': 50,
 }
 
+AI_SETUP_PROGRESS_TARGET = 120.0
+AI_PROGRESS_GAIN_PER_RUN = 42.0
+AI_PROGRESS_PENALTY_PER_SLIDER = 3.5
+AI_PROGRESS_PENALTY_PER_DELTA = 0.3  # per absolute slider delta point
+AI_PROGRESS_MAX_PENALTY = 40.0
 
 class RaceCar:
     def __init__(self, pilot: Pilota, team: Team, initial_compound: TireCompound = TireCompound.MEDIUM):
@@ -625,6 +630,107 @@ class RaceCar:
             return 100.0
         return min(100.0, (self.setup_info_points / self.setup_info_target) * 100.0)
 
+    def update_ai_setup_snapshot(
+        self,
+        setup_snapshot: Optional[Dict[str, int]] = None,
+        *,
+        reset_progress: bool = False,
+        force_complete: bool = False,
+    ):
+        """Sync AI setup data and optionally reset/complete progress."""
+        if setup_snapshot:
+            setup_store = self.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
+            setup_store.update(setup_snapshot)
+        if force_complete:
+            # Consider setup fully learned
+            self.setup_info_points = max(self.setup_info_target, 1.0)
+            return
+        if reset_progress:
+            self.reset_setup_info()
+            return
+
+    def apply_ai_progress_result(
+        self,
+        slider_changes: Optional[Dict[str, float]] = None,
+        *,
+        setup_complete: bool = False,
+        score_before: Optional[float] = None,
+        score_after: Optional[float] = None,
+        score_threshold: Optional[float] = None,
+    ) -> None:
+        """Update AI-only data chip metric after each setup run."""
+        if self.is_player_controlled:
+            return
+
+        self.setup_info_target = AI_SETUP_PROGRESS_TARGET
+        current = max(0.0, self.setup_info_points)
+        percent_before = self.setup_info_percent
+
+        derived_percent = None
+        if score_after is not None and score_threshold:
+            threshold = max(1e-3, score_threshold)
+            derived_percent = MathUtils.clamp((score_after / threshold) * 100.0, 0.0, 100.0)
+
+        if setup_complete:
+            percent_after = 100.0
+            outcome = 'complete'
+        elif derived_percent is not None:
+            percent_after = derived_percent
+            outcome = 'score'
+        else:
+            # Fallback to legacy heuristic when no score info is available
+            slider_changes = slider_changes or {}
+            if slider_changes:
+                change_count = len(slider_changes)
+                delta_sum = sum(abs(delta) for delta in slider_changes.values())
+                penalty = change_count * AI_PROGRESS_PENALTY_PER_SLIDER + delta_sum * AI_PROGRESS_PENALTY_PER_DELTA
+                penalty = min(AI_PROGRESS_MAX_PENALTY, penalty)
+                percent_after = max(0.0, percent_before - (penalty / self.setup_info_target * 100.0))
+                outcome = 'penalty'
+            else:
+                gain = AI_PROGRESS_GAIN_PER_RUN
+                percent_after = min(100.0, percent_before + (gain / self.setup_info_target * 100.0))
+                outcome = 'gain'
+
+        self.setup_info_points = (percent_after / 100.0) * self.setup_info_target
+        delta_points = self.setup_info_points - current
+
+        log_debug_event(
+            'ai_chip_progress',
+            driver=self.driver_number,
+            outcome=outcome,
+            slider_changes=slider_changes,
+            setup_complete=setup_complete,
+            score_before=score_before,
+            score_after=score_after,
+            score_threshold=score_threshold,
+            points_before=round(current, 2),
+            points_after=round(self.setup_info_points, 2),
+            delta=round(delta_points, 2),
+            percent_before=round(percent_before, 1),
+            percent_after=round(self.setup_info_percent, 1),
+            target=round(self.setup_info_target, 1),
+        )
+
+    def apply_ai_setup_progress(
+        self,
+        percent: float,
+        setup_snapshot: Optional[Dict[str, int]] = None,
+    ) -> None:
+        """Legacy helper used by SessionBridge to map AI convergence to progress."""
+        percent = max(0.0, min(100.0, percent))
+        if setup_snapshot:
+            setup_store = self.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
+            setup_store.update(setup_snapshot)
+
+        target = max(1.0, self.setup_info_target or 1.0)
+        if percent <= 0.0:
+            self.setup_info_points = 0.0
+        elif percent >= 100.0:
+            self.setup_info_points = target
+        else:
+            self.setup_info_points = (percent / 100.0) * target
+
     def _compute_setup_info_target(self):
         """Calcola la soglia di info necessarie.
         Dipende dal numero di slider modificati rispetto al baseline:
@@ -669,16 +775,17 @@ class RaceCar:
             return
         gain = self._compute_setup_info_gain()
         self.setup_info_points = min(self.setup_info_points + gain, self.setup_info_target * 1.5)
-        log_debug_event(
-            'setup_info_accumulated',
-            driver=self.driver_number,
-            lap_type=lap_type.value if isinstance(lap_type, CarState) else str(lap_type),
-            gain=round(gain, 1),
-            total=round(self.setup_info_points, 1),
-            target=round(self.setup_info_target, 1),
-            percent=round(self.setup_info_percent, 1),
-            ready=self.setup_feedback_ready,
-        )
+        if self.is_player_controlled:
+            log_debug_event(
+                'setup_info_accumulated',
+                driver=self.driver_number,
+                lap_type=lap_type.value if isinstance(lap_type, CarState) else str(lap_type),
+                gain=round(gain, 1),
+                total=round(self.setup_info_points, 1),
+                target=round(self.setup_info_target, 1),
+                percent=round(self.setup_info_percent, 1),
+                ready=self.setup_feedback_ready,
+            )
 
     def reset_setup_info(self):
         """Azzera i punti info e ricalcola il target. Chiamato su Apply/save setup."""

@@ -55,6 +55,7 @@ from utils.adapter import (
     racecar_to_car_entry,
     set_racecar_phase,
 )
+from debug_log import log_debug_event
 
 logger = logging.getLogger(__name__)
 
@@ -956,7 +957,7 @@ class SessionBridge:
 
         # AI Setup Search: process run → adjust sliders → check convergence
         ai_ss = self._ai_setup_states.get(car_id)
-        if ai_ss and not ai_ss.setup_complete:
+        if ai_ss:
             run_plan_program = 'SETUP_VALIDATION'
             engine = self.ai_engines.get(car_id)
             if engine and engine.current_run_idx > 0:
@@ -974,6 +975,53 @@ class SessionBridge:
                 result.threshold, result.setup_complete,
                 result.slider_changes,
             )
+
+            # Map AI progress to RaceCar.setup_info_percent for frontend chips
+            race_car = self.race_cars_map.get(car_id)
+            if race_car and not race_car.is_player_controlled:
+                def _chip_color(pct: float) -> str:
+                    if pct >= 100:
+                        return 'ready'
+                    if pct >= 80:
+                        return 'green'
+                    if pct >= 40:
+                        return 'yellow'
+                    return 'red'
+
+                before_points = race_car.setup_info_points
+                before_percent = race_car.setup_info_percent
+                before_color = _chip_color(before_percent)
+
+                race_car.apply_ai_progress_result(
+                    slider_changes=result.slider_changes,
+                    setup_complete=result.setup_complete,
+                )
+                race_car.update_ai_setup_snapshot(
+                    setup_snapshot=result.setup_snapshot,
+                )
+
+                after_points = race_car.setup_info_points
+                after_percent = race_car.setup_info_percent
+                after_color = _chip_color(after_percent)
+
+                log_debug_event(
+                    'ai_chip_run',
+                    driver=race_car.driver_number,
+                    car_id=car_id,
+                    run_index=result.run_index,
+                    session=result.session,
+                    program=result.program,
+                    setup_complete=result.setup_complete,
+                    slider_changes=result.slider_changes,
+                    points_before=round(before_points, 2),
+                    points_after=round(after_points, 2),
+                    percent_before=round(before_percent, 1),
+                    percent_after=round(after_percent, 1),
+                    color_before=before_color,
+                    color_after=after_color,
+                    color_changed=before_color != after_color,
+                    threshold_percent={'yellow': 40, 'green': 80},
+                )
 
         # Complete in AI engine (simplified — pass empty results)
         if car_id in self.ai_engines:

@@ -30,6 +30,19 @@ export class TimingPanelV3 {
         return `${sign}${Math.abs(delta).toFixed(3)}`;
     }
 
+    static resolveDataChipClass(car) {
+        const pct = car.setup_info_percent ?? 0;
+        const isPlayer = !!car.is_player_controlled;
+        const thresholds = isPlayer
+            ? { green: 67, yellow: 34 }
+            : { green: 80, yellow: 40 };
+
+        if (pct >= 100) return 'data-chip-ready';
+        if (pct >= thresholds.green) return 'data-chip-green';
+        if (pct >= thresholds.yellow) return 'data-chip-yellow';
+        return 'data-chip-red';
+    }
+
     lapClass(lapTime, personalBest) {
         const sessionBest = this.state.sessionBests.best_lap;
         if (!lapTime) return '';
@@ -114,8 +127,7 @@ export class TimingPanelV3 {
             `;
         }).join('');
 
-        const dataPercent = car.setup_info_percent ?? 0;
-        const dataChipClass = dataPercent >= 100 ? 'data-chip-ready' : dataPercent >= 67 ? 'data-chip-green' : dataPercent >= 34 ? 'data-chip-yellow' : 'data-chip-red';
+        const dataChipClass = TimingPanelV3.resolveDataChipClass(car);
 
         return `
             <div class="position">${index + 1}</div>
