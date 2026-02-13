@@ -152,5 +152,5 @@ SessionBridge.tick(sim_dt)
 | Export API (§4.2) | ⬜ | |
 | SetupEngine integration (§5.1) | ⬜ | |
 | EventBus (§5.1) | ⬜ | |
-| Blue flag per-car | ✅ | `CarSessionState.blue_flag`, `set_blue_flag()`, barra blu in timing UI |
+| Blue flag per-car | ✅ | `CarSessionState.blue_flag`, `set_blue_flag()`, barra blu in timing UI — vedi anche `docs/blue-flag-handling.md` |
 | Eventi UI (§6) | ⬜ | |

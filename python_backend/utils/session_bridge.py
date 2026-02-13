@@ -72,6 +72,10 @@ MIN_CAR_GAP_M = 40.0            # minimum gap between cars on track (metres)
 BLUE_FLAG_CLEAR_TICKS = 5
 BLUE_FLAG_PROXIMITY_THRESHOLD_M = 250.0
 
+# Session categorization for blue flag policy
+PRACTICE_SESSION_KINDS = {"FP1", "FP2", "FP3", "P1", "P2", "P3", "Q", "QUALI", "QUALIFYING"}
+RACE_SESSION_KINDS = {"RACE", "GP", "GRAND_PRIX"}
+
 
 # ---------------------------------------------------------------------------
 # CarTrackState – per-car state in the tick loop (spec §2.3)
@@ -103,6 +107,14 @@ class CarTrackState:
     current_sector: int = 0                 # 0=S1, 1=S2, 2=S3
     sector_dt_acc: float = 0.0             # accumulated dt_s in current sector
     setup_data_complete: bool = False       # AI: has enough setup info → head back in
+
+
+# Lap phases that should yield under blue flag during practice/quali when a HOT LAP approaches
+PRACTICE_SLOW_LAP_PHASES = {
+    LapPhase.OUT_LAP,
+    LapPhase.IN_LAP,
+    LapPhase.SLOW_LAP,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -304,6 +316,7 @@ class SessionBridge:
         self.battle_events: List[BattleEvent] = []       # events from last tick
         self._battle_cooldown: set = set()               # car_ids protected from min-gap this tick
         self._ai_setup_states: Dict[str, AISetupState] = {}  # car_id → AI setup search state
+        self.session_kind: str = "FP1"
 
     # ------------------------------------------------------------------
     # Initialization
@@ -326,7 +339,13 @@ class SessionBridge:
             logger.error("No sections in circuit config for %s", circuit_id)
             return False
 
-        st = SessionType(session_type)
+        self.session_kind = (session_type or "FP1").upper()
+        try:
+            st = SessionType(self.session_kind)
+        except ValueError:
+            logger.warning("Unsupported session_type %s, defaulting to FP1 for PSO", session_type)
+            st = SessionType.FP1
+
         self.pso = PracticeSessionOrchestrator(st, duration_s=SESSION_DURATION_S)
 
         teams: Dict[str, List] = {}
@@ -1082,6 +1101,11 @@ class SessionBridge:
         on_track_ids: set[str] = set()
         on_track_progress: List[Tuple[str, CarTrackState, float]] = []
 
+        session_kind = getattr(self, 'session_kind', 'FP1') or 'FP1'
+        session_kind = session_kind.upper()
+        is_practice_session = session_kind in PRACTICE_SESSION_KINDS or session_kind.startswith('FP')
+        is_race_session = session_kind in RACE_SESSION_KINDS
+
         for car_id, ts in self._track_states.items():
             css = self.pso.cars.get(car_id) if self.pso else None
             if css and css.phase in (CarPhase.ON_TRACK, CarPhase.PIT_ENTRY):
@@ -1092,47 +1116,75 @@ class SessionBridge:
                 # Ensure any off-track car has blue flag cleared immediately
                 self.pso.set_blue_flag(car_id, False)
 
-        # Player/AI receives blue flag only if a faster car (lap diff >= 1)
-        # is within the physical proximity threshold in front of them.
+        # Player/AI receives blue flag based on session-specific policy
         for car_id, ts, progress in on_track_progress:
             for other_id, other_ts, other_progress in on_track_progress:
                 if other_id == car_id:
                     continue
                 lap_diff = other_ts.lap_number - ts.lap_number
-                gap = (other_progress - progress) % circuit_m
+                raw_delta = other_progress - progress
+                gap_forward = raw_delta if raw_delta > 0 else raw_delta + circuit_m
                 css = self.pso.cars.get(car_id) if self.pso else None
 
-                # Default rule: leader at least 1 lap ahead
-                allow_blue = lap_diff >= 1
-                # Special case: defender in PIT_ENTRY (in-lap) and leader very close on same lap
-                if not allow_blue and css and css.phase == CarPhase.PIT_ENTRY and lap_diff == 0 and 0 < gap <= BLUE_FLAG_PROXIMITY_THRESHOLD_M:
-                    allow_blue = True
+                reason = None
+                gap_to_use = gap_forward
 
-                # Debug: log PIT_ENTRY candidates on same lap that are skipped
-                if css and css.phase == CarPhase.PIT_ENTRY and lap_diff == 0 and not allow_blue:
-                    log_debug_event(
-                        'blue_flag_skip',
-                        car_id=car_id,
-                        leader=other_id,
-                        gap_m=round(gap, 1),
-                        lap_diff=lap_diff,
-                        phase=str(css.phase),
-                        reason='gap_out_of_range' if gap <= 0 or gap > BLUE_FLAG_PROXIMITY_THRESHOLD_M else 'unknown',
+                if is_practice_session:
+                    defender_phase = ts.lap_phase
+                    leader_phase = other_ts.lap_phase
+                    same_lap_candidate = (
+                        lap_diff == 0
+                        and defender_phase in PRACTICE_SLOW_LAP_PHASES
+                        and leader_phase == LapPhase.HOT_LAP
+                        and raw_delta > 0
                     )
+                    if same_lap_candidate:
+                        gap_to_use = raw_delta
+                        if 0 < gap_to_use <= BLUE_FLAG_PROXIMITY_THRESHOLD_M:
+                            reason = 'practice_same_lap'
+                        else:
+                            log_debug_event(
+                                'blue_flag_skip',
+                                car_id=car_id,
+                                leader=other_id,
+                                gap_m=round(gap_to_use, 1),
+                                lap_diff=lap_diff,
+                                phase=str(css.phase) if css else None,
+                                lap_phase=defender_phase,
+                                leader_phase=leader_phase,
+                                reason='gap_out_of_range',
+                            )
 
-                if not allow_blue:
+                else:
+                    if lap_diff >= 1 and is_race_session:
+                        reason = 'race_lapped'
+                    elif lap_diff >= 1:
+                        reason = 'lapped'
+
+                if not reason or gap_to_use <= 0 or gap_to_use > BLUE_FLAG_PROXIMITY_THRESHOLD_M:
+                    if css and css.phase == CarPhase.PIT_ENTRY and lap_diff == 0:
+                        log_debug_event(
+                            'blue_flag_skip',
+                            car_id=car_id,
+                            leader=other_id,
+                            gap_m=round(gap_to_use, 1),
+                            lap_diff=lap_diff,
+                            phase=str(css.phase),
+                            reason='gap_out_of_range' if gap_to_use <= 0 or gap_to_use > BLUE_FLAG_PROXIMITY_THRESHOLD_M else 'unknown',
+                        )
                     continue
 
-                if 0 < gap <= BLUE_FLAG_PROXIMITY_THRESHOLD_M:
+                if 0 < gap_to_use <= BLUE_FLAG_PROXIMITY_THRESHOLD_M:
                     blue_flag_car_ids.append(car_id)
                     prev_gap = blue_flag_info.get(car_id, {}).get('gap_m', None)
-                    if prev_gap is None or gap < prev_gap:
+                    if prev_gap is None or gap_to_use < prev_gap:
                         blue_flag_info[car_id] = {
                             'leader': other_id,
                             'lap_diff': lap_diff,
-                            'gap_m': round(gap, 1),
+                            'gap_m': round(gap_to_use, 1),
                             'car_lap': ts.lap_number,
                             'leader_lap': other_ts.lap_number,
+                            'reason': reason,
                         }
                     break
 
@@ -1154,6 +1206,7 @@ class SessionBridge:
                         gap_m=info.get('gap_m'),
                         leader_lap=info.get('leader_lap'),
                         car_lap=info.get('car_lap'),
+                        reason=info.get('reason'),
                     )
                     self.pso.set_blue_flag(car_id, is_blue)
 
