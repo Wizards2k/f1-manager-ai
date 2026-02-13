@@ -5,7 +5,8 @@ import tempfile
 import threading
 import time
 
-LOG_PATH = os.environ.get('F1_DEBUG_LOG') or os.path.join(tempfile.gettempdir(), 'f1_setup_debug.log')
+_default_log_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')
+LOG_PATH = os.environ.get('F1_DEBUG_LOG') or os.path.join(_default_log_dir, 'f1_setup_debug.log')
 _log_lock = threading.Lock()
 
 def log_debug_event(event, **fields):

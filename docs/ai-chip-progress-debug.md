@@ -24,3 +24,7 @@
 1. Avviare una sessione FP post-patch e raccogliere di nuovo `f1_setup_debug.log` per verificare che `percent_after` salga progressivamente verso 40/80.
 2. Controllare nella UI (garage + timing panel) che le chip passino rosso → giallo → verde → ready/blink in linea con le soglie.
 3. Se necessario, ritoccare le soglie UI o introdurre smoothing (es. media mobile sui punteggi) per evitare oscillazioni.
+
+## Stato aggiornato (13 feb)
+- **Chip DATA AI**: i log mostrano `score_before/after/threshold` e le percentuali salgono (es. 0 → 98% → 100%, con colori che cambiano rosso → giallo/verde/ready). Il logging funziona da `python_backend/utils/session_bridge.py` verso `python_backend/logs/f1_setup_debug.log`.
+- **Bandiere blu**: nonostante la correzione di logica (incluso PIT_ENTRY) le bandiere non compaiono nei casi di in-lap. È stato aggiunto logging `blue_flag_set` e `blue_flag_skip` per tracciare gap, lap_diff, phase. La soglia attuale è `BLUE_FLAG_PROXIMITY_THRESHOLD_M = 250.0` e la condizione speciale consente blue flag su stesso giro solo se il difendente è in `PIT_ENTRY` e il leader è entro soglia. Ulteriori indagini in corso.

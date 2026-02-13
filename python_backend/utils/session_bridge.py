@@ -995,6 +995,9 @@ class SessionBridge:
                 race_car.apply_ai_progress_result(
                     slider_changes=result.slider_changes,
                     setup_complete=result.setup_complete,
+                    score_before=result.score_before,
+                    score_after=result.score_after,
+                    score_threshold=result.threshold,
                 )
                 race_car.update_ai_setup_snapshot(
                     setup_snapshot=result.setup_snapshot,
@@ -1075,12 +1078,13 @@ class SessionBridge:
 
         # ── Detect lapped cars (blue flag candidates) ──
         blue_flag_car_ids: List[str] = []
+        blue_flag_info: Dict[str, Dict[str, Any]] = {}
         on_track_ids: set[str] = set()
         on_track_progress: List[Tuple[str, CarTrackState, float]] = []
 
         for car_id, ts in self._track_states.items():
             css = self.pso.cars.get(car_id) if self.pso else None
-            if css and css.phase == CarPhase.ON_TRACK:
+            if css and css.phase in (CarPhase.ON_TRACK, CarPhase.PIT_ENTRY):
                 total_progress = ts.lap_number * circuit_m + ts.distance_in_lap
                 on_track_ids.add(car_id)
                 on_track_progress.append((car_id, ts, total_progress))
@@ -1095,11 +1099,41 @@ class SessionBridge:
                 if other_id == car_id:
                     continue
                 lap_diff = other_ts.lap_number - ts.lap_number
-                if lap_diff < 1:
-                    continue
                 gap = (other_progress - progress) % circuit_m
+                css = self.pso.cars.get(car_id) if self.pso else None
+
+                # Default rule: leader at least 1 lap ahead
+                allow_blue = lap_diff >= 1
+                # Special case: defender in PIT_ENTRY (in-lap) and leader very close on same lap
+                if not allow_blue and css and css.phase == CarPhase.PIT_ENTRY and lap_diff == 0 and 0 < gap <= BLUE_FLAG_PROXIMITY_THRESHOLD_M:
+                    allow_blue = True
+
+                # Debug: log PIT_ENTRY candidates on same lap that are skipped
+                if css and css.phase == CarPhase.PIT_ENTRY and lap_diff == 0 and not allow_blue:
+                    log_debug_event(
+                        'blue_flag_skip',
+                        car_id=car_id,
+                        leader=other_id,
+                        gap_m=round(gap, 1),
+                        lap_diff=lap_diff,
+                        phase=str(css.phase),
+                        reason='gap_out_of_range' if gap <= 0 or gap > BLUE_FLAG_PROXIMITY_THRESHOLD_M else 'unknown',
+                    )
+
+                if not allow_blue:
+                    continue
+
                 if 0 < gap <= BLUE_FLAG_PROXIMITY_THRESHOLD_M:
                     blue_flag_car_ids.append(car_id)
+                    prev_gap = blue_flag_info.get(car_id, {}).get('gap_m', None)
+                    if prev_gap is None or gap < prev_gap:
+                        blue_flag_info[car_id] = {
+                            'leader': other_id,
+                            'lap_diff': lap_diff,
+                            'gap_m': round(gap, 1),
+                            'car_lap': ts.lap_number,
+                            'leader_lap': other_ts.lap_number,
+                        }
                     break
 
         # Update PSO blue flags (only cars currently on track can receive blue flags)
@@ -1108,6 +1142,19 @@ class SessionBridge:
                 is_blue = car_id in blue_flag_car_ids
                 css = self.pso.cars.get(car_id)
                 if css and css.blue_flag != is_blue:
+                    info = blue_flag_info.get(car_id, {})
+                    log_debug_event(
+                        'blue_flag_set',
+                        car_id=car_id,
+                        is_blue=is_blue,
+                        lap=css.lap_number if hasattr(css, 'lap_number') else getattr(self._track_states.get(car_id), 'lap_number', None),
+                        phase=str(css.phase),
+                        leader=info.get('leader'),
+                        lap_diff=info.get('lap_diff'),
+                        gap_m=info.get('gap_m'),
+                        leader_lap=info.get('leader_lap'),
+                        car_lap=info.get('car_lap'),
+                    )
                     self.pso.set_blue_flag(car_id, is_blue)
 
         # ── Resolve battles per section ──

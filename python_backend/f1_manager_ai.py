@@ -8,12 +8,22 @@ import logging
 # Configura logging: console + file
 import os
 _log_dir = os.path.join(os.path.dirname(__file__), 'logs')
-os.makedirs(_log_dir, exist_ok=True)
+_log_path = os.environ.get('F1_SERVER_LOG') or os.path.join(_log_dir, 'server.log')
+os.makedirs(os.path.dirname(_log_path) or '.', exist_ok=True)
 _log_fmt = '%(asctime)s [%(levelname)s] %(message)s'
-logging.basicConfig(level=logging.INFO, format=_log_fmt, handlers=[
+handlers = [
     logging.StreamHandler(),
-    logging.FileHandler(os.path.join(_log_dir, 'server.log'), mode='w', encoding='utf-8'),
-])
+    logging.FileHandler(_log_path, mode='w', encoding='utf-8'),
+]
+logging.basicConfig(level=logging.INFO, format=_log_fmt, handlers=handlers)
+logging.captureWarnings(True)
+
+# Align werkzeug/flask/socketio loggers with root handlers so startup and HTTP logs are captured
+for name in ('werkzeug', 'flask.app', 'socketio', 'engineio'):
+    lg = logging.getLogger(name)
+    lg.handlers = handlers
+    lg.setLevel(logging.INFO)
+    lg.propagate = False
 
 # Importa moduli specializzati
 from config import SECRET_KEY, SOCKETIO_CORS_ORIGINS
