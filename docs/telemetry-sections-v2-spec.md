@@ -226,19 +226,19 @@ Flags:
 
 ## 7. Piano di implementazione
 
-1. **Script core**: algoritmo di segmentazione (detect brakes → find apexes → define boundaries → classify → compute derived)
-2. **Validazione Monza**: rigenerare Monza e verificare vincoli §4.2
-3. **Report visuale**: grafico velocità con confini sezione sovrapposti
-4. **Tutti i circuiti**: rigenerare tutti i 24 e validare
-5. **Aggiornare LapSimulator**: integrare nuovi campi e ricalcolare con dt_ref
+1. [x] **Script core**: algoritmo di segmentazione (detect brakes → find apexes → define boundaries → classify → compute derived)
+2. [x] **Validazione Monza**: rigenerare Monza e verificare vincoli §4.2
+3. [x] **Report visuale**: grafico velocità con confini sezione sovrapposti
+4. [x] **Tutti i circuiti**: rigenerare tutti i 24 e validare
+5. [x] **Aggiornare LapSimulator**: integrare nuovi campi e ricalcolare con dt_ref
 
 ## 8. Criteri di successo
 
-- [ ] 24/24 circuiti rigenerati con copertura 100%
-- [ ] Σ(dt_ref) = lap_time ± 0.1s per ogni circuito
-- [ ] Nessun gap tra sezioni
-- [ ] avg_speed coerente con punti telemetrici
-- [ ] braking_energy > 0 per tutte le sezioni con frenata
-- [ ] DRS zones mappate correttamente
-- [ ] radius_m calcolato per tutte le curve
-- [ ] LapSimulator su Monza produce lap time ± 5s dal riferimento
+- [x] 24/24 circuiti rigenerati con copertura 100%
+- [x] Σ(dt_ref) = lap_time ± 0.1s per ogni circuito
+- [x] Nessun gap tra sezioni
+- [x] avg_speed coerente con punti telemetrici
+- [x] braking_energy > 0 per tutte le sezioni con frenata
+- [x] DRS zones mappate correttamente
+- [x] radius_m calcolato per tutte le curve
+- [x] LapSimulator su Monza produce lap time ± 5s dal riferimento
