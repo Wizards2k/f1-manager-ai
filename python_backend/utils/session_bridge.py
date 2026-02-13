@@ -867,6 +867,13 @@ class SessionBridge:
         css = self.pso.cars.get(car_id)
         return css.blue_flag if css else False
 
+    def get_car_phase(self, car_id: str) -> Optional[str]:
+        """Expose the PracticeSessionOrchestrator phase for UI/telemetry."""
+        if self.pso is None:
+            return None
+        css = self.pso.cars.get(car_id)
+        return css.phase.value if css else None
+
     @property
     def is_finished(self) -> bool:
         return self.pso.is_finished if self.pso else True
@@ -957,7 +964,7 @@ class SessionBridge:
                 self.pso.set_blue_flag(car_id, False)
 
         race_car = self.race_cars_map.get(car_id)
-        laps_done = ts.laps_done_in_run
+        laps_done = getattr(ts, 'laps_done_in_run', 0) or 0
         best_lap = 0.0
         if race_car and race_car.lap_times:
             recent = race_car.lap_times[-laps_done:] if laps_done > 0 else []
@@ -1059,6 +1066,8 @@ class SessionBridge:
                 logger.warning("AI complete_run failed for %s: %s", car_id, e)
 
         if race_car:
+            if race_car.is_player_controlled and hasattr(race_car, 'enter_box'):
+                race_car.enter_box()
             set_racecar_phase(race_car, "box")
             race_car.stint_laps_remaining = 0
             race_car.distance_traveled = 0
