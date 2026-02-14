@@ -14,8 +14,11 @@ from __future__ import annotations
 
 import logging
 import random
+import os
+from datetime import datetime
+from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from lap_simulator.ai_data_types import (
     AIDriverConfig,
@@ -58,6 +61,16 @@ from utils.adapter import (
 from debug_log import log_debug_event
 
 logger = logging.getLogger(__name__)
+
+
+def _chip_color(percent: float) -> str:
+    if percent >= 100.0:
+        return "ready"
+    if percent >= 80.0:
+        return "green"
+    if percent >= 40.0:
+        return "yellow"
+    return "red"
 
 
 # ---------------------------------------------------------------------------
@@ -317,6 +330,8 @@ class SessionBridge:
         self._battle_cooldown: set = set()               # car_ids protected from min-gap this tick
         self._ai_setup_states: Dict[str, AISetupState] = {}  # car_id → AI setup search state
         self.session_kind: str = "FP1"
+        self._ai_report_enabled = os.getenv("F1_AI_SETUP_REPORT", "0").lower() in {"1", "true", "yes"}
+        self._event_feed: List[Dict[str, Any]] = []
 
     # ------------------------------------------------------------------
     # Initialization
@@ -884,6 +899,11 @@ class SessionBridge:
     def get_session_summary(self) -> dict:
         return self.pso.session_summary() if self.pso else {}
 
+    def pop_event_feed(self) -> List[Dict[str, Any]]:
+        events = list(self._event_feed)
+        self._event_feed.clear()
+        return events
+
     # ------------------------------------------------------------------
     # Internal: AI scheduling
     # ------------------------------------------------------------------
@@ -941,6 +961,15 @@ class SessionBridge:
                         laps_planned=run_plan.laps_planned,
                         pit_exit_delay_s=pit_exit,
                     )
+                    self._emit_run_started_event(
+                        car_id,
+                        program=run_plan.program.value,
+                        laps_planned=run_plan.laps_planned,
+                        fuel_load=run_plan.fuel_kg,
+                        compound=getattr(run_plan.compound, "value", str(run_plan.compound)),
+                        engine_map=getattr(run_plan.engine_map, "value", str(run_plan.engine_map)),
+                        ers_mode=getattr(run_plan.ers_mode, "value", str(run_plan.ers_mode)),
+                    )
                     logger.info(
                         "AI %s (%s): run %d/%d [%s] dispatched at t=%.0fs (planned %.0fs)",
                         car_id, plan.team_id, run_idx + 1,
@@ -993,6 +1022,7 @@ class SessionBridge:
             session_name = getattr(getattr(self.pso, 'session_type', None), 'value', None) if self.pso else None
             if not session_name:
                 session_name = 'FP1'
+            was_complete = ai_ss.setup_complete
             result = ai_ss.process_run(session_name, run_plan_program)
             logger.info(
                 "AI %s setup run %d: %.2f → %.2f (threshold=%.2f, complete=%s, changes=%s)",
@@ -1002,18 +1032,24 @@ class SessionBridge:
                 result.slider_changes,
             )
 
+            run_outcome = "success"
+            if laps_done < max(getattr(ts, 'laps_planned', laps_done), 1):
+                run_outcome = "partial"
+            if best_lap <= 0.0:
+                run_outcome = "aborted"
+
+            self._emit_run_completed_event(
+                car_id,
+                program=result.program,
+                laps_done=laps_done,
+                best_lap=best_lap,
+                outcome=run_outcome,
+                slider_changes=result.slider_changes,
+            )
+
             # Map AI progress to RaceCar.setup_info_percent for frontend chips
             race_car = self.race_cars_map.get(car_id)
             if race_car and not race_car.is_player_controlled:
-                def _chip_color(pct: float) -> str:
-                    if pct >= 100:
-                        return 'ready'
-                    if pct >= 80:
-                        return 'green'
-                    if pct >= 40:
-                        return 'yellow'
-                    return 'red'
-
                 before_points = race_car.setup_info_points
                 before_percent = race_car.setup_info_percent
                 before_color = _chip_color(before_percent)
@@ -1050,6 +1086,30 @@ class SessionBridge:
                     color_after=after_color,
                     color_changed=before_color != after_color,
                     threshold_percent={'yellow': 40, 'green': 80},
+                )
+
+            if result.slider_changes:
+                self._queue_event_feed(
+                    event_type="ai_setup_adjustment",
+                    car_id=car_id,
+                    payload={"changes": result.slider_changes, "program": result.program},
+                    ui_targets=["notification_bar", "timeline"],
+                )
+
+            if result.setup_complete and not was_complete:
+                targets = ["notification_bar", "timeline"]
+                if race_car and race_car.is_player_controlled:
+                    targets.insert(0, "hud_overlay")
+                self._queue_event_feed(
+                    event_type="ai_setup_converged",
+                    car_id=car_id,
+                    payload={
+                        "threshold_reached": True,
+                        "final_score": result.score_after,
+                        "threshold": result.threshold,
+                        "run_index": result.run_index,
+                    },
+                    ui_targets=targets,
                 )
 
         # Complete in AI engine (simplified — pass empty results)
@@ -1298,9 +1358,136 @@ class SessionBridge:
 
             # Store events
             self.battle_events.extend(result.events)
+            self._queue_battle_events(result.events)
 
         # Cooldown no longer needed (no gap enforcement)
         self._battle_cooldown.clear()
+
+    # ------------------------------------------------------------------
+    # Internal: event feed helpers
+    # ------------------------------------------------------------------
+
+    def _emit_run_started_event(
+        self,
+        car_id: str,
+        *,
+        program: str,
+        laps_planned: int,
+        fuel_load: float,
+        compound: str,
+        engine_map: Optional[str] = None,
+        ers_mode: Optional[str] = None,
+    ) -> None:
+        payload = {
+            "program": program,
+            "laps_planned": laps_planned,
+            "fuel_load": round(fuel_load, 1),
+            "compound": compound,
+            "engine_map": engine_map,
+            "ers_mode": ers_mode,
+        }
+        self._queue_event_feed(
+            "ai_run_started",
+            car_id=car_id,
+            payload=payload,
+            ui_targets=["notification_bar", "timeline"],
+        )
+
+    def _emit_run_completed_event(
+        self,
+        car_id: str,
+        *,
+        program: str,
+        laps_done: int,
+        best_lap: float,
+        outcome: str,
+        slider_changes: Dict[str, float],
+    ) -> None:
+        payload = {
+            "program": program,
+            "laps_done": laps_done,
+            "best_lap_s": round(best_lap, 3) if best_lap else 0.0,
+            "outcome": outcome,
+            "delta_setup": slider_changes,
+        }
+        self._queue_event_feed(
+            "ai_run_completed",
+            car_id=car_id,
+            payload=payload,
+            ui_targets=["notification_bar", "timeline"],
+        )
+
+    def _queue_battle_events(self, events: List[BattleEvent]) -> None:
+        if not events:
+            return
+        for ev in events:
+            attacker = self.race_cars_map.get(ev.attacker_id)
+            defender = self.race_cars_map.get(ev.defender_id)
+            player_involved = (
+                (attacker and attacker.is_player_controlled)
+                or (defender and defender.is_player_controlled)
+            )
+            if not player_involved:
+                continue
+            focus_car = attacker if attacker and attacker.is_player_controlled else defender
+            focus_id = str(getattr(focus_car, "driver_number", ev.attacker_id)) if focus_car else ev.attacker_id
+            payload = {
+                "attacker_id": ev.attacker_id,
+                "attacker_name": attacker.driver_name if attacker else "",
+                "defender_id": ev.defender_id,
+                "defender_name": defender.driver_name if defender else "",
+                "section": ev.section_id,
+                "scenario": ev.scenario,
+                "outcome": ev.outcome,
+                "message": ev.message,
+                "delta_v_kph": ev.delta_v_kph,
+                "gap_m": ev.gap_m,
+                "attack_chance": ev.attack_chance,
+            }
+            targets = ["hud_overlay", "timeline"]
+            if ev.event_type.endswith("collision"):
+                targets.insert(0, "notification_bar")
+            self._queue_event_feed(
+                event_type=ev.event_type,
+                car_id=str(focus_id),
+                payload=payload,
+                ui_targets=targets,
+                driver_name=focus_car.driver_name if focus_car else None,
+                team_name=focus_car.team_name if focus_car else None,
+            )
+
+    def _queue_event_feed(
+        self,
+        event_type: str,
+        *,
+        car_id: str,
+        payload: Dict[str, Any],
+        ui_targets: Optional[List[str]] = None,
+        driver_name: Optional[str] = None,
+        team_name: Optional[str] = None,
+    ) -> None:
+        race_car = self.race_cars_map.get(str(car_id))
+        if race_car:
+            driver_name = driver_name or race_car.driver_name
+            team_name = team_name or race_car.team_name
+        targets: List[str]
+        if ui_targets is not None:
+            targets = ui_targets
+        else:
+            targets = ["timeline"]
+            if race_car and race_car.is_player_controlled:
+                targets.insert(0, "notification_bar")
+        event = {
+            "event_type": event_type,
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "session_id": self.session_kind,
+            "car_id": str(car_id),
+            "team_name": team_name,
+            "driver_name": driver_name,
+            "payload": payload,
+            "ui_targets": targets,
+        }
+        self._event_feed.append(event)
 
     def _enforce_min_gap(self) -> None:
         """Push overlapping cars apart (safety net after battle resolution)."""
@@ -1363,5 +1550,92 @@ class SessionBridge:
             self._complete_car_run(car_id)
         for car_id, race_car in self.race_cars_map.items():
             set_racecar_phase(race_car, "box")
+        if self._ai_report_enabled:
+            self._generate_ai_setup_report()
         self.active = False
         logger.info("Session finished. Runs: %d", len(self.pso.run_log) if self.pso else 0)
+
+    def _generate_ai_setup_report(self) -> None:
+        if not self.ai_engines:
+            return
+        rows: List[str] = []
+        rows.append("<table class=\"setup-report\">")
+        rows.append(
+            "<thead><tr><th>Team</th><th>Pilota</th><th>Runs (done/req)</th><th>Score (cur/target)</th><th>Best Lap (s)</th><th>Setup Chip</th><th>Status</th><th>Programs</th></tr></thead>"
+        )
+        rows.append("<tbody>")
+
+        for car_id, engine in sorted(self.ai_engines.items()):
+            summary = engine.session_summary()
+            race_car = self.race_cars_map.get(car_id)
+            state = self._ai_setup_states.get(car_id)
+            score = state.setup_score if state else 0.0
+            threshold = state.threshold if state else 0.0
+            runs_done = state.total_runs if state else summary["runs_completed"]
+            runs_req = getattr(state, "min_runs_required", summary["runs_planned"])
+            score_label = f"{score:.2f}/{threshold:.2f}" if threshold > 0 else "–"
+            raw_percent = 0.0
+            if threshold > 0:
+                raw_percent = max(0.0, min(100.0, (score / threshold) * 100.0))
+            progress_factor = 1.0
+            if runs_req > 0:
+                progress_factor = min(1.0, runs_done / runs_req)
+            percent = raw_percent * progress_factor
+            is_ready = bool(state and state.setup_complete)
+            if not is_ready:
+                percent = min(percent, 90.0)
+            chip_class = _chip_color(percent)
+            chip_label = f"{percent:.0f}%"
+            programs = ", ".join(run.program.value for run in engine.session_plan.runs) if engine.session_plan else ""
+            status_label = "Ready" if is_ready else "Collecting"
+            runs_label = f"{runs_done}/{runs_req}"
+            rows.append(
+                "<tr>"
+                f"<td>{engine.team_config.team_id}</td>"
+                f"<td>{engine.driver_config.driver_id}</td>"
+                f"<td>{runs_label}</td>"
+                f"<td>{score_label}</td>"
+                f"<td>{summary['best_lap_s']:.3f}</td>"
+                f"<td class=\"chip {chip_class}\">{chip_label}</td>"
+                f"<td>{status_label}</td>"
+                f"<td>{programs}</td>"
+                "</tr>"
+            )
+
+        rows.append("</tbody></table>")
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        session = getattr(self.pso, "session_type", None)
+        session_name = session.value if session else "FP"
+        report_dir = Path("tmp")
+        report_dir.mkdir(parents=True, exist_ok=True)
+        report_path = report_dir / f"ai_setup_report_{session_name}_{timestamp}.html"
+        html = [
+            "<!doctype html>",
+            "<html lang=\"en\">",
+            "<head>",
+            "<meta charset=\"utf-8\" />",
+            f"<title>AI Setup Report – {session_name}</title>",
+            "<style>",
+            "body{background:#05060a;color:#f4f5ff;font-family:'Inter','Roboto','Helvetica Neue',sans-serif;padding:32px;}",
+            "h1{margin-top:0;font-size:24px;color:#ffffff;}",
+            "p{color:#c5c8ff;font-size:13px;margin-bottom:16px;}",
+            ".setup-report{width:100%;border-collapse:collapse;font-family:'Roboto Mono','SFMono-Regular',Consolas,monospace;font-size:13px;table-layout:fixed;color:#f4f5ff;}",
+            ".setup-report th,.setup-report td{border:1px solid #262a40;padding:8px 10px;vertical-align:top;background:#0c0f1a;}",
+            ".setup-report thead th{background:#12162a;color:#fdfdfd;}",
+            ".setup-report tbody tr:nth-child(odd) td{background:#0e1222;}",
+            ".setup-report tbody tr:nth-child(even) td{background:#0c0f1a;}",
+            ".setup-report .chip{font-weight:600;text-align:center;border-radius:999px;padding:4px 10px;display:inline-block;min-width:64px;}",
+            ".setup-report .chip.red{background:#39121d;color:#ff7a7a;}",
+            ".setup-report .chip.yellow{background:#3c2a11;color:#ffd166;}",
+            ".setup-report .chip.green{background:#1c3725;color:#6fffb0;}",
+            ".setup-report .chip.ready{background:#15373b;color:#80ffeb;}",
+            "</style>",
+            "</head>",
+            "<body>",
+            f"<h1>AI Setup Report – {session_name}</h1>",
+            f"<p>Generato: {datetime.utcnow().isoformat()} UTC</p>",
+            *rows,
+            "</body></html>",
+        ]
+        report_path.write_text("\n".join(html), encoding="utf-8")
+        logger.info("AI setup report written to %s", report_path)

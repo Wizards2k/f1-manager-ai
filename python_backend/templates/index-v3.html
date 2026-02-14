@@ -14,9 +14,31 @@
         <div class="game-area">
             <div class="map-area">
                 <div id="circuit-map"></div>
+                <div class="hud-overlay" id="hud-overlay"></div>
+                <button class="timeline-toggle-btn" id="timeline-toggle" aria-expanded="false" aria-controls="timeline-panel">
+                    <span class="toggle-label">Timeline</span>
+                    <span class="toggle-indicator">⟲</span>
+                </button>
+                <section class="timeline-panel-v3" id="timeline-panel" aria-hidden="true">
+                    <header class="timeline-panel-header">
+                        <div>
+                            <p class="timeline-label">Live Feed</p>
+                            <h4>Timeline eventi</h4>
+                        </div>
+                        <div class="timeline-actions">
+                            <button class="timeline-clear-btn" id="timeline-clear" title="Svuota timeline">Clear</button>
+                            <button class="timeline-close-btn" data-action="close-timeline" aria-label="Chiudi timeline">×</button>
+                        </div>
+                    </header>
+                    <div class="timeline-panel-body">
+                        <div class="timeline-list" id="timeline-list"></div>
+                        <div class="timeline-empty" id="timeline-empty">Nessun evento ancora.</div>
+                    </div>
+                </section>
             </div>
             <!-- Dock -->
             <div class="player-dock-v3" id="player-dock">
+                <div class="garage-status-line" id="garage-status"></div>
                 <div class="garage-notifications-v3" id="garage-notifications"></div>
                 <div id="player-car-cards-v3"></div>
             </div>

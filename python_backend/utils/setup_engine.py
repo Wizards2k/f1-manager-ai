@@ -115,7 +115,11 @@ CIRCUIT_SETUP_OVERRIDES: Dict[str, Dict[str, Dict[str, Any]]] = {
 
 def _resolve_field_params(field: str) -> Dict[str, Any]:
     base = {**BASE_FIELD_PARAMS[field]}
-    profile = config.get_current_circuit_profile() or {}
+    profile_getter = getattr(config, 'get_current_circuit_profile', None)
+    try:
+        profile = profile_getter() if callable(profile_getter) else {}
+    except Exception:
+        profile = {}
     circuit_id = profile.get('circuit_id') or profile.get('id') or profile.get('slug')
     if circuit_id:
         circuit_id = str(circuit_id).lower()

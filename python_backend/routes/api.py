@@ -4,7 +4,7 @@ import time
 from flask import Flask, render_template, jsonify, send_from_directory, request
 
 from data.teams import TEAMS
-from models import CarState, TireCompound, DEFAULT_SETUP_CONFIG
+from models import CarState, CarPhase, TireCompound, DEFAULT_SETUP_CONFIG
 from utils import (
     start_session_for_circuit,
     get_car_by_driver_number,
@@ -556,7 +556,7 @@ def register_routes(app):
                 stint_laps=target_laps,
             )
             if not ok:
-                return _error_response('V2 engine: car cannot go out now', 409)
+                return _error_response('PITLANE QUEUE FULL', 409)
         else:
             # V1 engine: legacy
             car.state = CarState.BOX

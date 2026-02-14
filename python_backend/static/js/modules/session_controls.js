@@ -58,8 +58,10 @@ export class SessionControls {
             const data = await response.json();
             this.isPaused = Boolean(data.is_paused);
             this.updatePauseButton(this.isPaused);
+            return this.isPaused;
         } catch (error) {
             console.error('Error toggling pause:', error);
+            return this.isPaused;
         }
     }
 
@@ -90,6 +92,16 @@ export class SessionControls {
             this.currentSpeed = gameSpeed;
             this.updateSpeedIndicator(this.currentSpeed);
         }
+    }
+
+    async setPauseState(shouldPause) {
+        if (typeof shouldPause !== 'boolean') {
+            return this.isPaused;
+        }
+        if (this.isPaused === shouldPause) {
+            return this.isPaused;
+        }
+        return this.togglePause();
     }
 
     async returnToCircuitSelection() {

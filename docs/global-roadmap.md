@@ -37,7 +37,7 @@ Portare il gioco a una release pubblica in cui:
 - LapSimulator orchestration pseudocodice end-to-end (InputMixer → update_section → BattleResolver → StateCommit)
 - Calibration/validation workflow (fitting componenti, badge CI, manifest)
 
-## 2. Implementazione – Fase A (Setup & Validazione — `docs/setup-engine-spec-v0.1.md`, `docs/config-spec.md`, `docs/setup-ui-plan.md`)
+## ✅ 2. Implementazione – Fase A (Setup & Validazione — `docs/setup-engine-spec-v0.1.md`, `docs/config-spec.md`, `docs/setup-ui-plan.md`)
 > **Stato:** ✅ Completata il 2026-02-10 (merge in `feature/mvp-phase-1`)
 1. ✅ **SetupEngineService runtime**: modulo/servizio REST + socket che applica mapping slider→fisica e restituisce scoring live.
 2. ✅ **Evaluate Setup refresh**: rifattorizzare `evaluate_setup` e categorie per usare `aero_balance`, `drag_index`, `traction_index`, `brake_cooling`.
@@ -66,7 +66,7 @@ Portare il gioco a una release pubblica in cui:
 3. ✅ **Practice Session Orchestrator**: SessionClock (60min, pause, fast-forward), PitlaneQueue (priority, cooldown, max slots), TyreInventory (check-out/check-in, heat cycles, EOL), PracticeSessionOrchestrator (tick loop, run management, red flag abort, leaderboard). 37 test, 189/189 totali.
 4. ✅ **TyreModel v2**: compound C1-C6+Inter+Wet, degradation_rate_multiplier, slip_sensitivity, heat-cycle penalty, graining/blistering temporali. 123/123 test.
 
-## 4. Implementazione – Fase C (Race Engine Integration — `docs/race-engine-integration-spec.md`)
+## ✅ 4. Implementazione – Fase C (Race Engine Integration — `docs/race-engine-integration-spec.md`)
 > **Branch**: `feature/race-engine`
 > **Spec tecnica di riferimento**: `docs/race-engine-integration-spec.md`
 
@@ -78,10 +78,10 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 5. ✅ **Test end-to-end**: FP1 Suzuka, 20 auto (2 player + 18 AI), 54/54 AI runs completati, 0.5s wall time.
 6. ✅ **BattleResolver 2.0 integration**: BR2 nel tick loop SessionBridge (FASE 3). Proximity detection per sezione, resolve pairs (overtake/blocked/side-by-side/collision). Collision → yellow flag con auto-recovery (60-120s). Blue flag detection per auto doppiate. Battle events emessi via socket. E2E: 166 overtakes, 40 blocked, 6 collisions, 6 yellow periods, 54/54 runs completati.
 
-## 5. Implementazione – Fase D (AI & Experience — `docs/ai-driver-engine-spec.md`, `docs/setup-ui-plan.md`)
+## ✅ 5. Implementazione – Fase D (AI & Experience — `docs/ai-driver-engine-spec.md`, `docs/setup-ui-plan.md`)
 1. ✅ **AI Driver Engine**: implementato in `python_backend/lap_simulator/ai_driver_engine.py`. Setup seed, session planning, run config, refinement loop. 105/105 test.
-2. **Telemetria & HUD eventi**: logging sorpassi, blocchi, dirty air, feedback ingegnere per player e QA.
-3. **UI Garage 2.0 completa**: engineer assistant, feedback testuale, gestione parc fermé e callouts realtime.
+2. ✅ **Telemetria & HUD eventi**: logging sorpassi, blocchi, dirty air, feedback ingegnere per player e QA.
+3. ✅ **UI Garage 2.0 completa**: engineer assistant, feedback testuale, gestione parc fermé e callouts realtime.
 
 ## 6. Implementazione – Fase E (Data & Calibrazione — `docs/physics-roadmap.md`, `docs/config-spec.md`, `docs/degradation-and-consumption.md`)
 1. **FastF1 toolchain**: ingestion, caching, manifest dataset.

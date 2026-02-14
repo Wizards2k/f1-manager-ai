@@ -22,6 +22,14 @@ from utils.setup_engine import (
     BASE_FIELD_PARAMS,
 )
 
+# ---------------------------------------------------------------------------
+# Global tuning constants
+# ---------------------------------------------------------------------------
+
+_BASE_CORRECTION_FRACTION = 0.18  # slower convergence per run vs 0.25
+_BASE_THRESHOLD = 8.40            # higher base requirement (was 8.10/8.25)
+_PERFECTIONISM_DIVISOR = 200.0    # larger impact from perfezionismo
+
 
 # ---------------------------------------------------------------------------
 # §2.6 — Pilot quality categories
@@ -137,16 +145,25 @@ def compute_setup_score(setup_values: Dict[str, int]) -> float:
 
 
 def compute_convergence_threshold(perfezionismo: int) -> float:
-    """
-    §2.4 — Convergence threshold per driver.
+    """§2.4 — Base convergence threshold per driver."""
+    return _BASE_THRESHOLD + (perfezionismo - 60) / _PERFECTIONISM_DIVISOR
 
-    base_threshold = 8.1, offset by perfezionismo.
-    Perfezionismo 60 → 8.10  (pragmatic, accepts "good enough")
-    Perfezionismo 75 → 8.15
-    Perfezionismo 85 → 8.19
-    Perfezionismo 95 → 8.23  (perfectionist, wants near-optimal)
-    """
-    return 8.1 + (perfezionismo - 60) / 280.0
+
+def _tier_threshold_offset(simulator_quality: int) -> float:
+    """Teams con simulatori peggiori richiedono soglie più alte."""
+    if simulator_quality >= 85:
+        return 0.05   # top team
+    if simulator_quality >= 70:
+        return 0.12  # midfield
+    return 0.20      # backmarker
+
+
+def _compute_min_runs_required(simulator_quality: int) -> int:
+    if simulator_quality >= 85:
+        return 4
+    if simulator_quality >= 70:
+        return 5
+    return 6
 
 
 # ---------------------------------------------------------------------------
@@ -225,8 +242,7 @@ def adjust_setup_after_run(
 
     cat_label, precision_mult, sigma, error_prob = _get_pilot_category(ricerca_assetto)
     # Base correction fraction: how much of the gap to optimal is closed per run
-    # Elite closes ~26%, Sperimentale ~20%
-    base_fraction = 0.25 * precision_mult
+    base_fraction = _BASE_CORRECTION_FRACTION * precision_mult
 
     new_setup = dict(setup_values)
     changes: Dict[str, float] = {}
@@ -297,6 +313,7 @@ class AISetupState:
     total_runs: int = 0
     completion_run: Optional[int] = None
     completion_session: Optional[str] = None
+    min_runs_required: int = 3
     _rng: Optional[random.Random] = field(default=None, repr=False)
 
     def initialize(self, seed: Optional[int] = None):
@@ -304,8 +321,10 @@ class AISetupState:
         self._rng = random.Random(seed)
         self.setup_config = generate_baseline_setup(self.simulator_quality, self._rng)
         self.setup_score = compute_setup_score(self.setup_config)
-        self.threshold = compute_convergence_threshold(self.perfezionismo)
-        self.setup_complete = self.setup_score >= self.threshold
+        base_threshold = compute_convergence_threshold(self.perfezionismo)
+        self.threshold = base_threshold + _tier_threshold_offset(self.simulator_quality)
+        self.min_runs_required = _compute_min_runs_required(self.simulator_quality)
+        self.setup_complete = False
 
     def process_run(self, session: str, program: str) -> SetupRunResult:
         """
@@ -330,7 +349,11 @@ class AISetupState:
             self.setup_score = compute_setup_score(self.setup_config)
 
         # Check convergence
-        if not self.setup_complete and self.setup_score >= self.threshold:
+        if (
+            not self.setup_complete
+            and self.total_runs >= self.min_runs_required
+            and self.setup_score >= self.threshold
+        ):
             self.setup_complete = True
             self.completion_run = self.total_runs
             self.completion_session = session

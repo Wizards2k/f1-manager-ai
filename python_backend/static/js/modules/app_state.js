@@ -7,6 +7,7 @@ export class AppState {
         this.carMarkers = new Map();
         this.playerCars = new Map();
         this.playerTeamId = null;
+        this.timelineEvents = [];
     }
 
     updateSessionBests(bests) {
@@ -68,5 +69,22 @@ export class AppState {
                 this.playerCars.delete(driver);
             }
         }
+    }
+
+    addTimelineEvent(event) {
+        if (!event) return;
+        this.timelineEvents.push(event);
+        // Keep only the latest 100 events to avoid unbounded growth
+        if (this.timelineEvents.length > 100) {
+            this.timelineEvents.splice(0, this.timelineEvents.length - 100);
+        }
+    }
+
+    getTimelineEvents() {
+        return [...this.timelineEvents];
+    }
+
+    clearTimelineEvents() {
+        this.timelineEvents.length = 0;
     }
 }
