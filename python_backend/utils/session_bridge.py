@@ -1093,9 +1093,13 @@ class SessionBridge:
                     event_type="ai_setup_adjustment",
                     car_id=car_id,
                     payload={"changes": result.slider_changes, "program": result.program},
+                    ui_targets=["notification_bar", "timeline"],
                 )
 
             if result.setup_complete and not was_complete:
+                targets = ["notification_bar", "timeline"]
+                if race_car and race_car.is_player_controlled:
+                    targets.insert(0, "hud_overlay")
                 self._queue_event_feed(
                     event_type="ai_setup_converged",
                     car_id=car_id,
@@ -1105,7 +1109,7 @@ class SessionBridge:
                         "threshold": result.threshold,
                         "run_index": result.run_index,
                     },
-                    ui_targets=["notification_bar", "hud_overlay", "timeline"],
+                    ui_targets=targets,
                 )
 
         # Complete in AI engine (simplified — pass empty results)
@@ -1382,7 +1386,12 @@ class SessionBridge:
             "engine_map": engine_map,
             "ers_mode": ers_mode,
         }
-        self._queue_event_feed("ai_run_started", car_id=car_id, payload=payload)
+        self._queue_event_feed(
+            "ai_run_started",
+            car_id=car_id,
+            payload=payload,
+            ui_targets=["notification_bar", "timeline"],
+        )
 
     def _emit_run_completed_event(
         self,
@@ -1405,6 +1414,7 @@ class SessionBridge:
             "ai_run_completed",
             car_id=car_id,
             payload=payload,
+            ui_targets=["notification_bar", "timeline"],
         )
 
     def _queue_battle_events(self, events: List[BattleEvent]) -> None:

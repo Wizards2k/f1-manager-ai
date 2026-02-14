@@ -1,5 +1,5 @@
 export class PlayerGarageV3 {
-    constructor(state, { teamLabel, statusMsg, cardsContainer, overlayContainer, dockElement, notificationsContainer }) {
+    constructor(state, { teamLabel, statusMsg, cardsContainer, overlayContainer, dockElement, notificationsContainer, hudContainer }) {
         this.state = state;
         this.teamLabel = teamLabel;
         this.statusMsg = statusMsg;
@@ -7,6 +7,7 @@ export class PlayerGarageV3 {
         this.overlayContainer = overlayContainer;
         this.dockElement = dockElement;
         this.notificationsContainer = notificationsContainer;
+        this.hudContainer = hudContainer;
         this.tyreOptions = [
             { value: 'soft', label: 'Soft' },
             { value: 'medium', label: 'Medium' },
@@ -99,7 +100,10 @@ export class PlayerGarageV3 {
         this.setupOpenDrivers = new Set();
         this.setupDrafts = new Map();
         this.notificationTimers = new WeakMap();
+        this.hudTimers = new WeakMap();
+        this.pendingSendDrivers = new Set();
         this.lastDriverFeedback = new Map();
+        this.RUNTIME_FIELDS = new Set(['pace_level', 'ice_mode', 'ers_mode']);
         this.bindEvents();
     }
 
@@ -130,11 +134,10 @@ export class PlayerGarageV3 {
     }
 
     setStatus(message, tone = 'info') {
-        if (this.statusMsg) {
-            this.statusMsg.textContent = message;
-            this.statusMsg.style.color = tone === 'error' ? '#ff7b72' : tone === 'success' ? '#8bdcb8' : '#8bdcb8';
-        }
-        this.pushNotification(message, tone);
+        if (!this.statusMsg) return;
+        this.statusMsg.textContent = message || '';
+        const baseClass = 'garage-status-line';
+        this.statusMsg.className = `${baseClass}${tone ? ' ' + tone : ''}`;
     }
 
     pushNotification(message, tone = 'info') {
@@ -145,16 +148,69 @@ export class PlayerGarageV3 {
         this.notificationsContainer.appendChild(toast);
 
         const toasts = this.notificationsContainer.querySelectorAll('.garage-toast-v3');
-        if (toasts.length > 3) {
-            toasts[0].classList.add('hide');
-            setTimeout(() => toasts[0].remove(), 220);
+        const overflow = toasts.length - 3;
+        if (overflow > 0) {
+            for (let i = 0; i < overflow; i += 1) {
+                this.dismissToast(toasts[i], true);
+            }
         }
 
-        const timer = setTimeout(() => {
-            toast.classList.add('hide');
-            setTimeout(() => toast.remove(), 220);
-        }, 4500);
+        const timer = setTimeout(() => this.dismissToast(toast), 4500);
         this.notificationTimers.set(toast, timer);
+    }
+
+    dismissToast(toast, immediate = false) {
+        if (!toast) return;
+        const timer = this.notificationTimers.get(toast);
+        if (timer) {
+            clearTimeout(timer);
+            this.notificationTimers.delete(toast);
+        }
+        if (immediate) {
+            toast.remove();
+            return;
+        }
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 220);
+    }
+
+    pushHudBanner({ title = 'EVENT', body, tone = 'info', duration = 4000 } = {}) {
+        if (!this.hudContainer || !body) return;
+        const banner = document.createElement('div');
+        banner.className = `hud-banner ${tone}`;
+        banner.innerHTML = `
+            <span class="hud-banner-title">${title}</span>
+            <span class="hud-banner-body">${body}</span>
+        `;
+        this.hudContainer.appendChild(banner);
+
+        const banners = this.hudContainer.querySelectorAll('.hud-banner');
+        const overflow = banners.length - 2;
+        if (overflow > 0) {
+            for (let i = 0; i < overflow; i += 1) {
+                this.dismissHudBanner(banners[i], true);
+            }
+        }
+
+        const timer = setTimeout(() => this.dismissHudBanner(banner), duration);
+        this.hudTimers.set(banner, timer);
+    }
+
+    dismissHudBanner(banner, immediate = false) {
+        if (!banner) return;
+        const timer = this.hudTimers.get(banner);
+        if (timer) {
+            clearTimeout(timer);
+            this.hudTimers.delete(banner);
+        }
+        if (immediate) {
+            banner.remove();
+            return;
+        }
+        if (!banner.classList.contains('hide')) {
+            banner.classList.add('hide');
+            setTimeout(() => banner.remove(), 250);
+        }
     }
 
     handleDriverFeedback(car) {
@@ -290,6 +346,9 @@ export class PlayerGarageV3 {
         if (infoPct >= thresholds.green) infoChipColor = 'setup-chip-green';
         else if (infoPct >= thresholds.yellow) infoChipColor = 'setup-chip-yellow';
 
+        const isPendingSend = this.pendingSendDrivers.has(car.driver_number);
+        const sendDisabled = !isBox || isPendingSend;
+        const sendLabel = isPendingSend ? 'Sending…' : 'Send Out';
         return `
             <div class="car-card-v3" data-driver="${car.driver_number}" data-state="${currentState}">
                 <header>
@@ -352,7 +411,7 @@ export class PlayerGarageV3 {
                 </div>
                 <div class="car-actions-v3 with-setup">
                     <div class="drive-actions">
-                        <button class="btn-send" data-action="send" ${isBox ? '' : 'disabled'}>Send Out</button>
+                        <button class="btn-send${isPendingSend ? ' pending' : ''}" data-action="send" ${sendDisabled ? 'disabled' : ''}>${sendLabel}</button>
                         <button class="btn-box" data-action="box" ${isBox ? 'disabled' : ''}>Box</button>
                     </div>
                     <button class="btn-setup-v3" data-action="setup" ${isBox ? '' : 'disabled'}>Setup</button>
@@ -781,10 +840,15 @@ export class PlayerGarageV3 {
         const existing = this.state.getPlayerCar(driverNumber) || {};
         const updated = { ...existing, ...carPayload };
         updated.state = this.getCarState(updated);
+        if (updated.state === 'BOX') {
+            this.pendingSendDrivers.delete(driverNumber);
+        } else if (updated.state) {
+            this.pendingSendDrivers.add(driverNumber);
+        }
         this.state.setPlayerCar(updated);
     }
 
-    async sendPlayerConfig(driverNumber, payload, state) {
+    async sendPlayerConfig(driverNumber, payload, state, options = {}) {
         const allowedPayload = { ...payload };
         if (state !== 'BOX') {
             delete allowedPayload.tyre_compound;
@@ -803,9 +867,15 @@ export class PlayerGarageV3 {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Configuration failed');
-            this.setStatus(`Setup stored for #${driverNumber}.`, 'success');
+            const touchedFields = Object.keys(allowedPayload);
+            const runtimeOnly = touchedFields.every(field => this.RUNTIME_FIELDS.has(field));
+            if (!runtimeOnly && !options.suppressStatus) {
+                this.setStatus(`Setup stored for #${driverNumber}.`, 'success');
+            }
             this.applyLocalPlayerUpdates(driverNumber, allowedPayload);
-            this.render(true);
+            if (!options.skipRender) {
+                this.render(true);
+            }
             return true;
         } catch (err) {
             console.error(err);
@@ -843,6 +913,14 @@ export class PlayerGarageV3 {
             console.log('[GarageV3] Send out response:', data);
             if (!res.ok) throw new Error(data.error || 'Send out failed');
             this.setStatus(`Car #${driverNumber} released.`, 'success');
+            if (this.pushHudBanner) {
+                this.pushHudBanner({
+                    title: `Driver #${driverNumber}`,
+                    body: 'Car released to track',
+                    tone: 'success',
+                    duration: 3500,
+                });
+            }
             if (data.car) {
                 this.applyLocalCarState(driverNumber, data.car);
             } else {
@@ -879,7 +957,7 @@ export class PlayerGarageV3 {
         }
     }
 
-    handleCardClick(event) {
+    async handleCardClick(event) {
         const actionBtn = event.target.closest('button[data-action]');
         if (!actionBtn) return;
         const card = actionBtn.closest('.car-card-v3');
@@ -891,28 +969,26 @@ export class PlayerGarageV3 {
         const state = card.dataset.state;
         const action = actionBtn.dataset.action;
         
-        console.log('[GarageV3] Click:', action, 'driver:', driverNumber, 'state:', state);
-
         if (action === 'send') {
             if (state !== 'BOX') {
                 this.setStatus('Car already on track. Box first to change tyres/fuel.', 'error');
                 return;
             }
-            // Disable button immediately to prevent double-press
             actionBtn.disabled = true;
+            this.pendingSendDrivers.add(driverNumber);
+            this.render(true);
             const payload = this.collectCardPayload(card);
-            console.log('[GarageV3] Sending config:', payload);
-            this.sendPlayerConfig(driverNumber, payload, state).then(configured => {
-                console.log('[GarageV3] Config result:', configured);
-                if (configured) {
-                    console.log('[GarageV3] Calling sendPlayerCarOut for driver:', driverNumber);
-                    this.sendPlayerCarOut(driverNumber).then(result => {
-                        console.log('[GarageV3] Send out result:', result);
-                    });
-                } else {
-                    actionBtn.disabled = false; // Re-enable on config failure
-                }
-            });
+            const configured = await this.sendPlayerConfig(driverNumber, payload, state, { skipRender: true });
+            if (!configured) {
+                this.pendingSendDrivers.delete(driverNumber);
+                this.render(true);
+                return;
+            }
+            const sent = await this.sendPlayerCarOut(driverNumber);
+            if (!sent) {
+                this.pendingSendDrivers.delete(driverNumber);
+                this.render(true);
+            }
         } else if (action === 'box') {
             if (state === 'BOX') {
                 this.setStatus('Car already in the garage.', 'error');

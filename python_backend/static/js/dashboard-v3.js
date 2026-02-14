@@ -21,7 +21,9 @@ import { SocketBridge } from './modules/socket_bridge.js';
         cardsContainer: document.getElementById('player-car-cards-v3'),
         overlayContainer: document.getElementById('player-setup-overlay'),
         dockElement: document.getElementById('player-dock'),
-        notificationsContainer: document.getElementById('garage-notifications')
+        statusMsg: document.getElementById('garage-status'),
+        notificationsContainer: document.getElementById('garage-notifications'),
+        hudContainer: document.getElementById('hud-overlay')
     });
 
     const sessionControls = new SessionControls({

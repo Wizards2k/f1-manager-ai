@@ -50,6 +50,80 @@ body {
     background: #0d0d0d;
 }
 
+.hud-overlay {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 30;
+    pointer-events: none;
+}
+
+.hud-banner {
+    min-width: 260px;
+    max-width: 360px;
+    background: rgba(10, 12, 18, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 14px 18px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(18px) saturate(160%);
+    font-family: 'Formula1 Display', 'Segoe UI', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    animation: hudBannerIn 0.3s ease;
+}
+
+.hud-banner.hide {
+    animation: hudBannerOut 0.25s ease forwards;
+}
+
+.hud-banner .hud-banner-title {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.hud-banner .hud-banner-body {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.hud-banner.info {
+    border-color: rgba(127, 180, 255, 0.55);
+    box-shadow: 0 0 20px rgba(127, 180, 255, 0.25);
+}
+
+.hud-banner.success {
+    border-color: rgba(126, 226, 181, 0.55);
+    box-shadow: 0 0 20px rgba(126, 226, 181, 0.25);
+}
+
+.hud-banner.error {
+    border-color: rgba(255, 140, 140, 0.6);
+    box-shadow: 0 0 24px rgba(255, 140, 140, 0.3);
+}
+
+.hud-banner.warning {
+    border-color: rgba(255, 203, 112, 0.55);
+    box-shadow: 0 0 20px rgba(255, 203, 112, 0.25);
+}
+
+@keyframes hudBannerIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hudBannerOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-6px); }
+}
+
 /* Leaflet customizations */
 .leaflet-container {
     background: #0d0d0d !important;
@@ -119,13 +193,48 @@ body {
     gap: 8px;
 }
 
+.garage-status-line {
+    min-height: 20px;
+    margin-bottom: 6px;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #8bdcb8;
+    padding: 3px 6px;
+    border-radius: 6px;
+    background: rgba(22, 28, 34, 0.7);
+    border: 1px solid rgba(139, 220, 184, 0.2);
+}
+
+.garage-status-line.error {
+    color: #ff7b72;
+    border-color: rgba(255, 123, 114, 0.25);
+    background: rgba(40, 12, 12, 0.7);
+}
+
+.garage-status-line.info {
+    color: #7fb4ff;
+    border-color: rgba(127, 180, 255, 0.25);
+    background: rgba(14, 22, 36, 0.7);
+}
+
+.garage-status-line.success {
+    color: #8bdcb8;
+    border-color: rgba(139, 220, 184, 0.25);
+    background: rgba(12, 36, 23, 0.7);
+}
+
+.garage-status-line:empty {
+    display: none;
+}
+
 .garage-notifications-v3 {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    max-height: 80px;
+    gap: 4px;
+    max-height: 140px;
     overflow: hidden;
-    padding: 0 0 6px;
+    padding: 0 0 8px;
     pointer-events: none;
 }
 
