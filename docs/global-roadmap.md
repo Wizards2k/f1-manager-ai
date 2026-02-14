@@ -82,12 +82,13 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 1. ✅ **AI Driver Engine**: implementato in `python_backend/lap_simulator/ai_driver_engine.py`. Setup seed, session planning, run config, refinement loop. 105/105 test.
 2. ✅ **Telemetria & HUD eventi**: logging sorpassi, blocchi, dirty air, feedback ingegnere per player e QA.
 3. ✅ **UI Garage 2.0 completa**: engineer assistant, feedback testuale, gestione parc fermé e callouts realtime.
-
+lascia
 ## 6. Implementazione – Fase E (Data & Calibrazione — `docs/physics-roadmap.md`, `docs/config-spec.md`, `docs/degradation-and-consumption.md`)
-1. **FastF1 toolchain**: ingestion, caching, manifest dataset.
+1. ✅ **FastF1 toolchain**: ingestion, caching, manifest dataset (wrapper `scripts/fastf1_build_assets.py`, manifest per anno, cache locale).
 2. **Script fitting componenti**: `aero_fit`, `tyre_fit`, `powerunit_fit`, `brake_calibration` con output in `config/calibration/`.
 3. **CI `calibration.yml`**: pipeline badge componenti → lap regression → race smoke test.
-4. **Manifest & dashboard**: repository asset calibrati + dashboard Plotly per confronto sim vs telemetria reale.
+4. **Data coherence watchdog**: sistema di controllo/coerenza contro i dati originali (FastF1 / telemetry JSON) con report automatici e alert su drift.
+5. **Manifest & dashboard**: repository asset calibrati + dashboard Plotly per confronto sim vs telemetria reale.
 
 ## 7. Implementazione – Fase F (Gameplay, Backend & QA Harness — `docs/physics-roadmap.md`, `docs/BattleResolver.md`, `docs/setup-ui-plan.md`)
 1. **RaceSimulator backend integration**: scheduler sezioni, orchestrazione multi-car, storage `section_progress`, sincronizzazione multiplayer fantasma.
