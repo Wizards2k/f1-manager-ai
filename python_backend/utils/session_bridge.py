@@ -14,6 +14,9 @@ from __future__ import annotations
 
 import logging
 import random
+import os
+from datetime import datetime
+from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
@@ -58,6 +61,16 @@ from utils.adapter import (
 from debug_log import log_debug_event
 
 logger = logging.getLogger(__name__)
+
+
+def _chip_color(percent: float) -> str:
+    if percent >= 100.0:
+        return "ready"
+    if percent >= 80.0:
+        return "green"
+    if percent >= 40.0:
+        return "yellow"
+    return "red"
 
 
 # ---------------------------------------------------------------------------
@@ -317,6 +330,7 @@ class SessionBridge:
         self._battle_cooldown: set = set()               # car_ids protected from min-gap this tick
         self._ai_setup_states: Dict[str, AISetupState] = {}  # car_id → AI setup search state
         self.session_kind: str = "FP1"
+        self._ai_report_enabled = os.getenv("F1_AI_SETUP_REPORT", "0").lower() in {"1", "true", "yes"}
 
     # ------------------------------------------------------------------
     # Initialization
@@ -1005,15 +1019,6 @@ class SessionBridge:
             # Map AI progress to RaceCar.setup_info_percent for frontend chips
             race_car = self.race_cars_map.get(car_id)
             if race_car and not race_car.is_player_controlled:
-                def _chip_color(pct: float) -> str:
-                    if pct >= 100:
-                        return 'ready'
-                    if pct >= 80:
-                        return 'green'
-                    if pct >= 40:
-                        return 'yellow'
-                    return 'red'
-
                 before_points = race_car.setup_info_points
                 before_percent = race_car.setup_info_percent
                 before_color = _chip_color(before_percent)
@@ -1363,5 +1368,92 @@ class SessionBridge:
             self._complete_car_run(car_id)
         for car_id, race_car in self.race_cars_map.items():
             set_racecar_phase(race_car, "box")
+        if self._ai_report_enabled:
+            self._generate_ai_setup_report()
         self.active = False
         logger.info("Session finished. Runs: %d", len(self.pso.run_log) if self.pso else 0)
+
+    def _generate_ai_setup_report(self) -> None:
+        if not self.ai_engines:
+            return
+        rows: List[str] = []
+        rows.append("<table class=\"setup-report\">")
+        rows.append(
+            "<thead><tr><th>Team</th><th>Pilota</th><th>Runs (done/req)</th><th>Score (cur/target)</th><th>Best Lap (s)</th><th>Setup Chip</th><th>Status</th><th>Programs</th></tr></thead>"
+        )
+        rows.append("<tbody>")
+
+        for car_id, engine in sorted(self.ai_engines.items()):
+            summary = engine.session_summary()
+            race_car = self.race_cars_map.get(car_id)
+            state = self._ai_setup_states.get(car_id)
+            score = state.setup_score if state else 0.0
+            threshold = state.threshold if state else 0.0
+            runs_done = state.total_runs if state else summary["runs_completed"]
+            runs_req = getattr(state, "min_runs_required", summary["runs_planned"])
+            score_label = f"{score:.2f}/{threshold:.2f}" if threshold > 0 else "–"
+            raw_percent = 0.0
+            if threshold > 0:
+                raw_percent = max(0.0, min(100.0, (score / threshold) * 100.0))
+            progress_factor = 1.0
+            if runs_req > 0:
+                progress_factor = min(1.0, runs_done / runs_req)
+            percent = raw_percent * progress_factor
+            is_ready = bool(state and state.setup_complete)
+            if not is_ready:
+                percent = min(percent, 90.0)
+            chip_class = _chip_color(percent)
+            chip_label = f"{percent:.0f}%"
+            programs = ", ".join(run.program.value for run in engine.session_plan.runs) if engine.session_plan else ""
+            status_label = "Ready" if is_ready else "Collecting"
+            runs_label = f"{runs_done}/{runs_req}"
+            rows.append(
+                "<tr>"
+                f"<td>{engine.team_config.team_id}</td>"
+                f"<td>{engine.driver_config.driver_id}</td>"
+                f"<td>{runs_label}</td>"
+                f"<td>{score_label}</td>"
+                f"<td>{summary['best_lap_s']:.3f}</td>"
+                f"<td class=\"chip {chip_class}\">{chip_label}</td>"
+                f"<td>{status_label}</td>"
+                f"<td>{programs}</td>"
+                "</tr>"
+            )
+
+        rows.append("</tbody></table>")
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        session = getattr(self.pso, "session_type", None)
+        session_name = session.value if session else "FP"
+        report_dir = Path("tmp")
+        report_dir.mkdir(parents=True, exist_ok=True)
+        report_path = report_dir / f"ai_setup_report_{session_name}_{timestamp}.html"
+        html = [
+            "<!doctype html>",
+            "<html lang=\"en\">",
+            "<head>",
+            "<meta charset=\"utf-8\" />",
+            f"<title>AI Setup Report – {session_name}</title>",
+            "<style>",
+            "body{background:#05060a;color:#f4f5ff;font-family:'Inter','Roboto','Helvetica Neue',sans-serif;padding:32px;}",
+            "h1{margin-top:0;font-size:24px;color:#ffffff;}",
+            "p{color:#c5c8ff;font-size:13px;margin-bottom:16px;}",
+            ".setup-report{width:100%;border-collapse:collapse;font-family:'Roboto Mono','SFMono-Regular',Consolas,monospace;font-size:13px;table-layout:fixed;color:#f4f5ff;}",
+            ".setup-report th,.setup-report td{border:1px solid #262a40;padding:8px 10px;vertical-align:top;background:#0c0f1a;}",
+            ".setup-report thead th{background:#12162a;color:#fdfdfd;}",
+            ".setup-report tbody tr:nth-child(odd) td{background:#0e1222;}",
+            ".setup-report tbody tr:nth-child(even) td{background:#0c0f1a;}",
+            ".setup-report .chip{font-weight:600;text-align:center;border-radius:999px;padding:4px 10px;display:inline-block;min-width:64px;}",
+            ".setup-report .chip.red{background:#39121d;color:#ff7a7a;}",
+            ".setup-report .chip.yellow{background:#3c2a11;color:#ffd166;}",
+            ".setup-report .chip.green{background:#1c3725;color:#6fffb0;}",
+            ".setup-report .chip.ready{background:#15373b;color:#80ffeb;}",
+            "</style>",
+            "</head>",
+            "<body>",
+            f"<h1>AI Setup Report – {session_name}</h1>",
+            f"<p>Generato: {datetime.utcnow().isoformat()} UTC</p>",
+            *rows,
+            "</body></html>",
+        ]
+        report_path.write_text("\n".join(html), encoding="utf-8")
+        logger.info("AI setup report written to %s", report_path)
