@@ -83,4 +83,8 @@ export class AppState {
     getTimelineEvents() {
         return [...this.timelineEvents];
     }
+
+    clearTimelineEvents() {
+        this.timelineEvents.length = 0;
+    }
 }

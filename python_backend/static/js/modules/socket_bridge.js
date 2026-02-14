@@ -1,10 +1,11 @@
 export class SocketBridge {
-    constructor({ state, mapModule, timingPanel, playerGarage, sessionControls }) {
+    constructor({ state, mapModule, timingPanel, playerGarage, sessionControls, timelinePanel }) {
         this.state = state;
         this.mapModule = mapModule;
         this.timingPanel = timingPanel;
         this.playerGarage = playerGarage;
         this.sessionControls = sessionControls;
+        this.timelinePanel = timelinePanel;
         this.socket = io();
         this.registerHandlers();
         this.bootstrap();
@@ -30,6 +31,11 @@ export class SocketBridge {
         const seenPlayerDrivers = new Set();
         cars.forEach(car => {
             if (car.is_player_controlled) {
+                // Clear pendingSend only when server confirms car is on track (no longer pending)
+                const isOnTrack = car.is_on_track === true || (car.state && car.state !== 'BOX');
+                if (isOnTrack && this.playerGarage.pendingSendDrivers.has(car.driver_number)) {
+                    this.playerGarage.pendingSendDrivers.delete(car.driver_number);
+                }
                 this.playerGarage.applyLocalCarState(car.driver_number, car);
                 seenPlayerDrivers.add(car.driver_number);
                 this.state.setPlayerCar(car);
@@ -94,6 +100,7 @@ export class SocketBridge {
             }
 
             this.state.addTimelineEvent?.(event);
+            this.timelinePanel?.render();
 
             const targets = Array.isArray(event.ui_targets) ? event.ui_targets : [];
             if (targets.includes('notification_bar')) {

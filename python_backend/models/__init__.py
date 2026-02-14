@@ -1,5 +1,6 @@
 from .models import (
     CarState,
+    CarPhase,
     RaceCar,
     TireCompound,
     Pilota,
@@ -11,6 +12,7 @@ from .models import (
 
 __all__ = [
     'CarState',
+    'CarPhase',
     'RaceCar',
     'TireCompound',
     'Pilota',

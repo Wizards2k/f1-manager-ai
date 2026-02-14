@@ -23,6 +23,16 @@ class CarState(Enum):
     IN_LAP = "IN LAP"
 
 
+class CarPhase(str, Enum):
+    """Where the car is in the session lifecycle."""
+    IN_GARAGE = "in_garage"
+    PIT_QUEUE = "pit_queue"
+    PIT_EXIT = "pit_exit"
+    ON_TRACK = "on_track"
+    PIT_ENTRY = "pit_entry"
+    PIT_WORK = "pit_work"
+
+
 class MathUtils:
     @staticmethod
     def clamp(value, min_value, max_value):

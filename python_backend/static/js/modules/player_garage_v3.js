@@ -148,7 +148,7 @@ export class PlayerGarageV3 {
         this.notificationsContainer.appendChild(toast);
 
         const toasts = this.notificationsContainer.querySelectorAll('.garage-toast-v3');
-        const overflow = toasts.length - 3;
+        const overflow = toasts.length - 2;
         if (overflow > 0) {
             for (let i = 0; i < overflow; i += 1) {
                 this.dismissToast(toasts[i], true);
@@ -348,7 +348,7 @@ export class PlayerGarageV3 {
 
         const isPendingSend = this.pendingSendDrivers.has(car.driver_number);
         const sendDisabled = !isBox || isPendingSend;
-        const sendLabel = isPendingSend ? 'Sending…' : 'Send Out';
+        const sendLabel = 'Send Out';
         return `
             <div class="car-card-v3" data-driver="${car.driver_number}" data-state="${currentState}">
                 <header>
@@ -832,19 +832,16 @@ export class PlayerGarageV3 {
         this.state.setPlayerCar(car);
     }
 
-    applyLocalCarState(driverNumber, carPayload) {
+    applyLocalCarState(driverNumber, carPayload, options = {}) {
         if (!carPayload || typeof carPayload !== 'object') {
             console.warn('[GarageV3] Invalid car payload');
             return;
         }
+        const preservePending = options.preservePending === true;
         const existing = this.state.getPlayerCar(driverNumber) || {};
         const updated = { ...existing, ...carPayload };
         updated.state = this.getCarState(updated);
-        if (updated.state === 'BOX') {
-            this.pendingSendDrivers.delete(driverNumber);
-        } else if (updated.state) {
-            this.pendingSendDrivers.add(driverNumber);
-        }
+        // pendingSendDrivers is managed only in handleCardClick and when car returns to BOX after stint
         this.state.setPlayerCar(updated);
     }
 
@@ -922,7 +919,8 @@ export class PlayerGarageV3 {
                 });
             }
             if (data.car) {
-                this.applyLocalCarState(driverNumber, data.car);
+                const shouldPreservePending = this.getCarState(data.car) === 'BOX';
+                this.applyLocalCarState(driverNumber, data.car, { preservePending: shouldPreservePending });
             } else {
                 console.warn('[GarageV3] No car data in response, updating state manually');
                 const car = this.state.getPlayerCar(driverNumber);
@@ -976,17 +974,12 @@ export class PlayerGarageV3 {
             }
             actionBtn.disabled = true;
             this.pendingSendDrivers.add(driverNumber);
+            this.applyLocalCarState(driverNumber, { state: 'OUT_LAP', is_on_track: true });
             this.render(true);
-            const payload = this.collectCardPayload(card);
-            const configured = await this.sendPlayerConfig(driverNumber, payload, state, { skipRender: true });
-            if (!configured) {
-                this.pendingSendDrivers.delete(driverNumber);
-                this.render(true);
-                return;
-            }
             const sent = await this.sendPlayerCarOut(driverNumber);
             if (!sent) {
                 this.pendingSendDrivers.delete(driverNumber);
+                this.applyLocalCarState(driverNumber, { state: 'BOX', is_on_track: false });
                 this.render(true);
             }
         } else if (action === 'box') {
@@ -1089,6 +1082,12 @@ export class PlayerGarageV3 {
                 this.toggleSetupOverlay(driverNumber, false);
             } else {
                 this.buildSetupOverlay(latestCar, currentState === 'BOX');
+            }
+            // Apply any pending tyres/fuel changes
+            const card = this.cardsContainer.querySelector(`[data-driver="${driverNumber}"]`);
+            if (card) {
+                const configPayload = this.collectCardPayload(card);
+                await this.sendPlayerConfig(driverNumber, configPayload, currentState, { skipRender: true });
             }
         } catch (err) {
             console.error(err);

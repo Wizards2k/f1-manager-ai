@@ -4,6 +4,7 @@ import { TimingPanelV3 } from './modules/timing_panel_v3.js';
 import { PlayerGarageV3 } from './modules/player_garage_v3.js';
 import { SessionControls } from './modules/session_controls.js';
 import { SocketBridge } from './modules/socket_bridge.js';
+import { TimelinePanelV3 } from './modules/timeline_panel_v3.js';
 
 (function initDashboardV3() {
     const appState = new AppState();
@@ -32,11 +33,23 @@ import { SocketBridge } from './modules/socket_bridge.js';
         speedIndicator: document.getElementById('current-speed')
     });
 
+    const timelinePanel = new TimelinePanelV3({
+        state: appState,
+        panelElement: document.getElementById('timeline-panel'),
+        listElement: document.getElementById('timeline-list'),
+        emptyElement: document.getElementById('timeline-empty'),
+        toggleButton: document.getElementById('timeline-toggle'),
+        clearButton: document.getElementById('timeline-clear'),
+        closeButton: document.querySelector('[data-action="close-timeline"]'),
+        sessionControls,
+    });
+
     new SocketBridge({
         state: appState,
         mapModule,
         timingPanel,
         playerGarage,
-        sessionControls
+        sessionControls,
+        timelinePanel,
     });
 })();

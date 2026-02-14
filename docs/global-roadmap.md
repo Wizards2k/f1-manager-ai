@@ -80,7 +80,7 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 
 ## 5. Implementazione – Fase D (AI & Experience — `docs/ai-driver-engine-spec.md`, `docs/setup-ui-plan.md`)
 1. ✅ **AI Driver Engine**: implementato in `python_backend/lap_simulator/ai_driver_engine.py`. Setup seed, session planning, run config, refinement loop. 105/105 test.
-2. **Telemetria & HUD eventi**: logging sorpassi, blocchi, dirty air, feedback ingegnere per player e QA.
+2. ✅ **Telemetria & HUD eventi**: logging sorpassi, blocchi, dirty air, feedback ingegnere per player e QA.
 3. **UI Garage 2.0 completa**: engineer assistant, feedback testuale, gestione parc fermé e callouts realtime.
 
 ## 6. Implementazione – Fase E (Data & Calibrazione — `docs/physics-roadmap.md`, `docs/config-spec.md`, `docs/degradation-and-consumption.md`)
