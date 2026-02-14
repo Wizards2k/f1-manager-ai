@@ -139,6 +139,11 @@ def race_simulation():
             'battle_events': battle_events,
         })
 
+        if bridge and bridge.active:
+            event_feed = bridge.pop_event_feed()
+            if event_feed:
+                socketio.emit('event_feed', event_feed)
+
 if __name__ == '__main__':
     # Avvia simulazione in background
     import threading
