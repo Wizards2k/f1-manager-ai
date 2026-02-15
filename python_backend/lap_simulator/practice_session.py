@@ -477,6 +477,9 @@ class PracticeSessionOrchestrator:
         self._next_run_id = 0
         self._started = False
         self._flag_clear_at_s: float = 0.0   # auto-clear yellow/red after this time
+        self.energy_guidance: Dict[str, Any] = {}
+        self.regen_profile: Dict[str, Any] = {}
+        self.brake_profile: Dict[str, Any] = {}
 
     # ------------------------------------------------------------------
     # Registration
@@ -632,6 +635,7 @@ class PracticeSessionOrchestrator:
             fuel_kg=fuel_kg,
             laps_planned=laps_planned,
             start_time_s=self.clock.elapsed_s,
+            notes=self._build_run_notes(program),
         )
 
         # Update car state
@@ -664,6 +668,47 @@ class PracticeSessionOrchestrator:
         )
 
         return record
+
+    # ------------------------------------------------------------------
+    # Circuit calibration helpers
+    # ------------------------------------------------------------------
+
+    def set_circuit_calibration(
+        self,
+        *,
+        energy_guidance: Optional[Dict[str, Any]] = None,
+        regen_profile: Optional[Dict[str, Any]] = None,
+        brake_profile: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        if energy_guidance:
+            self.energy_guidance = energy_guidance
+        if regen_profile:
+            self.regen_profile = regen_profile
+        if brake_profile:
+            self.brake_profile = brake_profile
+
+    def _build_run_notes(self, program: RunProgram) -> str:
+        parts: List[str] = []
+        if self.energy_guidance:
+            deploy = self.energy_guidance.get("deploy_limit_mj")
+            harvest = self.energy_guidance.get("harvest_limit_mj")
+            warnings = self.energy_guidance.get("warnings", [])
+            parts.append(
+                f"ERS budget {deploy}MJ/{harvest}MJ"
+            )
+            if warnings:
+                parts.append(f"warnings: {', '.join(warnings[:2])}")
+        if self.regen_profile:
+            bias = self.regen_profile.get("regen_migration_bias")
+            potential = self.regen_profile.get("potential_mj_per_lap")
+            parts.append(f"Regen bias {bias:+.2f}, pot {potential} MJ")
+        if self.brake_profile:
+            parts.append(
+                f"Brake base {self.brake_profile.get('regen_brake_base')}, duct {self.brake_profile.get('duct_recommendation')}"
+            )
+        if not parts:
+            return ""
+        return f"[{program.value}] " + " | ".join(parts)
 
     def complete_run(
         self,

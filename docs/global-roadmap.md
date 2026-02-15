@@ -81,8 +81,11 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 ## ✅ 5. Implementazione – Fase D (AI & Experience — `docs/ai-driver-engine-spec.md`, `docs/setup-ui-plan.md`)
 1. ✅ **AI Driver Engine**: implementato in `python_backend/lap_simulator/ai_driver_engine.py`. Setup seed, session planning, run config, refinement loop. 105/105 test.
 2. ✅ **Telemetria & HUD eventi**: logging sorpassi, blocchi, dirty air, feedback ingegnere per player e QA.
+   - 🔧 Backend 2026-02-15: SessionBridge e PSO propagano `ers_budget`/`regen_profile`/`brake_profile` nei nuovi blocchi `pu_stats` e `brake_diagnostics`, emessi via `race_update`.
+   - ✅ Regression test `test_calibration_and_telemetry.py` (10 giri per circuito) confronta i payload con i JSON derivati, garantendo coerenza per tutte le 24 piste.
+   - ⏭ UI da aggiornare per consumare i dati (panel HUD/Garage, preset push/recharge) — rimane aperto come follow-up FE.
 3. ✅ **UI Garage 2.0 completa**: engineer assistant, feedback testuale, gestione parc fermé e callouts realtime.
-lascia
+
 ## 6. Implementazione – Fase E (Data & Calibrazione — `docs/physics-roadmap.md`, `docs/config-spec.md`, `docs/degradation-and-consumption.md`)
 1. ✅ **FastF1 toolchain**: ingestion, caching, manifest dataset (wrapper `scripts/fastf1_build_assets.py`, manifest per anno, cache locale).
 2. **Script fitting componenti**: `aero_fit`, `tyre_fit`, `powerunit_fit`, `brake_calibration` con output in `config/calibration/`.
@@ -90,7 +93,7 @@ lascia
    - 🆕 **PU energy model & UI mockup** (`docs/pu-energy-model.md`): descrive come esporre mappe, SOC, MJ consumati/recuperati in Garage/HUD e gli hook per R&D (deploy/harvest split personalizzabile).
    - **Piano di integrazione**:
      1. *Config & fitting*: estendere i derived con `deploy_mj_per_lap`, `harvest_mj_per_lap`, `mguh_direct_ratio`, `target_soc_end_lap`, `torque_bias`, `regen_brake_factor`, `regen_brake_limit_nm`; aggiornare `powerunit_fit.py` e il nuovo `brake_calibration.py` con report MJ/SOC e torque curve.
-     2. *Runtime*: implementare i nuovi limiti in LapSimulator (PU + freni), calcolare `regen_brake_torque`/`hydraulic_brake_torque`, flag di brake migration e telemetria `pu_stats`/`pu_energy_trace` con MJ per sezione.
+     2. *Runtime*: implementare i nuovi limiti in LapSimulator (PU + freni), calcolare `regen_brake_torque`/`hydraulic_brake_torque`, flag di brake migration e telemetria `pu_stats`/`pu_energy_trace` con MJ per sezione: i blocchi `ers_budget` e `regen_profile` generati dai fitting devono essere inoltrati al SessionBridge, agli strumenti debug e al Practice Session Orchestrator senza parsing dei report.
      3. *UI/UX*: sviluppare il pannello Garage e il widget HUD descritti nel mockup, aggiungendo preset push/recharge e indicatori SOC/MJ, più aggiornare `docs/setup-ui-plan.md`.
      4. *Documentazione & QA*: mantenere allineati i documenti e definire checklist (Push lap, Recharge, Wet, Brake migration) per validare SOC/MJ e segnali UI.
 3. **CI `calibration.yml`**: pipeline badge componenti → lap regression → race smoke test.

@@ -362,6 +362,12 @@ class SessionBridge:
             st = SessionType.FP1
 
         self.pso = PracticeSessionOrchestrator(st, duration_s=SESSION_DURATION_S)
+        if self.circuit_config:
+            self.pso.set_circuit_calibration(
+                energy_guidance=self.circuit_config.ers_budget,
+                regen_profile=self.circuit_config.regen_profile,
+                brake_profile=self.circuit_config.brake_profile,
+            )
 
         teams: Dict[str, List] = {}
         for car in race_cars:
@@ -624,8 +630,8 @@ class SessionBridge:
                     ts.current_sector += 1
                     ts.sector_dt_acc = 0.0
 
-                # Update RaceCar with section data
-                self._apply_section_to_racecar(race_car, entry, result)
+                # Update RaceCar with section data/telemetry
+                self._apply_section_to_racecar(race_car, entry, result, section)
 
                 # Advance to next section
                 ts.current_section_idx += 1
@@ -771,7 +777,7 @@ class SessionBridge:
 
         return sector_times
 
-    def _apply_section_to_racecar(self, race_car, entry, result: SectionResult) -> None:
+    def _apply_section_to_racecar(self, race_car, entry, result: SectionResult, section: SectionContext) -> None:
         """Update RaceCar with per-section data (tyre, fuel, etc.)."""
         # Tyre wear (average across wheels)
         from lap_simulator.data_types import WheelPosition
@@ -796,6 +802,61 @@ class SessionBridge:
         race_car.fuel_percent = max(1.0, (entry.state.pu.fuel_kg / fuel_max_kg) * 100.0)
         if hasattr(race_car, "player_config"):
             race_car.player_config["fuel_percent"] = int(round(race_car.fuel_percent))
+
+        # Power unit / ERS telemetry block
+        race_car.pu_stats = self._build_pu_stats(entry)
+
+        # Brake diagnostics (per section + circuit profile)
+        race_car.brake_diagnostics = self._build_brake_diagnostics(section)
+
+    def _build_pu_stats(self, entry) -> Dict[str, Any]:
+        if not self.circuit_config:
+            return {}
+        budget = self.circuit_config.ers_budget or {}
+        maps_budget = budget.get("maps", {})
+        active_map = entry.state.pu.active_map.value if entry.state.pu.active_map else "STANDARD"
+        map_budget = maps_budget.get(active_map, {})
+        capacity = budget.get("battery_capacity_mj", 4.0) or 4.0
+        soc_mj = entry.state.pu.ers_energy_mj
+        deploy_limit = budget.get("deploy_limit_mj", 4.0)
+        harvest_limit = budget.get("harvest_limit_mj", 2.0)
+        return {
+            "map": active_map,
+            "soc_mj": round(soc_mj, 3),
+            "soc_pct": round((soc_mj / capacity) * 100.0, 1),
+            "capacity_mj": capacity,
+            "deploy_limit_mj": deploy_limit,
+            "harvest_limit_mj": harvest_limit,
+            "deploy_mj_per_lap": map_budget.get("deploy_mj_per_lap"),
+            "harvest_mj_per_lap": map_budget.get("harvest_mj_per_lap"),
+            "target_soc_end_lap": map_budget.get("target_soc_end_lap"),
+            "deploy_ratio": map_budget.get("deploy_ratio"),
+            "harvest_ratio": map_budget.get("harvest_ratio"),
+            "warnings": budget.get("warnings", []),
+        }
+
+    def _build_brake_diagnostics(self, section: SectionContext) -> Dict[str, Any]:
+        if not self.circuit_config:
+            return {}
+        profile = self.circuit_config.brake_profile or {}
+        diagnostics = {
+            "regen_brake_base": profile.get("regen_brake_base"),
+            "regen_migration_bias": profile.get("regen_migration_bias"),
+            "hydraulic_vs_regen_ratio": profile.get("hydraulic_vs_regen_ratio"),
+            "cooling_targets": profile.get("cooling_targets"),
+            "duct_recommendation": profile.get("duct_recommendation"),
+            "brake_energy_window": profile.get("brake_energy_window"),
+            "critical_sections": self.circuit_config.brake_critical_sections,
+        }
+        if section is not None:
+            diagnostics.update(
+                {
+                    "current_section_id": section.section_id,
+                    "current_section_name": section.name,
+                    "current_braking_energy_mj": section.braking_energy_mj,
+                }
+            )
+        return diagnostics
 
     # ------------------------------------------------------------------
     # Player commands
