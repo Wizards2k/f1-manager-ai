@@ -16,7 +16,7 @@
       min-height: 100vh;
     }
     .panel {
-      width: 460px;
+      width: 640px;
       border-radius: 24px;
       background: #10141b;
       border: 1px solid rgba(255,255,255,0.07);
@@ -79,6 +79,11 @@
     input[type=range] {
       width: 100%;
       accent-color: #ffd24c;
+    }
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
     }
     .dual-grid {
       display: grid;
@@ -230,54 +235,64 @@
       <div class="preset-chip">Custom</div>
     </div>
 
-    <div class="section">
-      <h2>Budget & split</h2>
-      <div class="slider">
-        <label><span>Deploy budget</span><span>65% · 2.6 MJ</span></label>
-        <input type="range" value="65" />
+    <div class="section-grid">
+      <div class="section">
+        <h2>Budget & split</h2>
+        <div class="slider">
+          <label><span>Deploy budget</span><span>65% · 2.6 MJ</span></label>
+          <input type="range" value="65" />
+        </div>
+        <div class="slider">
+          <label><span>MGU-H direct</span><span>55%</span></label>
+          <input type="range" value="55" />
+        </div>
+        <div class="slider">
+          <label><span>Target SOC</span><span>58%</span></label>
+          <input type="range" value="58" />
+        </div>
+        <div class="slider">
+          <label><span>Harvest bias</span><span>35%</span></label>
+          <input type="range" value="35" />
+        </div>
+        <div class="slider">
+          <label><span>Defense reserve</span><span>0.2 MJ</span></label>
+          <input type="range" value="30" />
+        </div>
       </div>
-      <div class="slider">
-        <label><span>MGU-H direct</span><span>55%</span></label>
-        <input type="range" value="55" />
-      </div>
-      <div class="slider">
-        <label><span>Target SOC</span><span>58%</span></label>
-        <input type="range" value="58" />
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Priority</h2>
-      <div class="dual-grid">
-        <div class="dual-card">
-          <strong>Main straights</strong>
-          Deploy 50% · Direct 60%
-          <div class="bar-preview">
-            <span>0.95 MJ</span>
-            <div class="bar-track"><div class="bar-fill"></div></div>
+      <div>
+        <div class="section">
+          <h2>Priority</h2>
+          <div class="dual-grid">
+            <div class="dual-card">
+              <strong>Main straights</strong>
+              Deploy 50% · Direct 60%
+              <div class="bar-preview">
+                <span>0.95 MJ</span>
+                <div class="bar-track"><div class="bar-fill"></div></div>
+              </div>
+            </div>
+            <div class="dual-card">
+              <strong>Corner exits</strong>
+              Deploy 20% · Direct 15%
+              <div class="bar-preview">
+                <span>0.35 MJ</span>
+                <div class="bar-track"><div class="bar-fill" style="width:35%"></div></div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="dual-card">
-          <strong>Corner exits</strong>
-          Deploy 20% · Direct 15%
-          <div class="bar-preview">
-            <span>0.35 MJ</span>
-            <div class="bar-track"><div class="bar-fill" style="width:35%"></div></div>
+        <div class="section">
+          <h2>Triggers</h2>
+          <div class="dual-grid">
+            <div class="dual-card">
+              <strong>Overtake window</strong>
+              8 s · Priority 1.0
+            </div>
+            <div class="dual-card">
+              <strong>Defense reserve</strong>
+              0.2 MJ · Gap +0.4 s
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Triggers</h2>
-      <div class="dual-grid">
-        <div class="dual-card">
-          <strong>Overtake window</strong>
-          8 s · Priority 1.0
-        </div>
-        <div class="dual-card">
-          <strong>Defense reserve</strong>
-          0.2 MJ · Gap +0.4 s
         </div>
       </div>
     </div>
