@@ -1,0 +1,15 @@
+# Aero calibration – az-2016_baku
+
+| Parametro | Valore |
+|-----------|--------|
+| CdA | 1.9187 |
+| ClA | 4.1195 |
+| drag_index | 1.3233 |
+| downforce_index | 0.8494 |
+| aero_balance_target | 0.1500 |
+
+## Notes
+- **source_year**: 2025
+- **session_type**: Q
+- **description**: qualifying_fastest
+- **generated_from**: az-2016_baku

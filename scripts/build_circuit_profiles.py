@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "config"
 RAW_CIRCUITS = ROOT / "python_backend" / "data" / "circuits"
 DERIVED_BASE = CONFIG / "circuits" / "derived"
+CALIBRATION_BASE = CONFIG / "calibration"
 
 GLOBAL_DEFAULTS = {
     "tyres": CONFIG / "tyres" / "tyre_params_global_default.json",
@@ -26,6 +27,12 @@ GLOBAL_DEFAULTS = {
     "pu_maps": CONFIG / "pu" / "pu_maps_global_default.json",
     "pu_reliability": CONFIG / "pu" / "pu_reliability_global_default.json",
     "damage": CONFIG / "damage" / "damage_coeffs_global_default.json",
+}
+
+CALIBRATION_PATHS = {
+    "tyres": CALIBRATION_BASE / "tyres",
+    "brakes": CALIBRATION_BASE / "brakes",
+    "pu": CALIBRATION_BASE / "pu",
 }
 
 SETUP_BOUNDS = CONFIG / "setup" / "setup_mapping_v2.json"
@@ -222,6 +229,16 @@ def add_common_meta(payload: Dict[str, Any], circuit_id: str, setup_key: str, te
         meta["telemetry_source"] = f"python_backend/data/circuits/{circuit_id}_Telemetry.json"
 
 
+def load_calibration(component: str, circuit_id: str) -> Optional[Dict[str, Any]]:
+    base = CALIBRATION_PATHS.get(component)
+    if not base:
+        return None
+    path = base / f"{circuit_id}.json"
+    if path.exists():
+        return load_json(path)
+    return None
+
+
 def merge_circuit_profile(circuit_id: str, args: argparse.Namespace) -> None:
     global_defaults = {k: load_json(v) for k, v in GLOBAL_DEFAULTS.items() if v.exists()}
     setup_bounds = load_json(SETUP_BOUNDS) if SETUP_BOUNDS.exists() else {}
@@ -234,9 +251,22 @@ def merge_circuit_profile(circuit_id: str, args: argparse.Namespace) -> None:
     out_dir = DERIVED_BASE / circuit_id
     ensure_dir(out_dir)
 
-    tyres = build_tyres(global_defaults.get("tyres", {}), pirelli_context)
+    tyre_cal = load_calibration("tyres", circuit_id)
+    if tyre_cal:
+        tyres = tyre_cal
+    else:
+        tyres = build_tyres(global_defaults.get("tyres", {}), pirelli_context)
+
     brakes = build_brakes(global_defaults.get("brakes", {}), setup_entry, cluster_metrics)
-    pu_maps = build_pu_maps(global_defaults.get("pu_maps", {}), setup_entry)
+    brake_cal = load_calibration("brakes", circuit_id)
+    if brake_cal:
+        brakes["_calibration"] = brake_cal
+
+    pu_cal = load_calibration("pu", circuit_id)
+    if pu_cal:
+        pu_maps = pu_cal
+    else:
+        pu_maps = build_pu_maps(global_defaults.get("pu_maps", {}), setup_entry)
     pu_reliability = deepcopy(global_defaults.get("pu_reliability", {}))
     damage = build_damage(global_defaults.get("damage", {}), setup_entry, pirelli_context)
 

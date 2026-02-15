@@ -15,7 +15,7 @@
     },
     "circuit_id": "es-1991_barcelona",
     "setup_profile_key": "barcelona_catalunya",
-    "built_at": "2026-02-08T14:23:28Z",
+    "built_at": "2026-02-15T11:05:42Z",
     "circuit_name": "Circuit de Barcelona-Catalunya",
     "telemetry_source": "python_backend/data/circuits/es-1991_barcelona_Telemetry.json"
   },

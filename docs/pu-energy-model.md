@@ -62,6 +62,11 @@ Integrare nel gioco la gestione completa della Power Unit 2025 (limiti 4 MJ depl
 | `player_action` | `set_engine_map`, `set_strategy_preset` | Comandi dalla UI verso SessionBridge |
 | Telemetria JSON | `pu_energy_trace` | Array per sezione con MJ e SOC |
 
+### 4.1 Calibration feed → runtime
+- Gli output di `powerunit_fit.py` (blocchi `ers_budget`, `regen_profile`, `soc_warnings`) sono serializzati pari passo in `config/calibration/pu/<cid>.json` e diventano parte del profilo circuito. Il SessionBridge li inserisce nel payload `race_update.pu_stats` e nei pacchetti per gli strumenti di debug senza parsare i report Markdown.
+- Il Practice Session Orchestrator consuma `ers_budget` per decidere automaticamente la sequenza push/recharge e per impostare i preset strategici nel Garage; `regen_profile` fornisce i coefficienti per suggerire brake migration e duct opening ai tool QA.
+- Gli stessi blocchi sono allegati alla telemetria archivio (`telemetry_runs/<date>.json`) così da avere uno storico dei limiti MJ applicati e delle eventuali condizioni di clipping rilevate durante le simulazioni batch.
+
 ## 5. Documentazione correlata
 - `docs/PowerUnit.md` – modello fisico e parametri.
 - `docs/EngineData2025.md` – limiti FIA, curve e preset.

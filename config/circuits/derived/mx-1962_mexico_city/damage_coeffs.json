@@ -15,7 +15,7 @@
     },
     "circuit_id": "mx-1962_mexico_city",
     "setup_profile_key": "hermanos_rodriguez",
-    "built_at": "2026-02-08T14:23:28Z",
+    "built_at": "2026-02-15T11:05:42Z",
     "circuit_name": "Aut\u00f3dromo Hermanos Rodr\u00edguez",
     "telemetry_source": "python_backend/data/circuits/mx-1962_mexico_city_Telemetry.json"
   },

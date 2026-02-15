@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PU Manager - Proposal A: Inline Expandable</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #2a2a2a;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        .section {
+            margin-bottom: 32px;
+        }
+        .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #666;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        .slider-row {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 20px;
+        }
+        .slider-group {
+            flex: 1;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .slider-label-left {
+            color: #fff;
+            font-weight: 500;
+        }
+        .slider-label-right {
+            color: #888;
+            font-size: 11px;
+        }
+        .slider-value {
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .slider-track {
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            position: relative;
+        }
+        .slider-fill {
+            height: 100%;
+            background: #d4af37;
+            border-radius: 2px;
+            position: relative;
+        }
+        .slider-thumb {
+            width: 16px;
+            height: 16px;
+            background: #d4af37;
+            border-radius: 50%;
+            position: absolute;
+            right: -8px;
+            top: -6px;
+            cursor: pointer;
+        }
+        .pu-section {
+            background: #151515;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+        .pu-compact {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .pu-status {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+            flex: 1;
+        }
+        .pu-metric {
+            font-size: 13px;
+        }
+        .pu-metric-label {
+            color: #888;
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+        .pu-metric-value {
+            color: #fff;
+            font-weight: 600;
+        }
+        .pu-metric-value.warning {
+            color: #ff4444;
+        }
+        .pu-metric-value.good {
+            color: #44ff44;
+        }
+        .btn-details {
+            background: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            color: #d4af37;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-details:hover {
+            background: #333;
+            border-color: #d4af37;
+        }
+        .pu-expanded {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #2a2a2a;
+            display: none;
+        }
+        .pu-expanded.active {
+            display: block;
+        }
+        .pu-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .pu-card {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            padding: 12px;
+        }
+        .pu-card-title {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .pu-card-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+        }
+        .pu-card-sub {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .progress-bar {
+            height: 8px;
+            background: #2a2a2a;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #d4af37, #f4cf57);
+            transition: width 0.3s;
+        }
+        .progress-fill.warning {
+            background: linear-gradient(90deg, #ff4444, #ff6666);
+        }
+        .warnings-list {
+            background: #1a1a1a;
+            border: 1px solid #ff4444;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+        .warning-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        .warning-item:last-child {
+            border-bottom: none;
+        }
+        .warning-badge {
+            background: #ff4444;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        .warning-text {
+            font-size: 12px;
+            color: #ccc;
+        }
+        .sparkline {
+            height: 40px;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 4px;
+            padding: 8px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            margin-top: 12px;
+        }
+        .sparkline-bar {
+            flex: 1;
+            background: #d4af37;
+            border-radius: 2px 2px 0 0;
+            min-height: 2px;
+        }
+        .buttons {
+            display: flex;
+            gap: 16px;
+            margin-top: 32px;
+        }
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        .btn-reset {
+            background: #2a2a2a;
+            color: #fff;
+        }
+        .btn-reset:hover {
+            background: #333;
+        }
+        .btn-apply {
+            background: #d4af37;
+            color: #000;
+        }
+        .btn-apply:hover {
+            background: #f4cf57;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SETUP – #44 LEWIS HAMILTON</h1>
+        <div class="subtitle">IN GARAGE</div>
+
+        <div class="section">
+            <div class="section-title">AERODYNAMICS</div>
+            <div class="slider-row">
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-label-left">FRONT WING</span>
+                        <span class="slider-label-right">12°–28°</span>
+                    </div>
+                    <div class="slider-value">20°</div>
+                    <div class="slider-track">
+                        <div class="slider-fill" style="width: 50%;">
+                            <div class="slider-thumb"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-label-left">REAR WING</span>
+                        <span class="slider-label-right">10°–32°</span>
+                    </div>
+                    <div class="slider-value">21°</div>
+                    <div class="slider-track">
+                        <div class="slider-fill" style="width: 48%;">
+                            <div class="slider-thumb"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">BRAKES</div>
+            <div class="slider-row">
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-label-left">BRAKE BALANCE</span>
+                        <span class="slider-label-right">53%–58%</span>
+                    </div>
+                    <div class="slider-value">55.5%</div>
+                    <div class="slider-track">
+                        <div class="slider-fill" style="width: 55%;">
+                            <div class="slider-thumb"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-label-left">BRAKE DUCT</span>
+                        <span class="slider-label-right">25%–70%</span>
+                    </div>
+                    <div class="slider-value">48%</div>
+                    <div class="slider-track">
+                        <div class="slider-fill" style="width: 48%;">
+                            <div class="slider-thumb"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROPOSAL A: INLINE EXPANDABLE PU SECTION -->
+        <div class="section">
+            <div class="section-title">POWER UNIT & ERS</div>
+            <div class="pu-section">
+                <div class="pu-compact">
+                    <div class="pu-status">
+                        <div class="pu-metric">
+                            <div class="pu-metric-label">ERS SOC</div>
+                            <div class="pu-metric-value good">3.2 MJ (80%)</div>
+                        </div>
+                        <div class="pu-metric">
+                            <div class="pu-metric-label">ACTIVE MAP</div>
+                            <div class="pu-metric-value">STANDARD</div>
+                        </div>
+                        <div class="pu-metric">
+                            <div class="pu-metric-label">LAP DEPLOY</div>
+                            <div class="pu-metric-value">2.1 / 4.0 MJ</div>
+                        </div>
+                        <div class="pu-metric">
+                            <div class="pu-metric-label">LAP HARVEST</div>
+                            <div class="pu-metric-value">1.8 / 2.0 MJ</div>
+                        </div>
+                    </div>
+                    <button class="btn-details" onclick="toggleExpanded()">⚡ Details</button>
+                </div>
+
+                <div class="pu-expanded" id="puExpanded">
+                    <div class="pu-grid">
+                        <div class="pu-card">
+                            <div class="pu-card-title">Battery Capacity</div>
+                            <div class="pu-card-value">4.0 MJ</div>
+                            <div class="pu-card-sub">FIA Maximum</div>
+                        </div>
+                        <div class="pu-card">
+                            <div class="pu-card-title">Deploy Limit</div>
+                            <div class="pu-card-value">4.0 MJ</div>
+                            <div class="pu-card-sub">Per Lap</div>
+                        </div>
+                        <div class="pu-card">
+                            <div class="pu-card-title">Harvest Limit</div>
+                            <div class="pu-card-value">2.0 MJ</div>
+                            <div class="pu-card-sub">Per Lap (MGU-K)</div>
+                        </div>
+                    </div>
+
+                    <div class="pu-card">
+                        <div class="pu-card-title">Deploy Budget (Current Lap)</div>
+                        <div class="pu-card-value">2.1 / 4.0 MJ</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 52.5%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="pu-card" style="margin-top: 12px;">
+                        <div class="pu-card-title">Harvest Budget (Current Lap)</div>
+                        <div class="pu-card-value">1.8 / 2.0 MJ</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill warning" style="width: 90%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="warnings-list">
+                        <div class="pu-card-title" style="margin-bottom: 8px;">⚠️ RUNTIME WARNINGS</div>
+                        <div class="warning-item">
+                            <div class="warning-badge">DEPLOY</div>
+                            <div class="warning-text">Deploy limit hit at Section 7 (Spoon Curve)</div>
+                        </div>
+                        <div class="warning-item">
+                            <div class="warning-badge">HARVEST</div>
+                            <div class="warning-text">Harvest limit approaching (90% used)</div>
+                        </div>
+                    </div>
+
+                    <div class="pu-card" style="margin-top: 12px;">
+                        <div class="pu-card-title">Energy Trace (Last 10 Sections)</div>
+                        <div class="sparkline">
+                            <div class="sparkline-bar" style="height: 60%;"></div>
+                            <div class="sparkline-bar" style="height: 80%;"></div>
+                            <div class="sparkline-bar" style="height: 45%;"></div>
+                            <div class="sparkline-bar" style="height: 90%;"></div>
+                            <div class="sparkline-bar" style="height: 70%;"></div>
+                            <div class="sparkline-bar" style="height: 55%;"></div>
+                            <div class="sparkline-bar" style="height: 85%;"></div>
+                            <div class="sparkline-bar" style="height: 40%;"></div>
+                            <div class="sparkline-bar" style="height: 75%;"></div>
+                            <div class="sparkline-bar" style="height: 65%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button class="btn btn-reset">Reset</button>
+            <button class="btn btn-apply">Apply</button>
+        </div>
+    </div>
+
+    <script>
+        function toggleExpanded() {
+            const expanded = document.getElementById('puExpanded');
+            const btn = document.querySelector('.btn-details');
+            expanded.classList.toggle('active');
+            btn.textContent = expanded.classList.contains('active') ? '⚡ Hide' : '⚡ Details';
+        }
+    </script>
+</body>
+</html>

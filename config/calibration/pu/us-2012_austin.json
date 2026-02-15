@@ -1,0 +1,234 @@
+{
+  "_meta": {
+    "version": "0.1",
+    "circuit_id": "us-2012_austin",
+    "source_year": 2025,
+    "session_type": "Q",
+    "description": "qualifying_fastest",
+    "stats": {
+      "heat_mean": 0.7941176470588236,
+      "heat_peak": 1.5,
+      "drs_ratio": 0.5383544071834342,
+      "power_bias": 0.6605277625068721,
+      "total_brake": 11.221,
+      "brake_density": 2.0562580172255824,
+      "avg_brake_section": 0.6600588235294118,
+      "brake_energy_p25": 0.0,
+      "brake_energy_p75": 0.907,
+      "brake_energy_p90": 2.1842,
+      "brake_energy_peak": 3.17,
+      "circuit_length_m": 5456.999999999999
+    }
+  },
+  "maps": {
+    "ECONOMY": {
+      "heat_load_kw": 217.48,
+      "torque_ramp": 0.35,
+      "deployment_style": "conservative",
+      "cooling_share": 0.509,
+      "ers_output_kw": 105.3,
+      "deploy_mj_per_lap": 1.898,
+      "harvest_mj_per_lap": 1.578,
+      "mguh_direct_ratio": 0.264,
+      "target_soc_end_lap": 0.752,
+      "torque_bias": -0.0339,
+      "notes": {
+        "map": "ECONOMY",
+        "heat_scale": 0.989,
+        "cooling_target": 0.509,
+        "torque_bias_delta": 0.0161,
+        "drs_ratio": 0.538,
+        "deploy_dynamic": 1.015,
+        "harvest_dynamic": 0.835,
+        "deploy_limit_hit": false,
+        "harvest_limit_hit": false
+      }
+    },
+    "STANDARD": {
+      "heat_load_kw": 257.02,
+      "torque_ramp": 0.6193,
+      "deployment_style": "balanced",
+      "cooling_share": 0.459,
+      "ers_output_kw": 157.95,
+      "deploy_mj_per_lap": 3.045,
+      "harvest_mj_per_lap": 1.336,
+      "mguh_direct_ratio": 0.364,
+      "target_soc_end_lap": 0.344,
+      "torque_bias": 0.0161,
+      "notes": {
+        "map": "STANDARD",
+        "heat_scale": 0.989,
+        "cooling_target": 0.459,
+        "torque_bias_delta": 0.0161,
+        "drs_ratio": 0.538,
+        "deploy_dynamic": 1.015,
+        "harvest_dynamic": 0.835,
+        "deploy_limit_hit": false,
+        "harvest_limit_hit": false
+      }
+    },
+    "RICH": {
+      "heat_load_kw": 296.56,
+      "torque_ramp": 0.8293,
+      "deployment_style": "aggressive",
+      "cooling_share": 0.409,
+      "ers_output_kw": 197.44,
+      "deploy_mj_per_lap": 3.727,
+      "harvest_mj_per_lap": 0.977,
+      "mguh_direct_ratio": 0.464,
+      "target_soc_end_lap": 0.05,
+      "torque_bias": 0.0561,
+      "notes": {
+        "map": "RICH",
+        "heat_scale": 0.989,
+        "cooling_target": 0.409,
+        "torque_bias_delta": 0.0161,
+        "drs_ratio": 0.538,
+        "deploy_dynamic": 1.015,
+        "harvest_dynamic": 0.835,
+        "deploy_limit_hit": false,
+        "harvest_limit_hit": false
+      }
+    },
+    "QUALY": {
+      "heat_load_kw": 326.21,
+      "torque_ramp": 1.0,
+      "deployment_style": "time_attack",
+      "cooling_share": 0.359,
+      "ers_output_kw": 200,
+      "deploy_mj_per_lap": 4.0,
+      "harvest_mj_per_lap": 0.626,
+      "mguh_direct_ratio": 0.564,
+      "target_soc_end_lap": 0.05,
+      "torque_bias": 0.0961,
+      "notes": {
+        "map": "QUALY",
+        "heat_scale": 0.989,
+        "cooling_target": 0.359,
+        "torque_bias_delta": 0.0161,
+        "drs_ratio": 0.538,
+        "deploy_dynamic": 1.015,
+        "harvest_dynamic": 0.835,
+        "deploy_limit_hit": true,
+        "harvest_limit_hit": false
+      }
+    },
+    "WET": {
+      "heat_load_kw": 237.25,
+      "torque_ramp": 0.5293,
+      "deployment_style": "wet_grip",
+      "cooling_share": 0.559,
+      "ers_output_kw": 125.05,
+      "deploy_mj_per_lap": 2.375,
+      "harvest_mj_per_lap": 1.561,
+      "mguh_direct_ratio": 0.314,
+      "target_soc_end_lap": 0.578,
+      "torque_bias": -0.0039,
+      "notes": {
+        "map": "WET",
+        "heat_scale": 0.989,
+        "cooling_target": 0.559,
+        "torque_bias_delta": 0.0161,
+        "drs_ratio": 0.538,
+        "deploy_dynamic": 1.015,
+        "harvest_dynamic": 0.835,
+        "deploy_limit_hit": false,
+        "harvest_limit_hit": false
+      }
+    },
+    "RECHARGE": {
+      "heat_load_kw": 227.36,
+      "torque_ramp": 0.4193,
+      "deployment_style": "harvest",
+      "cooling_share": 0.609,
+      "ers_output_kw": 92.14,
+      "deploy_mj_per_lap": 0.5,
+      "harvest_mj_per_lap": 2.0,
+      "mguh_direct_ratio": 0.414,
+      "target_soc_end_lap": 0.98,
+      "torque_bias": -0.0439,
+      "notes": {
+        "map": "RECHARGE",
+        "heat_scale": 0.989,
+        "cooling_target": 0.609,
+        "torque_bias_delta": 0.0161,
+        "drs_ratio": 0.538,
+        "deploy_dynamic": 1.015,
+        "harvest_dynamic": 0.835,
+        "deploy_limit_hit": false,
+        "harvest_limit_hit": true
+      }
+    }
+  },
+  "regen_profile": {
+    "base_factor": 0.839,
+    "limit_nm": 352.0,
+    "potential_mj_per_lap": 1.081,
+    "regen_migration_bias": -0.258,
+    "brake_energy_window": {
+      "min_mj": 0.0,
+      "max_mj": 2.184
+    }
+  },
+  "ers_budget": {
+    "battery_capacity_mj": 5.5,
+    "deploy_limit_mj": 4.0,
+    "harvest_limit_mj": 2.0,
+    "maps": {
+      "ECONOMY": {
+        "deploy_mj_per_lap": 1.898,
+        "harvest_mj_per_lap": 1.578,
+        "target_soc_end_lap": 0.752,
+        "deploy_ratio": 0.474,
+        "harvest_ratio": 0.789
+      },
+      "STANDARD": {
+        "deploy_mj_per_lap": 3.045,
+        "harvest_mj_per_lap": 1.336,
+        "target_soc_end_lap": 0.344,
+        "deploy_ratio": 0.761,
+        "harvest_ratio": 0.668
+      },
+      "RICH": {
+        "deploy_mj_per_lap": 3.727,
+        "harvest_mj_per_lap": 0.977,
+        "target_soc_end_lap": 0.05,
+        "deploy_ratio": 0.932,
+        "harvest_ratio": 0.488
+      },
+      "QUALY": {
+        "deploy_mj_per_lap": 4.0,
+        "harvest_mj_per_lap": 0.626,
+        "target_soc_end_lap": 0.05,
+        "deploy_ratio": 1.0,
+        "harvest_ratio": 0.313
+      },
+      "WET": {
+        "deploy_mj_per_lap": 2.375,
+        "harvest_mj_per_lap": 1.561,
+        "target_soc_end_lap": 0.578,
+        "deploy_ratio": 0.594,
+        "harvest_ratio": 0.78
+      },
+      "RECHARGE": {
+        "deploy_mj_per_lap": 0.5,
+        "harvest_mj_per_lap": 2.0,
+        "target_soc_end_lap": 0.98,
+        "deploy_ratio": 0.125,
+        "harvest_ratio": 1.0
+      }
+    },
+    "warnings": [
+      "RICH: SOC target very low (0.05) – plan recharge lap",
+      "QUALY: deploy at 100% of MGU-K limit",
+      "QUALY: harvest insufficient vs deploy (ratio 0.31)",
+      "QUALY: SOC target very low (0.05) – plan recharge lap"
+    ]
+  },
+  "soc_warnings": [
+    "RICH: SOC target very low (0.05) – plan recharge lap",
+    "QUALY: deploy at 100% of MGU-K limit",
+    "QUALY: harvest insufficient vs deploy (ratio 0.31)",
+    "QUALY: SOC target very low (0.05) – plan recharge lap"
+  ]
+}

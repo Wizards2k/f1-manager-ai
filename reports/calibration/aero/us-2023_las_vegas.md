@@ -1,0 +1,15 @@
+# Aero calibration – us-2023_las_vegas
+
+| Parametro | Valore |
+|-----------|--------|
+| CdA | 1.7073 |
+| ClA | 5.2586 |
+| drag_index | 1.1774 |
+| downforce_index | 1.0842 |
+| aero_balance_target | 0.1500 |
+
+## Notes
+- **source_year**: 2025
+- **session_type**: Q
+- **description**: qualifying_fastest
+- **generated_from**: us-2023_las_vegas

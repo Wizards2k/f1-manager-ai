@@ -5,7 +5,7 @@
     "notes": "Global default PU reliability (non calibrated). Circuit/weather/setup modifiers adjust cooling; da ritarare su dati FastF1.",
     "circuit_id": "au-1953_melbourne",
     "setup_profile_key": "albert",
-    "built_at": "2026-02-08T14:23:28Z",
+    "built_at": "2026-02-15T11:05:42Z",
     "circuit_name": "Albert Park Grand Prix Circuit",
     "telemetry_source": "python_backend/data/circuits/au-1953_melbourne_Telemetry.json"
   },

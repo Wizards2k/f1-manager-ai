@@ -90,12 +90,19 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 1. ✅ **FastF1 toolchain**: ingestion, caching, manifest dataset (wrapper `scripts/fastf1_build_assets.py`, manifest per anno, cache locale).
 2. **Script fitting componenti**: `aero_fit`, `tyre_fit`, `powerunit_fit`, `brake_calibration` con output in `config/calibration/`.
    - 📄 Documentazione PU/ERS aggiornata: `docs/PowerUnit.md` + `docs/EngineData2025.md` (limiti FIA, torque curve, strategie push/recharge).
-   - 🆕 **PU energy model & UI mockup** (`docs/pu-energy-model.md`): descrive come esporre mappe, SOC, MJ consumati/recuperati in Garage/HUD e gli hook per R&D (deploy/harvest split personalizzabile).
-   - **Piano di integrazione**:
-     1. *Config & fitting*: estendere i derived con `deploy_mj_per_lap`, `harvest_mj_per_lap`, `mguh_direct_ratio`, `target_soc_end_lap`, `torque_bias`, `regen_brake_factor`, `regen_brake_limit_nm`; aggiornare `powerunit_fit.py` e il nuovo `brake_calibration.py` con report MJ/SOC e torque curve.
-     2. *Runtime*: implementare i nuovi limiti in LapSimulator (PU + freni), calcolare `regen_brake_torque`/`hydraulic_brake_torque`, flag di brake migration e telemetria `pu_stats`/`pu_energy_trace` con MJ per sezione: i blocchi `ers_budget` e `regen_profile` generati dai fitting devono essere inoltrati al SessionBridge, agli strumenti debug e al Practice Session Orchestrator senza parsing dei report.
-     3. *UI/UX*: sviluppare il pannello Garage e il widget HUD descritti nel mockup, aggiungendo preset push/recharge e indicatori SOC/MJ, più aggiornare `docs/setup-ui-plan.md`.
-     4. *Documentazione & QA*: mantenere allineati i documenti e definire checklist (Push lap, Recharge, Wet, Brake migration) per validare SOC/MJ e segnali UI.
+   - 🆕 **PU energy model & UI mockup** (`docs/pu-energy-model.md`).
+   - **Piano di integrazione (stato 2026-02-15)**
+     1. ✅ *Config & fitting* – derived e script aggiornati con i nuovi campi (deploy/harvest MJ, mguh ratio, torque bias, regen factor/limit) e report MJ/SOC.
+     2. 🔧 *Runtime* – dati caricati in `CircuitConfig` e inoltrati a PSO/telemetria (`ers_budget`, `regen_profile`, `brake_profile`). Da completare: clamp MJ per giro, brake migration torque split, `pu_energy_trace`, warning runtime.
+     3. ⏭ *UI/UX* – mockup definiti ma pannello Garage/HUD ancora da implementare; i blocchi `pu_stats`/`brake_diagnostics` sono pronti per l’integrazione FE.
+     4. 🔧 *Documentazione & QA* – doc aggiornati, restano le checklist QA (Push lap, Recharge, Wet, Brake migration).
+
+   - **Roadmap operativa (rollout incrementale)**
+     1. **PU Hybrid V2** – completare runtime (limiti MJ, brake migration, energy trace), estendere i test per circuito e implementare HUD/Garage SOC&MJ + preset push/recharge.
+     2. **Brake Calibration & Migration** – usare i profili frenata per calcolare coppie regen/idrauliche, loggare warning e visualizzarli (bias/duct/cooling) nella UI.
+     3. **Tyre Model V2** – integrare i parametri derivati (temp window, gaussian, graining/blistering) nel simulatore e mostrare trend degrado/termico.
+     4. **Aero Package dettagliato** – applicare DF/drag/handling penalty avanzati nel runtime e surface UI con indicatori aero balance/cooling.
+     5. **Automazione & QA** – pipeline `calibration.yml`, watchdog FastF1 vs sim, manifest + dashboard Plotly e checklist QA dedicate.
 3. **CI `calibration.yml`**: pipeline badge componenti → lap regression → race smoke test.
 4. **Data coherence watchdog**: sistema di controllo/coerenza contro i dati originali (FastF1 / telemetry JSON) con report automatici e alert su drift.
 5. **Manifest & dashboard**: repository asset calibrati + dashboard Plotly per confronto sim vs telemetria reale.

@@ -1,6 +1,7 @@
 import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -15,6 +16,18 @@ for path in (PYTHON_BACKEND_ROOT, REPO_ROOT):
 
 from data.teams import TEAMS
 from lap_simulator.config_loader import load_circuit_config
+from lap_simulator.data_types import (
+    CircuitConfig,
+    DriverIntent,
+    EngineMapName,
+    EngineMapParams,
+    EnvContext,
+    PUState,
+    PUReliabilityParams,
+    SectionContext,
+    SectionKind,
+)
+from lap_simulator.power_unit import generate_output
 from models import RaceCar
 from utils.session_bridge import SessionBridge
 
@@ -44,6 +57,62 @@ def _build_player_cars(count: int = 2):
             if len(cars) >= count:
                 return cars
     raise RuntimeError("Not enough pilots in TEAMS to build player cars")
+
+
+def test_power_unit_clamps_when_deploy_budget_exhausted():
+    config = CircuitConfig(
+        pu_maps={
+            EngineMapName.QUALY: EngineMapParams(
+                name=EngineMapName.QUALY,
+                torque_ramp=1.0,
+                cooling_share=0.5,
+                ers_output_kw=120.0,
+            )
+        },
+        pu_reliability=PUReliabilityParams(),
+        ers_budget={
+            "deploy_limit_mj": 0.2,
+            "harvest_limit_mj": 0.05,
+            "maps": {
+                "QUALY": {
+                    "deploy_mj_per_lap": 0.05,
+                    "harvest_mj_per_lap": 0.02,
+                }
+            },
+        },
+        regen_profile={
+            "base_factor": 0.4,
+            "regen_limit_per_section": 0.03,
+            "potential_mj_per_lap": 0.03,
+        },
+        brake_profile={
+            "regen_migration_bias": 0.2,
+            "hydraulic_vs_regen_ratio": 1.2,
+        },
+    )
+    section = SectionContext(
+        section_id="sec_test",
+        name="Test",
+        kind=SectionKind.SLOW_CORNER,
+        length_m=150.0,
+        v_base_kph=120.0,
+        braking_energy_mj=0.1,
+    )
+    env = EnvContext()
+    driver = DriverIntent(ers_deploy_request=True)
+    aero = SimpleNamespace(cooling_capacity=1.0, kerb_severity=0.0, bump_penalty=0.0)
+    pu_state = PUState(active_map=EngineMapName.QUALY, ers_energy_mj=0.2)
+
+    # First section should consume entire budget without warning
+    generate_output(pu_state, driver, aero, section, env, config, dt_estimate_s=1.0)
+    assert pu_state.lap_deploy_mj == pytest.approx(0.05, abs=1e-4)
+    assert "deploy_limit_hit" not in pu_state.runtime_warnings
+
+    # Second section forces clamp at zero deploy and raises warning
+    generate_output(pu_state, driver, aero, section, env, config, dt_estimate_s=1.0)
+    assert "deploy_limit_hit" in pu_state.runtime_warnings
+    assert pu_state.energy_trace[-1]["deploy_mj"] == pytest.approx(0.0, abs=1e-4)
+    assert pu_state.ers_output_kw == pytest.approx(0.0, abs=1e-3)
 
 
 @pytest.mark.parametrize("circuit_id", _list_circuits())
@@ -124,11 +193,16 @@ def test_session_bridge_three_laps_per_circuit(circuit_id):
             assert stats.get("harvest_limit_mj") == pytest.approx(harvest_limit)
 
         assert stats.get("warnings", []) == config.ers_budget.get("warnings", [])
-
-        map_name = stats.get("map")
         maps_budget = config.ers_budget.get("maps", {})
-        if map_name in maps_budget:
-            map_budget = maps_budget[map_name]
+        map_name = stats.get("map")
+        map_budget = maps_budget.get(map_name, {}) if map_name else {}
+
+        runtime_warnings = stats.get("warnings_runtime", [])
+        assert isinstance(runtime_warnings, list)
+        deploy_budget = map_budget.get("deploy_mj_per_lap", 0)
+        assert "deploy_limit_hit" not in runtime_warnings or stats.get("lap_deploy_mj", 0) >= deploy_budget
+
+        if map_budget:
             deploy = map_budget.get("deploy_mj_per_lap")
             harvest = map_budget.get("harvest_mj_per_lap")
             target_soc = map_budget.get("target_soc_end_lap")
@@ -138,6 +212,12 @@ def test_session_bridge_three_laps_per_circuit(circuit_id):
                 assert stats.get("harvest_mj_per_lap") == pytest.approx(harvest)
             if target_soc is not None:
                 assert stats.get("target_soc_end_lap") == pytest.approx(target_soc)
+            lap_deploy = stats.get("lap_deploy_mj")
+            lap_harvest = stats.get("lap_harvest_mj")
+            if lap_deploy is not None:
+                assert lap_deploy <= deploy + 0.05
+            if lap_harvest is not None and harvest is not None:
+                assert lap_harvest <= harvest + 0.05
 
         soc_pct = stats.get("soc_pct")
         if soc_pct is not None:
@@ -145,6 +225,14 @@ def test_session_bridge_three_laps_per_circuit(circuit_id):
         soc_mj = stats.get("soc_mj")
         if soc_mj is not None and capacity is not None:
             assert soc_mj <= capacity + 0.01
+
+        trace = stats.get("energy_trace", [])
+        assert isinstance(trace, list)
+        if trace:
+            sample = trace[-1]
+            assert "section_id" in sample
+            assert "deploy_mj" in sample
+            assert "harvest_mj" in sample
 
         profile = config.brake_profile or {}
         regen_base = profile.get("regen_brake_base")

@@ -15,7 +15,7 @@
     },
     "circuit_id": "be-1925_spa_francorchamps",
     "setup_profile_key": "spa_francorchamps",
-    "built_at": "2026-02-08T14:23:28Z",
+    "built_at": "2026-02-15T11:05:42Z",
     "circuit_name": "Circuit de Spa-Francorchamps",
     "telemetry_source": "python_backend/data/circuits/be-1925_spa_francorchamps_Telemetry.json"
   },

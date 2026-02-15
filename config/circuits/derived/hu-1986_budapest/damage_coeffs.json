@@ -15,7 +15,7 @@
     },
     "circuit_id": "hu-1986_budapest",
     "setup_profile_key": "hungaroring",
-    "built_at": "2026-02-08T14:23:28Z",
+    "built_at": "2026-02-15T11:05:42Z",
     "circuit_name": "Hungaroring",
     "telemetry_source": "python_backend/data/circuits/hu-1986_budapest_Telemetry.json"
   },

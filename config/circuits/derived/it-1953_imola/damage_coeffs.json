@@ -15,7 +15,7 @@
     },
     "circuit_id": "it-1953_imola",
     "setup_profile_key": "enzo_e_dino_ferrari",
-    "built_at": "2026-02-08T14:23:28Z",
+    "built_at": "2026-02-15T11:05:42Z",
     "circuit_name": "Autodromo Enzo e Dino Ferrari",
     "telemetry_source": "python_backend/data/circuits/it-1953_imola_Telemetry.json"
   },

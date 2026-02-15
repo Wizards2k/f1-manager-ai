@@ -162,7 +162,11 @@ def _parse_tyre_params(data: Dict[str, Any]) -> Dict[TyreCompound, TyreCompoundP
 # Brake loader
 # ---------------------------------------------------------------------------
 
-def _parse_brake_params(data: Dict[str, Any], system: str = "base") -> BrakeSystemParams:
+def _parse_brake_params(
+    data: Dict[str, Any],
+    system: str = "base",
+    regen_factor: Optional[float] = None,
+) -> BrakeSystemParams:
     systems = data.get("systems", {})
     s = systems.get(system, systems.get("base", {}))
     hc = s.get("heat_capacity", {})
@@ -178,6 +182,7 @@ def _parse_brake_params(data: Dict[str, Any], system: str = "base") -> BrakeSyst
         fade_sensitivity_c_per_unit=s.get("fade_sensitivity_c_per_unit", 15.0),
         cooling_coeff=s.get("cooling_coeff", 1.0),
         heat_quality=s.get("heat_quality", 1.0),
+        regen_brake_factor=regen_factor if regen_factor is not None else s.get("regen_brake_factor", 1.0),
     )
 
 
@@ -190,6 +195,8 @@ _MAP_NAME = {
     "STANDARD": EngineMapName.STANDARD,
     "RICH":     EngineMapName.RICH,
     "QUALY":    EngineMapName.QUALY,
+    "WET":      EngineMapName.WET,
+    "RECHARGE": EngineMapName.RECHARGE,
 }
 
 
@@ -207,6 +214,8 @@ def _parse_pu_maps(data: Dict[str, Any]) -> Dict[EngineMapName, EngineMapParams]
             deployment_style=vals.get("deployment_style", "balanced"),
             cooling_share=vals.get("cooling_share", 0.50),
             ers_output_kw=vals.get("ers_output_kw", 120),
+            mguh_direct_ratio=vals.get("mguh_direct_ratio", 0.0),
+            mguh_power_kw=vals.get("mguh_power_kw", vals.get("ers_output_kw", 120) * 0.65),
         )
     return result
 
@@ -301,12 +310,24 @@ def load_circuit_config(
     # --- Brakes ---
     brake_path = derived_dir / "brake_params.json" if derived_dir.exists() else global_brakes
     brake_data = _load_json(brake_path) if brake_path.exists() else _load_json(global_brakes)
-    brake_params = _parse_brake_params(brake_data, system=brake_system)
+    brake_calibration = brake_data.pop("_calibration", None)
+    brake_profile = {}
+    brake_sections = []
+    regen_factor = None
+    if brake_calibration:
+        brake_profile = brake_calibration.get("brake_profile", {})
+        brake_sections = brake_calibration.get("critical_sections", [])
+        regen_factor = brake_profile.get("regen_brake_base")
+    brake_params = _parse_brake_params(brake_data, system=brake_system, regen_factor=regen_factor)
 
     # --- PU ---
     pu_map_path = derived_dir / "pu_maps.json" if derived_dir.exists() else global_pu_maps
     pu_map_data = _load_json(pu_map_path) if pu_map_path.exists() else _load_json(global_pu_maps)
     pu_maps = _parse_pu_maps(pu_map_data)
+
+    ers_budget = pu_map_data.get("ers_budget", {})
+    regen_profile = pu_map_data.get("regen_profile", {})
+    soc_warnings = pu_map_data.get("soc_warnings", [])
 
     pu_rel_data = _load_json(global_pu_rel)
     pu_reliability = _parse_pu_reliability(pu_rel_data)
@@ -330,5 +351,10 @@ def load_circuit_config(
         pu_maps=pu_maps,
         pu_reliability=pu_reliability,
         damage_coeffs=damage_coeffs,
+        brake_profile=brake_profile,
+        brake_critical_sections=brake_sections,
+        ers_budget=ers_budget,
+        regen_profile=regen_profile,
+        soc_warnings=soc_warnings,
         reference_lap_time_s=ref_lap_time if ref_lap_time > 0 else sum_dt_ref,
     )

@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 SESSION_DURATION_S = 3600             # 60 minutes
-PITLANE_COOLDOWN_S = 45              # min time between runs (tyre change + minor setup)
+PITLANE_COOLDOWN_S = 120             # min time between runs (tyre change + minor setup)
 PITLANE_QUEUE_DELAY_S = 7            # avg delay per queued car
 MAX_PITLANE_SLOTS = 8                # max cars exiting simultaneously
 PITLANE_TRAVEL_S = 20                # time to traverse pitlane (in + out)
@@ -287,7 +287,7 @@ class PitlaneQueue:
         self.queue: List[PitlaneRequest] = []
         self.active_exits: List[PitlaneRequest] = []
         self.next_slot_time: Dict[str, float] = {}  # car_id → earliest next exit
-        self._last_release_time: float = 0.0
+        self._last_release_time: float = -MIN_PIT_EXIT_GAP_S
 
     def request_exit(
         self,
@@ -533,7 +533,7 @@ class PracticeSessionOrchestrator:
         events_before = len(self.events)
 
         sim_dt = self.clock.tick(real_dt_s)
-        if sim_dt <= 0:
+        if sim_dt <= 0 and self.clock.flag != SessionFlag.RED:
             return []
 
         now = self.clock.elapsed_s
@@ -550,18 +550,21 @@ class PracticeSessionOrchestrator:
             released = self.pitlane.process_tick(now)
             for req in released:
                 css = self.cars.get(req.car_id)
-                if css:
-                    css.phase = CarPhase.ON_TRACK
-                    self._emit(
-                        PracticeEventType.CAR_EXIT_PIT,
-                        car_id=req.car_id, team_id=css.team_id,
-                        message=f"{css.driver_name} exits pit",
-                    )
+                if not css:
+                    continue
+                css.phase = CarPhase.ON_TRACK
+                css.next_available_s = now + PITLANE_TRAVEL_S
+                self._emit(
+                    PracticeEventType.CAR_EXIT_PIT,
+                    car_id=req.car_id, team_id=css.team_id,
+                    message=f"{css.driver_name} exits pit",
+                )
 
         # Check pit work completion
         for css in self.cars.values():
             if css.phase == CarPhase.PIT_WORK and now >= css.pit_work_end_s:
                 css.phase = CarPhase.IN_GARAGE
+                css.next_available_s = max(css.next_available_s, now)
 
         # Check session end
         if self.clock.is_finished:
@@ -606,8 +609,16 @@ class PracticeSessionOrchestrator:
         if css is None:
             return None
 
+        now = self.clock.elapsed_s
+
         if css.phase not in (CarPhase.IN_GARAGE, CarPhase.PIT_WORK):
             logger.warning("Car %s not in garage (phase=%s)", car_id, css.phase)
+            return None
+
+        if now < css.next_available_s:
+            logger.info(
+                "Car %s cooldown active (ready at %.1fs)", car_id, css.next_available_s
+            )
             return None
 
         # Check tyre availability
@@ -643,7 +654,7 @@ class PracticeSessionOrchestrator:
         css.current_tyre_set_id = tyre_set.set_id
         css.laps_planned = laps_planned
         css.laps_this_run = 0
-        css.run_start_time_s = self.clock.elapsed_s
+        css.run_start_time_s = now
         css.phase = CarPhase.PIT_QUEUE
 
         # Queue for pitlane
@@ -654,7 +665,7 @@ class PracticeSessionOrchestrator:
         self.pitlane.request_exit(
             car_id=car_id,
             team_id=css.team_id,
-            current_time_s=self.clock.elapsed_s,
+            current_time_s=now,
             priority=priority,
             is_player=css.is_player,
         )
@@ -768,7 +779,7 @@ class PracticeSessionOrchestrator:
             css.next_available_s = max(cooldown_end, css.pit_work_end_s)
         else:
             css.phase = CarPhase.IN_GARAGE
-            css.next_available_s = cooldown_end
+            css.next_available_s = max(cooldown_end, css.next_available_s)
 
         css.current_run_id = -1
         css.current_tyre_set_id = ""
@@ -913,6 +924,8 @@ class PracticeSessionOrchestrator:
         css.phase = CarPhase.IN_GARAGE
         css.current_run_id = -1
         css.current_tyre_set_id = ""
+        css.laps_this_run = 0
+        css.next_available_s = max(css.next_available_s, self.clock.elapsed_s + PITLANE_COOLDOWN_S)
 
         self._emit(
             PracticeEventType.RUN_ABORT,

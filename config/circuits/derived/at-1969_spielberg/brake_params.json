@@ -10,7 +10,7 @@
     },
     "circuit_id": "at-1969_spielberg",
     "setup_profile_key": "red_bull_ring",
-    "built_at": "2026-02-08T14:23:28Z",
+    "built_at": "2026-02-15T11:05:42Z",
     "circuit_name": "Red Bull Ring",
     "telemetry_source": "python_backend/data/circuits/at-1969_spielberg_Telemetry.json"
   },
@@ -77,5 +77,111 @@
       "max_pct": 58.0,
       "step_pct": 0.1
     }
+  },
+  "_calibration": {
+    "_meta": {
+      "version": "0.1",
+      "circuit_id": "at-1969_spielberg",
+      "stats": {
+        "total_brake_mj": 8.986,
+        "brake_density": 2.0887959088795913,
+        "avg_brake_section": 0.6418571428571429,
+        "p75_brake_section": 1.0547499999999999,
+        "p90_brake_section": 1.9713000000000003,
+        "peak_brake_section": 2.116,
+        "avg_heat_factor": 0.7142857142857143,
+        "avg_bump_factor": 0.0,
+        "length_km": 4.302
+      },
+      "notes": "Derived from telemetry braking energy and thermal factors"
+    },
+    "brake_profile": {
+      "regen_brake_base": 0.65,
+      "regen_migration_bias": -0.49,
+      "hydraulic_vs_regen_ratio": 1.4,
+      "cooling_targets": {
+        "front_delta": -0.171,
+        "rear_delta": -0.114
+      },
+      "duct_recommendation": {
+        "min_open": 0.221,
+        "max_open": 0.671
+      },
+      "regen_brake_factor_range": {
+        "min": 0.47,
+        "max": 0.83
+      },
+      "brake_energy_window": {
+        "p75": 1.055,
+        "p90": 1.971,
+        "peak": 2.116
+      }
+    },
+    "critical_sections": [
+      {
+        "id": "sec_05",
+        "name": "Turn 3",
+        "braking_energy_mj": 2.116,
+        "heat_factor": 1.0,
+        "bumpiness_factor": 0.0,
+        "length_m": 122.0
+      },
+      {
+        "id": "sec_13",
+        "name": "Turn 7",
+        "braking_energy_mj": 2.016,
+        "heat_factor": 1.3,
+        "bumpiness_factor": 0.0,
+        "length_m": 150.9
+      },
+      {
+        "id": "sec_02",
+        "name": "Turn 1",
+        "braking_energy_mj": 1.867,
+        "heat_factor": 1.3,
+        "bumpiness_factor": 0.0,
+        "length_m": 131.8
+      },
+      {
+        "id": "sec_11",
+        "name": "Turn 6",
+        "braking_energy_mj": 1.166,
+        "heat_factor": 0.8,
+        "bumpiness_factor": 0.0,
+        "length_m": 103.0
+      },
+      {
+        "id": "sec_07",
+        "name": "Turn 4",
+        "braking_energy_mj": 0.721,
+        "heat_factor": 1.3,
+        "bumpiness_factor": 0.0,
+        "length_m": 112.2
+      },
+      {
+        "id": "sec_09",
+        "name": "Turn 5",
+        "braking_energy_mj": 0.569,
+        "heat_factor": 0.8,
+        "bumpiness_factor": 0.0,
+        "length_m": 59.3
+      },
+      {
+        "id": "sec_03",
+        "name": "Turn 2",
+        "braking_energy_mj": 0.525,
+        "heat_factor": 1.3,
+        "bumpiness_factor": 0.0,
+        "length_m": 83.9
+      },
+      {
+        "id": "sec_01",
+        "name": "Straight 1",
+        "braking_energy_mj": 0.006,
+        "heat_factor": 0.2,
+        "bumpiness_factor": 0.0,
+        "length_m": 580.8
+      }
+    ]
   }
 }

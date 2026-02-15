@@ -31,6 +31,25 @@ Qui sta il cuore della simulazione. Non è una semplice batteria "carica/scarica
 
 > **Il "Trucco" del Direct Drive:** Quando vedi un'auto che continua a spingere a 330 km/h senza tagliare potenza, sta usando l'energia generata dall'MGU-H e la manda *direttamente* all'MGU-K, bypassando la batteria. Questo non conta nel limite dei 4 MJ.
 
+##### 2.1 Profili MGU-H per il simulatore
+
+Per riflettere la realtà 2025, ogni circuito viene assegnato a un profilo energetico (high speed / balanced / low speed) dal tool `scripts/powerunit_fit.py`. Il profilo determina:
+
+- **Energia totale MGU-H per giro** (`total_mj`).
+- **Split** tra direct drive (`direct_mj`) e ricarica ES (`es_mj`).
+- **Bias** normalizzati (`mguh_to_mguk_bias`, `mguh_to_es_bias`) usati dal runtime per bilanciare la spinta.
+- **Potenza media** `mguh_power_kw`, ricavata da `total_mj / lap_time` e scalata per la mappa attiva.
+
+Valori tipici:
+
+| Profilo | Circuiti | Totale MGU-H (MJ) | Direct (MJ) | ES (MJ) | Note |
+| --- | --- | --- | --- | --- | --- |
+| **High speed** | Monza, Spa, Lusail | 7.0 - 8.0 | 4.0 - 5.0 | 2.0 - 3.0 | DRS lunghi, power bias ≥ 0.60 |
+| **Balanced** | Silverstone, Barcellona, Suzuka | 5.0 - 6.0 | 2.5 - 3.5 | 2.0 - 2.5 | Power bias ~0.45 |
+| **Low speed** | Monaco, Hungaroring | 2.0 - 2.5 | 0.3 - 0.6 | 1.5 - 2.0 | Recupero limitato, focus SOC |
+
+Gli output sono persistiti in `config/circuits/derived/<cid>/pu_maps.json` tramite i campi `mguh_direct_ratio` e `mguh_power_kw`. Il LapSimulator li usa per calcolare per-sezione l'energia disponibile e registrare `lap_mguh_direct_mj` / `lap_mguh_harvest_mj` nella telemetria.
+
 ---
 
 ### 3. Mappature Motore (Engine Modes / STRAT)
@@ -123,6 +142,11 @@ Ecco un esempio di struttura dati per un motore generico 2025 (es. Ferrari/Honda
 1. **Brake Migration (Brake-by-wire):** Quando la batteria è piena, l'MGU-K non può più frenare l'auto (non ha dove mettere l'energia). Il simulatore deve compensare spostando automaticamente la frenata sui dischi posteriori idraulici, altrimenti il pilota va lungo (brake balance shift).
 2. **Turbo Lag & Anti-Lag:** L'MGU-H tiene il turbo sempre in pressione. Se l'MGU-H si rompe (o finisce energia), il motore termico ha un turbo lag enorme (inguidabile).
 3. **Consumo Carburante:** Circa 1.35 kg - 1.5 kg per giro (dipende dalla pista). Se metti meno di 110kg in partenza sei più veloce (ogni 10kg sono circa 0.3s al giro), ma devi fare "Lift and Coast" (alzare il piede prima della frenata) a fine gara.
+
+#### 4.1 Uso in telemetria e strumenti interni
+- I valori calibrati (`deploy_aggressiveness`, `harvest_aggressiveness`, `target_soc_end_lap`, limiti MJ) vengono proiettati nei file `config/calibration/pu/<cid>.json` e sono letti dal runtime per popolare i payload `race_update.pu_stats` e la telemetria archivio (`pu_energy_trace`).
+- Gli strumenti di debug e il Practice Session Orchestrator consumano gli stessi blocchi (`ers_budget`, `regen_profile`) per mostrare warning di clipping, proporre brake migration o pianificare cicli Push/Recharge: i report Markdown generati dai fitting sono la rappresentazione leggibile di questi dati e servono come audit trail.
+- Qualunque modifica manuale (override R&D) deve essere riflessa sia nel JSON di calibrazione sia nel pacchetto telemetria, in modo da mantenere allineati HUD, strumenti QA e dataset FastF1 di riferimento.
 
 Vuoi che ti generi una curva di coppia approssimativa (Torque Curve) combinata ICE + Elettrico per capire come erogano la potenza?
 

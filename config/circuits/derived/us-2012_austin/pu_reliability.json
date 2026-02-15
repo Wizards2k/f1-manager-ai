@@ -5,7 +5,7 @@
     "notes": "Global default PU reliability (non calibrated). Circuit/weather/setup modifiers adjust cooling; da ritarare su dati FastF1.",
     "circuit_id": "us-2012_austin",
     "setup_profile_key": "americas",
-    "built_at": "2026-02-08T14:23:28Z",
+    "built_at": "2026-02-15T11:05:42Z",
     "circuit_name": "Circuit of the Americas",
     "telemetry_source": "python_backend/data/circuits/us-2012_austin_Telemetry.json"
   },

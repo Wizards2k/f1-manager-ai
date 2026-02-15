@@ -1,0 +1,106 @@
+{
+  "_meta": {
+    "version": "0.1",
+    "circuit_id": "jp-1962_suzuka",
+    "stats": {
+      "total_brake_mj": 9.645,
+      "brake_density": 1.6727077227241984,
+      "avg_brake_section": 0.7419230769230769,
+      "p75_brake_section": 1.224,
+      "p90_brake_section": 1.8414000000000004,
+      "peak_brake_section": 2.954,
+      "avg_heat_factor": 0.7076923076923077,
+      "avg_bump_factor": 0.0,
+      "length_km": 5.7661
+    },
+    "notes": "Derived from telemetry braking energy and thermal factors"
+  },
+  "brake_profile": {
+    "regen_brake_base": 0.65,
+    "regen_migration_bias": -0.49,
+    "hydraulic_vs_regen_ratio": 1.4,
+    "cooling_targets": {
+      "front_delta": -0.175,
+      "rear_delta": -0.117
+    },
+    "duct_recommendation": {
+      "min_open": 0.221,
+      "max_open": 0.671
+    },
+    "regen_brake_factor_range": {
+      "min": 0.47,
+      "max": 0.83
+    },
+    "brake_energy_window": {
+      "p75": 1.224,
+      "p90": 1.841,
+      "peak": 2.954
+    }
+  },
+  "critical_sections": [
+    {
+      "id": "sec_02",
+      "name": "Turn 1",
+      "braking_energy_mj": 2.954,
+      "heat_factor": 1.3,
+      "bumpiness_factor": 0.0,
+      "length_m": 183.8
+    },
+    {
+      "id": "sec_12",
+      "name": "Turn 6",
+      "braking_energy_mj": 1.976,
+      "heat_factor": 1.3,
+      "bumpiness_factor": 0.0,
+      "length_m": 143.2
+    },
+    {
+      "id": "sec_06",
+      "name": "Turn 3",
+      "braking_energy_mj": 1.303,
+      "heat_factor": 1.0,
+      "bumpiness_factor": 0.0,
+      "length_m": 146.7
+    },
+    {
+      "id": "sec_08",
+      "name": "Turn 4",
+      "braking_energy_mj": 1.224,
+      "heat_factor": 1.0,
+      "bumpiness_factor": 0.0,
+      "length_m": 118.9
+    },
+    {
+      "id": "sec_04",
+      "name": "Turn 2",
+      "braking_energy_mj": 1.213,
+      "heat_factor": 1.0,
+      "bumpiness_factor": 0.0,
+      "length_m": 92.9
+    },
+    {
+      "id": "sec_10",
+      "name": "Turn 5",
+      "braking_energy_mj": 0.975,
+      "heat_factor": 1.0,
+      "bumpiness_factor": 0.0,
+      "length_m": 88.1
+    },
+    {
+      "id": "sec_01",
+      "name": "Straight 1",
+      "braking_energy_mj": 0.0,
+      "heat_factor": 0.2,
+      "bumpiness_factor": 0.0,
+      "length_m": 367.7
+    },
+    {
+      "id": "sec_03",
+      "name": "Straight 2",
+      "braking_energy_mj": 0.0,
+      "heat_factor": 0.4,
+      "bumpiness_factor": 0.0,
+      "length_m": 328.8
+    }
+  ]
+}

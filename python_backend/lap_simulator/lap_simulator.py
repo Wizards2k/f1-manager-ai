@@ -140,6 +140,22 @@ class LapSimulator:
         state = entry.state
         state.lap_time_acc_s = 0.0
         state.current_section_idx = 0
+        # Reset per-lap PU energy tracking
+        pu_state = state.pu
+        pu_state.lap_id_prev = pu_state.lap_id_current
+        pu_state.energy_trace_prev = list(pu_state.energy_trace)
+        pu_state.runtime_warnings_prev = list(pu_state.runtime_warnings)
+        pu_state.lap_deploy_prev_mj = pu_state.lap_deploy_mj
+        pu_state.lap_harvest_prev_mj = pu_state.lap_harvest_mj
+        pu_state.lap_mguh_direct_prev_mj = pu_state.lap_mguh_direct_mj
+        pu_state.lap_mguh_harvest_prev_mj = pu_state.lap_mguh_harvest_mj
+        pu_state.lap_id_current += 1
+        pu_state.lap_deploy_mj = 0.0
+        pu_state.lap_harvest_mj = 0.0
+        pu_state.lap_mguh_direct_mj = 0.0
+        pu_state.lap_mguh_harvest_mj = 0.0
+        pu_state.energy_trace = []
+        pu_state.runtime_warnings = []
 
         section_results: List[SectionResult] = []
         all_events: List[SectionEvent] = []

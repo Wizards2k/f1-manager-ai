@@ -732,6 +732,19 @@ class SessionBridge:
         if is_competitive:
             update_session_bests(race_car)
 
+        # Reset PU state for next lap (same logic as LapSimulator._run_lap_single)
+        pu_state = ts.car_entry.state.pu
+        pu_state.lap_id_prev = pu_state.lap_id_current
+        pu_state.energy_trace_prev = list(pu_state.energy_trace)
+        pu_state.runtime_warnings_prev = list(pu_state.runtime_warnings)
+        pu_state.lap_deploy_prev_mj = pu_state.lap_deploy_mj
+        pu_state.lap_harvest_prev_mj = pu_state.lap_harvest_mj
+        pu_state.lap_id_current += 1
+        pu_state.lap_deploy_mj = 0.0
+        pu_state.lap_harvest_mj = 0.0
+        pu_state.energy_trace = []
+        pu_state.runtime_warnings = []
+
         # Reset section results for next lap
         ts.lap_section_results = []
 
@@ -820,6 +833,11 @@ class SessionBridge:
         soc_mj = entry.state.pu.ers_energy_mj
         deploy_limit = budget.get("deploy_limit_mj", 4.0)
         harvest_limit = budget.get("harvest_limit_mj", 2.0)
+        pu_state = entry.state.pu
+        energy_trace = (pu_state.energy_trace or [])[-20:]
+        energy_trace_prev = (pu_state.energy_trace_prev or [])[-20:]
+        runtime_warnings = (pu_state.runtime_warnings or [])[-5:]
+        runtime_warnings_prev = (pu_state.runtime_warnings_prev or [])[-5:]
         return {
             "map": active_map,
             "soc_mj": round(soc_mj, 3),
@@ -833,6 +851,20 @@ class SessionBridge:
             "deploy_ratio": map_budget.get("deploy_ratio"),
             "harvest_ratio": map_budget.get("harvest_ratio"),
             "warnings": budget.get("warnings", []),
+            "warnings_runtime": runtime_warnings,
+            "warnings_runtime_prev": runtime_warnings_prev,
+            "lap_deploy_mj": round(entry.state.pu.lap_deploy_mj, 3),
+            "lap_harvest_mj": round(entry.state.pu.lap_harvest_mj, 3),
+            "lap_mguh_direct_mj": round(entry.state.pu.lap_mguh_direct_mj, 3),
+            "lap_mguh_harvest_mj": round(entry.state.pu.lap_mguh_harvest_mj, 3),
+            "lap_deploy_prev_mj": round(entry.state.pu.lap_deploy_prev_mj, 3),
+            "lap_harvest_prev_mj": round(entry.state.pu.lap_harvest_prev_mj, 3),
+            "lap_mguh_direct_prev_mj": round(entry.state.pu.lap_mguh_direct_prev_mj, 3),
+            "lap_mguh_harvest_prev_mj": round(entry.state.pu.lap_mguh_harvest_prev_mj, 3),
+            "lap_id_current": entry.state.pu.lap_id_current,
+            "lap_id_prev": entry.state.pu.lap_id_prev,
+            "energy_trace": energy_trace,
+            "energy_trace_prev": energy_trace_prev,
         }
 
     def _build_brake_diagnostics(self, section: SectionContext) -> Dict[str, Any]:
@@ -909,6 +941,20 @@ class SessionBridge:
         entry = racecar_to_car_entry(car)
         entry.car_id = car_id
         entry.state.car_id = car_id
+
+        # Preserve PU state from previous stint if it exists
+        prev_track_state = self._track_states.get(car_id)
+        if prev_track_state and prev_track_state.car_entry:
+            prev_pu = prev_track_state.car_entry.state.pu
+            # Copy PU state fields that should persist across stints
+            entry.state.pu.lap_id_current = prev_pu.lap_id_current
+            entry.state.pu.lap_id_prev = prev_pu.lap_id_prev
+            entry.state.pu.lap_deploy_prev_mj = prev_pu.lap_deploy_prev_mj
+            entry.state.pu.lap_harvest_prev_mj = prev_pu.lap_harvest_prev_mj
+            entry.state.pu.energy_trace_prev = list(prev_pu.energy_trace_prev)
+            entry.state.pu.runtime_warnings_prev = list(prev_pu.runtime_warnings_prev)
+            # Also preserve battery SOC
+            entry.state.pu.ers_energy_mj = prev_pu.ers_energy_mj
 
         self._track_states[car_id] = CarTrackState(
             car_id=car_id, car_entry=entry,

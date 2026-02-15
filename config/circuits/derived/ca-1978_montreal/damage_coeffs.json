@@ -15,7 +15,7 @@
     },
     "circuit_id": "ca-1978_montreal",
     "setup_profile_key": "gilles_villeneuve",
-    "built_at": "2026-02-08T14:23:28Z",
+    "built_at": "2026-02-15T11:05:42Z",
     "circuit_name": "Circuit Gilles-Villeneuve",
     "telemetry_source": "python_backend/data/circuits/ca-1978_montreal_Telemetry.json"
   },

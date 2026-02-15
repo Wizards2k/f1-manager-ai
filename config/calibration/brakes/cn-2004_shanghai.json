@@ -1,0 +1,106 @@
+{
+  "_meta": {
+    "version": "0.1",
+    "circuit_id": "cn-2004_shanghai",
+    "stats": {
+      "total_brake_mj": 13.354,
+      "brake_density": 2.488122077099364,
+      "avg_brake_section": 0.7855294117647059,
+      "p75_brake_section": 1.693,
+      "p90_brake_section": 1.9314,
+      "peak_brake_section": 2.171,
+      "avg_heat_factor": 0.7823529411764706,
+      "avg_bump_factor": 0.0,
+      "length_km": 5.3671000000000015
+    },
+    "notes": "Derived from telemetry braking energy and thermal factors"
+  },
+  "brake_profile": {
+    "regen_brake_base": 0.739,
+    "regen_migration_bias": -0.366,
+    "hydraulic_vs_regen_ratio": 1.366,
+    "cooling_targets": {
+      "front_delta": -0.131,
+      "rear_delta": -0.087
+    },
+    "duct_recommendation": {
+      "min_open": 0.228,
+      "max_open": 0.678
+    },
+    "regen_brake_factor_range": {
+      "min": 0.559,
+      "max": 0.919
+    },
+    "brake_energy_window": {
+      "p75": 1.693,
+      "p90": 1.931,
+      "peak": 2.171
+    }
+  },
+  "critical_sections": [
+    {
+      "id": "sec_12",
+      "name": "Turn 6",
+      "braking_energy_mj": 2.171,
+      "heat_factor": 1.0,
+      "bumpiness_factor": 0.0,
+      "length_m": 142.1
+    },
+    {
+      "id": "sec_02",
+      "name": "Turn 1",
+      "braking_energy_mj": 2.028,
+      "heat_factor": 1.5,
+      "bumpiness_factor": 0.0,
+      "length_m": 139.8
+    },
+    {
+      "id": "sec_08",
+      "name": "Turn 4",
+      "braking_energy_mj": 1.867,
+      "heat_factor": 1.5,
+      "bumpiness_factor": 0.0,
+      "length_m": 154.5
+    },
+    {
+      "id": "sec_16",
+      "name": "Turn 8",
+      "braking_energy_mj": 1.738,
+      "heat_factor": 1.3,
+      "bumpiness_factor": 0.0,
+      "length_m": 140.3
+    },
+    {
+      "id": "sec_10",
+      "name": "Turn 5",
+      "braking_energy_mj": 1.693,
+      "heat_factor": 1.5,
+      "bumpiness_factor": 0.0,
+      "length_m": 169.8
+    },
+    {
+      "id": "sec_04",
+      "name": "Turn 2",
+      "braking_energy_mj": 1.466,
+      "heat_factor": 1.3,
+      "bumpiness_factor": 0.0,
+      "length_m": 155.1
+    },
+    {
+      "id": "sec_14",
+      "name": "Turn 7",
+      "braking_energy_mj": 1.174,
+      "heat_factor": 1.0,
+      "bumpiness_factor": 0.0,
+      "length_m": 139.0
+    },
+    {
+      "id": "sec_06",
+      "name": "Turn 3",
+      "braking_energy_mj": 0.721,
+      "heat_factor": 0.8,
+      "bumpiness_factor": 0.0,
+      "length_m": 92.0
+    }
+  ]
+}

@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 # ---------------------------------------------------------------------------
@@ -213,6 +213,8 @@ class EngineMapParams:
     deployment_style: str = "balanced"
     cooling_share: float = 0.50
     ers_output_kw: float = 120.0
+    mguh_direct_ratio: float = 0.0
+    mguh_power_kw: float = 0.0
 
 
 @dataclass
@@ -248,6 +250,21 @@ class PUState:
     # Fuel
     fuel_kg: float = 100.0
     fuel_burn_rate_kg_per_s: float = 0.0  # computed each section
+    # Per-lap energy tracking
+    lap_deploy_mj: float = 0.0
+    lap_harvest_mj: float = 0.0
+    lap_mguh_direct_mj: float = 0.0
+    lap_mguh_harvest_mj: float = 0.0
+    energy_trace: List[Dict[str, Any]] = field(default_factory=list)
+    runtime_warnings: List[str] = field(default_factory=list)
+    lap_deploy_prev_mj: float = 0.0
+    lap_harvest_prev_mj: float = 0.0
+    lap_mguh_direct_prev_mj: float = 0.0
+    lap_mguh_harvest_prev_mj: float = 0.0
+    energy_trace_prev: List[Dict[str, Any]] = field(default_factory=list)
+    runtime_warnings_prev: List[str] = field(default_factory=list)
+    lap_id_current: int = 0
+    lap_id_prev: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -493,6 +510,11 @@ class CircuitConfig:
     pu_maps: Dict[EngineMapName, EngineMapParams] = field(default_factory=dict)
     pu_reliability: PUReliabilityParams = field(default_factory=PUReliabilityParams)
     damage_coeffs: DamageCoeffs = field(default_factory=DamageCoeffs)
+    brake_profile: Dict[str, Any] = field(default_factory=dict)
+    brake_critical_sections: List[Dict[str, Any]] = field(default_factory=list)
+    ers_budget: Dict[str, Any] = field(default_factory=dict)
+    regen_profile: Dict[str, Any] = field(default_factory=dict)
+    soc_warnings: List[str] = field(default_factory=list)
     # reference values for normalization
     df_ref: float = 70.0
     drag_ref: float = 30.0

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pilot Dock + PU Inline Bar</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #0a0a0a;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: #e0e0e0;
+            padding: 24px;
+        }
+        .dock-wrapper {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .dock-card {
+            width: 480px;
+            background: #151515;
+            border-radius: 16px;
+            border: 1px solid #2a2a2a;
+            padding: 16px;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+        }
+        .dock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .driver-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+        }
+        .driver-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 16px;
+            background: #c21e2a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+        .driver-name {
+            font-weight: 600;
+            color: #fff;
+        }
+        .status-chip {
+            background: #262626;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+        .status-chip.box { color: #b8b8b8; border: 1px solid #3a3a3a; }
+        .status-chip.data { color: #ff5555; border: 1px solid #ff5555; }
+        .fuel-tyres {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 12px;
+            margin-bottom: 12px;
+        }
+        .bar-label {
+            width: 40px;
+            text-transform: uppercase;
+            color: #888;
+            font-size: 10px;
+            letter-spacing: 1px;
+        }
+        .bar {
+            flex: 1;
+            height: 6px;
+            border-radius: 4px;
+            background: #1f1f1f;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #f9d976, #f39f86);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            font-size: 12px;
+            margin-bottom: 12px;
+        }
+        .input-label { color: #888; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; margin-bottom: 4px; }
+        select, input {
+            width: 100%;
+            background: #1f1f1f;
+            border: 1px solid #2f2f2f;
+            color: #fff;
+            padding: 6px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        .push-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .slider {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: #262626;
+            position: relative;
+        }
+        .slider-fill {
+            position: absolute;
+            height: 100%;
+            background: linear-gradient(90deg, #70a5ff, #2878f0);
+            border-radius: 4px;
+        }
+        .slider-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 10px;
+            background: #fff;
+            border: 3px solid #2878f0;
+            position: absolute;
+            right: -10px;
+            top: -6px;
+        }
+        .button-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .btn {
+            flex: 1;
+            border-radius: 999px;
+            padding: 10px 0;
+            font-weight: 600;
+            font-size: 13px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn.send { background: #f3c55f; color: #000; }
+        .btn.box { background: #9b2f2f; color: #fff; }
+        .btn.setup {
+            flex: none;
+            width: 120px;
+            background: transparent;
+            color: #fff;
+            border: 1px solid #3a3a3a;
+        }
+        /* PU inline bar */
+        .pu-inline {
+            background: #101010;
+            border: 1px solid #212121;
+            border-radius: 10px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 11px;
+        }
+        .pu-metric {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .pu-label {
+            text-transform: uppercase;
+            color: #777;
+            letter-spacing: 0.5px;
+        }
+        .pu-value {
+            color: #f7f7f7;
+            font-weight: 600;
+        }
+        .pu-value.good { color: #58e58d; }
+        .pu-bar {
+            width: 140px;
+            height: 6px;
+            border-radius: 3px;
+            background: #1f1f1f;
+            overflow: hidden;
+        }
+        .pu-bar-fill { height: 100%; background: linear-gradient(90deg, #ffd94a, #ff964a); }
+        .pu-button {
+            margin-left: auto;
+            background: #262626;
+            border: 1px solid #3a3a3a;
+            color: #f3c55f;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+        }
+        .pu-button:hover { border-color: #f3c55f; }
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            width: 800px;
+            background: #141414;
+            border-radius: 16px;
+            border: 1px solid #2a2a2a;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #222;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-title { font-size: 18px; font-weight: 600; }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .modal-body {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .modal-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        .stat-card {
+            background: #191919;
+            border: 1px solid #262626;
+            border-radius: 14px;
+            padding: 16px 18px;
+        }
+        .stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #777;
+            margin-bottom: 8px;
+        }
+        .stat-value {
+            font-size: 22px;
+            font-weight: 600;
+        }
+        .stat-sub {
+            font-size: 12px;
+            color: #888;
+        }
+        .progress {
+            margin-top: 12px;
+            height: 8px;
+            border-radius: 4px;
+            background: #1f1f1f;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f3c55f, #f18949);
+        }
+        .warning-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .warning-card {
+            background: #221515;
+            border: 1px solid #ff6b6b;
+            border-radius: 24px;
+            padding: 16px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .warning-pill {
+            width: 44px;
+            height: 64px;
+            border-radius: 22px;
+            background: linear-gradient(180deg, #ff8a8a, #ff5050);
+            color: #141414;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+        }
+        .warning-content {
+            color: #fff;
+            font-size: 13px;
+        }
+        .warning-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .warning-desc {
+            color: #c9c9c9;
+            font-size: 12px;
+        }
+        .trace-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        .trace-table th, .trace-table td {
+            font-size: 12px;
+            padding: 6px 0;
+            border-bottom: 1px solid #242424;
+        }
+        .trace-table th { color: #777; text-align: left; }
+    </style>
+</head>
+<body>
+    <div class="dock-wrapper">
+        <div class="dock-card">
+            <div class="dock-header">
+                <div class="driver-info">
+                    <div class="driver-number">16</div>
+                    <div>
+                        <div class="driver-name">CHARLES LECLERC</div>
+                        <div style="font-size: 11px; color:#9a9a9a;">READY IN BOX</div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <div class="status-chip box">BOX</div>
+                    <div class="status-chip data">DATA</div>
+                </div>
+            </div>
+
+            <div class="fuel-tyres">
+                <div class="bar-label">Fuel</div>
+                <div class="bar"><div class="bar-fill" style="width:75%;"></div></div>
+                <div class="bar-label">Tires</div>
+                <div class="bar"><div class="bar-fill" style="width:60%; background:linear-gradient(90deg,#b0ff72,#47d147);"></div></div>
+            </div>
+
+            <div class="grid">
+                <div>
+                    <div class="input-label">Tyre Compound</div>
+                    <select><option>Medium</option></select>
+                </div>
+                <div>
+                    <div class="input-label">Fuel %</div>
+                    <input type="number" value="100">
+                </div>
+                <div>
+                    <div class="input-label">Stint Laps</div>
+                    <input type="number" value="10">
+                </div>
+            </div>
+
+            <div class="grid" style="grid-template-columns: repeat(4,1fr);">
+                <div>
+                    <div class="input-label">ICE Map</div>
+                    <select><option>Standard</option><option>Qualy</option></select>
+                </div>
+                <div>
+                    <div class="input-label">ERS Mode</div>
+                    <select><option>Neutral</option><option>Push</option></select>
+                </div>
+                <div>
+                    <div class="input-label">Tyre °C</div>
+                    <div style="font-size:13px;color:#8cf291;">FL 93°</div>
+                </div>
+                <div>
+                    <div class="input-label">&nbsp;</div>
+                    <div style="font-size:13px;color:#8cf291;">FR 93° RL 93° RR 93°</div>
+                </div>
+            </div>
+
+            <div class="button-row">
+                <button class="btn send">Send Out</button>
+                <button class="btn box">Box</button>
+                <button class="btn setup">Setup</button>
+            </div>
+
+            <div class="pu-inline">
+                <div class="pu-metric">
+                    <div class="pu-label">ERS SOC</div>
+                    <div class="pu-value good">3.2 MJ (80%)</div>
+                </div>
+                <div class="pu-metric">
+                    <div class="pu-label">Deploy</div>
+                    <div class="pu-value">2.1 / 4.0 MJ</div>
+                </div>
+                <div class="pu-metric" style="flex:1;">
+                    <div class="pu-label">Lap Budget</div>
+                    <div class="pu-bar">
+                        <div class="pu-bar-fill" style="width:52.5%"></div>
+                    </div>
+                </div>
+                <button class="pu-button" onclick="openModal()">⚡ Details</button>
+            </div>
+
+            <div class="push-row" style="margin-top:12px;">
+                <div class="input-label" style="margin-bottom:0;">Driver Push (5)</div>
+                <div class="slider">
+                    <div class="slider-fill" style="width:60%;">
+                        <div class="slider-thumb"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">⚡ PU Manager — Charles Leclerc</div>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Battery SOC</div>
+                        <div class="stat-value" style="color:#58e58d;">3.2 MJ</div>
+                        <div class="stat-sub">80% of 4.0 MJ capacity</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Deploy limit</div>
+                        <div class="stat-value">4.0 MJ</div>
+                        <div class="stat-sub">Per lap</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Harvest limit</div>
+                        <div class="stat-value">2.0 MJ</div>
+                        <div class="stat-sub">Per lap</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Current deploy usage</div>
+                        <div class="stat-value">2.1 MJ</div>
+                        <div class="progress"><div class="progress-fill" style="width:52.5%;"></div></div>
+                        <div class="stat-sub" style="margin-top:8px;">52.5% of budget this lap</div>
+                    </div>
+                </div>
+
+                <div class="modal-grid" style="grid-template-columns: repeat(2, 1fr);">
+                    <div class="stat-card">
+                        <div class="stat-label">Current harvest</div>
+                        <div class="stat-value" style="color:#f2a65a;">1.8 MJ</div>
+                        <div class="progress"><div class="progress-fill" style="width:90%;background:linear-gradient(90deg,#ffb347,#ffcc33);"></div></div>
+                        <div class="stat-sub" style="margin-top:8px;">90% of harvest limit</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Energy balance</div>
+                        <div class="stat-value">Δ +0.3 MJ</div>
+                        <div class="stat-sub">Harvest - deploy this lap</div>
+                    </div>
+                </div>
+
+                <div class="warning-row">
+                    <div class="warning-card">
+                        <div class="warning-pill">Deploy</div>
+                        <div class="warning-content">
+                            <div class="warning-title">Deploy limit hit — Section 7</div>
+                            <div class="warning-desc">Spoon Curve: ERS clamped for 0.4s (lap deploy 100%)</div>
+                        </div>
+                    </div>
+                    <div class="warning-card">
+                        <div class="warning-pill">Harvest</div>
+                        <div class="warning-content">
+                            <div class="warning-title">Harvest approaching</div>
+                            <div class="warning-desc">MGU-K recovery limited next braking zone (90% usage)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <table class="trace-table">
+                    <thead>
+                        <tr><th>Section</th><th>Deploy</th><th>Harvest</th><th>Hydraulic</th><th>Regen Ratio</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Turn 1</td><td>0.32 MJ</td><td>0.18 MJ</td><td>0.12 MJ</td><td>0.67</td></tr>
+                        <tr><td>S-Curves</td><td>0.28 MJ</td><td>0.15 MJ</td><td>0.09 MJ</td><td>0.60</td></tr>
+                        <tr><td>Spoon</td><td>0.35 MJ</td><td>0.21 MJ</td><td>0.13 MJ</td><td>0.62</td></tr>
+                        <tr><td>130R</td><td>0.15 MJ</td><td>0.08 MJ</td><td>0.05 MJ</td><td>0.63</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openModal() {
+            document.getElementById('modal').classList.add('active');
+        }
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PU Manager - Proposal B: Dedicated Modal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #2a2a2a;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        .section {
+            margin-bottom: 32px;
+        }
+        .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #666;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        .slider-row {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 20px;
+        }
+        .slider-group {
+            flex: 1;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .slider-label-left {
+            color: #fff;
+            font-weight: 500;
+        }
+        .slider-label-right {
+            color: #888;
+            font-size: 11px;
+        }
+        .slider-value {
+            color: #fff;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .slider-track {
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            position: relative;
+        }
+        .slider-fill {
+            height: 100%;
+            background: #d4af37;
+            border-radius: 2px;
+            position: relative;
+        }
+        .slider-thumb {
+            width: 16px;
+            height: 16px;
+            background: #d4af37;
+            border-radius: 50%;
+            position: absolute;
+            right: -8px;
+            top: -6px;
+            cursor: pointer;
+        }
+        .buttons {
+            display: flex;
+            gap: 16px;
+            margin-top: 32px;
+        }
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        .btn-reset {
+            background: #2a2a2a;
+            color: #fff;
+        }
+        .btn-reset:hover {
+            background: #333;
+        }
+        .btn-apply {
+            background: #d4af37;
+            color: #000;
+        }
+        .btn-apply:hover {
+            background: #f4cf57;
+        }
+        .btn-pu {
+            background: #d4af37;
+            color: #000;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-pu:hover {
+            background: #f4cf57;
+            transform: translateY(-1px);
+        }
+        
+        /* MODAL STYLES */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: #1a1a1a;
+            border-radius: 12px;
+            border: 1px solid #2a2a2a;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid #2a2a2a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .modal-close:hover {
+            background: #2a2a2a;
+            color: #fff;
+        }
+        .modal-tabs {
+            display: flex;
+            gap: 0;
+            padding: 0 24px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        .modal-tab {
+            padding: 16px 24px;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .modal-tab:hover {
+            color: #fff;
+        }
+        .modal-tab.active {
+            color: #d4af37;
+            border-bottom-color: #d4af37;
+        }
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: #151515;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #fff;
+        }
+        .stat-sub {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        .stat-value.good {
+            color: #44ff44;
+        }
+        .stat-value.warning {
+            color: #ffaa00;
+        }
+        .stat-value.danger {
+            color: #ff4444;
+        }
+        .map-section {
+            background: #151515;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .map-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+        }
+        .map-badge {
+            background: #d4af37;
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .map-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .map-stat {
+            font-size: 12px;
+        }
+        .map-stat-label {
+            color: #888;
+            margin-bottom: 4px;
+        }
+        .map-stat-value {
+            color: #fff;
+            font-weight: 600;
+        }
+        .progress-bar {
+            height: 8px;
+            background: #2a2a2a;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #d4af37, #f4cf57);
+            transition: width 0.3s;
+        }
+        .progress-fill.warning {
+            background: linear-gradient(90deg, #ffaa00, #ffcc00);
+        }
+        .progress-fill.danger {
+            background: linear-gradient(90deg, #ff4444, #ff6666);
+        }
+        .trace-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .trace-table th {
+            background: #151515;
+            padding: 12px;
+            text-align: left;
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        .trace-table td {
+            padding: 12px;
+            font-size: 13px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        .trace-table tr:hover {
+            background: #151515;
+        }
+        .trace-section {
+            color: #d4af37;
+            font-weight: 600;
+        }
+        .warning-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .warning-card {
+            background: #151515;
+            border: 1px solid #ff4444;
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .warning-icon {
+            background: #ff4444;
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .warning-content {
+            flex: 1;
+        }
+        .warning-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .warning-desc {
+            font-size: 12px;
+            color: #ccc;
+        }
+        .brake-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SETUP – #44 LEWIS HAMILTON</h1>
+        <div class="subtitle">IN GARAGE</div>
+
+        <div class="section">
+            <div class="section-title">AERODYNAMICS</div>
+            <div class="slider-row">
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-label-left">FRONT WING</span>
+                        <span class="slider-label-right">12°–28°</span>
+                    </div>
+                    <div class="slider-value">20°</div>
+                    <div class="slider-track">
+                        <div class="slider-fill" style="width: 50%;">
+                            <div class="slider-thumb"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-label-left">REAR WING</span>
+                        <span class="slider-label-right">10°–32°</span>
+                    </div>
+                    <div class="slider-value">21°</div>
+                    <div class="slider-track">
+                        <div class="slider-fill" style="width: 48%;">
+                            <div class="slider-thumb"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">BRAKES</div>
+            <div class="slider-row">
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-label-left">BRAKE BALANCE</span>
+                        <span class="slider-label-right">53%–58%</span>
+                    </div>
+                    <div class="slider-value">55.5%</div>
+                    <div class="slider-track">
+                        <div class="slider-fill" style="width: 55%;">
+                            <div class="slider-thumb"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span class="slider-label-left">BRAKE DUCT</span>
+                        <span class="slider-label-right">25%–70%</span>
+                    </div>
+                    <div class="slider-value">48%</div>
+                    <div class="slider-track">
+                        <div class="slider-fill" style="width: 48%;">
+                            <div class="slider-thumb"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button class="btn btn-reset">Reset</button>
+            <button class="btn-pu" onclick="openModal()">⚡ PU Manager</button>
+            <button class="btn btn-apply">Apply</button>
+        </div>
+    </div>
+
+    <!-- PROPOSAL B: DEDICATED MODAL -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModalOnOverlay(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title">⚡ Power Unit Manager</div>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            
+            <div class="modal-tabs">
+                <button class="modal-tab active" onclick="switchTab('energy')">Energy Budget</button>
+                <button class="modal-tab" onclick="switchTab('trace')">Telemetry Trace</button>
+                <button class="modal-tab" onclick="switchTab('warnings')">Warnings & Diagnostics</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- TAB 1: ENERGY BUDGET -->
+                <div class="tab-content active" id="tab-energy">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Battery SOC</div>
+                            <div class="stat-value good">3.2 MJ</div>
+                            <div class="stat-sub">80% of 4.0 MJ capacity</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Deploy Limit</div>
+                            <div class="stat-value">4.0 MJ</div>
+                            <div class="stat-sub">Per lap (FIA)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Harvest Limit</div>
+                            <div class="stat-value">2.0 MJ</div>
+                            <div class="stat-sub">Per lap (MGU-K)</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" style="margin-bottom: 24px;">
+                        <div class="stat-label">Current Lap Deploy</div>
+                        <div class="stat-value">2.1 MJ</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 52.5%;"></div>
+                        </div>
+                        <div class="stat-sub" style="margin-top: 8px;">52.5% of 4.0 MJ budget used</div>
+                    </div>
+
+                    <div class="stat-card" style="margin-bottom: 24px;">
+                        <div class="stat-label">Current Lap Harvest</div>
+                        <div class="stat-value warning">1.8 MJ</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill warning" style="width: 90%;"></div>
+                        </div>
+                        <div class="stat-sub" style="margin-top: 8px;">90% of 2.0 MJ budget used</div>
+                    </div>
+
+                    <h3 style="font-size: 14px; color: #888; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px;">Engine Maps Configuration</h3>
+
+                    <div class="map-section">
+                        <div class="map-header">
+                            <div class="map-name">STANDARD</div>
+                            <div class="map-badge">ACTIVE</div>
+                        </div>
+                        <div class="map-stats">
+                            <div class="map-stat">
+                                <div class="map-stat-label">Deploy/Lap</div>
+                                <div class="map-stat-value">3.5 MJ</div>
+                            </div>
+                            <div class="map-stat">
+                                <div class="map-stat-label">Harvest/Lap</div>
+                                <div class="map-stat-value">1.8 MJ</div>
+                            </div>
+                            <div class="map-stat">
+                                <div class="map-stat-label">Target SOC</div>
+                                <div class="map-stat-value">75%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="map-section">
+                        <div class="map-header">
+                            <div class="map-name">QUALY</div>
+                        </div>
+                        <div class="map-stats">
+                            <div class="map-stat">
+                                <div class="map-stat-label">Deploy/Lap</div>
+                                <div class="map-stat-value">4.0 MJ</div>
+                            </div>
+                            <div class="map-stat">
+                                <div class="map-stat-label">Harvest/Lap</div>
+                                <div class="map-stat-value">2.0 MJ</div>
+                            </div>
+                            <div class="map-stat">
+                                <div class="map-stat-label">Target SOC</div>
+                                <div class="map-stat-value">50%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="map-section">
+                        <div class="map-header">
+                            <div class="map-name">RACE</div>
+                        </div>
+                        <div class="map-stats">
+                            <div class="map-stat">
+                                <div class="map-stat-label">Deploy/Lap</div>
+                                <div class="map-stat-value">3.0 MJ</div>
+                            </div>
+                            <div class="map-stat">
+                                <div class="map-stat-label">Harvest/Lap</div>
+                                <div class="map-stat-value">1.5 MJ</div>
+                            </div>
+                            <div class="map-stat">
+                                <div class="map-stat-label">Target SOC</div>
+                                <div class="map-stat-value">80%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: TELEMETRY TRACE -->
+                <div class="tab-content" id="tab-trace">
+                    <h3 style="font-size: 14px; color: #888; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px;">Last 20 Sections Energy Trace</h3>
+                    <table class="trace-table">
+                        <thead>
+                            <tr>
+                                <th>Section</th>
+                                <th>Deploy (MJ)</th>
+                                <th>Harvest (MJ)</th>
+                                <th>Hydraulic (MJ)</th>
+                                <th>Regen Ratio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="trace-section">Turn 1</td>
+                                <td>0.32</td>
+                                <td>0.18</td>
+                                <td>0.12</td>
+                                <td>0.67</td>
+                            </tr>
+                            <tr>
+                                <td class="trace-section">S-Curves</td>
+                                <td>0.28</td>
+                                <td>0.15</td>
+                                <td>0.09</td>
+                                <td>0.60</td>
+                            </tr>
+                            <tr>
+                                <td class="trace-section">Dunlop</td>
+                                <td>0.25</td>
+                                <td>0.22</td>
+                                <td>0.14</td>
+                                <td>0.64</td>
+                            </tr>
+                            <tr>
+                                <td class="trace-section">Degner 1</td>
+                                <td>0.30</td>
+                                <td>0.19</td>
+                                <td>0.11</td>
+                                <td>0.58</td>
+                            </tr>
+                            <tr>
+                                <td class="trace-section">Degner 2</td>
+                                <td>0.22</td>
+                                <td>0.16</td>
+                                <td>0.10</td>
+                                <td>0.63</td>
+                            </tr>
+                            <tr>
+                                <td class="trace-section">Hairpin</td>
+                                <td>0.38</td>
+                                <td>0.24</td>
+                                <td>0.16</td>
+                                <td>0.67</td>
+                            </tr>
+                            <tr>
+                                <td class="trace-section">Spoon</td>
+                                <td>0.35</td>
+                                <td>0.21</td>
+                                <td>0.13</td>
+                                <td>0.62</td>
+                            </tr>
+                            <tr>
+                                <td class="trace-section">130R</td>
+                                <td>0.15</td>
+                                <td>0.08</td>
+                                <td>0.05</td>
+                                <td>0.63</td>
+                            </tr>
+                            <tr>
+                                <td class="trace-section">Casio Triangle</td>
+                                <td>0.29</td>
+                                <td>0.17</td>
+                                <td>0.11</td>
+                                <td>0.65</td>
+                            </tr>
+                            <tr>
+                                <td class="trace-section">Chicane</td>
+                                <td>0.26</td>
+                                <td>0.20</td>
+                                <td>0.12</td>
+                                <td>0.60</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- TAB 3: WARNINGS & DIAGNOSTICS -->
+                <div class="tab-content" id="tab-warnings">
+                    <h3 style="font-size: 14px; color: #888; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px;">Runtime Warnings</h3>
+                    <div class="warning-list">
+                        <div class="warning-card">
+                            <div class="warning-icon">!</div>
+                            <div class="warning-content">
+                                <div class="warning-title">Deploy Limit Hit</div>
+                                <div class="warning-desc">Section 7 (Spoon Curve) - Deploy budget exhausted for current lap</div>
+                            </div>
+                        </div>
+                        <div class="warning-card">
+                            <div class="warning-icon">!</div>
+                            <div class="warning-content">
+                                <div class="warning-title">Harvest Approaching Limit</div>
+                                <div class="warning-desc">90% of harvest budget used - MGU-K recovery will be limited</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 style="font-size: 14px; color: #888; margin: 24px 0 16px; text-transform: uppercase; letter-spacing: 1px;">Brake & Regen Diagnostics</h3>
+                    <div class="brake-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Regen Brake Base</div>
+                            <div class="stat-value">0.35</div>
+                            <div class="stat-sub">Base recovery factor</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Migration Bias</div>
+                            <div class="stat-value">+0.12</div>
+                            <div class="stat-sub">Front bias adjustment</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Hydraulic vs Regen</div>
+                            <div class="stat-value">1.25</div>
+                            <div class="stat-sub">Torque split ratio</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Critical Sections</div>
+                            <div class="stat-value">3</div>
+                            <div class="stat-sub">High brake load zones</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openModal() {
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+        
+        function closeModalOnOverlay(event) {
+            if (event.target.id === 'modalOverlay') {
+                closeModal();
+            }
+        }
+        
+        function switchTab(tabName) {
+            // Remove active from all tabs and contents
+            document.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active to clicked tab and corresponding content
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tabName).classList.add('active');
+        }
+    </script>
+</body>
+</html>

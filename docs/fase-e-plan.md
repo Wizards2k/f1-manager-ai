@@ -21,7 +21,31 @@ scope: engine simulator v2, segment-based physics, degradation pipelines
     - ✅ Manifest per anno scritto automaticamente (es. `python_backend/data/circuits/2024/manifest.json`).
   - **Derived refresh**: opzionale hook che, dopo la generazione del circuito, rilancia `scripts/build_circuit_profiles.py` per aggiornare `config/circuits/derived/<circuit_id>/` usando gli stessi dati.
   - **Documentazione**: guida operativa (sezione dedicata in questo file + README) con prerequisiti FastF1, setup cache e invocazione batch per produrre anni diversi.
-- [ ] **D2 – Circuit profile loader**: loader runtime che espone segmenti, fattori termici, fuel burn, bumpiness e DRS al simulatore.
+- [ ] **D2 – Script fitting componenti & circuit profile loader**:
+  - **Input comuni**: `python_backend/data/circuits/<year>/*_Telemetry.json`, manifest (per sapere anno/sessione), seed globali in `config/tyres`, `config/brakes`, `config/pu`, `config/damage`.
+  - **Output**: file in `config/calibration/` (`aero.json`, `tyres.json`, `pu.json`, `brakes.json`) + opzionale `reports/calibration/<date>/<circuit>.md` con grafici/resoconto.
+  - **aero_fit.py**:
+    1. Carica profilo circuito e telemetria (velocità entry/exit/min per sezione).
+    2. Calcola target `v_corner_max` per classi di curva, stima `CdA`/`ClA` per ogni circuito confrontando velocità rettilinei vs referenza.
+    3. Produce parametri `drag_index`, `downforce_index`, `aero_balance_target` per team e li salva in `config/calibration/aero/<circuit>.json`.
+  - **tyre_fit.py**:
+    1. Usa lap delta vs compound/tyre_age (da manifest → sessione/gomma) per stimare `wear_rate_base`, `thermal_mass`, `temp_window` corretti.
+    2. Genera curve `wear_pct(lap)` e `thermal_factor(temp)` per ogni compound e circuito.
+    3. Scrive `config/calibration/tyres/<circuit>.json` e aggiorna `tyre_params.json` derived via hook.
+  - **powerunit_fit.py**:
+    1. Analizza velocità e throttle lungo i rettilinei per stimare `torque_ramp`, `P_total`, `ERS_deploy_profile`.
+    2. Calcola `heat_load`, `cooling_share`, soglie derating basate su telemetria temperature (se disponibile) o fallback da modelli.
+    3. Output in `config/calibration/pu/<circuit>.json` (mappe ICE/ERS e reliability overrides) includendo blocchi `ers_budget` e `regen_profile` che saranno inoltrati al SessionBridge, agli strumenti debug e al Practice Session Orchestrator senza parsing dei report.
+  - **brake_calibration.py**:
+    1. Integra `braking_energy_mj` per sezione per dedurre `heat_capacity`, `fade_threshold`, `cooling_coeff`.
+    2. Bilancia front/rear in base a `brake_bias` (se registrato) e bumpiness; produce suggerimenti su duct aperto minimo.
+    3. Scrive `config/calibration/brakes/<circuit>.json` includendo `regen_brake_base`/`hydraulic_vs_regen_ratio` che alimentano Telemetria/HUD e tool QA.
+  - **Circuit profile loader (runtime)**:
+    - Funzione `load_circuit_profile(circuit_id, season)` che:
+      1. Carica Telemetry JSON per l’anno richiesto (default quello più recente disponibile).
+      2. Merge dei parametri calibrati (`config/calibration/*`) con i seed derived in `config/circuits/derived/<circuit_id>/`.
+      3. Restituisce un oggetto `CircuitProfile` già completo di segmenti, heat/cool factors, fuel burn, DRS, mapping setup.
+    - Prevede caching in memoria per evitare reload continuo e logging del provenance (quale anno/calibrazione sono stati usati).
 - [ ] **D3 – Setup → parametri fisici**:
   - Mappatura slider (front/rear wing, ride height, sospensioni, anti-roll, brake ducts) → `ClA`, `CdA`, `aero_balance`, `mu_base`, `cooling_coeff`.
   - Aggiornare `config/setup_mapping_v2.json`/derived per includere i coefficienti necessari.

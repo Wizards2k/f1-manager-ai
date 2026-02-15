@@ -18,19 +18,20 @@ import { TimelinePanelV3 } from './modules/timeline_panel_v3.js';
         timerElement: document.getElementById('session-timer')
     });
 
+    const sessionControls = new SessionControls({
+        pauseButton: document.getElementById('pause-btn'),
+        speedButtons: document.querySelectorAll('.speed-btn'),
+        speedIndicator: document.getElementById('current-speed')
+    });
+
     const playerGarage = new PlayerGarageV3(appState, {
         cardsContainer: document.getElementById('player-car-cards-v3'),
         overlayContainer: document.getElementById('player-setup-overlay'),
         dockElement: document.getElementById('player-dock'),
         statusMsg: document.getElementById('garage-status'),
         notificationsContainer: document.getElementById('garage-notifications'),
-        hudContainer: document.getElementById('hud-overlay')
-    });
-
-    const sessionControls = new SessionControls({
-        pauseButton: document.getElementById('pause-btn'),
-        speedButtons: document.querySelectorAll('.speed-btn'),
-        speedIndicator: document.getElementById('current-speed')
+        hudContainer: document.getElementById('hud-overlay'),
+        sessionControls,
     });
 
     const timelinePanel = new TimelinePanelV3({

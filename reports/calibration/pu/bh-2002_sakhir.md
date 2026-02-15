@@ -1,0 +1,194 @@
+# PowerUnit calibration – bh-2002_sakhir
+
+## Track stats
+- heat_mean: 0.700
+- heat_peak: 1.300
+- drs_ratio: 0.671
+- brake_density (MJ/km): 2.104
+- power_bias: 0.902
+- circuit_length_km: 5.364
+
+## Regen profile
+- base_factor: 0.84
+- limit_nm: 353.6
+- potential_mj_per_lap: 1.397
+- regen_migration_bias: -0.256
+- brake_energy_window: {'min_mj': 0.0, 'max_mj': 2.566}
+
+## ERS budget
+- battery_capacity_mj: 5.5
+- deploy_limit_mj: 4.0
+- harvest_limit_mj: 2.0
+
+| Map | Deploy (MJ) | Harvest (MJ) | Target SOC | Deploy ratio | Harvest ratio |
+|-----|-------------|--------------|------------|--------------|---------------|
+| ECONOMY | 2.021 | 1.589 | 0.735 | 0.505 | 0.794 |
+| STANDARD | 3.242 | 1.345 | 0.315 | 0.81 | 0.672 |
+| RICH | 3.968 | 0.983 | 0.05 | 0.992 | 0.491 |
+| QUALY | 4.0 | 0.63 | 0.05 | 1.0 | 0.315 |
+| WET | 2.529 | 1.572 | 0.556 | 0.632 | 0.786 |
+| RECHARGE | 0.5 | 2.0 | 0.98 | 0.125 | 1.0 |
+
+## SOC warnings
+- RICH: deploy at 99% of MGU-K limit
+- RICH: SOC target very low (0.05) – plan recharge lap
+- QUALY: deploy at 100% of MGU-K limit
+- QUALY: harvest insufficient vs deploy (ratio 0.32)
+- QUALY: SOC target very low (0.05) – plan recharge lap
+
+## Maps
+### ECONOMY
+| Parametro | Valore |
+|-----------|--------|
+| heat_load_kw | 208.78 |
+| torque_ramp | 0.3682 |
+| deployment_style | conservative |
+| cooling_share | 0.49 |
+| ers_output_kw | 110.21 |
+| deploy_mj_per_lap | 2.021 |
+| harvest_mj_per_lap | 1.589 |
+| mguh_direct_ratio | 0.601 |
+| target_soc_end_lap | 0.735 |
+| torque_bias | -0.0098 |
+| mguh_power_kw | 91.41 |
+
+Notes:
+- map: ECONOMY
+- heat_scale: 0.949
+- cooling_target: 0.49
+- torque_bias_delta: 0.0402
+- drs_ratio: 0.671
+- deploy_dynamic: 1.081
+- harvest_dynamic: 0.84
+- deploy_limit_hit: False
+- harvest_limit_hit: False
+
+### STANDARD
+| Parametro | Valore |
+|-----------|--------|
+| heat_load_kw | 246.74 |
+| torque_ramp | 0.6482 |
+| deployment_style | balanced |
+| cooling_share | 0.44 |
+| ers_output_kw | 165.31 |
+| deploy_mj_per_lap | 3.242 |
+| harvest_mj_per_lap | 1.345 |
+| mguh_direct_ratio | 0.641 |
+| target_soc_end_lap | 0.315 |
+| torque_bias | 0.0402 |
+| mguh_power_kw | 99.36 |
+
+Notes:
+- map: STANDARD
+- heat_scale: 0.949
+- cooling_target: 0.44
+- torque_bias_delta: 0.0402
+- drs_ratio: 0.671
+- deploy_dynamic: 1.081
+- harvest_dynamic: 0.84
+- deploy_limit_hit: False
+- harvest_limit_hit: False
+
+### RICH
+| Parametro | Valore |
+|-----------|--------|
+| heat_load_kw | 284.7 |
+| torque_ramp | 0.8582 |
+| deployment_style | aggressive |
+| cooling_share | 0.39 |
+| ers_output_kw | 200 |
+| deploy_mj_per_lap | 3.968 |
+| harvest_mj_per_lap | 0.983 |
+| mguh_direct_ratio | 0.701 |
+| target_soc_end_lap | 0.05 |
+| torque_bias | 0.0802 |
+| mguh_power_kw | 104.33 |
+
+Notes:
+- map: RICH
+- heat_scale: 0.949
+- cooling_target: 0.39
+- torque_bias_delta: 0.0402
+- drs_ratio: 0.671
+- deploy_dynamic: 1.081
+- harvest_dynamic: 0.84
+- deploy_limit_hit: True
+- harvest_limit_hit: False
+
+### QUALY
+| Parametro | Valore |
+|-----------|--------|
+| heat_load_kw | 313.17 |
+| torque_ramp | 1.0 |
+| deployment_style | time_attack |
+| cooling_share | 0.35 |
+| ers_output_kw | 200 |
+| deploy_mj_per_lap | 4.0 |
+| harvest_mj_per_lap | 0.63 |
+| mguh_direct_ratio | 0.761 |
+| target_soc_end_lap | 0.05 |
+| torque_bias | 0.1202 |
+| mguh_power_kw | 109.3 |
+
+Notes:
+- map: QUALY
+- heat_scale: 0.949
+- cooling_target: 0.35
+- torque_bias_delta: 0.0402
+- drs_ratio: 0.671
+- deploy_dynamic: 1.081
+- harvest_dynamic: 0.84
+- deploy_limit_hit: True
+- harvest_limit_hit: False
+
+### WET
+| Parametro | Valore |
+|-----------|--------|
+| heat_load_kw | 227.76 |
+| torque_ramp | 0.5582 |
+| deployment_style | wet_grip |
+| cooling_share | 0.54 |
+| ers_output_kw | 130.87 |
+| deploy_mj_per_lap | 2.529 |
+| harvest_mj_per_lap | 1.572 |
+| mguh_direct_ratio | 0.591 |
+| target_soc_end_lap | 0.556 |
+| torque_bias | 0.0202 |
+| mguh_power_kw | 89.43 |
+
+Notes:
+- map: WET
+- heat_scale: 0.949
+- cooling_target: 0.54
+- torque_bias_delta: 0.0402
+- drs_ratio: 0.671
+- deploy_dynamic: 1.081
+- harvest_dynamic: 0.84
+- deploy_limit_hit: False
+- harvest_limit_hit: False
+
+### RECHARGE
+| Parametro | Valore |
+|-----------|--------|
+| heat_load_kw | 218.27 |
+| torque_ramp | 0.4482 |
+| deployment_style | harvest |
+| cooling_share | 0.59 |
+| ers_output_kw | 96.43 |
+| deploy_mj_per_lap | 0.5 |
+| harvest_mj_per_lap | 2.0 |
+| mguh_direct_ratio | 0.461 |
+| target_soc_end_lap | 0.98 |
+| torque_bias | -0.0198 |
+| mguh_power_kw | 79.49 |
+
+Notes:
+- map: RECHARGE
+- heat_scale: 0.949
+- cooling_target: 0.59
+- torque_bias_delta: 0.0402
+- drs_ratio: 0.671
+- deploy_dynamic: 1.081
+- harvest_dynamic: 0.84
+- deploy_limit_hit: False
+- harvest_limit_hit: True

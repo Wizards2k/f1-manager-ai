@@ -1,0 +1,136 @@
+# Tyre calibration – nl-1948_zandvoort
+
+## Track stats
+- avg_heat: 0.692
+- avg_bump: 0.000
+- total_brake_mj: 10.524
+- brake_density_mj_per_km: 2.489
+
+## Compounds
+### C1
+| Parametro | Valore |
+|-----------|--------|
+| temp_window_surface_c | [88.46, 123.46, 138.46] |
+| temp_window_core_c | [89.08, 101.08, 114.08] |
+| gaussian_sigma_surface_c | 7.0 |
+| gaussian_sigma_core_c | 6.0 |
+| base_grip | 0.92 |
+| wear_rate_base_pct_per_km | 0.08779 |
+| degradation_rate_multiplier | 0.6 |
+| slip_sensitivity | 0.75 |
+| thermal_mass_surface | 1.25 |
+| thermal_mass_core | 1.4 |
+| conduction_coeff | 0.06 |
+| cooling_coeff | 1.05 |
+
+### C2
+| Parametro | Valore |
+|-----------|--------|
+| temp_window_surface_c | [88.46, 120.46, 133.46] |
+| temp_window_core_c | [87.08, 98.08, 109.08] |
+| gaussian_sigma_surface_c | 7.0 |
+| gaussian_sigma_core_c | 6.0 |
+| base_grip | 0.95 |
+| wear_rate_base_pct_per_km | 0.107299 |
+| degradation_rate_multiplier | 0.8 |
+| slip_sensitivity | 0.8 |
+| thermal_mass_surface | 1.18 |
+| thermal_mass_core | 1.32 |
+| conduction_coeff | 0.065 |
+| cooling_coeff | 1.05 |
+
+### C3
+| Parametro | Valore |
+|-----------|--------|
+| temp_window_surface_c | [86.46, 118.46, 133.46] |
+| temp_window_core_c | [84.08, 96.08, 107.08] |
+| gaussian_sigma_surface_c | 7.0 |
+| gaussian_sigma_core_c | 6.0 |
+| base_grip | 1.0 |
+| wear_rate_base_pct_per_km | 0.126808 |
+| degradation_rate_multiplier | 1.0 |
+| slip_sensitivity | 1.0 |
+| thermal_mass_surface | 1.1 |
+| thermal_mass_core | 1.25 |
+| conduction_coeff | 0.07 |
+| cooling_coeff | 1.0 |
+
+### C4
+| Parametro | Valore |
+|-----------|--------|
+| temp_window_surface_c | [83.46, 106.46, 118.46] |
+| temp_window_core_c | [79.08, 91.08, 99.08] |
+| gaussian_sigma_surface_c | 7.0 |
+| gaussian_sigma_core_c | 6.0 |
+| base_grip | 1.06 |
+| wear_rate_base_pct_per_km | 0.156071 |
+| degradation_rate_multiplier | 1.3 |
+| slip_sensitivity | 1.15 |
+| thermal_mass_surface | 0.98 |
+| thermal_mass_core | 1.12 |
+| conduction_coeff | 0.075 |
+| cooling_coeff | 0.95 |
+
+### C5
+| Parametro | Valore |
+|-----------|--------|
+| temp_window_surface_c | [80.46, 100.46, 113.46] |
+| temp_window_core_c | [74.08, 87.08, 94.08] |
+| gaussian_sigma_surface_c | 7.0 |
+| gaussian_sigma_core_c | 6.0 |
+| base_grip | 1.12 |
+| wear_rate_base_pct_per_km | 0.185334 |
+| degradation_rate_multiplier | 1.6 |
+| slip_sensitivity | 1.3 |
+| thermal_mass_surface | 0.9 |
+| thermal_mass_core | 1.05 |
+| conduction_coeff | 0.08 |
+| cooling_coeff | 0.92 |
+
+### C6
+| Parametro | Valore |
+|-----------|--------|
+| temp_window_surface_c | [78.46, 94.46, 103.46] |
+| temp_window_core_c | [69.08, 83.08, 89.08] |
+| gaussian_sigma_surface_c | 7.0 |
+| gaussian_sigma_core_c | 6.0 |
+| base_grip | 1.18 |
+| wear_rate_base_pct_per_km | 0.214598 |
+| degradation_rate_multiplier | 1.8 |
+| slip_sensitivity | 1.45 |
+| thermal_mass_surface | 0.82 |
+| thermal_mass_core | 0.98 |
+| conduction_coeff | 0.085 |
+| cooling_coeff | 0.9 |
+
+### INTERMEDIATE
+| Parametro | Valore |
+|-----------|--------|
+| temp_window_surface_c | [58.46, 70.46, 83.46] |
+| temp_window_core_c | [54.08, 67.08, 74.08] |
+| gaussian_sigma_surface_c | 7.5 |
+| gaussian_sigma_core_c | 6.5 |
+| base_grip | 0.95 |
+| wear_rate_base_pct_per_km | 0.117053 |
+| degradation_rate_multiplier | 0.9 |
+| slip_sensitivity | 0.9 |
+| thermal_mass_surface | 1.05 |
+| thermal_mass_core | 1.2 |
+| conduction_coeff | 0.065 |
+| cooling_coeff | 1.1 |
+
+### WET
+| Parametro | Valore |
+|-----------|--------|
+| temp_window_surface_c | [38.46, 53.46, 68.46] |
+| temp_window_core_c | [34.08, 49.08, 59.08] |
+| gaussian_sigma_surface_c | 8.0 |
+| gaussian_sigma_core_c | 7.0 |
+| base_grip | 0.85 |
+| wear_rate_base_pct_per_km | 0.097544 |
+| degradation_rate_multiplier | 0.7 |
+| slip_sensitivity | 0.85 |
+| thermal_mass_surface | 1.15 |
+| thermal_mass_core | 1.3 |
+| conduction_coeff | 0.06 |
+| cooling_coeff | 1.2 |

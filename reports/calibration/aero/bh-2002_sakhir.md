@@ -1,0 +1,15 @@
+# Aero calibration – bh-2002_sakhir
+
+| Parametro | Valore |
+|-----------|--------|
+| CdA | 1.5405 |
+| ClA | 4.8683 |
+| drag_index | 1.0624 |
+| downforce_index | 1.0038 |
+| aero_balance_target | 0.1500 |
+
+## Notes
+- **source_year**: 2025
+- **session_type**: Q
+- **description**: qualifying_fastest
+- **generated_from**: bh-2002_sakhir

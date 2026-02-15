@@ -1,185 +1,202 @@
 {
   "_meta": {
     "version": "0.1",
-    "last_updated": "2026-02-08",
-    "notes": "Seed parameters derived from TyreModel spec; replace with calibrated values once fitting is done. Per-compound values are global; circuit-specific modifiers (heat_factor, bumpiness, kerb severity) provengono da config/tyres/pirelli_track_profile_2025.json e dai Telemetry *_Telemetry.json.",
-    "derived_context": {
-      "track_features": {
-        "bumps": 2,
-        "kerbs": 3,
-        "avg_speed_rating": 4
-      },
-      "wear_rate_base": 0.25,
-      "wear_rate_multiplier": 1.389,
-      "bump_multiplier": 1.13,
-      "cooling_multiplier": 1.04
-    },
     "circuit_id": "es-1991_barcelona",
+    "source_year": 2025,
+    "session_type": "Q",
+    "description": "qualifying_fastest",
+    "stats": {
+      "avg_heat": 0.7615384615384615,
+      "avg_bump": 0.0,
+      "avg_brake": 0.9586923076923077,
+      "total_brake": 12.463000000000001,
+      "brake_density": 2.698203074258498
+    },
     "setup_profile_key": "barcelona_catalunya",
-    "built_at": "2026-02-08T14:23:28Z",
+    "built_at": "2026-02-15T11:05:42Z",
     "circuit_name": "Circuit de Barcelona-Catalunya",
     "telemetry_source": "python_backend/data/circuits/es-1991_barcelona_Telemetry.json"
   },
   "compounds": {
     "C1": {
       "temp_window_surface_c": [
-        90,
-        125,
-        140
+        88.81,
+        123.81,
+        138.81
       ],
       "temp_window_core_c": [
-        90,
-        102,
-        115
+        89.28,
+        101.28,
+        114.28
       ],
       "gaussian_sigma_surface_c": 7.0,
       "gaussian_sigma_core_c": 6.0,
       "base_grip": 0.92,
-      "wear_rate_base_pct_per_km": 0.14125,
+      "wear_rate_base_pct_per_km": 0.088289,
+      "degradation_rate_multiplier": 0.6,
+      "slip_sensitivity": 0.75,
       "thermal_mass_surface": 1.25,
       "thermal_mass_core": 1.4,
       "conduction_coeff": 0.06,
-      "cooling_coeff": 1.092
+      "cooling_coeff": 1.05
     },
     "C2": {
       "temp_window_surface_c": [
-        90,
-        122,
-        135
+        88.81,
+        120.81,
+        133.81
       ],
       "temp_window_core_c": [
-        88,
-        99,
-        110
+        87.28,
+        98.28,
+        109.28
       ],
       "gaussian_sigma_surface_c": 7.0,
       "gaussian_sigma_core_c": 6.0,
       "base_grip": 0.95,
-      "wear_rate_base_pct_per_km": 0.1726388888888889,
+      "wear_rate_base_pct_per_km": 0.107909,
+      "degradation_rate_multiplier": 0.8,
+      "slip_sensitivity": 0.8,
       "thermal_mass_surface": 1.18,
       "thermal_mass_core": 1.32,
       "conduction_coeff": 0.065,
-      "cooling_coeff": 1.092
+      "cooling_coeff": 1.05
     },
     "C3": {
       "temp_window_surface_c": [
-        88,
-        120,
-        135
+        86.81,
+        118.81,
+        133.81
       ],
       "temp_window_core_c": [
-        85,
-        97,
-        108
+        84.28,
+        96.28,
+        107.28
       ],
       "gaussian_sigma_surface_c": 7.0,
       "gaussian_sigma_core_c": 6.0,
       "base_grip": 1.0,
-      "wear_rate_base_pct_per_km": 0.2040277777777778,
+      "wear_rate_base_pct_per_km": 0.127528,
+      "degradation_rate_multiplier": 1.0,
+      "slip_sensitivity": 1.0,
       "thermal_mass_surface": 1.1,
       "thermal_mass_core": 1.25,
       "conduction_coeff": 0.07,
-      "cooling_coeff": 1.04
+      "cooling_coeff": 1.0
     },
     "C4": {
       "temp_window_surface_c": [
-        85,
-        108,
-        120
+        83.81,
+        106.81,
+        118.81
       ],
       "temp_window_core_c": [
-        80,
-        92,
-        100
+        79.28,
+        91.28,
+        99.28
       ],
       "gaussian_sigma_surface_c": 7.0,
       "gaussian_sigma_core_c": 6.0,
       "base_grip": 1.06,
-      "wear_rate_base_pct_per_km": 0.2511111111111111,
+      "wear_rate_base_pct_per_km": 0.156958,
+      "degradation_rate_multiplier": 1.3,
+      "slip_sensitivity": 1.15,
       "thermal_mass_surface": 0.98,
       "thermal_mass_core": 1.12,
       "conduction_coeff": 0.075,
-      "cooling_coeff": 0.988
+      "cooling_coeff": 0.95
     },
     "C5": {
       "temp_window_surface_c": [
-        82,
-        102,
-        115
+        80.81,
+        100.81,
+        113.81
       ],
       "temp_window_core_c": [
-        75,
-        88,
-        95
+        74.28,
+        87.28,
+        94.28
       ],
       "gaussian_sigma_surface_c": 7.0,
       "gaussian_sigma_core_c": 6.0,
       "base_grip": 1.12,
-      "wear_rate_base_pct_per_km": 0.2981944444444445,
+      "wear_rate_base_pct_per_km": 0.186388,
+      "degradation_rate_multiplier": 1.6,
+      "slip_sensitivity": 1.3,
       "thermal_mass_surface": 0.9,
       "thermal_mass_core": 1.05,
       "conduction_coeff": 0.08,
-      "cooling_coeff": 0.9568000000000001
+      "cooling_coeff": 0.92
     },
     "C6": {
       "temp_window_surface_c": [
-        80,
-        96,
-        105
+        78.81,
+        94.81,
+        103.81
       ],
       "temp_window_core_c": [
-        70,
-        84,
-        90
+        69.28,
+        83.28,
+        89.28
       ],
       "gaussian_sigma_surface_c": 7.0,
       "gaussian_sigma_core_c": 6.0,
       "base_grip": 1.18,
-      "wear_rate_base_pct_per_km": 0.3452777777777778,
+      "wear_rate_base_pct_per_km": 0.215817,
+      "degradation_rate_multiplier": 1.8,
+      "slip_sensitivity": 1.45,
       "thermal_mass_surface": 0.82,
       "thermal_mass_core": 0.98,
       "conduction_coeff": 0.085,
-      "cooling_coeff": 0.936
+      "cooling_coeff": 0.9
     },
     "INTERMEDIATE": {
       "temp_window_surface_c": [
-        60,
-        72,
-        85
+        58.81,
+        70.81,
+        83.81
       ],
       "temp_window_core_c": [
-        55,
-        68,
-        75
+        54.28,
+        67.28,
+        74.28
       ],
       "gaussian_sigma_surface_c": 7.5,
       "gaussian_sigma_core_c": 6.5,
       "base_grip": 0.95,
-      "wear_rate_base_pct_per_km": 0.18833333333333335,
+      "wear_rate_base_pct_per_km": 0.117719,
+      "degradation_rate_multiplier": 0.9,
+      "slip_sensitivity": 0.9,
       "thermal_mass_surface": 1.05,
       "thermal_mass_core": 1.2,
       "conduction_coeff": 0.065,
-      "cooling_coeff": 1.1440000000000001
+      "cooling_coeff": 1.1
     },
     "WET": {
       "temp_window_surface_c": [
-        40,
-        55,
-        70
+        38.81,
+        53.81,
+        68.81
       ],
       "temp_window_core_c": [
-        35,
-        50,
-        60
+        34.28,
+        49.28,
+        59.28
       ],
       "gaussian_sigma_surface_c": 8.0,
       "gaussian_sigma_core_c": 7.0,
       "base_grip": 0.85,
-      "wear_rate_base_pct_per_km": 0.15694444444444447,
+      "wear_rate_base_pct_per_km": 0.098099,
+      "degradation_rate_multiplier": 0.7,
+      "slip_sensitivity": 0.85,
       "thermal_mass_surface": 1.15,
       "thermal_mass_core": 1.3,
       "conduction_coeff": 0.06,
-      "cooling_coeff": 1.248
+      "cooling_coeff": 1.2
     }
+  },
+  "brake_heat_proxy": {
+    "brake_density_mj_per_km": 2.698,
+    "avg_brake_section_mj": 0.959
   }
 }

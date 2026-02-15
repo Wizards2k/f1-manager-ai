@@ -1,5 +1,5 @@
 export class PlayerGarageV3 {
-    constructor(state, { teamLabel, statusMsg, cardsContainer, overlayContainer, dockElement, notificationsContainer, hudContainer }) {
+    constructor(state, { teamLabel, statusMsg, cardsContainer, overlayContainer, dockElement, notificationsContainer, hudContainer, sessionControls }) {
         this.state = state;
         this.teamLabel = teamLabel;
         this.statusMsg = statusMsg;
@@ -8,6 +8,8 @@ export class PlayerGarageV3 {
         this.dockElement = dockElement;
         this.notificationsContainer = notificationsContainer;
         this.hudContainer = hudContainer;
+        this.sessionControls = sessionControls;
+        this.wasPausedBeforePU = null;
         this.tyreOptions = [
             { value: 'soft', label: 'Soft' },
             { value: 'medium', label: 'Medium' },
@@ -131,6 +133,226 @@ export class PlayerGarageV3 {
                 }
             });
         }
+    }
+
+    buildLapUsageChipRow({ mapName, deployLimit, harvestLimit, deployPerLap, harvestPerLap, current, previous, hasPrevTrace, hasPrevWarnings, hasPrevLap }) {
+        const chips = [];
+        if (current) {
+            chips.push(this.buildLapUsageChip({
+                label: 'Giro attuale',
+                lapIndex: current.lapIndex,
+                deploy: current.deploy,
+                harvest: current.harvest,
+                mguhDirect: current.mguhDirect,
+                mguhHarvest: current.mguhHarvest,
+                deployBudget: deployPerLap,
+                harvestBudget: harvestPerLap,
+                deployLimit,
+                harvestLimit,
+                mapName,
+            }));
+        }
+        const showPrev = previous && (
+            hasPrevLap ||
+            (previous.deploy ?? 0) > 0.001 ||
+            (previous.harvest ?? 0) > 0.001 ||
+            hasPrevTrace ||
+            hasPrevWarnings
+        );
+        if (showPrev) {
+            chips.push(this.buildLapUsageChip({
+                label: 'Giro precedente',
+                lapIndex: previous.lapIndex,
+                deploy: previous.deploy,
+                harvest: previous.harvest,
+                mguhDirect: previous.mguhDirect,
+                mguhHarvest: previous.mguhHarvest,
+                deployBudget: deployPerLap,
+                harvestBudget: harvestPerLap,
+                deployLimit,
+                harvestLimit,
+                mapName,
+            }));
+        }
+        if (!chips.length) return '';
+        return `<div class="pu-lap-chip-row-v3">${chips.join('')}</div>`;
+    }
+
+    buildLapUsageChip({ label, lapIndex, deploy, harvest, mguhDirect, mguhHarvest, deployBudget, harvestBudget, deployLimit, harvestLimit, mapName }) {
+        if (deploy == null && harvest == null) return '';
+        const lapLabel = this.formatLapLabel(lapIndex);
+        const deployBudgetStr = deployBudget ? `${deployBudget.toFixed(1)} MJ` : '—';
+        const harvestBudgetStr = harvestBudget ? `${harvestBudget.toFixed(1)} MJ` : '—';
+        const deployText = deploy != null ? `${deploy.toFixed(2)} MJ` : '—';
+        const harvestText = harvest != null ? `${harvest.toFixed(2)} MJ` : '—';
+        const deployRatio = deployBudget ? Math.min((deploy || 0) / deployBudget, 1) : 0;
+        const harvestRatio = harvestBudget ? Math.min((harvest || 0) / harvestBudget, 1) : 0;
+        const mguhDirectText = typeof mguhDirect === 'number' ? `${mguhDirect.toFixed(2)} MJ` : '—';
+        const mguhHarvestText = typeof mguhHarvest === 'number' ? `${mguhHarvest.toFixed(2)} MJ` : '—';
+        return `
+            <div class="pu-lap-chip-v3">
+                <div class="pu-chip-header">
+                    <span class="pu-chip-label">${label}</span>
+                    <span class="pu-chip-lap">${lapLabel}</span>
+                </div>
+                <div class="pu-chip-body">
+                    <div class="pu-chip-metric">
+                        <div class="pu-chip-metric-label">Deploy</div>
+                        <div class="pu-chip-metric-value">${deployText} / ${deployBudgetStr}</div>
+                        <div class="pu-chip-progress"><div style="width:${deployRatio * 100}%"></div></div>
+                    </div>
+                    <div class="pu-chip-metric">
+                        <div class="pu-chip-metric-label">Harvest</div>
+                        <div class="pu-chip-metric-value">${harvestText} / ${harvestBudgetStr}</div>
+                        <div class="pu-chip-progress harvest"><div style="width:${harvestRatio * 100}%"></div></div>
+                    </div>
+                    <div class="pu-chip-metric">
+                        <div class="pu-chip-metric-label">MGU-H Direct</div>
+                        <div class="pu-chip-metric-value">${mguhDirectText}</div>
+                    </div>
+                    <div class="pu-chip-metric">
+                        <div class="pu-chip-metric-label">MGU-H → ES</div>
+                        <div class="pu-chip-metric-value">${mguhHarvestText}</div>
+                    </div>
+                </div>
+                <div class="pu-chip-sub">Mappa ${mapName} · Limite FIA ${deployLimit.toFixed(1)} MJ · Limite recupero ${harvestLimit.toFixed(1)} MJ</div>
+            </div>
+        `;
+    }
+
+    buildWarningSection({ currentWarnings = [], previousWarnings = [], currentLapIndex, previousLapIndex }) {
+        const currentBadges = this.buildWarningBadges(currentWarnings, currentLapIndex, 'Giro attuale');
+        const previousBadges = this.buildWarningBadges(previousWarnings, previousLapIndex, 'Giro precedente');
+        if (!currentBadges && !previousBadges) {
+            return '<div class="pu-warning-row-v3"><div class="pu-warning-empty">No runtime warnings</div></div>';
+        }
+        return `<div class="pu-warning-row-v3">${currentBadges || ''}${previousBadges || ''}</div>`;
+    }
+
+    buildWarningBadges(warnings, lapIndex, label) {
+        if (!warnings || !warnings.length) return '';
+        const lapText = this.formatLapLabel(lapIndex, true);
+        const unique = [...new Set(warnings)];
+        return unique.map(w => {
+            const isDeploy = w.includes('deploy');
+            const tone = isDeploy ? 'deploy' : 'harvest';
+            return `
+                <div class="pu-warning-badge-v3 ${tone}">
+                    <div class="pu-warning-badge-label">${label}${lapText ? ` · ${lapText}` : ''}</div>
+                    <div class="pu-warning-badge-title">${w}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    buildPUTableRows(currentTrace = [], prevTrace = [], lapIdCurrent, lapIdPrev) {
+        const rows = [];
+        const pushRows = (entries, lapId, tone) => {
+            if (!entries || !entries.length) return;
+            entries.slice(-20).forEach(entry => {
+                rows.push({
+                    lapLabel: this.formatLapLabel(lapId) || (tone === 'prev' ? 'Lap prev' : 'Lap'),
+                    section: entry.section_id || '--',
+                    deploy: entry.deploy_mj ?? 0,
+                    harvest: entry.harvest_mj ?? 0,
+                    hydraulic: entry.hydraulic_mj ?? 0,
+                    regen: entry.regen_vs_hydraulic ?? 0,
+                    mguhDirect: entry.mguh_direct_mj ?? 0,
+                    mguhHarvest: entry.mguh_es_mj ?? 0,
+                });
+            });
+        };
+        pushRows(currentTrace, lapIdCurrent, 'current');
+        pushRows(prevTrace, lapIdPrev, 'prev');
+        if (!rows.length) {
+            return '<tr><td colspan="8" style="text-align:center;color:#888;">No trace data</td></tr>';
+        }
+        return rows.map(row => `
+            <tr>
+                <td>${row.lapLabel}</td>
+                <td>${row.section}</td>
+                <td>${row.deploy.toFixed(2)} MJ</td>
+                <td>${row.harvest.toFixed(2)} MJ</td>
+                <td>${row.hydraulic.toFixed(2)} MJ</td>
+                <td>${row.regen.toFixed(2)}</td>
+                <td>${row.mguhDirect.toFixed(2)} MJ</td>
+                <td>${row.mguhHarvest.toFixed(2)} MJ</td>
+            </tr>
+        `).join('');
+    }
+
+    resolveLapIndexes({ car, lapIdCurrent, lapIdPrev }) {
+        const completedLapCount = Array.isArray(car.lap_times) ? car.lap_times.length : null;
+        const normalizeLapId = (value) => {
+            if (typeof value !== 'number' || Number.isNaN(value) || value < 0) return null;
+            return value;
+        };
+
+        let currentLapIndex = normalizeLapId(lapIdCurrent);
+        let previousLapIndex = normalizeLapId(lapIdPrev);
+
+        if (currentLapIndex === null && completedLapCount !== null) {
+            currentLapIndex = Math.max(completedLapCount, 0);
+        }
+        if (previousLapIndex === null && completedLapCount !== null) {
+            previousLapIndex = completedLapCount > 0 ? completedLapCount - 1 : null;
+        }
+        if (previousLapIndex === null && currentLapIndex !== null && currentLapIndex > 0) {
+            previousLapIndex = currentLapIndex - 1;
+        }
+        if (currentLapIndex === null) {
+            currentLapIndex = 0;
+        }
+
+        return {
+            currentLapIndex,
+            previousLapIndex,
+            completedLapCount,
+        };
+    }
+
+    formatLapLabel(lapIndex, allowEmpty = false) {
+        if (typeof lapIndex !== 'number' || Number.isNaN(lapIndex) || lapIndex < 0) {
+            return allowEmpty ? '' : 'Lap —';
+        }
+        return `Lap ${lapIndex}`;
+    }
+
+    puStatsSignature(puStats) {
+        if (!puStats) return 'pu:none';
+        const fields = [
+            puStats.soc_mj,
+            puStats.soc_pct,
+            puStats.lap_deploy_mj,
+            puStats.lap_harvest_mj,
+            puStats.lap_mguh_direct_mj,
+            puStats.lap_mguh_harvest_mj,
+            puStats.lap_id_current,
+            puStats.lap_id_prev,
+        ].map(val => (typeof val === 'number' ? val.toFixed(3) : 'null'));
+        return `pu:${fields.join(':')}`;
+    }
+
+    computeLapTotals(trace = [], fallbackDeploy = 0, fallbackHarvest = 0, fallbackMguhDirect = 0, fallbackMguhHarvest = 0) {
+        const hasTrace = Array.isArray(trace) && trace.length > 0;
+        const totals = trace.reduce((acc, entry) => {
+            const deploy = typeof entry.deploy_mj === 'number' ? entry.deploy_mj : 0;
+            const harvest = typeof entry.harvest_mj === 'number' ? entry.harvest_mj : 0;
+            const mguhDirect = typeof entry.mguh_direct_mj === 'number' ? entry.mguh_direct_mj : 0;
+            const mguhHarvest = typeof entry.mguh_es_mj === 'number' ? entry.mguh_es_mj : 0;
+            return {
+                deploy: acc.deploy + deploy,
+                harvest: acc.harvest + harvest,
+                mguhDirect: acc.mguhDirect + mguhDirect,
+                mguhHarvest: acc.mguhHarvest + mguhHarvest,
+            };
+        }, { deploy: 0, harvest: 0, mguhDirect: 0, mguhHarvest: 0 });
+        const deploy = hasTrace ? totals.deploy : (typeof fallbackDeploy === 'number' ? fallbackDeploy : 0);
+        const harvest = hasTrace ? totals.harvest : (typeof fallbackHarvest === 'number' ? fallbackHarvest : 0);
+        const mguhDirect = hasTrace ? totals.mguhDirect : (typeof fallbackMguhDirect === 'number' ? fallbackMguhDirect : 0);
+        const mguhHarvest = hasTrace ? totals.mguhHarvest : (typeof fallbackMguhHarvest === 'number' ? fallbackMguhHarvest : 0);
+        const hasData = hasTrace || deploy > 0.0005 || harvest > 0.0005 || mguhDirect > 0.0005 || mguhHarvest > 0.0005;
+        return { deploy, harvest, mguhDirect, mguhHarvest, hasData, hasTrace };
     }
 
     setStatus(message, tone = 'info') {
@@ -409,6 +631,7 @@ export class PlayerGarageV3 {
                     </div>
                     ${tyreTemps}
                 </div>
+                ${this.buildPUInlineBar(car)}
                 <div class="car-actions-v3 with-setup">
                     <div class="drive-actions">
                         <button class="btn-send${isPendingSend ? ' pending' : ''}" data-action="send" ${sendDisabled ? 'disabled' : ''}>${sendLabel}</button>
@@ -464,6 +687,212 @@ export class PlayerGarageV3 {
                 </div>
             </div>
         `;
+    }
+
+    buildPUInlineBar(car) {
+        const puStats = car.pu_stats || {};
+        const socMj = puStats.soc_mj ?? 0;
+        const socPct = puStats.soc_pct ?? 0;
+        const lapDeploy = puStats.lap_deploy_mj ?? 0;
+        const deployLimit = puStats.deploy_mj_per_lap ?? 4.0;
+        const deployPct = deployLimit > 0 ? Math.min((lapDeploy / deployLimit) * 100, 100) : 0;
+        const socClass = socPct >= 60 ? 'pu-soc-good' : socPct >= 30 ? 'pu-soc-warn' : 'pu-soc-low';
+        
+        return `
+            <div class="pu-inline-bar-v3">
+                <div class="pu-metric-v3">
+                    <span class="pu-label-v3">ERS SOC</span>
+                    <span class="pu-value-v3 ${socClass}">${socMj.toFixed(1)} MJ (${Math.round(socPct)}%)</span>
+                </div>
+                <div class="pu-metric-v3">
+                    <span class="pu-label-v3">Deploy</span>
+                    <span class="pu-value-v3">${lapDeploy.toFixed(1)} / ${deployLimit.toFixed(1)} MJ</span>
+                </div>
+                <div class="pu-budget-bar-v3">
+                    <span class="pu-label-v3">Lap Budget</span>
+                    <div class="pu-bar-track-v3">
+                        <div class="pu-bar-fill-v3" style="width:${deployPct}%"></div>
+                    </div>
+                </div>
+                <button class="pu-details-btn-v3" data-action="pu-details">⚡ Details</button>
+            </div>
+        `;
+    }
+
+    buildPUModal(car) {
+        if (!this.overlayContainer) return;
+        const puStats = car.pu_stats || {};
+        const driverName = car.driver_name || `Driver #${car.driver_number}`;
+        
+        const socMj = puStats.soc_mj ?? 0;
+        const socPct = puStats.soc_pct ?? 0;
+        const capacityMj = puStats.capacity_mj ?? 4.0;
+        const deployLimit = puStats.deploy_limit_mj ?? 4.0;
+        const harvestLimit = puStats.harvest_limit_mj ?? 2.0;
+        const lapDeploy = puStats.lap_deploy_mj ?? 0;
+        const lapHarvest = puStats.lap_harvest_mj ?? 0;
+        const deployPerLap = puStats.deploy_mj_per_lap ?? 4.0;
+        const harvestPerLap = puStats.harvest_mj_per_lap ?? 2.0;
+        const lapMguhDirect = puStats.lap_mguh_direct_mj ?? 0;
+        const lapMguhHarvest = puStats.lap_mguh_harvest_mj ?? 0;
+        const lapMguhDirectPrev = puStats.lap_mguh_direct_prev_mj ?? null;
+        const lapMguhHarvestPrev = puStats.lap_mguh_harvest_prev_mj ?? null;
+        const deployPct = deployPerLap > 0 ? Math.min((lapDeploy / deployPerLap) * 100, 100) : 0;
+        const harvestPct = harvestPerLap > 0 ? Math.min((lapHarvest / harvestPerLap) * 100, 100) : 0;
+        const energyBalance = lapHarvest - lapDeploy;
+        const warnings = puStats.warnings_runtime || [];
+        const warningsPrev = puStats.warnings_runtime_prev || [];
+        const trace = puStats.energy_trace || [];
+        const tracePrev = puStats.energy_trace_prev || [];
+        const lapDeployPrev = puStats.lap_deploy_prev_mj ?? null;
+        const lapHarvestPrev = puStats.lap_harvest_prev_mj ?? null;
+        const lapIdCurrent = puStats.lap_id_current ?? null;
+        const lapIdPrev = puStats.lap_id_prev ?? null;
+        
+        console.log('[PU Debug]', {
+            lapIdCurrent,
+            lapIdPrev,
+            lapDeploy,
+            lapHarvest,
+            lapDeployPrev,
+            lapHarvestPrev,
+            traceLength: trace.length,
+            tracePrevLength: tracePrev.length,
+            completedLaps: car.lap_times?.length,
+        });
+        const mapName = puStats.map || 'STANDARD';
+        const socClass = socPct >= 60 ? 'pu-soc-good' : socPct >= 30 ? 'pu-soc-warn' : 'pu-soc-low';
+        
+        const { currentLapIndex, previousLapIndex, completedLapCount } = this.resolveLapIndexes({
+            car,
+            lapIdCurrent,
+            lapIdPrev,
+        });
+
+        const currentTotals = this.computeLapTotals(trace, lapDeploy, lapHarvest, lapMguhDirect, lapMguhHarvest);
+        const previousTotals = this.computeLapTotals(tracePrev, lapDeployPrev, lapHarvestPrev, lapMguhDirectPrev, lapMguhHarvestPrev);
+
+        const hasPrevWarnings = Array.isArray(warningsPrev) && warningsPrev.length > 0;
+        const hasPrevLap = previousLapIndex !== null || (completedLapCount !== null && completedLapCount > 0);
+
+        const lapChipRow = this.buildLapUsageChipRow({
+            mapName,
+            deployLimit,
+            harvestLimit,
+            deployPerLap,
+            harvestPerLap,
+            current: currentTotals.hasData ? {
+                lapIndex: currentLapIndex,
+                deploy: currentTotals.deploy,
+                harvest: currentTotals.harvest,
+                mguhDirect: currentTotals.mguhDirect,
+                mguhHarvest: currentTotals.mguhHarvest,
+            } : null,
+            previous: (previousLapIndex !== null || previousTotals.hasData || previousTotals.hasTrace) ? {
+                lapIndex: previousLapIndex,
+                deploy: previousTotals.deploy,
+                harvest: previousTotals.harvest,
+                mguhDirect: previousTotals.mguhDirect,
+                mguhHarvest: previousTotals.mguhHarvest,
+            } : null,
+            hasPrevTrace: previousTotals.hasTrace,
+            hasPrevWarnings,
+            hasPrevLap,
+        });
+
+        const traceRows = this.buildPUTableRows(trace, tracePrev, currentLapIndex, previousLapIndex);
+        
+        this.overlayContainer.dataset.driver = car.driver_number;
+        this.overlayContainer.classList.add('is-visible', 'pu-modal-active');
+        this.overlayContainer.classList.remove('is-hiding');
+        this.overlayContainer.innerHTML = `
+            <div class="pu-modal-v3">
+                <div class="pu-modal-header-v3">
+                    <div class="pu-modal-title-v3">⚡ PU Manager — ${driverName}</div>
+                    <button class="pu-modal-close-v3" data-action="close-pu">×</button>
+                </div>
+                <div class="pu-modal-body-v3">
+                    <div class="pu-stats-grid-v3" style="grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px;">
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">Battery SOC</div>
+                            <div class="pu-stat-value-v3 ${socClass}" style="font-size: 18px; margin: 3px 0;">${socMj.toFixed(1)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">${Math.round(socPct)}% carica</div>
+                        </div>
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">Capacità Batteria</div>
+                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${capacityMj.toFixed(1)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Totale</div>
+                        </div>
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">Deploy Limit</div>
+                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${deployLimit.toFixed(1)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Per lap</div>
+                        </div>
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">Harvest Limit</div>
+                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${harvestLimit.toFixed(1)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Per lap</div>
+                        </div>
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">MGU-H Direct</div>
+                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${lapMguhDirect.toFixed(2)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Ultimo giro</div>
+                        </div>
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">MGU-H → ES</div>
+                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${lapMguhHarvest.toFixed(2)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Ultimo giro</div>
+                        </div>
+                    </div>
+                    ${lapChipRow}
+                    <div class="pu-trace-container-v3" style="max-height: 280px; overflow-y: auto;">
+                        <table class="pu-trace-table-v3">
+                            <thead>
+                                <tr><th>Lap</th><th>Section</th><th>Deploy</th><th>Harvest</th><th>Hydraulic</th><th>Regen Ratio</th><th>MGU-H Direct</th><th>MGU-H → ES</th></tr>
+                            </thead>
+                            <tbody>
+                                ${traceRows || '<tr><td colspan="8" style="text-align:center;color:#888;">No trace data</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+        this.setPauseForPU(true);
+    }
+
+    togglePUModal(driverNumber, open = true) {
+        if (!this.overlayContainer) return;
+        if (open) {
+            const car = this.state.getPlayerCar(driverNumber);
+            if (car) {
+                this.buildPUModal(car);
+            }
+        } else {
+            this.overlayContainer.classList.remove('is-visible', 'pu-modal-active');
+            this.overlayContainer.classList.add('is-hiding');
+            setTimeout(() => {
+                this.overlayContainer.classList.remove('is-hiding');
+                this.overlayContainer.removeAttribute('data-driver');
+                this.overlayContainer.innerHTML = '';
+                this.setPauseForPU(false);
+            }, 200);
+        }
+    }
+
+    async setPauseForPU(active) {
+        if (!this.sessionControls) return;
+        if (active) {
+            this.wasPausedBeforePU = this.sessionControls.isPaused;
+            if (!this.sessionControls.isPaused) {
+                await this.sessionControls.setPauseState(true);
+            }
+        } else if (this.wasPausedBeforePU === false) {
+            await this.sessionControls.setPauseState(false);
+            this.wasPausedBeforePU = null;
+        } else {
+            this.wasPausedBeforePU = null;
+        }
     }
 
     getSetupPayload(car) {
@@ -746,7 +1175,7 @@ export class PlayerGarageV3 {
             return;
         }
 
-        const fp = cars.map(c => `${c.driver_number}:${c.state}:${c.total_laps}:${c.current_tire}:${c.tire_age}`).join('|');
+        const fp = cars.map(c => `${c.driver_number}:${c.state}:${c.total_laps}:${c.current_tire}:${c.tire_age}:${this.puStatsSignature(c.pu_stats)}`).join('|');
         if (!force && fp === this._lastRenderFp) return;
         this._lastRenderFp = fp;
 
@@ -884,6 +1313,8 @@ export class PlayerGarageV3 {
     handleOverlayAction(driverNumber, action) {
         if (action === 'close-setup') {
             this.toggleSetupOverlay(driverNumber, false);
+        } else if (action === 'close-pu') {
+            this.togglePUModal(driverNumber, false);
         } else if (action === 'reset-setup') {
             this.resetSetupDraft(driverNumber);
             const carData = this.state.getPlayerCar(driverNumber);
@@ -990,6 +1421,10 @@ export class PlayerGarageV3 {
             this.requestPlayerBox(driverNumber);
         } else if (action === 'setup') {
             this.toggleSetupOverlay(driverNumber, true);
+        } else if (action === 'pu-details') {
+            this.togglePUModal(driverNumber, true);
+        } else if (action === 'close-pu') {
+            this.togglePUModal(driverNumber, false);
         } else if (action === 'close-setup') {
             this.toggleSetupOverlay(driverNumber, false);
         } else if (action === 'reset-setup') {

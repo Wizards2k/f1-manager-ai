@@ -356,7 +356,7 @@ timeline-toggle-btn:hover {
     width: 100vw;
     height: 100vh;
     background: rgba(0,0,0,0.85);
-    z-index: 1000;
+    z-index: 1500;
     justify-content: center;
     align-items: center;
 }
@@ -1984,4 +1984,341 @@ timeline-toggle-btn:hover {
     color: #888;
     margin-top: 6px;
     text-align: right;
+}
+
+/* ===============================
+   PU Inline Bar (V3)
+   =============================== */
+.pu-inline-bar-v3 {
+    background: #101010;
+    border: 1px solid #212121;
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 11px;
+    margin-top: 8px;
+}
+
+.pu-metric-v3 {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pu-label-v3 {
+    text-transform: uppercase;
+    color: #777;
+    letter-spacing: 0.5px;
+    font-size: 10px;
+}
+
+.pu-value-v3 {
+    color: #f7f7f7;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.pu-value-v3.pu-soc-good {
+    color: #58e58d;
+}
+
+.pu-value-v3.pu-soc-warn {
+    color: #f5d56a;
+}
+
+.pu-value-v3.pu-soc-low {
+    color: #ff6d6d;
+}
+
+.pu-budget-bar-v3 {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pu-bar-track-v3 {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #1f1f1f;
+    overflow: hidden;
+}
+
+.pu-bar-fill-v3 {
+    height: 100%;
+    background: linear-gradient(90deg, #ffd94a, #ff964a);
+    transition: width 0.3s;
+}
+
+.pu-details-btn-v3 {
+    margin-left: auto;
+    background: #262626;
+    border: 1px solid #3a3a3a;
+    color: #f3c55f;
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pu-details-btn-v3:hover {
+    border-color: #f3c55f;
+    background: #2a2a2a;
+}
+
+/* ===============================
+   PU Manager Modal (V3)
+   =============================== */
+.pu-modal-active {
+    background: rgba(0, 0, 0, 0.85);
+}
+
+.pu-modal-v3 {
+    width: 800px;
+    max-height: 90vh;
+    background: #141414;
+    border-radius: 16px;
+    border: 1px solid #2a2a2a;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6);
+}
+
+.pu-modal-header-v3 {
+    padding: 20px 24px;
+    border-bottom: 1px solid #222;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pu-modal-title-v3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.pu-modal-close-v3 {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 24px;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.pu-modal-close-v3:hover {
+    background: #2a2a2a;
+    color: #fff;
+}
+
+.pu-modal-body-v3 {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+}
+
+.pu-stats-grid-v3 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.pu-stat-card-v3 {
+    background: #191919;
+    border: 1px solid #262626;
+    border-radius: 14px;
+    padding: 16px 18px;
+}
+
+.pu-stat-label-v3 {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #777;
+    margin-bottom: 8px;
+}
+
+.pu-stat-value-v3 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.pu-stat-sub-v3 {
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
+}
+
+.pu-progress-v3 {
+    margin-top: 12px;
+    height: 8px;
+    border-radius: 4px;
+    background: #1f1f1f;
+    overflow: hidden;
+}
+
+.pu-progress-fill-v3 {
+    height: 100%;
+    background: linear-gradient(90deg, #f3c55f, #f18949);
+    transition: width 0.3s;
+}
+
+.pu-lap-chip-row-v3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+}
+
+.pu-lap-chip-v3 {
+    background: #191919;
+    border: 1px solid #2b2b2b;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pu-chip-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #888;
+}
+
+.pu-chip-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pu-chip-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pu-chip-metric-label {
+    font-size: 11px;
+    color: #777;
+    text-transform: uppercase;
+}
+
+.pu-chip-metric-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fefefe;
+}
+
+.pu-chip-progress {
+    height: 6px;
+    border-radius: 999px;
+    background: #1f1f1f;
+    overflow: hidden;
+}
+
+.pu-chip-progress > div {
+    height: 100%;
+    background: linear-gradient(90deg, #ffb347, #ffcc33);
+}
+
+.pu-chip-progress.harvest > div {
+    background: linear-gradient(90deg, #58e58d, #2fb37b);
+}
+
+.pu-chip-sub {
+    font-size: 11px;
+    color: #888;
+}
+
+.pu-warning-row-v3 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.pu-warning-badge-v3 {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid #3a3a3a;
+    background: #181414;
+    min-width: 220px;
+}
+
+.pu-warning-badge-v3.deploy {
+    border-color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.08);
+}
+
+.pu-warning-badge-v3.harvest {
+    border-color: #f5d56a;
+    background: rgba(245, 213, 106, 0.08);
+}
+
+.pu-warning-badge-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #888;
+}
+
+.pu-warning-badge-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.pu-warning-empty {
+    font-size: 13px;
+    color: #888;
+}
+
+.pu-trace-container-v3 {
+    max-height: 280px;
+    overflow-y: auto;
+    border: 1px solid #262626;
+    border-radius: 8px;
+}
+
+.pu-trace-table-v3 {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.pu-trace-table-v3 th,
+.pu-trace-table-v3 td {
+    font-size: 12px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #242424;
+    text-align: left;
+}
+
+.pu-trace-table-v3 th {
+    color: #777;
+    background: #191919;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.pu-trace-table-v3 tbody tr:hover {
+    background: #1a1a1a;
 }

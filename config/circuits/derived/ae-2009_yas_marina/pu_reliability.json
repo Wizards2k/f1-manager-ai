@@ -5,7 +5,7 @@
     "notes": "Global default PU reliability (non calibrated). Circuit/weather/setup modifiers adjust cooling; da ritarare su dati FastF1.",
     "circuit_id": "ae-2009_yas_marina",
     "setup_profile_key": "yas_marina",
-    "built_at": "2026-02-14T19:11:20Z",
+    "built_at": "2026-02-15T11:05:42Z",
     "circuit_name": "Yas Marina Circuit",
     "telemetry_source": "python_backend/data/circuits/ae-2009_yas_marina_Telemetry.json"
   },
