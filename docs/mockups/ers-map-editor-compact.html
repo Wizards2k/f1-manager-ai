@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ERS Map Panel – Compact</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      background: #050608;
+      font-family: "Space Grotesk", "Sora", system-ui;
+      color: #f4f6fb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .panel {
+      width: 460px;
+      border-radius: 24px;
+      background: #10141b;
+      border: 1px solid rgba(255,255,255,0.07);
+      padding: 24px;
+      box-shadow: 0 15px 60px rgba(0,0,0,0.45);
+    }
+    .panel header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .panel h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .meta {
+      font-size: 11px;
+      color: #96a0b3;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .preset-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .preset-chip {
+      flex: 1;
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      text-align: center;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .preset-chip.active {
+      background: rgba(255,210,76,0.18);
+      border: 1px solid rgba(255,210,76,0.6);
+    }
+    .section {
+      margin-bottom: 18px;
+    }
+    .section h2 {
+      font-size: 14px;
+      margin: 0 0 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #96a0b3;
+    }
+    .slider {
+      margin-bottom: 12px;
+    }
+    .slider label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    input[type=range] {
+      width: 100%;
+      accent-color: #ffd24c;
+    }
+    .dual-grid {
+      display: grid;
+      grid-template-columns: repeat(2,1fr);
+      gap: 10px;
+      font-size: 12px;
+    }
+    .dual-card {
+      background: rgba(255,255,255,0.04);
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .dual-card strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .bar-preview {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: #96a0b3;
+    }
+    .bar-track {
+      flex: 1;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.07);
+      position: relative;
+    }
+    .bar-fill {
+      position: absolute;
+      height: 100%;
+      left: 0;
+      top: 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg,#ffd24c,#ff8f3d);
+      width: 72%;
+    }
+    .warning {
+      margin-top: 12px;
+      font-size: 12px;
+      color: #f9b49f;
+    }
+    .preview {
+      margin-top: 16px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 18px;
+      padding: 16px;
+    }
+    .preview h3 {
+      margin: 0 0 12px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #96a0b3;
+    }
+    .bar-stack {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      height: 110px;
+      margin-bottom: 12px;
+    }
+    .bar-stack .bar {
+      flex: 1;
+      background: linear-gradient(180deg,#ffd24c,#ff8f3d);
+      border-radius: 12px 12px 6px 6px;
+      position: relative;
+    }
+    .bar-stack .bar span {
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      color: #f4f6fb;
+    }
+    .bar-stack .bar::after {
+      content: attr(data-label);
+      position: absolute;
+      bottom: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      color: #96a0b3;
+    }
+    .gauge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+    .gauge-track {
+      flex: 1;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      position: relative;
+    }
+    .gauge-fill {
+      position: absolute;
+      height: 100%;
+      left: 0;
+      top: 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg,#55f3c3,#1cb0ff);
+      width: 70%;
+    }
+    .cta {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .ghost {
+      background: rgba(255,255,255,0.08);
+      color: #f4f6fb;
+    }
+    .primary {
+      background: #ffd24c;
+      color: #14151a;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <header>
+      <div>
+        <div class="meta">ERS MAP</div>
+        <h1>Standard · jp-1962</h1>
+      </div>
+      <div class="meta">SOC 58% · Deploy 2.6 MJ</div>
+    </header>
+
+    <div class="preset-row">
+      <div class="preset-chip active">Standard</div>
+      <div class="preset-chip">Push</div>
+      <div class="preset-chip">Recharge</div>
+      <div class="preset-chip">Custom</div>
+    </div>
+
+    <div class="section">
+      <h2>Budget & split</h2>
+      <div class="slider">
+        <label><span>Deploy budget</span><span>65% · 2.6 MJ</span></label>
+        <input type="range" value="65" />
+      </div>
+      <div class="slider">
+        <label><span>MGU-H direct</span><span>55%</span></label>
+        <input type="range" value="55" />
+      </div>
+      <div class="slider">
+        <label><span>Target SOC</span><span>58%</span></label>
+        <input type="range" value="58" />
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Priority</h2>
+      <div class="dual-grid">
+        <div class="dual-card">
+          <strong>Main straights</strong>
+          Deploy 50% · Direct 60%
+          <div class="bar-preview">
+            <span>0.95 MJ</span>
+            <div class="bar-track"><div class="bar-fill"></div></div>
+          </div>
+        </div>
+        <div class="dual-card">
+          <strong>Corner exits</strong>
+          Deploy 20% · Direct 15%
+          <div class="bar-preview">
+            <span>0.35 MJ</span>
+            <div class="bar-track"><div class="bar-fill" style="width:35%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Triggers</h2>
+      <div class="dual-grid">
+        <div class="dual-card">
+          <strong>Overtake window</strong>
+          8 s · Priority 1.0
+        </div>
+        <div class="dual-card">
+          <strong>Defense reserve</strong>
+          0.2 MJ · Gap +0.4 s
+        </div>
+      </div>
+    </div>
+
+    <div class="warning">
+      Warning: SOC stimato a 18% nel settore 3. Considera di ridurre il deploy sulle corner exits.
+    </div>
+
+    <div class="preview">
+      <h3>Preview & validation</h3>
+      <div class="bar-stack">
+        <div class="bar" style="height: 82%;" data-label="Settore 1"><span>0.95 MJ</span></div>
+        <div class="bar" style="height: 65%;" data-label="Settore 2"><span>0.75 MJ</span></div>
+        <div class="bar" style="height: 48%;" data-label="Settore 3"><span>0.52 MJ</span></div>
+      </div>
+      <div class="gauge">
+        <span>SOC trend</span>
+        <div class="gauge-track"><div class="gauge-fill"></div></div>
+        <span>55% target</span>
+      </div>
+    </div>
+
+    <div class="cta">
+      <button class="ghost">Reset</button>
+      <button class="primary">Apply map</button>
+    </div>
+  </div>
+</body>
+</html>
