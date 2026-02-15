@@ -88,17 +88,24 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 
 ## 6. Implementazione – Fase E (Data & Calibrazione — `docs/physics-roadmap.md`, `docs/config-spec.md`, `docs/degradation-and-consumption.md`)
 1. ✅ **FastF1 toolchain**: ingestion, caching, manifest dataset (wrapper `scripts/fastf1_build_assets.py`, manifest per anno, cache locale).
-2. **Script fitting componenti**: `aero_fit`, `tyre_fit`, `powerunit_fit`, `brake_calibration` con output in `config/calibration/`.
-   - 📄 Documentazione PU/ERS aggiornata: `docs/PowerUnit.md` + `docs/EngineData2025.md` (limiti FIA, torque curve, strategie push/recharge).
-   - 🆕 **PU energy model & UI mockup** (`docs/pu-energy-model.md`).
-   - **Piano di integrazione (stato 2026-02-15)**
-     1. ✅ *Config & fitting* – derived e script aggiornati con i nuovi campi (deploy/harvest MJ, mguh ratio, torque bias, regen factor/limit) e report MJ/SOC.
-     2. 🔧 *Runtime* – dati caricati in `CircuitConfig` e inoltrati a PSO/telemetria (`ers_budget`, `regen_profile`, `brake_profile`). Da completare: clamp MJ per giro, brake migration torque split, `pu_energy_trace`, warning runtime.
-     3. ⏭ *UI/UX* – mockup definiti ma pannello Garage/HUD ancora da implementare; i blocchi `pu_stats`/`brake_diagnostics` sono pronti per l’integrazione FE.
-     4. 🔧 *Documentazione & QA* – doc aggiornati, restano le checklist QA (Push lap, Recharge, Wet, Brake migration).
+2. ✅ **Script fitting componenti**: `aero_fit`, `tyre_fit`, `powerunit_fit`, `brake_calibration` implementati con output in `config/circuits/derived/` e `reports/calibration/`.
+   - ✅ Documentazione PU/ERS aggiornata: `docs/PowerUnit.md` + `docs/EngineData2025.md` (limiti FIA, torque curve, strategie push/recharge).
+   - ✅ **PU energy model & UI mockup** (`docs/pu-energy-model.md`, `docs/Engine-MGU-H.md`).
+   - **Piano di integrazione MGU-H (completato 2026-02-15)**
+     1. ✅ *Config & fitting* – tutti i 24 circuiti rigenerati con profili MGU-H (high/balanced/low speed), `mguh_direct_ratio` e `mguh_power_kw` per ogni mappa.
+     2. ✅ *Runtime* – logica MGU-H completa in `power_unit.py` (direct drive + harvest ES illimitati, calcolo dinamico potenza, split energetico gerarchico).
+     3. ✅ *Telemetria* – `lap_mguh_direct_mj`, `lap_mguh_harvest_mj` esposti via SessionBridge, trace per sezione con `mguh_direct_mj` e `mguh_es_mj`.
+     4. ✅ *UI/UX* – PU modal aggiornata con stat cards MGU-H, colonne trace, chip giro. Layout ottimizzato (grid 3 col, tabella scrollabile). Fix lap label (0-based).
+     5. ✅ *Documentazione & QA* – `Engine-MGU-H.md` creato, `EngineData2025.md` e `PowerUnit.md` aggiornati. 242/242 test passing.
+
+   - **Punti aperti post-MGU-H (2026-02-15)**
+     1. 🔧 **MGU-H direct drive consumption** – energia MGU-H direct calcolata ma non consumata/limitata. Serve tracciamento budget MGU-H disponibile per sezione.
+     2. 🔧 **ERS deployment strategy** – logica attuale deploya su tutti i rettilinei, svuotando batteria a metà giro anche in STANDARD. Serve allocazione intelligente basata su priorità sezioni, MGU-H direct disponibile, target SOC.
+     3. 🔧 **Brake migration torque split** – profili frenata disponibili ma split regen/idraulico non ancora implementato nel runtime.
+     4. ⏭ **Component integration** – verificare interazione aero/tyres/brakes/driver con nuova logica PU.
 
    - **Roadmap operativa (rollout incrementale)**
-     1. **PU Hybrid V2** – completare runtime (limiti MJ, brake migration, energy trace), estendere i test per circuito e implementare HUD/Garage SOC&MJ + preset push/recharge.
+     1. **PU Hybrid V2.1** – implementare consumo MGU-H direct, refactor deployment strategy (section priority, MGU-H awareness), brake migration torque split.
      2. **Brake Calibration & Migration** – usare i profili frenata per calcolare coppie regen/idrauliche, loggare warning e visualizzarli (bias/duct/cooling) nella UI.
      3. **Tyre Model V2** – integrare i parametri derivati (temp window, gaussian, graining/blistering) nel simulatore e mostrare trend degrado/termico.
      4. **Aero Package dettagliato** – applicare DF/drag/handling penalty avanzati nel runtime e surface UI con indicatori aero balance/cooling.
@@ -151,7 +158,9 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 - `docs/AeroPackage.md`, `docs/config-spec.md`, `docs/degradation-and-consumption.md`
 
 ## 10. Prossimi passi immediati
-1. Validare questa roadmap con product/gameplay.
-2. Aggiornare `docs/BattleResolver.md` con la nuova logica.
-3. Pianificare implementazione Setup Engine 2.0 (ticket/branch dedicato).
-4. Avviare design TyreModel v0.4 e Grip meccanico (spec + tasks).
+1. **PU Hybrid V2.1** – implementare consumo MGU-H direct drive e refactor deployment strategy (priorità sezioni, MGU-H awareness).
+2. **Brake migration** – completare split torque regen/idraulico nel runtime usando i profili derivati.
+3. **Component integration** – verificare e ottimizzare interazione tra tutti i moduli LapSimulator con nuova logica PU.
+4. Validare roadmap con product/gameplay.
+5. Pianificare implementazione Setup Engine 2.0 (ticket/branch dedicato).
+6. Avviare design TyreModel v0.4 e Grip meccanico (spec + tasks).
