@@ -90,5 +90,31 @@ Questi limiti sono documentati in `docs/EngineData2025.md` e sono già presenti 
 4. **Brake migration UI**: come surfaciamo la quota regen/idraulico e gli eventuali warning quando il deploy viene bloccato dalla batteria piena?
 5. **AI Driver Engine**: i programmi practice (push, quali sim) devono poter richiedere una strategia ERS specifica.
 
+## 9. Catalogo mappe default (baseline gioco)
+All'avvio vogliamo fornire un set di mappature curate, già tarate per tipologia di circuito. L'idea è mantenere 5 preset base (override dal giocatore facoltativo):
+
+| Nome | Use case | Parametri chiave |
+| --- | --- | --- |
+| **Standard** | Giro gara neutro | `deploy_budget_pct=60`, `mguh_direct_pct=55`, priority: Primary 50% / Secondary 35% / Corner exit 15%, `target_soc_end_lap=55%` |
+| **Push** | Attacco / uscita Safety Car | `deploy_budget_pct=95`, `mguh_direct_pct=70`, priority: Primary 65% / Secondary 25% / Corner exit 10%, `defense_reserve_pct=0` |
+| **Overtake** | Bottone K1 | come Push ma con `overtake_boost_window=12s`, `defense_reserve_pct=10` |
+| **Recharge** | In/out lap, VSC | `deploy_budget_pct=10`, `mguh_direct_pct=30`, priority: Corner exit 60%, `harvest_bias_pct=90`, `target_soc_end_lap=95%` |
+| **Wet/Cool** | Condizioni grip basso | `deploy_budget_pct=45`, `mguh_direct_pct=40`, priority bilanciata (Primary 35% / Secondary 30% / Corner exit 35%), `harvest_bias_pct=60` |
+
+Per ogni circuito il fitting script sceglie il profilo (high/balanced/low) e applica offset a questi preset (es. Monza aumenta `deploy_budget_pct` del Push, Monaco riduce `mguh_direct_pct`). Dedicheremo un capitolo ad hoc nel documento (appendice futura) con la tabella iniziale completa.
+
+## 10. Editor mappature custom (proposta UX)
+1. **Input utente**: slider 0–100% per i parametri descritti in §5 (budget, split MGU-H, bucket priority, trigger speciali). Valori suggeriti e tooltip con limiti regolamentari.
+2. **Validazione live**: se la somma dei bucket supera 100% o il budget supera 4 MJ, mostriamo un warning e correggiamo automaticamente; clampiamo `mguh_direct_pct` 0–100.
+3. **Anteprima**: grafico a barre per settore che mostra quanta energia verrà allocata, + gauge SOC target. Possiamo simulare un giro usando il profilo circuito per dare feedback "Batteria ok / clipping".
+4. **Persistenza**: salviamo il preset in `profiles/ers_maps/<player>.json` e lo agganciamo alle mappe standard (ECONOMY, STANDARD, ecc.) quando il giocatore seleziona il preset dal garage o dal volante.
+5. **Edge cases**: se il preset richiede più energia di quella fisica disponibile (MGU-H + batteria), il runtime scala i valori e invia un warning nella PU modal.
+
+## 11. Gestione mappe per AI
+- **Seed default**: ogni team AI parte dai preset standard (Standard, Push, Recharge). Il profilo circuito definisce quale mappa usare in quali run (es. Monza FP1 → Standard, Push per run 3).
+- **Driver persona**: l'AI Driver Engine (vedi `docs/ai-driver-engine-spec.md`) sceglie `deploy_budget_pct` dinamicamente in base a aggressività e obiettivi run: un pilota aggressivo alza `deploy_budget_pct` e anticipa l'uso del bottone overtake.
+- **Strategy planner**: durante la gara, il Race Engineer AI può switchare mappa se il SOC scende sotto il target o se serve difendere/attaccare. La logica usa gli stessi parametri (priority score, defense reserve).
+- **Calibrazione**: i report derivati includeranno anche i preset AI per circuito (`ai_ers_map_plan`) così da garantire comportamento coerente nelle simulazioni QA.
+
 ---
 Questa bozza è un collage delle informazioni disseminate nei documenti esistenti, integrato con i gap osservati in runtime. Possiamo usarla come base per la discussione sulle idee che vuoi proporre (es. nuove mappe prioritarie, controlli giocatore, script di calibrazione aggiuntivi).
