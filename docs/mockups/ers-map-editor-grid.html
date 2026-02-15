@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ERS Map Editor – Grid Variant</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Sora", "Space Grotesk", system-ui;
+      background: radial-gradient(circle at top, #141b29, #090c11 55%);
+      color: #f8fafc;
+    }
+    .shell {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 48px;
+      gap: 32px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 {
+      font-size: 28px;
+      margin: 0;
+    }
+    header .meta {
+      font-size: 14px;
+      color: #9fb3d2;
+    }
+    .grid-layout {
+      display: grid;
+      grid-template-columns: 280px repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+    .card {
+      background: rgba(255,255,255,0.04);
+      border-radius: 20px;
+      padding: 20px;
+      border: 1px solid rgba(255,255,255,0.07);
+      backdrop-filter: blur(18px);
+    }
+    .card h2 {
+      margin: 0 0 14px;
+      font-size: 16px;
+      letter-spacing: 0.02em;
+    }
+    .preset-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .preset-pill {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid transparent;
+      font-size: 14px;
+    }
+    .preset-pill.active {
+      border-color: #5cf1c5;
+      box-shadow: 0 0 0 1px rgba(92,241,197,0.4);
+    }
+    .slider {
+      margin-bottom: 16px;
+    }
+    .slider label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    input[type=range] {
+      width: 100%;
+      accent-color: #5cf1c5;
+    }
+    .matrix {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 12px;
+      font-size: 12px;
+    }
+    .matrix div {
+      background: rgba(255,255,255,0.05);
+      padding: 12px;
+      border-radius: 12px;
+    }
+    .chart {
+      display: flex;
+      gap: 16px;
+      align-items: flex-end;
+      height: 160px;
+      margin-bottom: 18px;
+    }
+    .chart-bar {
+      flex: 1;
+      border-radius: 10px 10px 4px 4px;
+      background: linear-gradient(180deg,#5cf1c5,#1f8df5);
+      position: relative;
+    }
+    .chart-bar span {
+      position: absolute;
+      top: -22px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+    }
+    .chart-bar::after {
+      content: attr(data-label);
+      position: absolute;
+      bottom: -26px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      color: #92a5c7;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td {
+      text-align: left;
+      padding: 8px 4px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .cta-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    button {
+      padding: 10px 18px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .ghost {
+      background: rgba(255,255,255,0.08);
+      color: #f8fafc;
+    }
+    .primary {
+      background: #5cf1c5;
+      color: #0b1019;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div>
+        <h1>ERS Map Designer</h1>
+        <div class="meta">Circuit preset · us-2012_austin · Profile: balanced</div>
+      </div>
+      <div class="meta">SOC target · 58% · Warning: clipping risk sector 3</div>
+    </header>
+
+    <div class="grid-layout">
+      <section class="card">
+        <h2>Presets</h2>
+        <div class="preset-list">
+          <div class="preset-pill active">Standard race</div>
+          <div class="preset-pill">Push / Qualy</div>
+          <div class="preset-pill">K1 Attack</div>
+          <div class="preset-pill">Recharge</div>
+          <div class="preset-pill">Custom slot</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Energy Budget</h2>
+        <div class="slider">
+          <label><span>Deploy budget</span><span>2.40 MJ (60%)</span></label>
+          <input type="range" value="60" />
+        </div>
+        <div class="slider">
+          <label><span>MGU-H direct</span><span>58%</span></label>
+          <input type="range" value="58" />
+        </div>
+        <div class="slider">
+          <label><span>MGU-H → ES</span><span>42%</span></label>
+          <input type="range" value="42" />
+        </div>
+        <div class="slider">
+          <label><span>Target SOC</span><span>58%</span></label>
+          <input type="range" value="58" />
+        </div>
+        <div class="slider">
+          <label><span>Harvest bias</span><span>40%</span></label>
+          <input type="range" value="40" />
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Priority matrix</h2>
+        <div class="matrix">
+          <div>
+            <strong>Primary straight</strong>
+            Deploy 55% · Direct 60% · DRS auto boost
+          </div>
+          <div>
+            <strong>Secondary straight</strong>
+            Deploy 30% · Direct 30% · Traction exit +0.2s
+          </div>
+          <div>
+            <strong>Corner exit</strong>
+            Deploy 15% · Direct 10% · Hold 0.2 MJ reserve
+          </div>
+        </div>
+        <table style="margin-top: 14px;">
+          <thead>
+            <tr><th>Section</th><th>Priority</th><th>Mode</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>S1 · Degner</td><td>0.62</td><td>Corner exit boost</td></tr>
+            <tr><td>S2 · Spoon</td><td>0.88</td><td>Primary straight</td></tr>
+            <tr><td>S3 · 130R</td><td>1.00</td><td>Overtake window</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>Preview</h2>
+        <div class="chart">
+          <div class="chart-bar" style="height: 78%;" data-label="S1"><span>0.82 MJ</span></div>
+          <div class="chart-bar" style="height: 65%;" data-label="S2"><span>0.68 MJ</span></div>
+          <div class="chart-bar" style="height: 50%;" data-label="S3"><span>0.52 MJ</span></div>
+        </div>
+        <table>
+          <tr><td>Defense reserve</td><td>0.30 MJ</td></tr>
+          <tr><td>Overtake window</td><td>Enable sectors 2–3</td></tr>
+          <tr><td>Clipping risk</td><td>Sector 3 (SOC 18%)</td></tr>
+        </table>
+        <div class="cta-row">
+          <button class="ghost">Simulate lap</button>
+          <button class="primary">Save changes</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

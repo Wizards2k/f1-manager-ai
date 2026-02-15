@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ERS Map Editor – Deck Variant</title>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    body {
+      margin: 0;
+      background: #060608;
+      color: #fdfdfd;
+      font-family: "General Sans", "Space Grotesk", system-ui;
+    }
+    .viewport {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 40px 48px;
+      gap: 28px;
+    }
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .toolbar h1 {
+      font-size: 32px;
+      margin: 0;
+    }
+    .toolbar span {
+      font-size: 14px;
+      color: #8b8fa1;
+    }
+    .deck {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+    }
+    .deck-card {
+      border-radius: 24px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+      padding: 24px;
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 30px 70px rgba(0,0,0,0.35);
+    }
+    .deck-card h2 {
+      margin: 0 0 18px;
+      font-size: 18px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .pill-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      font-size: 12px;
+    }
+    .pill {
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      display: flex;
+      justify-content: space-between;
+    }
+    .stacked-sliders {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    label {
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    input[type=range] {
+      width: 100%;
+      accent-color: #ff7f4d;
+    }
+    .table-card {
+      background: rgba(255,255,255,0.03);
+      border-radius: 20px;
+      padding: 18px;
+      font-size: 13px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      text-align: left;
+    }
+    .bar-mini {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      position: relative;
+      overflow: hidden;
+    }
+    .bar-mini span {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #ff7f4d, #ffc34f);
+    }
+    .footer-cta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 24px;
+    }
+    .footer-cta .hint {
+      font-size: 13px;
+      color: #8b8fa1;
+    }
+    .footer-cta .buttons {
+      display: flex;
+      gap: 12px;
+    }
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 24px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .ghost {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+    .primary {
+      background: #ff7f4d;
+      color: #0c0c0f;
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport">
+    <div class="toolbar">
+      <div>
+        <h1>Custom ERS Deck</h1>
+        <span>Driver: Charles · Circuit: it-1922_monza · Profile: high speed</span>
+      </div>
+      <span>SOC goal 52% · Deploy budget 3.1 MJ</span>
+    </div>
+
+    <div class="deck">
+      <div class="deck-card">
+        <h2>Preset slots</h2>
+        <div class="pill-grid">
+          <div class="pill"><span>Standard</span><span>Active</span></div>
+          <div class="pill"><span>Push</span><span>95%</span></div>
+          <div class="pill"><span>Recharge</span><span>Harvest 90%</span></div>
+          <div class="pill"><span>Wet/Cool</span><span>45%</span></div>
+          <div class="pill"><span>Custom A</span><span>Draft</span></div>
+          <div class="pill"><span>Custom B</span><span>—</span></div>
+        </div>
+      </div>
+
+      <div class="deck-card">
+        <h2>Energy budget</h2>
+        <div class="stacked-sliders">
+          <div>
+            <label><span>Deploy budget</span><span>78% · 3.12 MJ</span></label>
+            <input type="range" value="78" />
+          </div>
+          <div>
+            <label><span>Direct drive (MGU-H)</span><span>65%</span></label>
+            <input type="range" value="65" />
+          </div>
+          <div>
+            <label><span>Battery recharge bias</span><span>35%</span></label>
+            <input type="range" value="35" />
+          </div>
+          <div>
+            <label><span>Target SOC end lap</span><span>52%</span></label>
+            <input type="range" value="52" />
+          </div>
+          <div>
+            <label><span>Defense reserve</span><span>0.25 MJ</span></label>
+            <input type="range" value="30" />
+          </div>
+        </div>
+      </div>
+
+      <div class="deck-card">
+        <h2>Priority buckets</h2>
+        <div class="table-card">
+          <table>
+            <tr><th>Bucket</th><th>Deploy</th><th>Direct</th><th>Notes</th></tr>
+            <tr><td>Main straight</td><td><div class="bar-mini"><span style="width:70%"></span></div></td><td>75%</td><td>DRS active</td></tr>
+            <tr><td>Secondary straight</td><td><div class="bar-mini"><span style="width:40%"></span></div></td><td>30%</td><td>Reserve 0.2 MJ</td></tr>
+            <tr><td>Corner exits</td><td><div class="bar-mini"><span style="width:25%"></span></div></td><td>15%</td><td>Traction boost</td></tr>
+          </table>
+        </div>
+        <div class="table-card" style="margin-top:14px;">
+          <table>
+            <tr><th>Trigger</th><th>Setting</th><th>Status</th></tr>
+            <tr><td>Overtake window</td><td>14s</td><td>Ready</td></tr>
+            <tr><td>Defense trigger Δ</td><td>+0.35s</td><td>Auto</td></tr>
+            <tr><td>Recharge hold</td><td>Sector 1</td><td>Locked</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="deck-card">
+      <h2>Lap preview</h2>
+      <table>
+        <tr><th>Sector</th><th>Deploy MJ</th><th>Direct MJ</th><th>SOC result</th></tr>
+        <tr><td>S1</td><td>1.12</td><td>0.38</td><td>68%</td></tr>
+        <tr><td>S2</td><td>0.95</td><td>0.32</td><td>57%</td></tr>
+        <tr><td>S3</td><td>0.78</td><td>0.22</td><td>52%</td></tr>
+      </table>
+      <div class="footer-cta">
+        <div class="hint">Simulation: clipping risk none · brake migration off</div>
+        <div class="buttons">
+          <button class="ghost">Duplicate preset</button>
+          <button class="primary">Publish to driver</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

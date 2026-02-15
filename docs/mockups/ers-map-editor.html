@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ERS Map Editor Mockup</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", "Inter", system-ui, sans-serif;
+      background: #0e1116;
+      color: #f4f6fb;
+    }
+    .app-shell {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      min-height: 100vh;
+    }
+    aside {
+      background: #12161d;
+      border-right: 1px solid rgba(255,255,255,0.08);
+      padding: 32px 28px;
+    }
+    main {
+      padding: 32px 36px;
+    }
+    h1 {
+      font-size: 26px;
+      margin: 0 0 6px;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: #9aa3b5;
+      margin-bottom: 28px;
+    }
+    .preset-card {
+      background: #1a1f29;
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 16px;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+    .preset-card.active {
+      border-color: #ffd24c;
+      box-shadow: 0 0 0 1px rgba(255,210,76,0.35);
+    }
+    .preset-name {
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .preset-meta {
+      font-size: 12px;
+      color: #9aa3b5;
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .tag {
+      background: rgba(255,255,255,0.08);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .editor-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+    .panel {
+      background: #151a22;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.05);
+      padding: 22px;
+    }
+    .panel h2 {
+      margin: 0 0 18px;
+      font-size: 18px;
+    }
+    .slider-row {
+      margin-bottom: 18px;
+    }
+    .slider-row label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    input[type=range] {
+      width: 100%;
+      accent-color: #ffd24c;
+    }
+    .bucket-grid {
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 12px;
+    }
+    .bucket-card {
+      background: #1d242f;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 12px;
+    }
+    .bucket-card strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    .chart-wrapper {
+      background: #11151b;
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .bars {
+      display: flex;
+      gap: 16px;
+      align-items: flex-end;
+      height: 140px;
+    }
+    .bar {
+      flex: 1;
+      background: linear-gradient(180deg,#ffd24c,#ff8a00);
+      border-radius: 8px 8px 4px 4px;
+      position: relative;
+    }
+    .bar::after {
+      content: attr(data-label);
+      position: absolute;
+      bottom: -28px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      color: #9aa3b5;
+    }
+    .bar span {
+      position: absolute;
+      top: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+    }
+    .gauge {
+      margin-top: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+    .gauge-track {
+      flex: 1;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      margin: 0 12px;
+      position: relative;
+    }
+    .gauge-fill {
+      position: absolute;
+      height: 100%;
+      left: 0;
+      top: 0;
+      border-radius: 999px;
+      background: #55f3c3;
+      width: 72%;
+    }
+    .warning-card {
+      margin-top: 18px;
+      background: rgba(255,84,84,0.12);
+      border: 1px solid rgba(255,84,84,0.35);
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 13px;
+      color: #ffc1c1;
+    }
+    .cta-row {
+      margin-top: 28px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 20px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-ghost {
+      background: rgba(255,255,255,0.08);
+      color: #f4f6fb;
+    }
+    .btn-primary {
+      background: #ffd24c;
+      color: #1a1c21;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside>
+      <h1>ERS Maps</h1>
+      <p class="subtitle">Select a preset or craft your own deployment profile. Circuit: jp-1962_suzuka</p>
+      <div class="preset-card active">
+        <div class="preset-name">Standard</div>
+        <div class="preset-meta"><span>Balanced deploy</span><span class="tag">Active</span></div>
+      </div>
+      <div class="preset-card">
+        <div class="preset-name">Push / Attack</div>
+        <div class="preset-meta"><span>Max deploy window</span><span>95% budget</span></div>
+      </div>
+      <div class="preset-card">
+        <div class="preset-name">Recharge</div>
+        <div class="preset-meta"><span>Harvest priority</span><span>90% harvest</span></div>
+      </div>
+      <div class="preset-card">
+        <div class="preset-name">Wet / Cool</div>
+        <div class="preset-meta"><span>Stable SOC</span><span>45% deploy</span></div>
+      </div>
+      <div class="preset-card">
+        <div class="preset-name">Custom slot A</div>
+        <div class="preset-meta"><span>Not saved</span><span class="tag">Draft</span></div>
+      </div>
+    </aside>
+    <main>
+      <div class="editor-grid">
+        <section class="panel">
+          <h2>Budget & split</h2>
+          <div class="slider-row">
+            <label><span>Deploy budget (per lap)</span><span>72% · 2.88 MJ</span></label>
+            <input type="range" value="72" />
+          </div>
+          <div class="slider-row">
+            <label><span>MGU-H → Direct drive</span><span>60%</span></label>
+            <input type="range" value="60" />
+          </div>
+          <div class="slider-row">
+            <label><span>MGU-H → Battery</span><span>40%</span></label>
+            <input type="range" value="40" />
+          </div>
+          <div class="slider-row">
+            <label><span>Target SOC end lap</span><span>55%</span></label>
+            <input type="range" value="55" />
+          </div>
+          <div class="slider-row">
+            <label><span>Defense reserve</span><span>12%</span></label>
+            <input type="range" value="12" />
+          </div>
+          <div class="slider-row">
+            <label><span>Harvest bias</span><span>35%</span></label>
+            <input type="range" value="35" />
+          </div>
+        </section>
+        <section class="panel">
+          <h2>Section priority</h2>
+          <div class="bucket-grid">
+            <div class="bucket-card">
+              <strong>Primary straights</strong>
+              <div>Deploy 55%</div>
+              <div>Direct drive 65%</div>
+              <div>Bonus: Overtake window</div>
+            </div>
+            <div class="bucket-card">
+              <strong>Secondary straights</strong>
+              <div>Deploy 30%</div>
+              <div>Direct drive 25%</div>
+              <div>DRS auto boost</div>
+            </div>
+            <div class="bucket-card">
+              <strong>Corner exits</strong>
+              <div>Deploy 15%</div>
+              <div>Direct drive 10%</div>
+              <div>Traction assist</div>
+            </div>
+          </div>
+          <div class="slider-row" style="margin-top: 22px;">
+            <label><span>Overtake boost window</span><span>10 s</span></label>
+            <input type="range" value="65" />
+          </div>
+          <div class="slider-row">
+            <label><span>Defensive trigger gap</span><span>+0.4 s</span></label>
+            <input type="range" value="40" />
+          </div>
+        </section>
+      </div>
+
+      <section class="panel" style="margin-top: 22px;">
+        <h2>Preview & validation</h2>
+        <div class="chart-wrapper">
+          <div class="bars">
+            <div class="bar" style="height: 85%;" data-label="Sector 1"><span>0.95 MJ</span></div>
+            <div class="bar" style="height: 68%;" data-label="Sector 2"><span>0.75 MJ</span></div>
+            <div class="bar" style="height: 47%;" data-label="Sector 3"><span>0.52 MJ</span></div>
+          </div>
+          <div class="gauge">
+            <span>SOC trend</span>
+            <div class="gauge-track"><div class="gauge-fill"></div></div>
+            <span>55% target</span>
+          </div>
+        </div>
+        <div class="warning-card">
+          Warning: deploy allocation supera il target SOC nell'ultimo settore. Riduci il budget o aumenta la quota corner exit.
+        </div>
+        <div class="cta-row">
+          <button class="btn-ghost">Reset</button>
+          <button class="btn-primary">Save preset</button>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
