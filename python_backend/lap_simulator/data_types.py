@@ -51,6 +51,8 @@ class EngineMapName(str, Enum):
     STANDARD = "STANDARD"
     RICH = "RICH"
     QUALY = "QUALY"
+    WET = "WET"
+    RECHARGE = "RECHARGE"
 
 
 class ERSModeName(str, Enum):
@@ -183,6 +185,7 @@ class BrakeSystemParams:
     fade_sensitivity_c_per_unit: float = 15.0
     cooling_coeff: float = 1.0
     heat_quality: float = 1.0
+    regen_brake_factor: float = 1.0
 
 
 @dataclass

@@ -20,7 +20,7 @@ Portare il gioco a una release pubblica in cui:
 - Profili derivati per circuito generati (`config/circuits/derived/<cid>/`) via `scripts/build_circuit_profiles.py` (tyres/brakes/PU/damage).
 - Catalogo JSON e uso moduli: `docs/config-spec.md`.
 - AeroPackage: formule e componenti in `docs/AeroPackage.md` (sintesi), dettagli in `docs/lap-physics-spec-v0.5.md` (§3.1–3.3) e mapping slider in `docs/setup-engine-spec-v0.1.md` (§3.2).
-- PowerUnit ICE/ERS: modello e mappe in `docs/PowerUnit.md` (sintesi), dettagli in `docs/lap-physics-spec-v0.5.md` (§3.3–3.4), seed/config in `config/pu/*_global_default.json`.
+- PowerUnit ICE/ERS: modello e mappe in `docs/PowerUnit.md` (sintesi), dati energetici/mode strategy in `docs/EngineData2025.md`, dettagli in `docs/lap-physics-spec-v0.5.md` (§3.3–3.4), seed/config in `config/pu/*_global_default.json`.
 
 ## 1. Analisi da completare prima del codice
 
@@ -86,6 +86,13 @@ lascia
 ## 6. Implementazione – Fase E (Data & Calibrazione — `docs/physics-roadmap.md`, `docs/config-spec.md`, `docs/degradation-and-consumption.md`)
 1. ✅ **FastF1 toolchain**: ingestion, caching, manifest dataset (wrapper `scripts/fastf1_build_assets.py`, manifest per anno, cache locale).
 2. **Script fitting componenti**: `aero_fit`, `tyre_fit`, `powerunit_fit`, `brake_calibration` con output in `config/calibration/`.
+   - 📄 Documentazione PU/ERS aggiornata: `docs/PowerUnit.md` + `docs/EngineData2025.md` (limiti FIA, torque curve, strategie push/recharge).
+   - 🆕 **PU energy model & UI mockup** (`docs/pu-energy-model.md`): descrive come esporre mappe, SOC, MJ consumati/recuperati in Garage/HUD e gli hook per R&D (deploy/harvest split personalizzabile).
+   - **Piano di integrazione**:
+     1. *Config & fitting*: estendere i derived con `deploy_mj_per_lap`, `harvest_mj_per_lap`, `mguh_direct_ratio`, `target_soc_end_lap`, `torque_bias`, `regen_brake_factor`, `regen_brake_limit_nm`; aggiornare `powerunit_fit.py` e il nuovo `brake_calibration.py` con report MJ/SOC e torque curve.
+     2. *Runtime*: implementare i nuovi limiti in LapSimulator (PU + freni), calcolare `regen_brake_torque`/`hydraulic_brake_torque`, flag di brake migration e telemetria `pu_stats`/`pu_energy_trace` con MJ per sezione.
+     3. *UI/UX*: sviluppare il pannello Garage e il widget HUD descritti nel mockup, aggiungendo preset push/recharge e indicatori SOC/MJ, più aggiornare `docs/setup-ui-plan.md`.
+     4. *Documentazione & QA*: mantenere allineati i documenti e definire checklist (Push lap, Recharge, Wet, Brake migration) per validare SOC/MJ e segnali UI.
 3. **CI `calibration.yml`**: pipeline badge componenti → lap regression → race smoke test.
 4. **Data coherence watchdog**: sistema di controllo/coerenza contro i dati originali (FastF1 / telemetry JSON) con report automatici e alert su drift.
 5. **Manifest & dashboard**: repository asset calibrati + dashboard Plotly per confronto sim vs telemetria reale.
