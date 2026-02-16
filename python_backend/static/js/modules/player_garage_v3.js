@@ -10,6 +10,8 @@ export class PlayerGarageV3 {
         this.hudContainer = hudContainer;
         this.sessionControls = sessionControls;
         this.wasPausedBeforePU = null;
+        this.activePuTab = 'stats';
+        this._ersStylesInjected = false;
         this.tyreOptions = [
             { value: 'soft', label: 'Soft' },
             { value: 'medium', label: 'Medium' },
@@ -121,7 +123,7 @@ export class PlayerGarageV3 {
                 if (actionBtn) {
                     const driver = Number(this.overlayContainer.dataset.driver);
                     if (driver) {
-                        this.handleOverlayAction(driver, actionBtn.dataset.action);
+                        this.handleOverlayAction(driver, actionBtn.dataset.action, actionBtn);
                     }
                 }
             });
@@ -178,7 +180,240 @@ export class PlayerGarageV3 {
         return `<div class="pu-lap-chip-row-v3">${chips.join('')}</div>`;
     }
 
-    buildLapUsageChip({ label, lapIndex, deploy, harvest, mguhDirect, mguhHarvest, deployBudget, harvestBudget, deployLimit, harvestLimit, mapName }) {
+    ensureErsMapStyles() {
+        if (this._ersStylesInjected || typeof document === 'undefined') return;
+        const style = document.createElement('style');
+        style.id = 'garage-ers-map-styles';
+        style.textContent = `
+            .ers-map-panel { color: #f5f5f5; font-family: 'Space Grotesk', 'Inter', system-ui; }
+            .ers-meta-row { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+            .ers-meta-row .meta { font-size: 11px; letter-spacing: 0.08em; color: #96a0b3; text-transform: uppercase; }
+            .ers-preset-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 16px; }
+            .ers-preset-chip { border-radius: 12px; padding: 8px 10px; font-size: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05); cursor: pointer; }
+            .ers-preset-chip.active { border-color: rgba(255,210,76,0.8); background: rgba(255,210,76,0.2); color: #ffd24c; }
+            .ers-preset-chip:disabled { opacity: 0.4; cursor: not-allowed; }
+            .ers-section-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+            .ers-section-card { background: rgba(255,255,255,0.03); border-radius: 16px; padding: 14px; }
+            .ers-section-card h3 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #96a0b3; }
+            .ers-slider-row { margin-bottom: 12px; }
+            .ers-slider-row label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: #cfd6e6; }
+            .ers-slider-track { width: 100%; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08); position: relative; overflow: hidden; }
+            .ers-slider-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 999px; background: linear-gradient(90deg,#ffd24c,#ff8f3d); }
+            .ers-bucket-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+            .ers-bucket-card { background: rgba(255,255,255,0.04); border-radius: 14px; padding: 12px; font-size: 12px; }
+            .ers-bucket-card strong { display: block; font-size: 13px; margin-bottom: 4px; }
+            .ers-bucket-bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,0.07); overflow: hidden; margin-top: 6px; }
+            .ers-bucket-bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg,#ffd24c,#ff8f3d); }
+            .ers-trigger-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 12px; }
+            .ers-trigger-card { background: rgba(255,255,255,0.03); border-radius: 14px; padding: 10px; font-size: 12px; }
+            .ers-trigger-card strong { display: block; font-size: 12px; letter-spacing: 0.06em; color: #96a0b3; text-transform: uppercase; margin-bottom: 4px; }
+            .ers-warning-box { margin-top: 14px; font-size: 12px; color: #f9b49f; }
+            .ers-warning-box ul { margin: 6px 0 0; padding-left: 18px; }
+            .ers-preview { margin-top: 16px; background: rgba(255,255,255,0.03); border-radius: 18px; padding: 16px; }
+            .ers-preview h4 { margin: 0 0 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #96a0b3; }
+            .ers-preview-bars { display: flex; align-items: flex-end; gap: 10px; height: 110px; margin-bottom: 12px; }
+            .ers-preview-bar { flex: 1; background: linear-gradient(180deg,#ffd24c,#ff8f3d); border-radius: 12px 12px 6px 6px; position: relative; }
+            .ers-preview-bar span { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #fff; }
+            .ers-preview-bar::after { content: attr(data-label); position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #96a0b3; }
+            .ers-gauge { display: flex; align-items: center; gap: 10px; font-size: 11px; }
+            .ers-gauge-track { flex: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08); position: relative; overflow: hidden; }
+            .ers-gauge-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 999px; background: linear-gradient(90deg,#55f3c3,#1cb0ff); }
+            .ers-cta-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+            .ers-cta-row button { border: none; border-radius: 999px; padding: 9px 18px; font-size: 12px; font-weight: 600; cursor: pointer; }
+            .ers-cta-row .ghost { background: rgba(255,255,255,0.08); color: #f4f6fb; }
+            .ers-cta-row .primary { background: #ffd24c; color: #14151a; }
+            .ers-cta-row button:disabled { opacity: 0.4; cursor: not-allowed; }
+            .ers-locked-banner { margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.05); color: #f4c48a; font-size: 12px; }
+        `;
+        document.head.appendChild(style);
+        this._ersStylesInjected = true;
+    }
+
+    formatErsWarning(message) {
+        if (!message) return '';
+        return message.replace(/_/g, ' ').replace(/:/, ' · ').toUpperCase();
+    }
+
+    formatPercentage(value, digits = 0) {
+        if (typeof value !== 'number' || Number.isNaN(value)) return null;
+        const pct = value > 1 ? value : value * 100;
+        return `${pct.toFixed(digits)}%`;
+    }
+
+    resolveBudgetValue(runtimeValue, configValue, fallback = 0) {
+        if (typeof runtimeValue === 'number' && !Number.isNaN(runtimeValue) && runtimeValue > 1e-5) {
+            return runtimeValue;
+        }
+        if (typeof configValue === 'number' && !Number.isNaN(configValue)) {
+            return configValue;
+        }
+        return fallback;
+    }
+
+    buildErsBucketCard(entry) {
+        const target = typeof entry.targetTotal === 'number' ? entry.targetTotal : 0;
+        const used = typeof entry.used === 'number' ? entry.used : 0;
+        const usedPct = target > 1e-3 ? Math.min((used / target) * 100, 999) : 0;
+        const remaining = Math.max(target - used, 0);
+        const pctLabel = entry.pctLabel ? entry.pctLabel : null;
+        return `
+            <div class="ers-bucket-card">
+                <strong>${entry.label}</strong>
+                <div>${target.toFixed(2)} MJ${pctLabel ? ` • ${pctLabel}` : ''}</div>
+                <div style="font-size:11px; color:#96a0b3;">${entry.description}</div>
+                <div class="ers-bucket-bar"><span style="width:${Math.min(usedPct, 100)}%"></span></div>
+                <div class="ers-bucket-usage">Used ${used.toFixed(2)} MJ${target > 1e-3 ? ` (${usedPct.toFixed(0)}%)` : ''} · Reserve ${remaining.toFixed(2)} MJ</div>
+            </div>
+        `;
+    }
+
+    buildErsMapPanel(car, puStats, isBox) {
+        this.ensureErsMapStyles();
+        if (!puStats || !Object.keys(puStats).length) {
+            return '<div class="ers-map-panel">No ERS telemetry available yet.</div>';
+        }
+        const socPct = typeof puStats.soc_pct === 'number' ? Math.round(puStats.soc_pct) : null;
+        const lapDeploy = typeof puStats.lap_deploy_mj === 'number' ? puStats.lap_deploy_mj : 0;
+        const mapName = puStats.map || 'STANDARD';
+        const deployBudget = this.resolveBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap, puStats.deploy_limit_mj || 0);
+        const deployBudgetConfig = typeof puStats.deploy_mj_per_lap === 'number' ? puStats.deploy_mj_per_lap : null;
+        const targetSoc = typeof puStats.target_soc_end_lap === 'number' ? puStats.target_soc_end_lap : null;
+        const defenseReserve = this.resolveBudgetValue(puStats.defense_reserve_available_mj, puStats.defense_reserve_mj_config, 0);
+        const defenseReservePct = deployBudget > 1e-6 ? `${Math.round((defenseReserve / deployBudget) * 100)}%` : null;
+        const primary = {
+            totalRuntime: puStats.bucket_primary_total_mj ?? 0,
+            totalConfig: puStats.bucket_primary_config_mj ?? null,
+            used: puStats.bucket_primary_used_mj ?? 0,
+            pctConfig: puStats.bucket_primary_pct,
+        };
+        const secondary = {
+            totalRuntime: puStats.bucket_secondary_total_mj ?? 0,
+            totalConfig: puStats.bucket_secondary_config_mj ?? null,
+            used: puStats.bucket_secondary_used_mj ?? 0,
+            pctConfig: puStats.bucket_secondary_pct,
+        };
+        const exitBucket = {
+            totalRuntime: puStats.bucket_exit_total_mj ?? 0,
+            totalConfig: puStats.bucket_exit_config_mj ?? null,
+            used: puStats.bucket_exit_used_mj ?? 0,
+            pctConfig: puStats.bucket_exit_pct,
+        };
+        const bucketEntries = [
+            { key: 'primary', label: 'Main straights', description: 'Primary bucket', ...primary },
+            { key: 'secondary', label: 'Secondary', description: 'Medium corners', ...secondary },
+            { key: 'exit', label: 'Corner exits', description: 'Acceleration zones', ...exitBucket },
+        ].map(entry => {
+            const targetTotal = entry.totalRuntime > 1e-5 ? entry.totalRuntime : (entry.totalConfig ?? 0);
+            const usedPct = targetTotal > 1e-5 ? (entry.used / targetTotal) * 100 : 0;
+            return {
+                ...entry,
+                targetTotal,
+                pctLabel: this.formatPercentage(entry.pctConfig),
+                usedPct,
+            };
+        });
+        const bucketCards = bucketEntries.map(entry => this.buildErsBucketCard(entry)).join('');
+        const lastPriority = typeof puStats.last_priority_score === 'number' ? puStats.last_priority_score : 0;
+        const lastBucket = (puStats.last_bucket_key || 'primary').replace(/_/g, ' ');
+        const lastDefenseUsed = typeof puStats.last_defense_used_mj === 'number' ? puStats.last_defense_used_mj : 0;
+        const lastAllocated = typeof puStats.last_bucket_allocated_mj === 'number' ? puStats.last_bucket_allocated_mj : 0;
+        const playerErsMode = (car?.player_config?.ers_mode || car?.ers_mode || 'Neutral').toLowerCase();
+        const inferredMode = (() => {
+            if (playerErsMode) return playerErsMode;
+            if (puStats.last_recharge_mode) return 'harvest';
+            if (puStats.last_push_mode) return 'overtake';
+            return 'deploy';
+        })();
+        const ersPresetDefs = [
+            { key: 'harvest', label: 'Harvest' },
+            { key: 'neutral', label: 'Neutral (Default)' },
+            { key: 'deploy', label: 'Deploy' },
+            { key: 'overtake', label: 'Overtake' },
+        ];
+        const presetChips = ersPresetDefs.map(preset => {
+            const active = inferredMode === preset.key;
+            return `<button type="button" class="ers-preset-chip ${active ? 'active' : ''}">${preset.label}</button>`;
+        }).join('');
+        const warnings = puStats.warnings_runtime || [];
+        const warningBlock = warnings.length
+            ? `<div class="ers-warning-box"><strong>Runtime warnings</strong><ul>${warnings.map(w => `<li>${this.formatErsWarning(w)}</li>`).join('')}</ul></div>`
+            : '<div class="ers-warning-box" style="color:#9cd7c5;">No runtime warnings.</div>';
+        const previewBars = bucketEntries.map(entry => {
+            const height = entry.targetTotal > 1e-3 ? Math.min((entry.used / (entry.targetTotal || 1)) * 80 + 15, 100) : 12;
+            const pctLabel = entry.targetTotal > 1e-3 ? `${Math.round(entry.usedPct)}%` : '';
+            return `<div class="ers-preview-bar" style="height:${height}%" data-label="${entry.label}"><span>${entry.used.toFixed(2)} MJ${pctLabel ? `<br/><small>${pctLabel}</small>` : ''}</span></div>`;
+        }).join('');
+        const gaugePct = (() => {
+            if (targetSoc && socPct !== null) {
+                return Math.max(Math.min((socPct / targetSoc) * 100, 100), 0);
+            }
+            return socPct !== null ? Math.max(Math.min(socPct, 100), 0) : 0;
+        })();
+        const lastIntent = puStats.last_recharge_mode ? 'Recharge' : (puStats.last_push_mode ? 'Push' : (puStats.last_defense_mode ? 'Defense' : 'Standard'));
+        const deployBudgetLabel = (deployBudgetConfig && Math.abs(deployBudget - deployBudgetConfig) > 1e-3)
+            ? `${deployBudget.toFixed(2)} MJ (cfg ${deployBudgetConfig.toFixed(2)} MJ)`
+            : `${deployBudget.toFixed(2)} MJ`;
+        const defenseReserveLabel = defenseReservePct
+            ? `${defenseReserve.toFixed(2)} MJ (${defenseReservePct})`
+            : `${defenseReserve.toFixed(2)} MJ`;
+        const lastAllocationPct = deployBudget > 1e-5 ? `${Math.round((lastAllocated / deployBudget) * 100)}%` : null;
+        return `
+            <div class="ers-map-panel">
+                <div class="ers-meta-row">
+                    <div>
+                        <div class="meta">ERS MAP</div>
+                        <div style="font-size:18px;">${mapName}</div>
+                    </div>
+                    <div class="meta">SOC ${socPct ?? '--'}% · Deploy ${lapDeploy.toFixed(2)} MJ</div>
+                </div>
+                <div class="ers-preset-row">${presetChips}</div>
+                <div class="ers-section-grid">
+                    <div class="ers-section-card">
+                        <h3>Budget & split</h3>
+                        <div class="ers-slider-row">
+                            <label><span>Deploy budget</span><span>${deployBudgetLabel}</span></label>
+                            <div class="ers-slider-track"><div class="ers-slider-fill" style="width:${Math.min((deployBudget / (puStats.deploy_limit_mj || deployBudget || 1)) * 100, 100)}%"></div></div>
+                        </div>
+                        <div class="ers-slider-row">
+                            <label><span>Defense reserve</span><span>${defenseReserveLabel}</span></label>
+                            <div class="ers-slider-track"><div class="ers-slider-fill" style="width:${Math.min((defenseReserve / 0.5) * 100, 100)}%"></div></div>
+                        </div>
+                        <div class="ers-slider-row">
+                            <label><span>Last allocation</span><span>${lastAllocated.toFixed(2)} MJ${lastAllocationPct ? ` (${lastAllocationPct})` : ''}</span></label>
+                            <div class="ers-slider-track"><div class="ers-slider-fill" style="width:${Math.min((lastAllocated / Math.max(deployBudget, 0.0001)) * 100, 100)}%"></div></div>
+                        </div>
+                    </div>
+                    <div class="ers-section-card">
+                        <h3>Priority buckets</h3>
+                        <div class="ers-bucket-grid">${bucketCards}</div>
+                    </div>
+                </div>
+                <div class="ers-section-card" style="margin-top:14px;">
+                    <h3>Triggers & context</h3>
+                    <div class="ers-trigger-grid">
+                        <div class="ers-trigger-card">
+                            <strong>Priority score</strong>
+                            <div style="font-size:18px;">${(lastPriority * 100).toFixed(0)}%</div>
+                            <div style="font-size:11px; color:#7c889c;">Active bucket · ${lastBucket}</div>
+                        </div>
+                        <div class="ers-trigger-card">
+                            <strong>Defense buffer</strong>
+                            <div style="font-size:18px;">${defenseReserve.toFixed(2)} MJ</div>
+                            <div style="font-size:11px; color:#7c889c;">Last used ${lastDefenseUsed.toFixed(2)} MJ</div>
+                        </div>
+                        <div class="ers-trigger-card">
+                            <strong>Driver intent</strong>
+                            <div style="font-size:18px;">${lastIntent}</div>
+                            <div style="font-size:11px; color:#7c889c;">Car state · ${this.getStateDisplay(this.getCarState(car))}</div>
+                        </div>
+                    </div>
+                </div>
+                ${warningBlock}
+            </div>
+        `;
+    }
+
+    buildLapUsageChip({ label, lapIndex, deploy, harvest, deployBudget, harvestBudget, deployLimit, harvestLimit, mapName }) {
         if (deploy == null && harvest == null) return '';
         const lapLabel = this.formatLapLabel(lapIndex);
         const deployBudgetStr = deployBudget ? `${deployBudget.toFixed(1)} MJ` : '—';
@@ -187,8 +422,8 @@ export class PlayerGarageV3 {
         const harvestText = harvest != null ? `${harvest.toFixed(2)} MJ` : '—';
         const deployRatio = deployBudget ? Math.min((deploy || 0) / deployBudget, 1) : 0;
         const harvestRatio = harvestBudget ? Math.min((harvest || 0) / harvestBudget, 1) : 0;
-        const mguhDirectText = typeof mguhDirect === 'number' ? `${mguhDirect.toFixed(2)} MJ` : '—';
-        const mguhHarvestText = typeof mguhHarvest === 'number' ? `${mguhHarvest.toFixed(2)} MJ` : '—';
+        const deployPctLabel = deployBudget ? `${Math.round(deployRatio * 100)}%` : (deploy ? '—' : '0%');
+        const harvestPctLabel = harvestBudget ? `${Math.round(harvestRatio * 100)}%` : (harvest ? '—' : '0%');
         return `
             <div class="pu-lap-chip-v3">
                 <div class="pu-chip-header">
@@ -198,24 +433,19 @@ export class PlayerGarageV3 {
                 <div class="pu-chip-body">
                     <div class="pu-chip-metric">
                         <div class="pu-chip-metric-label">Deploy</div>
-                        <div class="pu-chip-metric-value">${deployText} / ${deployBudgetStr}</div>
-                        <div class="pu-chip-progress"><div style="width:${deployRatio * 100}%"></div></div>
+                        <div class="pu-chip-metric-value">${deployText} <span class="pu-chip-percent">${deployPctLabel}</span></div>
+                        <div class="pu-chip-meter"><span style="width:${deployRatio * 100}%"></span></div>
                     </div>
                     <div class="pu-chip-metric">
                         <div class="pu-chip-metric-label">Harvest</div>
-                        <div class="pu-chip-metric-value">${harvestText} / ${harvestBudgetStr}</div>
-                        <div class="pu-chip-progress harvest"><div style="width:${harvestRatio * 100}%"></div></div>
-                    </div>
-                    <div class="pu-chip-metric">
-                        <div class="pu-chip-metric-label">MGU-H Direct</div>
-                        <div class="pu-chip-metric-value">${mguhDirectText}</div>
-                    </div>
-                    <div class="pu-chip-metric">
-                        <div class="pu-chip-metric-label">MGU-H → ES</div>
-                        <div class="pu-chip-metric-value">${mguhHarvestText}</div>
+                        <div class="pu-chip-metric-value">${harvestText} <span class="pu-chip-percent">${harvestPctLabel}</span></div>
+                        <div class="pu-chip-meter"><span style="width:${harvestRatio * 100}%"></span></div>
                     </div>
                 </div>
-                <div class="pu-chip-sub">Mappa ${mapName} · Limite FIA ${deployLimit.toFixed(1)} MJ · Limite recupero ${harvestLimit.toFixed(1)} MJ</div>
+                <div class="pu-chip-footer">
+                    <span>Map ${mapName}</span>
+                    <span>Deploy limit ${deployLimit.toFixed(1)} · Harvest ${harvestLimit.toFixed(1)} MJ</span>
+                </div>
             </div>
         `;
     }
@@ -245,6 +475,24 @@ export class PlayerGarageV3 {
         }).join('');
     }
 
+    formatEnergyCell(value, mode = 'neutral', unit = 'MJ') {
+        const magnitude = Math.abs(value);
+        let level = 'neutral';
+        if (magnitude > 0.01) {
+            if (mode === 'spend') {
+                if (magnitude > 0.8) level = 'spend-high';
+                else if (magnitude > 0.3) level = 'spend-mid';
+                else level = 'spend-low';
+            } else if (mode === 'recovery') {
+                if (magnitude > 0.8) level = 'recovery-high';
+                else if (magnitude > 0.3) level = 'recovery-mid';
+                else level = 'recovery-low';
+            }
+        }
+        const formatted = `${value.toFixed(2)}${unit ? ` ${unit}` : ''}`;
+        return `<span class="pu-energy-cell ${level}">${formatted}</span>`;
+    }
+
     buildPUTableRows(currentTrace = [], prevTrace = [], lapIdCurrent, lapIdPrev) {
         const rows = [];
         const pushRows = (entries, lapId, tone) => {
@@ -271,12 +519,12 @@ export class PlayerGarageV3 {
             <tr>
                 <td>${row.lapLabel}</td>
                 <td>${row.section}</td>
-                <td>${row.deploy.toFixed(2)} MJ</td>
-                <td>${row.harvest.toFixed(2)} MJ</td>
-                <td>${row.hydraulic.toFixed(2)} MJ</td>
+                <td>${this.formatEnergyCell(row.deploy, 'spend')}</td>
+                <td>${this.formatEnergyCell(row.harvest, 'recovery')}</td>
+                <td>${this.formatEnergyCell(row.hydraulic, 'spend')}</td>
                 <td>${row.regen.toFixed(2)}</td>
-                <td>${row.mguhDirect.toFixed(2)} MJ</td>
-                <td>${row.mguhHarvest.toFixed(2)} MJ</td>
+                <td>${this.formatEnergyCell(row.mguhDirect, 'spend')}</td>
+                <td>${this.formatEnergyCell(row.mguhHarvest, 'recovery')}</td>
             </tr>
         `).join('');
     }
@@ -723,7 +971,9 @@ export class PlayerGarageV3 {
         if (!this.overlayContainer) return;
         const puStats = car.pu_stats || {};
         const driverName = car.driver_name || `Driver #${car.driver_number}`;
-        
+        const carState = this.getCarState(car);
+        const isBox = carState === 'BOX';
+        this.overlayContainer.style.zIndex = '1500';
         const socMj = puStats.soc_mj ?? 0;
         const socPct = puStats.soc_pct ?? 0;
         const capacityMj = puStats.capacity_mj ?? 4.0;
@@ -785,15 +1035,11 @@ export class PlayerGarageV3 {
                 lapIndex: currentLapIndex,
                 deploy: currentTotals.deploy,
                 harvest: currentTotals.harvest,
-                mguhDirect: currentTotals.mguhDirect,
-                mguhHarvest: currentTotals.mguhHarvest,
             } : null,
             previous: (previousLapIndex !== null || previousTotals.hasData || previousTotals.hasTrace) ? {
                 lapIndex: previousLapIndex,
                 deploy: previousTotals.deploy,
                 harvest: previousTotals.harvest,
-                mguhDirect: previousTotals.mguhDirect,
-                mguhHarvest: previousTotals.mguhHarvest,
             } : null,
             hasPrevTrace: previousTotals.hasTrace,
             hasPrevWarnings,
@@ -802,6 +1048,58 @@ export class PlayerGarageV3 {
 
         const traceRows = this.buildPUTableRows(trace, tracePrev, currentLapIndex, previousLapIndex);
         
+        const puStatsPanel = `
+            <div class="pu-stats-grid-v3" style="grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px;">
+                <div class="pu-stat-card-v3" style="padding: 10px;">
+                    <div class="pu-stat-label-v3" style="font-size: 10px;">Battery SOC</div>
+                    <div class="pu-stat-value-v3 ${socClass}" style="font-size: 18px; margin: 3px 0;">${socMj.toFixed(1)} MJ</div>
+                    <div class="pu-stat-sub-v3" style="font-size: 9px;">${Math.round(socPct)}% carica</div>
+                </div>
+                <div class="pu-stat-card-v3" style="padding: 10px;">
+                    <div class="pu-stat-label-v3" style="font-size: 10px;">Capacità Batteria</div>
+                    <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${capacityMj.toFixed(1)} MJ</div>
+                    <div class="pu-stat-sub-v3" style="font-size: 9px;">Totale</div>
+                </div>
+                <div class="pu-stat-card-v3" style="padding: 10px;">
+                    <div class="pu-stat-label-v3" style="font-size: 10px;">Deploy Limit</div>
+                    <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${deployLimit.toFixed(1)} MJ</div>
+                    <div class="pu-stat-sub-v3" style="font-size: 9px;">Per lap</div>
+                </div>
+                <div class="pu-stat-card-v3" style="padding: 10px;">
+                    <div class="pu-stat-label-v3" style="font-size: 10px;">Harvest Limit</div>
+                    <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${harvestLimit.toFixed(1)} MJ</div>
+                    <div class="pu-stat-sub-v3" style="font-size: 9px;">Per lap</div>
+                </div>
+                <div class="pu-stat-card-v3" style="padding: 10px;">
+                    <div class="pu-stat-label-v3" style="font-size: 10px;">MGU-H Direct Drive</div>
+                    <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${lapMguhDirect.toFixed(2)} MJ</div>
+                    <div class="pu-stat-sub-v3" style="font-size: 9px;">Ultimo giro</div>
+                </div>
+                <div class="pu-stat-card-v3" style="padding: 10px;">
+                    <div class="pu-stat-label-v3" style="font-size: 10px;">MGU-H → ES</div>
+                    <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${lapMguhHarvest.toFixed(2)} MJ</div>
+                    <div class="pu-stat-sub-v3" style="font-size: 9px;">Ultimo giro</div>
+                </div>
+            </div>
+            ${lapChipRow}
+            <div class="pu-trace-container-v3" style="max-height: 280px; overflow-y: auto;">
+                <table class="pu-trace-table-v3">
+                    <thead>
+                        <tr><th>Lap</th><th>Section</th><th>Deploy</th><th>Harvest</th><th>Hydraulic</th><th>Regen Ratio</th><th>MGU-H Direct Drive</th><th>MGU-H → ES</th></tr>
+                    </thead>
+                    <tbody>
+                        ${traceRows || '<tr><td colspan="8" style="text-align:center;color:#888;">No trace data</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        const ersPanel = this.buildErsMapPanel(car, puStats, isBox);
+        const tabBaseStyle = 'flex:1;border:1px solid rgba(255,255,255,0.14);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;background:rgba(255,255,255,0.04);color:#d7def1;cursor:pointer;';
+        const inactiveStyle = `${tabBaseStyle}`;
+        const activeStyle = `${tabBaseStyle}background:#ffd24c;color:#10141b;border-color:#ffd24c;`;
+        const statsBtnStyle = this.activePuTab === 'stats' ? activeStyle : inactiveStyle;
+        const ersBtnStyle = this.activePuTab === 'ers-map' ? activeStyle : inactiveStyle;
+
         this.overlayContainer.dataset.driver = car.driver_number;
         this.overlayContainer.classList.add('is-visible', 'pu-modal-active');
         this.overlayContainer.classList.remove('is-hiding');
@@ -811,50 +1109,17 @@ export class PlayerGarageV3 {
                     <div class="pu-modal-title-v3">⚡ PU Manager — ${driverName}</div>
                     <button class="pu-modal-close-v3" data-action="close-pu">×</button>
                 </div>
+                <div class="pu-modal-tabs-v3" style="display:flex; gap:8px; margin-bottom:14px;">
+                    <button class="pu-tab-btn" style="${statsBtnStyle}" data-action="switch-pu-tab" data-tab="stats">Telemetry</button>
+                    <button class="pu-tab-btn" style="${ersBtnStyle}" data-action="switch-pu-tab" data-tab="ers-map">ERS Map</button>
+                </div>
                 <div class="pu-modal-body-v3">
-                    <div class="pu-stats-grid-v3" style="grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px;">
-                        <div class="pu-stat-card-v3" style="padding: 10px;">
-                            <div class="pu-stat-label-v3" style="font-size: 10px;">Battery SOC</div>
-                            <div class="pu-stat-value-v3 ${socClass}" style="font-size: 18px; margin: 3px 0;">${socMj.toFixed(1)} MJ</div>
-                            <div class="pu-stat-sub-v3" style="font-size: 9px;">${Math.round(socPct)}% carica</div>
-                        </div>
-                        <div class="pu-stat-card-v3" style="padding: 10px;">
-                            <div class="pu-stat-label-v3" style="font-size: 10px;">Capacità Batteria</div>
-                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${capacityMj.toFixed(1)} MJ</div>
-                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Totale</div>
-                        </div>
-                        <div class="pu-stat-card-v3" style="padding: 10px;">
-                            <div class="pu-stat-label-v3" style="font-size: 10px;">Deploy Limit</div>
-                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${deployLimit.toFixed(1)} MJ</div>
-                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Per lap</div>
-                        </div>
-                        <div class="pu-stat-card-v3" style="padding: 10px;">
-                            <div class="pu-stat-label-v3" style="font-size: 10px;">Harvest Limit</div>
-                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${harvestLimit.toFixed(1)} MJ</div>
-                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Per lap</div>
-                        </div>
-                        <div class="pu-stat-card-v3" style="padding: 10px;">
-                            <div class="pu-stat-label-v3" style="font-size: 10px;">MGU-H Direct</div>
-                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${lapMguhDirect.toFixed(2)} MJ</div>
-                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Ultimo giro</div>
-                        </div>
-                        <div class="pu-stat-card-v3" style="padding: 10px;">
-                            <div class="pu-stat-label-v3" style="font-size: 10px;">MGU-H → ES</div>
-                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${lapMguhHarvest.toFixed(2)} MJ</div>
-                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Ultimo giro</div>
-                        </div>
-                    </div>
-                    ${lapChipRow}
-                    <div class="pu-trace-container-v3" style="max-height: 280px; overflow-y: auto;">
-                        <table class="pu-trace-table-v3">
-                            <thead>
-                                <tr><th>Lap</th><th>Section</th><th>Deploy</th><th>Harvest</th><th>Hydraulic</th><th>Regen Ratio</th><th>MGU-H Direct</th><th>MGU-H → ES</th></tr>
-                            </thead>
-                            <tbody>
-                                ${traceRows || '<tr><td colspan="8" style="text-align:center;color:#888;">No trace data</td></tr>'}
-                            </tbody>
-                        </table>
-                    </div>
+                    <section data-panel="stats" style="${this.activePuTab === 'stats' ? '' : 'display:none;'}">
+                        ${puStatsPanel}
+                    </section>
+                    <section data-panel="ers-map" style="${this.activePuTab === 'ers-map' ? '' : 'display:none;'}">
+                        ${ersPanel}
+                    </section>
                 </div>
             </div>
         `;
@@ -875,7 +1140,9 @@ export class PlayerGarageV3 {
                 this.overlayContainer.classList.remove('is-hiding');
                 this.overlayContainer.removeAttribute('data-driver');
                 this.overlayContainer.innerHTML = '';
+                this.overlayContainer.style.zIndex = '';
                 this.setPauseForPU(false);
+                this.activePuTab = 'stats';
             }, 200);
         }
     }
@@ -883,14 +1150,16 @@ export class PlayerGarageV3 {
     async setPauseForPU(active) {
         if (!this.sessionControls) return;
         if (active) {
-            this.wasPausedBeforePU = this.sessionControls.isPaused;
+            if (this.wasPausedBeforePU === null) {
+                this.wasPausedBeforePU = this.sessionControls.isPaused;
+            }
             if (!this.sessionControls.isPaused) {
                 await this.sessionControls.setPauseState(true);
             }
-        } else if (this.wasPausedBeforePU === false) {
-            await this.sessionControls.setPauseState(false);
-            this.wasPausedBeforePU = null;
         } else {
+            if (this.wasPausedBeforePU === false) {
+                await this.sessionControls.setPauseState(false);
+            }
             this.wasPausedBeforePU = null;
         }
     }
@@ -1310,7 +1579,7 @@ export class PlayerGarageV3 {
         }
     }
 
-    handleOverlayAction(driverNumber, action) {
+    handleOverlayAction(driverNumber, action, target = null) {
         if (action === 'close-setup') {
             this.toggleSetupOverlay(driverNumber, false);
         } else if (action === 'close-pu') {
@@ -1330,6 +1599,13 @@ export class PlayerGarageV3 {
             const state = this.getCarState(carData);
             const payload = this.buildSetupPayloadFromDraft(driverNumber, carData);
             this.submitSetupConfig(driverNumber, payload, state);
+        } else if (action === 'switch-pu-tab') {
+            const tab = target?.dataset?.tab || 'stats';
+            const carData = this.state.getPlayerCar(driverNumber);
+            this.activePuTab = tab;
+            if (carData) {
+                this.buildPUModal(carData);
+            }
         }
     }
 

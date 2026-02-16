@@ -2210,6 +2210,15 @@ timeline-toggle-btn:hover {
     gap: 10px;
 }
 
+.pu-chip-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #9aa0ad;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
 .pu-chip-metric {
     display: flex;
     flex-direction: column;
@@ -2219,35 +2228,55 @@ timeline-toggle-btn:hover {
 .pu-chip-metric-label {
     font-size: 11px;
     color: #777;
-    text-transform: uppercase;
 }
 
 .pu-chip-metric-value {
-    font-size: 15px;
-    font-weight: 600;
-    color: #fefefe;
+font-size: 15px;
+font-weight: 600;
+color: #fefefe;
+}
+.pu-chip-metric-value .pu-chip-percent {
+font-size: 11px;
+font-weight: 500;
+color: #8ad9bb;
+margin-left: 6px;
 }
 
 .pu-chip-progress {
-    height: 6px;
-    border-radius: 999px;
-    background: #1f1f1f;
-    overflow: hidden;
+height: 6px;
+border-radius: 999px;
+background: #1f1f1f;
+overflow: hidden;
 }
 
 .pu-chip-progress > div {
-    height: 100%;
-    background: linear-gradient(90deg, #ffb347, #ffcc33);
+height: 100%;
+background: linear-gradient(90deg, #ffb347, #ffcc33);
 }
 
 .pu-chip-progress.harvest > div {
-    background: linear-gradient(90deg, #58e58d, #2fb37b);
+background: linear-gradient(90deg, #58e58d, #2fb37b);
 }
 
 .pu-chip-sub {
     font-size: 11px;
     color: #888;
 }
+
+.pu-energy-cell {
+    display: inline-block;
+    min-width: 60px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.pu-energy-cell.spend-low { color: #f1c15f; }
+.pu-energy-cell.spend-mid { color: #f7a53a; }
+.pu-energy-cell.spend-high { color: #ff7b5b; font-weight: 600; }
+.pu-energy-cell.recovery-low { color: #6fe0c5; }
+.pu-energy-cell.recovery-mid { color: #3ec89f; }
+.pu-energy-cell.recovery-high { color: #23a081; font-weight: 600; }
+.pu-energy-cell.neutral { color: #b3b3b3; }
 
 .pu-warning-row-v3 {
     display: flex;

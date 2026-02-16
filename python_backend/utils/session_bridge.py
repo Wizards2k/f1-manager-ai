@@ -440,6 +440,17 @@ class SessionBridge:
                         sim_q, ric_ass, perf,
                     )
 
+        # Seed PU/brake telemetry so frontend has configuration data before first lap
+        for car_id, car in self.race_cars_map.items():
+            try:
+                entry = racecar_to_car_entry(car)
+                entry.car_id = car_id
+                entry.state.car_id = car_id
+                car.pu_stats = self._build_pu_stats(entry)
+                car.brake_diagnostics = self._build_brake_diagnostics(None)
+            except Exception as exc:
+                logger.warning("Failed to seed PU stats for %s: %s", car_id, exc)
+
         # Precompute section cumulative distances for fast lookup
         self._section_end_m: List[float] = []
         cum = 0.0
@@ -838,6 +849,30 @@ class SessionBridge:
         energy_trace_prev = (pu_state.energy_trace_prev or [])[-20:]
         runtime_warnings = (pu_state.runtime_warnings or [])[-5:]
         runtime_warnings_prev = (pu_state.runtime_warnings_prev or [])[-5:]
+        primary_pct_cfg = map_budget.get("bucket_primary_pct")
+        secondary_pct_cfg = map_budget.get("bucket_secondary_pct")
+        exit_pct_cfg = map_budget.get("bucket_exit_pct")
+        defense_reserve_cfg = map_budget.get("defense_reserve_mj")
+        deploy_budget_cfg = map_budget.get("deploy_mj_per_lap")
+        bucket_cfg = {"primary": None, "secondary": None, "exit": None}
+        if deploy_budget_cfg is not None and (primary_pct_cfg or secondary_pct_cfg or exit_pct_cfg):
+            pct_sum = max(
+                (primary_pct_cfg or 0.0) + (secondary_pct_cfg or 0.0) + (exit_pct_cfg or 0.0),
+                1e-6,
+            )
+            available_cfg = max(deploy_budget_cfg - (defense_reserve_cfg or 0.0), 0.0)
+            bucket_cfg = {
+                "primary": available_cfg * ((primary_pct_cfg or 0.0) / pct_sum),
+                "secondary": available_cfg * ((secondary_pct_cfg or 0.0) / pct_sum),
+                "exit": available_cfg * ((exit_pct_cfg or 0.0) / pct_sum),
+            }
+
+        bucket_primary_total = pu_state.bucket_primary_total_mj if pu_state.bucket_primary_total_mj > 1e-6 else (bucket_cfg["primary"] or 0.0)
+        bucket_secondary_total = pu_state.bucket_secondary_total_mj if pu_state.bucket_secondary_total_mj > 1e-6 else (bucket_cfg["secondary"] or 0.0)
+        bucket_exit_total = pu_state.bucket_exit_total_mj if pu_state.bucket_exit_total_mj > 1e-6 else (bucket_cfg["exit"] or 0.0)
+        deploy_budget_total = pu_state.deploy_budget_total_mj if pu_state.deploy_budget_total_mj > 1e-6 else (deploy_budget_cfg or deploy_limit)
+        defense_reserve_available = pu_state.defense_reserve_available_mj if pu_state.defense_reserve_available_mj > 1e-6 else (defense_reserve_cfg or 0.0)
+
         return {
             "map": active_map,
             "soc_mj": round(soc_mj, 3),
@@ -850,6 +885,13 @@ class SessionBridge:
             "target_soc_end_lap": map_budget.get("target_soc_end_lap"),
             "deploy_ratio": map_budget.get("deploy_ratio"),
             "harvest_ratio": map_budget.get("harvest_ratio"),
+            "bucket_primary_pct": primary_pct_cfg,
+            "bucket_secondary_pct": secondary_pct_cfg,
+            "bucket_exit_pct": exit_pct_cfg,
+            "bucket_primary_config_mj": None if bucket_cfg["primary"] is None else round(bucket_cfg["primary"], 4),
+            "bucket_secondary_config_mj": None if bucket_cfg["secondary"] is None else round(bucket_cfg["secondary"], 4),
+            "bucket_exit_config_mj": None if bucket_cfg["exit"] is None else round(bucket_cfg["exit"], 4),
+            "defense_reserve_mj_config": defense_reserve_cfg,
             "warnings": budget.get("warnings", []),
             "warnings_runtime": runtime_warnings,
             "warnings_runtime_prev": runtime_warnings_prev,
@@ -865,6 +907,21 @@ class SessionBridge:
             "lap_id_prev": entry.state.pu.lap_id_prev,
             "energy_trace": energy_trace,
             "energy_trace_prev": energy_trace_prev,
+            "bucket_primary_total_mj": round(bucket_primary_total, 4),
+            "bucket_secondary_total_mj": round(bucket_secondary_total, 4),
+            "bucket_exit_total_mj": round(bucket_exit_total, 4),
+            "bucket_primary_used_mj": round(pu_state.bucket_primary_used_mj, 4),
+            "bucket_secondary_used_mj": round(pu_state.bucket_secondary_used_mj, 4),
+            "bucket_exit_used_mj": round(pu_state.bucket_exit_used_mj, 4),
+            "deploy_budget_total_mj": round(deploy_budget_total, 4),
+            "defense_reserve_available_mj": round(defense_reserve_available, 4),
+            "last_priority_score": round(pu_state.last_priority_score, 3),
+            "last_bucket_key": pu_state.last_bucket_key,
+            "last_bucket_allocated_mj": round(pu_state.last_bucket_allocated_mj, 4),
+            "last_defense_used_mj": round(pu_state.last_defense_used_mj, 4),
+            "last_push_mode": bool(pu_state.last_push_mode),
+            "last_defense_mode": bool(pu_state.last_defense_mode),
+            "last_recharge_mode": bool(pu_state.last_recharge_mode),
         }
 
     def _build_brake_diagnostics(self, section: SectionContext) -> Dict[str, Any]:

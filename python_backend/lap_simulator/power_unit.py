@@ -20,6 +20,7 @@ from .data_types import (
     PUReliabilityParams,
     PUState,
     SectionContext,
+    SectionKind,
     SectionEvent,
     clamp,
 )
@@ -48,6 +49,19 @@ SECTION_MGUH_FACTORS = {
     "SlowCorner": 0.45,
     "VerySlowCorner": 0.35,
 }
+
+PRIORITY_BASE = {
+    SectionKind.STRAIGHT: 1.0,
+    SectionKind.MEDIUM_STRAIGHT: 0.85,
+    SectionKind.ULTRA_FAST_CORNER: 0.75,
+    SectionKind.FAST_CORNER: 0.65,
+    SectionKind.MEDIUM_CORNER: 0.5,
+    SectionKind.SLOW_CORNER: 0.35,
+    SectionKind.VERY_SLOW_CORNER: 0.25,
+}
+
+PRIMARY_BUCKET_KINDS = {SectionKind.STRAIGHT, SectionKind.MEDIUM_STRAIGHT}
+SECONDARY_BUCKET_KINDS = {SectionKind.ULTRA_FAST_CORNER, SectionKind.FAST_CORNER}
 
 
 # ---------------------------------------------------------------------------
@@ -78,6 +92,7 @@ def generate_output(
     )
 
     map_budget = _map_budget(config, pu_state.active_map)
+    _ensure_bucket_budget(pu_state, map_params, map_budget)
 
     # --- ICE power ---
     ice_wear_factor = 1.0 - pu_state.ice_wear_pct * 0.002
@@ -107,17 +122,28 @@ def generate_output(
     pu_state.ice_power_kw = ice_power_kw
 
     # --- ERS output ---
-    ers_output_raw = map_params.ers_output_kw
-    if driver_intent.ers_deploy_request:
-        ers_output_raw = min(ers_output_raw * 1.2, ERS_MAX_KW)
+    priority_score = _section_priority(section, driver_intent)
+    if not driver_intent.ers_deploy_request:
+        priority_score *= 0.25
+    priority_score = clamp(priority_score, 0.0, 1.0)
+    pu_state.last_priority_score = priority_score
+
+    ers_output_raw = map_params.ers_output_kw * priority_score
+    bucket_key = _resolve_bucket(section)
+    pu_state.last_bucket_key = bucket_key
 
     # Pre-compute MGU-H availability before battery constraints
     mguh_power_kw = _estimate_mguh_power_kw(map_params, section, aero_forces, config)
     dt_safe = max(dt_estimate_s, 0.01)
     mguh_energy_available_mj = (mguh_power_kw * dt_safe) / 1000.0
     direct_bias, es_bias = _resolve_mguh_bias(map_params, pu_state, map_budget)
-    mguh_direct_capacity_mj = mguh_energy_available_mj * direct_bias
-    mguh_es_capacity_mj = mguh_energy_available_mj * es_bias
+    mguh_lap_total = _estimate_mguh_lap_energy(map_params, config)
+    mguh_direct_budget_total = map_budget.get("mguh_direct_mj", mguh_lap_total * direct_bias)
+    mguh_es_budget_total = map_budget.get("mguh_es_mj", mguh_lap_total * es_bias)
+    mguh_direct_remaining_mj = max(mguh_direct_budget_total - pu_state.lap_mguh_direct_mj, 0.0)
+    mguh_es_remaining_mj = max(mguh_es_budget_total - pu_state.lap_mguh_harvest_mj, 0.0)
+    mguh_direct_capacity_mj = min(mguh_energy_available_mj * direct_bias, mguh_direct_remaining_mj)
+    mguh_es_capacity_mj = min(mguh_energy_available_mj * es_bias, mguh_es_remaining_mj)
 
     # ERS derating from temperature
     ers_derating_factor = 1.0
@@ -143,12 +169,29 @@ def generate_output(
     mguh_direct_used_mj = min(mguh_direct_capacity_mj, ers_energy_requested_mj)
     battery_energy_needed_mj = max(ers_energy_requested_mj - mguh_direct_used_mj, 0.0)
 
+    target_soc = map_budget.get("target_soc_end_lap")
+    if target_soc is not None:
+        min_soc_mj = clamp(target_soc, 0.0, 1.0) * ERS_MAX_ENERGY_MJ
+        available_for_deploy = max(pu_state.ers_energy_mj - min_soc_mj, 0.0)
+        battery_energy_needed_mj = min(battery_energy_needed_mj, available_for_deploy + 1e-4)
+
     if deploy_budget is not None:
         deploy_remaining = max(deploy_budget - pu_state.lap_deploy_mj, 0.0)
         if deploy_remaining < battery_energy_needed_mj:
             battery_energy_needed_mj = deploy_remaining
             if deploy_remaining <= 0.0:
                 pu_state.runtime_warnings.append("deploy_limit_hit")
+
+    battery_energy_needed_mj = _apply_bucket_allocation(
+        pu_state,
+        bucket_key,
+        battery_energy_needed_mj,
+        driver_intent,
+    )
+
+    pu_state.last_push_mode = bool(driver_intent.ers_push_mode)
+    pu_state.last_defense_mode = bool(driver_intent.ers_defense_mode)
+    pu_state.last_recharge_mode = bool(driver_intent.ers_recharge_mode)
 
     battery_energy_allocated_mj = min(battery_energy_needed_mj, pu_state.ers_energy_mj)
     if battery_energy_allocated_mj < battery_energy_needed_mj - 1e-5:
@@ -346,3 +389,142 @@ def _resolve_mguh_bias(
 
     total = max(base_direct + base_es, 1e-6)
     return base_direct / total, base_es / total
+
+
+def _estimate_mguh_lap_energy(
+    map_params: EngineMapParams,
+    config: CircuitConfig,
+) -> float:
+    """Coarse estimate of total MGU-H energy produced over a lap (MJ)."""
+    base_kw = max(map_params.mguh_power_kw or 0.0, 0.0)
+    if base_kw <= 0.0:
+        return 0.0
+    lap_time = config.reference_lap_time_s or 90.0
+    avg_section_factor = 0.72  # approximate mean of SECTION_MGUH_FACTORS
+    return clamp((base_kw * avg_section_factor * lap_time) / 1000.0, 0.0, 12.0)
+
+
+def _ensure_bucket_budget(
+    pu_state: PUState,
+    map_params: EngineMapParams,
+    map_budget: Dict[str, float],
+) -> None:
+    if pu_state.bucket_budget_initialized:
+        return
+
+    deploy_total = map_budget.get("deploy_mj_per_lap")
+    if deploy_total is None:
+        deploy_total = min(map_params.ers_output_kw / ERS_MAX_KW * ERS_DEPLOY_LIMIT_MJ_PER_LAP, ERS_DEPLOY_LIMIT_MJ_PER_LAP)
+    deploy_total = clamp(deploy_total, 0.2, ERS_DEPLOY_LIMIT_MJ_PER_LAP)
+
+    primary_pct = map_budget.get("bucket_primary_pct", map_params.bucket_primary_pct)
+    secondary_pct = map_budget.get("bucket_secondary_pct", map_params.bucket_secondary_pct)
+    exit_pct = map_budget.get("bucket_exit_pct", map_params.bucket_exit_pct)
+    pct_sum = max(primary_pct + secondary_pct + exit_pct, 1e-6)
+
+    defense_reserve = map_budget.get("defense_reserve_mj", map_params.defense_reserve_mj)
+    defense_reserve = clamp(defense_reserve, 0.0, deploy_total * 0.6)
+    available = max(deploy_total - defense_reserve, 0.0)
+
+    pu_state.bucket_primary_total_mj = available * (primary_pct / pct_sum)
+    pu_state.bucket_secondary_total_mj = available * (secondary_pct / pct_sum)
+    pu_state.bucket_exit_total_mj = available * (exit_pct / pct_sum)
+    pu_state.defense_reserve_available_mj = defense_reserve
+    pu_state.deploy_budget_total_mj = deploy_total
+    pu_state.bucket_budget_initialized = True
+
+
+def _section_priority(section: SectionContext, intent: DriverIntent) -> float:
+    if intent.ers_recharge_mode:
+        return 0.05
+
+    base = PRIORITY_BASE.get(section.kind, 0.4)
+    length_factor = clamp(section.length_m / 350.0, 0.5, 1.3)
+    score = base * length_factor
+
+    if section.drs_available:
+        score += 0.12
+
+    if intent.ers_push_mode:
+        score = score * 1.25 + 0.1
+    elif intent.ers_defense_mode and section.kind not in PRIMARY_BUCKET_KINDS:
+        score *= 1.1
+
+    return clamp(score, 0.05, 1.2)
+
+
+def _resolve_bucket(section: SectionContext) -> str:
+    if section.kind in PRIMARY_BUCKET_KINDS:
+        return "primary"
+    if section.kind in SECONDARY_BUCKET_KINDS:
+        return "secondary"
+    return "exit"
+
+
+def _apply_bucket_allocation(
+    pu_state: PUState,
+    bucket_key: str,
+    requested_mj: float,
+    intent: DriverIntent,
+) -> float:
+    if requested_mj <= 1e-6:
+        pu_state.last_bucket_allocated_mj = 0.0
+        pu_state.last_defense_used_mj = 0.0
+        return 0.0
+    if intent.ers_recharge_mode:
+        pu_state.last_bucket_allocated_mj = 0.0
+        pu_state.last_defense_used_mj = 0.0
+        return 0.0
+
+    allocated = 0.0
+    remaining_request = requested_mj
+    defense_used = 0.0
+
+    # Defense buffer
+    if intent.ers_defense_mode and pu_state.defense_reserve_available_mj > 1e-6:
+        defense_take = min(remaining_request, pu_state.defense_reserve_available_mj)
+        pu_state.defense_reserve_available_mj -= defense_take
+        allocated += defense_take
+        remaining_request -= defense_take
+        defense_used = defense_take
+
+    consumed = _consume_bucket(pu_state, bucket_key, remaining_request)
+    allocated += consumed
+    remaining_request -= consumed
+
+    if remaining_request > 1e-5 and intent.ers_push_mode:
+        for alt in ("primary", "secondary", "exit"):
+            if remaining_request <= 1e-5 or alt == bucket_key:
+                continue
+            extra = _consume_bucket(pu_state, alt, remaining_request)
+            allocated += extra
+            remaining_request -= extra
+
+    if remaining_request > 1e-5:
+        pu_state.runtime_warnings.append(f"bucket_exhausted:{bucket_key}")
+
+    pu_state.last_bucket_allocated_mj = allocated
+    pu_state.last_defense_used_mj = defense_used
+
+    return allocated
+
+
+def _consume_bucket(pu_state: PUState, bucket_key: str, amount: float) -> float:
+    if amount <= 1e-6:
+        return 0.0
+    total_attr, used_attr = _bucket_attrs(bucket_key)
+    total = getattr(pu_state, total_attr, 0.0)
+    used = getattr(pu_state, used_attr, 0.0)
+    remaining = max(total - used, 0.0)
+    take = min(amount, remaining)
+    if take > 0.0:
+        setattr(pu_state, used_attr, used + take)
+    return take
+
+
+def _bucket_attrs(bucket_key: str) -> Tuple[str, str]:
+    if bucket_key == "primary":
+        return "bucket_primary_total_mj", "bucket_primary_used_mj"
+    if bucket_key == "secondary":
+        return "bucket_secondary_total_mj", "bucket_secondary_used_mj"
+    return "bucket_exit_total_mj", "bucket_exit_used_mj"

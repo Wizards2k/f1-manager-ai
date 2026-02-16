@@ -98,15 +98,63 @@ def compute_inputs(
     elif section.kind == SectionKind.FAST_CORNER:
         brake_bias_adjust = -craft_norm * 0.003  # slightly more rear
 
+    # --- ERS mode heuristics ---
+    ers_mode_raw = (getattr(car_state, "ers_mode", "Neutral") or "Neutral").lower()
+    ers_push_mode = False
+    ers_defense_mode = False
+    ers_recharge_mode = False
+
+    if ers_mode_raw in ("harvest", "recharge", "safety_car"):
+        ers_recharge_mode = True
+    elif ers_mode_raw in ("deploy", "push"):
+        ers_push_mode = True
+    elif ers_mode_raw in ("overtake", "attack"):
+        ers_push_mode = True
+
+    if car_state.overtake_window > 0.55 and car_state.attack_cooldown <= 0:
+        ers_push_mode = True
+
+    if car_state.side_by_side or car_state.defense_reset > 0:
+        ers_defense_mode = True
+
+    battery_mj = car_state.pu.ers_energy_mj
+    if not ers_push_mode and not ers_defense_mode:
+        if battery_mj < 0.4 and ers_mode_raw == "neutral":
+            ers_recharge_mode = True
+
+    if ers_defense_mode and battery_mj > 0.15:
+        ers_recharge_mode = False
+
     # --- ERS deploy request ---
     ers_deploy = False
-    # Deploy on straights when battery is available
-    if section.kind in (SectionKind.STRAIGHT, SectionKind.MEDIUM_STRAIGHT):
-        if car_state.pu.ers_energy_mj > 0.5:
-            ers_deploy = True
-    # Also deploy if attacking
-    if car_state.overtake_window > 0.5 and car_state.pu.ers_energy_mj > 0.3:
-        ers_deploy = True
+    if not ers_recharge_mode and battery_mj > 0.15:
+        high_priority_section = section.kind in (SectionKind.STRAIGHT, SectionKind.MEDIUM_STRAIGHT)
+        push_section = section.kind in (
+            SectionKind.MEDIUM_CORNER,
+            SectionKind.FAST_CORNER,
+            SectionKind.ULTRA_FAST_CORNER,
+        )
+        defense_section = section.kind in (
+            SectionKind.VERY_SLOW_CORNER,
+            SectionKind.SLOW_CORNER,
+            SectionKind.MEDIUM_CORNER,
+        )
+
+        should_request = False
+        if high_priority_section:
+            should_request = True
+        elif ers_push_mode and push_section:
+            should_request = True
+        elif ers_defense_mode and defense_section:
+            should_request = True
+
+        if section.drs_available and battery_mj > 0.2:
+            should_request = True
+
+        if battery_mj < 0.25 and not (ers_push_mode or ers_defense_mode):
+            should_request = False
+
+        ers_deploy = should_request
 
     # --- Tyre save mode ---
     tyre_save = False
@@ -132,6 +180,9 @@ def compute_inputs(
         target_line=target_line,
         brake_bias_adjust=brake_bias_adjust,
         ers_deploy_request=ers_deploy,
+        ers_push_mode=ers_push_mode,
+        ers_defense_mode=ers_defense_mode,
+        ers_recharge_mode=ers_recharge_mode,
         tyre_save_mode=tyre_save,
         fuel_save_mode=fuel_save,
     )

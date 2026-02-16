@@ -216,6 +216,10 @@ def _parse_pu_maps(data: Dict[str, Any]) -> Dict[EngineMapName, EngineMapParams]
             ers_output_kw=vals.get("ers_output_kw", 120),
             mguh_direct_ratio=vals.get("mguh_direct_ratio", 0.0),
             mguh_power_kw=vals.get("mguh_power_kw", vals.get("ers_output_kw", 120) * 0.65),
+            bucket_primary_pct=vals.get("bucket_primary_pct", 0.5),
+            bucket_secondary_pct=vals.get("bucket_secondary_pct", 0.35),
+            bucket_exit_pct=vals.get("bucket_exit_pct", 0.15),
+            defense_reserve_mj=vals.get("defense_reserve_mj", 0.2),
         )
     return result
 

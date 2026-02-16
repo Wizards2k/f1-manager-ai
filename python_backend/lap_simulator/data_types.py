@@ -215,6 +215,10 @@ class EngineMapParams:
     ers_output_kw: float = 120.0
     mguh_direct_ratio: float = 0.0
     mguh_power_kw: float = 0.0
+    bucket_primary_pct: float = 0.5
+    bucket_secondary_pct: float = 0.35
+    bucket_exit_pct: float = 0.15
+    defense_reserve_mj: float = 0.2
 
 
 @dataclass
@@ -265,6 +269,23 @@ class PUState:
     runtime_warnings_prev: List[str] = field(default_factory=list)
     lap_id_current: int = 0
     lap_id_prev: int = 0
+    # ERS map budget (per lap)
+    bucket_primary_total_mj: float = 0.0
+    bucket_secondary_total_mj: float = 0.0
+    bucket_exit_total_mj: float = 0.0
+    bucket_primary_used_mj: float = 0.0
+    bucket_secondary_used_mj: float = 0.0
+    bucket_exit_used_mj: float = 0.0
+    defense_reserve_available_mj: float = 0.0
+    deploy_budget_total_mj: float = 0.0
+    bucket_budget_initialized: bool = False
+    last_priority_score: float = 0.0
+    last_bucket_key: str = "primary"
+    last_bucket_allocated_mj: float = 0.0
+    last_defense_used_mj: float = 0.0
+    last_push_mode: bool = False
+    last_defense_mode: bool = False
+    last_recharge_mode: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -373,6 +394,9 @@ class DriverIntent:
     target_line: str = "optimal"         # optimal / defensive / aggressive
     brake_bias_adjust: float = 0.0       # delta from setup
     ers_deploy_request: bool = False
+    ers_push_mode: bool = False
+    ers_defense_mode: bool = False
+    ers_recharge_mode: bool = False
     tyre_save_mode: bool = False
     fuel_save_mode: bool = False
 
@@ -439,6 +463,7 @@ class CarState:
     pu: PUState = field(default_factory=PUState)
     damage: DamageState = field(default_factory=DamageState)
     driver_mental: DriverMentalState = field(default_factory=DriverMentalState)
+    ers_mode: str = "Neutral"           # Harvest / Neutral / Deploy / Overtake
     # lap tracking
     current_section_idx: int = 0
     section_progress: float = 0.0        # 0-1 within current section
