@@ -164,6 +164,12 @@ class LapSimulator:
         pu_state.bucket_exit_total_mj = 0.0
         pu_state.deploy_budget_total_mj = 0.0
         pu_state.defense_reserve_available_mj = 0.0
+        pu_state.mguh_primary_total_mj = 0.0
+        pu_state.mguh_secondary_total_mj = 0.0
+        pu_state.mguh_exit_total_mj = 0.0
+        pu_state.mguh_primary_used_mj = 0.0
+        pu_state.mguh_secondary_used_mj = 0.0
+        pu_state.mguh_exit_used_mj = 0.0
         pu_state.bucket_budget_initialized = False
 
         section_results: List[SectionResult] = []

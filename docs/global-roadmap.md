@@ -98,14 +98,17 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
      4. ✅ *UI/UX* – PU modal aggiornata con stat cards MGU-H, colonne trace, chip giro. Layout ottimizzato (grid 3 col, tabella scrollabile). Fix lap label (0-based).
      5. ✅ *Documentazione & QA* – `Engine-MGU-H.md` creato, `EngineData2025.md` e `PowerUnit.md` aggiornati. 242/242 test passing.
 
-   - **Punti aperti post-MGU-H (2026-02-15)**
-     1. 🔧 **MGU-H direct drive consumption** – energia MGU-H direct calcolata ma non consumata/limitata. Serve tracciamento budget MGU-H disponibile per sezione.
-     2. 🔧 **ERS deployment strategy** – logica attuale deploya su tutti i rettilinei, svuotando batteria a metà giro anche in STANDARD. Serve allocazione intelligente basata su priorità sezioni, MGU-H direct disponibile, target SOC.
-     3. 🔧 **Brake migration torque split** – profili frenata disponibili ma split regen/idraulico non ancora implementato nel runtime.
-     4. ⏭ **Component integration** – verificare interazione aero/tyres/brakes/driver con nuova logica PU.
+   - **Punti aperti post-MGU-H (2026-02-15, aggiornati 2026-02-16)**
+     1. ✅ **MGU-H direct drive consumption** – budget per bucket implementato nel LapSimulator (`power_unit.py`).
+     2. ✅ **ERS deployment strategy** – refactor completo con priorità sezione, SOC target e telemetria/UI aggiornata.
+     3. ✅ **Brake migration torque split** – split regen/idraulico implementato nel runtime (power_unit.py) con telemetria e warning SOC.
+     4. ✅ **Component integration** – verificata interazione aero/tyres/brakes/driver con la nuova logica PU (SessionBridge 3-lap QA run).
 
    - **Roadmap operativa (rollout incrementale)**
      1. **PU Hybrid V2.1** – implementare consumo MGU-H direct, refactor deployment strategy (section priority, MGU-H awareness), brake migration torque split.
+        - ✅ Consumo MGU-H direct + budget bucketizzato (LapSimulator `power_unit.py`, 2026-02-16).
+        - ✅ Strategia ERS basata su priorità sezioni + SOC target con nuova UI/telemetria ERS Map (Garage V3, 2026-02-16).
+        - ✅ Brake migration torque split (regen vs idraulico) con telemetria e warning SOC (2026-02-16).
      2. **Brake Calibration & Migration** – usare i profili frenata per calcolare coppie regen/idrauliche, loggare warning e visualizzarli (bias/duct/cooling) nella UI.
      3. **Tyre Model V2** – integrare i parametri derivati (temp window, gaussian, graining/blistering) nel simulatore e mostrare trend degrado/termico.
      4. **Aero Package dettagliato** – applicare DF/drag/handling penalty avanzati nel runtime e surface UI con indicatori aero balance/cooling.

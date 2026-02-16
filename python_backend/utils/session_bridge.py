@@ -854,17 +854,25 @@ class SessionBridge:
         exit_pct_cfg = map_budget.get("bucket_exit_pct")
         defense_reserve_cfg = map_budget.get("defense_reserve_mj")
         deploy_budget_cfg = map_budget.get("deploy_mj_per_lap")
+        mguh_direct_cfg_total = map_budget.get("mguh_direct_mj_per_lap")
         bucket_cfg = {"primary": None, "secondary": None, "exit": None}
+        mguh_bucket_cfg = {"primary": None, "secondary": None, "exit": None}
+        pct_sum = max(
+            (primary_pct_cfg or 0.0) + (secondary_pct_cfg or 0.0) + (exit_pct_cfg or 0.0),
+            1e-6,
+        )
         if deploy_budget_cfg is not None and (primary_pct_cfg or secondary_pct_cfg or exit_pct_cfg):
-            pct_sum = max(
-                (primary_pct_cfg or 0.0) + (secondary_pct_cfg or 0.0) + (exit_pct_cfg or 0.0),
-                1e-6,
-            )
             available_cfg = max(deploy_budget_cfg - (defense_reserve_cfg or 0.0), 0.0)
             bucket_cfg = {
                 "primary": available_cfg * ((primary_pct_cfg or 0.0) / pct_sum),
                 "secondary": available_cfg * ((secondary_pct_cfg or 0.0) / pct_sum),
                 "exit": available_cfg * ((exit_pct_cfg or 0.0) / pct_sum),
+            }
+        if mguh_direct_cfg_total is not None and (primary_pct_cfg or secondary_pct_cfg or exit_pct_cfg):
+            mguh_bucket_cfg = {
+                "primary": mguh_direct_cfg_total * ((primary_pct_cfg or 0.0) / pct_sum),
+                "secondary": mguh_direct_cfg_total * ((secondary_pct_cfg or 0.0) / pct_sum),
+                "exit": mguh_direct_cfg_total * ((exit_pct_cfg or 0.0) / pct_sum),
             }
 
         bucket_primary_total = pu_state.bucket_primary_total_mj if pu_state.bucket_primary_total_mj > 1e-6 else (bucket_cfg["primary"] or 0.0)
@@ -872,6 +880,14 @@ class SessionBridge:
         bucket_exit_total = pu_state.bucket_exit_total_mj if pu_state.bucket_exit_total_mj > 1e-6 else (bucket_cfg["exit"] or 0.0)
         deploy_budget_total = pu_state.deploy_budget_total_mj if pu_state.deploy_budget_total_mj > 1e-6 else (deploy_budget_cfg or deploy_limit)
         defense_reserve_available = pu_state.defense_reserve_available_mj if pu_state.defense_reserve_available_mj > 1e-6 else (defense_reserve_cfg or 0.0)
+        mguh_primary_total = pu_state.mguh_primary_total_mj if pu_state.mguh_primary_total_mj > 1e-6 else (mguh_bucket_cfg["primary"] or 0.0)
+        mguh_secondary_total = pu_state.mguh_secondary_total_mj if pu_state.mguh_secondary_total_mj > 1e-6 else (mguh_bucket_cfg["secondary"] or 0.0)
+        mguh_exit_total = pu_state.mguh_exit_total_mj if pu_state.mguh_exit_total_mj > 1e-6 else (mguh_bucket_cfg["exit"] or 0.0)
+        mguh_direct_total = mguh_primary_total + mguh_secondary_total + mguh_exit_total
+        mguh_primary_used = pu_state.mguh_primary_used_mj
+        mguh_secondary_used = pu_state.mguh_secondary_used_mj
+        mguh_exit_used = pu_state.mguh_exit_used_mj
+        mguh_direct_used = mguh_primary_used + mguh_secondary_used + mguh_exit_used
 
         return {
             "map": active_map,
@@ -915,6 +931,21 @@ class SessionBridge:
             "bucket_exit_used_mj": round(pu_state.bucket_exit_used_mj, 4),
             "deploy_budget_total_mj": round(deploy_budget_total, 4),
             "defense_reserve_available_mj": round(defense_reserve_available, 4),
+            "soc_floor_dynamic_pct": round(getattr(pu_state, "soc_floor_dynamic_pct", 0.0), 4),
+            "soc_target_pct": round(getattr(pu_state, "soc_target_pct", 0.0), 4),
+            "mguh_primary_total_mj": round(mguh_primary_total, 4),
+            "mguh_secondary_total_mj": round(mguh_secondary_total, 4),
+            "mguh_exit_total_mj": round(mguh_exit_total, 4),
+            "mguh_primary_used_mj": round(mguh_primary_used, 4),
+            "mguh_secondary_used_mj": round(mguh_secondary_used, 4),
+            "mguh_exit_used_mj": round(mguh_exit_used, 4),
+            "mguh_direct_total_mj": round(mguh_direct_total, 4),
+            "mguh_direct_used_mj": round(mguh_direct_used, 4),
+            "mguh_direct_remaining_mj": round(max(mguh_direct_total - mguh_direct_used, 0.0), 4),
+            "mguh_primary_config_mj": None if mguh_bucket_cfg["primary"] is None else round(mguh_bucket_cfg["primary"], 4),
+            "mguh_secondary_config_mj": None if mguh_bucket_cfg["secondary"] is None else round(mguh_bucket_cfg["secondary"], 4),
+            "mguh_exit_config_mj": None if mguh_bucket_cfg["exit"] is None else round(mguh_bucket_cfg["exit"], 4),
+            "mguh_direct_config_total_mj": None if mguh_direct_cfg_total is None else round(mguh_direct_cfg_total, 4),
             "last_priority_score": round(pu_state.last_priority_score, 3),
             "last_bucket_key": pu_state.last_bucket_key,
             "last_bucket_allocated_mj": round(pu_state.last_bucket_allocated_mj, 4),

@@ -278,6 +278,12 @@ class PUState:
     bucket_exit_used_mj: float = 0.0
     defense_reserve_available_mj: float = 0.0
     deploy_budget_total_mj: float = 0.0
+    mguh_primary_total_mj: float = 0.0
+    mguh_secondary_total_mj: float = 0.0
+    mguh_exit_total_mj: float = 0.0
+    mguh_primary_used_mj: float = 0.0
+    mguh_secondary_used_mj: float = 0.0
+    mguh_exit_used_mj: float = 0.0
     bucket_budget_initialized: bool = False
     last_priority_score: float = 0.0
     last_bucket_key: str = "primary"
@@ -286,6 +292,8 @@ class PUState:
     last_push_mode: bool = False
     last_defense_mode: bool = False
     last_recharge_mode: bool = False
+    soc_floor_dynamic_pct: float = 0.5
+    soc_target_pct: float = 0.55
 
 
 # ---------------------------------------------------------------------------

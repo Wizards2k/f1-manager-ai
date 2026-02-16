@@ -12,6 +12,10 @@ scope: engine simulator v2, segment-based physics, degradation pipelines
 4. Provisioning dati & tooling: pipeline FastF1/telemetry offline, derived JSON per circuito.
 
 ## 2. Deliverable (work in progress)
+- **Aggiornamento 2026-02-16**
+  - ✅ ERS Map Panel rivisto e integrato nel Garage V3 con tutte le telemetrie MGU-H/SOC richieste (propedeutico a D4-D5 per monitoring degradazione).
+  - ✅ Script QA `python_backend/scripts/ers_speed_compare.py` per confronti on/off ERS e raccolta delta velocità (supporta le attività di tuning globale in D2/D4).
+  - ✅ Suite `python_backend/tests/test_calibration_and_telemetry.py` aggiornata alla nuova logica bucket-based (49 test verdi) → base per le validazioni automatiche richieste in D6.
 - [ ] **D0 – Branch & backup V1**: creare `feature/fase-e`, duplicare i file del simulatore attuale come `*_v1` o `legacy/` per permettere il confronto.
 - [ ] **D1 – Dataset & data provider**:
   - **Core script**: continuare a usare `scripts/regenerate_telemetry_sections.py` per produrre i file `python_backend/data/circuits/*_Telemetry.json` (segmenti, heat/bump, DRS, pit delta). Nessuna riscrittura: lo script resta il cuore della pipeline.

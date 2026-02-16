@@ -27,7 +27,7 @@ from lap_simulator.data_types import (
     SectionContext,
     SectionKind,
 )
-from lap_simulator.power_unit import generate_output
+from lap_simulator.power_unit import generate_output, ERS_MAX_ENERGY_MJ
 from models import RaceCar
 from utils.session_bridge import SessionBridge
 
@@ -119,6 +119,90 @@ def test_power_unit_clamps_when_deploy_budget_exhausted():
     assert pu_state.lap_deploy_mj <= 0.0501
     assert pu_state.energy_trace[-1]["deploy_mj"] == pytest.approx(0.0, abs=1e-4)
     assert pu_state.ers_output_kw == pytest.approx(0.0, abs=1e-3)
+
+
+def test_brake_migration_respects_hydraulic_ratio():
+    config = CircuitConfig(
+        pu_maps={
+            EngineMapName.STANDARD: EngineMapParams(
+                name=EngineMapName.STANDARD,
+                torque_ramp=1.0,
+                cooling_share=0.5,
+                ers_output_kw=60.0,
+            )
+        },
+        pu_reliability=PUReliabilityParams(),
+        regen_profile={
+            "base_factor": 0.6,
+            "regen_limit_per_section": 1.0,
+            "potential_mj_per_lap": 5.0,
+        },
+        brake_profile={
+            "hydraulic_vs_regen_ratio": 1.0,  # 50/50 split
+        },
+    )
+    section = SectionContext(
+        section_id="sec_brake",
+        name="Brake Test",
+        kind=SectionKind.SLOW_CORNER,
+        length_m=120.0,
+        v_base_kph=120.0,
+        braking_energy_mj=0.2,
+    )
+    env = EnvContext()
+    driver = DriverIntent(ers_deploy_request=False)
+    aero = SimpleNamespace(cooling_capacity=1.0, kerb_severity=0.0, bump_penalty=0.0)
+    pu_state = PUState(active_map=EngineMapName.STANDARD, ers_energy_mj=2.0)
+
+    generate_output(pu_state, driver, aero, section, env, config, dt_estimate_s=1.0)
+
+    trace = pu_state.energy_trace[-1]
+    regen = trace["harvest_mj"]
+    hydraulic = trace["hydraulic_mj"]
+    assert regen > 0.0
+    assert hydraulic > 0.0
+    assert hydraulic == pytest.approx(regen, abs=1e-4)
+
+
+def test_brake_migration_warns_when_soc_full():
+    config = CircuitConfig(
+        pu_maps={
+            EngineMapName.STANDARD: EngineMapParams(
+                name=EngineMapName.STANDARD,
+                torque_ramp=1.0,
+                cooling_share=0.5,
+                ers_output_kw=60.0,
+            )
+        },
+        pu_reliability=PUReliabilityParams(),
+        regen_profile={
+            "base_factor": 0.5,
+            "regen_limit_per_section": 1.0,
+            "potential_mj_per_lap": 5.0,
+        },
+        brake_profile={
+            "regen_brake_base": 0.7,
+        },
+    )
+    section = SectionContext(
+        section_id="sec_soc",
+        name="SOC Full",
+        kind=SectionKind.SLOW_CORNER,
+        length_m=110.0,
+        v_base_kph=110.0,
+        braking_energy_mj=0.2,
+    )
+    env = EnvContext()
+    driver = DriverIntent(ers_deploy_request=False)
+    aero = SimpleNamespace(cooling_capacity=1.0, kerb_severity=0.0, bump_penalty=0.0)
+    pu_state = PUState(active_map=EngineMapName.STANDARD, ers_energy_mj=ERS_MAX_ENERGY_MJ)
+
+    generate_output(pu_state, driver, aero, section, env, config, dt_estimate_s=1.0)
+
+    trace = pu_state.energy_trace[-1]
+    assert trace["harvest_mj"] <= 0.003
+    assert trace["hydraulic_mj"] == pytest.approx(section.braking_energy_mj, abs=3e-3)
+    assert "brake_migration_disabled_soc" in pu_state.runtime_warnings
 
 
 @pytest.mark.parametrize("circuit_id", _list_circuits())

@@ -15,11 +15,37 @@ from .data_types import (
     DriverIntent,
     DriverMentalState,
     DriverSkills,
+    EngineMapName,
+    EngineMapParams,
     EnvContext,
     SectionContext,
     SectionKind,
     clamp,
 )
+
+
+ERS_MAX_ENERGY_MJ = 4.0
+DEFAULT_MAP_PARAMS = EngineMapParams(name=EngineMapName.STANDARD)
+
+SECTION_PRIORITY_BASE = {
+    SectionKind.STRAIGHT: 1.0,
+    SectionKind.MEDIUM_STRAIGHT: 0.85,
+    SectionKind.ULTRA_FAST_CORNER: 0.75,
+    SectionKind.FAST_CORNER: 0.65,
+    SectionKind.MEDIUM_CORNER: 0.5,
+    SectionKind.SLOW_CORNER: 0.35,
+    SectionKind.VERY_SLOW_CORNER: 0.25,
+}
+
+SECTION_MGUH_FACTORS = {
+    "Straight": 1.00,
+    "MediumStraight": 0.9,
+    "UltraFastCorner": 0.85,
+    "FastCorner": 0.75,
+    "MediumCorner": 0.6,
+    "SlowCorner": 0.45,
+    "VerySlowCorner": 0.35,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -118,43 +144,63 @@ def compute_inputs(
         ers_defense_mode = True
 
     battery_mj = car_state.pu.ers_energy_mj
+    soc_pct = clamp(battery_mj / ERS_MAX_ENERGY_MJ, 0.0, 1.0)
+    lap_sections = max(len(config.sections), 1)
+    lap_progress = clamp(car_state.current_section_idx / lap_sections, 0.0, 1.0)
+    active_map = getattr(car_state.pu, "active_map", EngineMapName.STANDARD) or EngineMapName.STANDARD
+    map_params = config.pu_maps.get(active_map, config.pu_maps.get(EngineMapName.STANDARD, DEFAULT_MAP_PARAMS))
+    if map_params is None:
+        map_params = DEFAULT_MAP_PARAMS
+    map_budget = _lookup_map_budget(config, active_map)
+    target_soc = map_budget.get("target_soc_end_lap")
+    if target_soc is None:
+        target_soc = 0.55
+    target_soc = clamp(target_soc, 0.2, 0.95)
+    reserve_soc = clamp(target_soc + 0.1, 0.25, 0.98)
+    late_soc_floor = clamp(target_soc - 0.12, 0.05, 0.9)
+    dynamic_soc_floor = reserve_soc - (reserve_soc - late_soc_floor) * lap_progress
+
+    if car_state and getattr(car_state, "pu", None):
+        car_state.pu.soc_floor_dynamic_pct = dynamic_soc_floor
+        car_state.pu.soc_target_pct = target_soc
+
     if not ers_push_mode and not ers_defense_mode:
-        if battery_mj < 0.4 and ers_mode_raw == "neutral":
+        if soc_pct < dynamic_soc_floor and lap_progress < 0.92:
             ers_recharge_mode = True
 
-    if ers_defense_mode and battery_mj > 0.15:
+    if ers_defense_mode and soc_pct > 0.18:
+        ers_recharge_mode = False
+
+    if ers_recharge_mode and soc_pct > dynamic_soc_floor + 0.05:
         ers_recharge_mode = False
 
     # --- ERS deploy request ---
     ers_deploy = False
-    if not ers_recharge_mode and battery_mj > 0.15:
-        high_priority_section = section.kind in (SectionKind.STRAIGHT, SectionKind.MEDIUM_STRAIGHT)
-        push_section = section.kind in (
-            SectionKind.MEDIUM_CORNER,
-            SectionKind.FAST_CORNER,
-            SectionKind.ULTRA_FAST_CORNER,
-        )
-        defense_section = section.kind in (
-            SectionKind.VERY_SLOW_CORNER,
-            SectionKind.SLOW_CORNER,
-            SectionKind.MEDIUM_CORNER,
-        )
+    if not ers_recharge_mode and battery_mj > 0.08:
+        priority_score = _estimate_section_priority(section, ers_push_mode, ers_defense_mode)
+        mguh_density = _estimate_mguh_density(map_params, section)
+        threshold = 0.55
+        if ers_push_mode:
+            threshold = 0.32
+        elif ers_defense_mode:
+            threshold = 0.42
+        elif section.drs_available:
+            threshold = 0.48
 
-        should_request = False
-        if high_priority_section:
-            should_request = True
-        elif ers_push_mode and push_section:
-            should_request = True
-        elif ers_defense_mode and defense_section:
-            should_request = True
+        soc_deficit = dynamic_soc_floor - soc_pct
+        if soc_deficit > 0 and not ers_push_mode:
+            threshold += clamp(soc_deficit * 1.2, 0.02, 0.2)
 
-        if section.drs_available and battery_mj > 0.2:
-            should_request = True
+        threshold -= mguh_density * 0.12
+        if lap_progress > 0.85:
+            threshold -= 0.05
+        if soc_pct > 0.85:
+            threshold -= 0.08
 
-        if battery_mj < 0.25 and not (ers_push_mode or ers_defense_mode):
-            should_request = False
-
-        ers_deploy = should_request
+        threshold = clamp(threshold, 0.25, 0.85)
+        ers_deploy = priority_score >= threshold and (soc_pct > 0.12 or ers_push_mode)
+        if ers_deploy and soc_pct < 0.15 and not ers_push_mode:
+            ers_deploy = False
 
     # --- Tyre save mode ---
     tyre_save = False
@@ -186,6 +232,41 @@ def compute_inputs(
         tyre_save_mode=tyre_save,
         fuel_save_mode=fuel_save,
     )
+
+
+def _lookup_map_budget(config: CircuitConfig, active_map: EngineMapName) -> dict:
+    budget = config.ers_budget or {}
+    maps = budget.get("maps") or {}
+    key = active_map.value if isinstance(active_map, EngineMapName) else str(active_map)
+    return maps.get(key, {})
+
+
+def _estimate_section_priority(section: SectionContext, push_mode: bool, defense_mode: bool) -> float:
+    base = SECTION_PRIORITY_BASE.get(section.kind, 0.4)
+    length_factor = clamp(section.length_m / 350.0, 0.5, 1.3)
+    score = base * length_factor
+    if section.drs_available:
+        score += 0.12
+    if push_mode:
+        score = score * 1.2 + 0.1
+    elif defense_mode and section.kind not in (SectionKind.STRAIGHT, SectionKind.MEDIUM_STRAIGHT):
+        score *= 1.05
+    return clamp(score, 0.05, 1.2)
+
+
+def _estimate_mguh_density(map_params: EngineMapParams, section: SectionContext) -> float:
+    base_kw = max(map_params.mguh_power_kw or 0.0, 0.0)
+    factor = SECTION_MGUH_FACTORS.get(section.kind.value, 0.6)
+    dt_ref = section.dt_ref_s or _estimate_section_dt(section)
+    mguh_mj = clamp((base_kw * factor * dt_ref) / 1000.0, 0.0, 0.25)
+    # normalize ~0.15 MJ window
+    return clamp(mguh_mj / 0.15, 0.0, 1.0)
+
+
+def _estimate_section_dt(section: SectionContext) -> float:
+    v_base = max(section.v_base_kph or 180.0, 60.0)
+    v_ms = v_base / 3.6
+    return clamp(section.length_m / max(v_ms, 1.0), 0.25, 6.0)
 
 
 # ---------------------------------------------------------------------------
