@@ -77,3 +77,8 @@ Integrare nel gioco la gestione completa della Power Unit 2025 (limiti 4 MJ depl
 2. Aggiornare `docs/setup-ui-plan.md` con la sezione "PU Control".
 3. Allineare backend (`session_bridge`, `race_update`) per trasportare i nuovi campi `pu_stats`.
 4. Aggiornare `scripts/powerunit_fit.py` per generare `deploy/harvest/mguh_ratio/torque_bias` e allegare preview nel report Markdown.
+
+## 7. Stato implementazione – 2026-02-16
+- ✅ **ERS Map Panel** integrato nel Garage V3 con layout compatto (budget & split + notifiche sovrapposte, trigger cards riviste). La UI ora mostra SOC floor/target, bucket deploy + MGU-H e warning runtime.
+- ✅ **Script `ers_speed_compare.py`** aggiunto sotto `python_backend/scripts/` per confrontare Monza (o qualsiasi circuito) con ERS attivo vs disattivato. Output: tempi giro, velocità media/picco e delta per sezione.
+- ✅ **Test coerenza PU/telemetria**: `python_backend/tests/test_calibration_and_telemetry.py` aggiornato per riflettere la nuova logica dei bucket ERS (warning `bucket_exhausted:*`). Suite completa `pytest` → 49 test passati.

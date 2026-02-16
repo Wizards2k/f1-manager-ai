@@ -2129,7 +2129,11 @@ timeline-toggle-btn:hover {
     flex-direction: column;
     gap: 12px;
     max-height: calc(100vh - 80px);
-    overflow-y: auto;
+    overflow: hidden;
+}
+
+.pu-modal-body-v3::-webkit-scrollbar {
+    display: none;
 }
 
 .pu-stats-grid-v3 {

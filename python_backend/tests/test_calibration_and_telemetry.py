@@ -103,14 +103,20 @@ def test_power_unit_clamps_when_deploy_budget_exhausted():
     aero = SimpleNamespace(cooling_capacity=1.0, kerb_severity=0.0, bump_penalty=0.0)
     pu_state = PUState(active_map=EngineMapName.QUALY, ers_energy_mj=0.2)
 
-    # First section should consume entire budget without warning
+    # First section consumes the requested energy (bounded by per-bucket share)
     generate_output(pu_state, driver, aero, section, env, config, dt_estimate_s=1.0)
-    assert pu_state.lap_deploy_mj == pytest.approx(0.05, abs=1e-4)
+    assert 0.0 < pu_state.lap_deploy_mj < 0.05
     assert "deploy_limit_hit" not in pu_state.runtime_warnings
 
-    # Second section forces clamp at zero deploy and raises warning
-    generate_output(pu_state, driver, aero, section, env, config, dt_estimate_s=1.0)
-    assert "deploy_limit_hit" in pu_state.runtime_warnings
+    # Keep deploying until bucket exhaustion warning appears
+    for _ in range(20):
+        generate_output(pu_state, driver, aero, section, env, config, dt_estimate_s=1.0)
+        if any(w.startswith("bucket_exhausted") for w in pu_state.runtime_warnings):
+            break
+    else:
+        pytest.fail("bucket_exhausted warning not raised after exhausting budget")
+
+    assert pu_state.lap_deploy_mj <= 0.0501
     assert pu_state.energy_trace[-1]["deploy_mj"] == pytest.approx(0.0, abs=1e-4)
     assert pu_state.ers_output_kw == pytest.approx(0.0, abs=1e-3)
 

@@ -185,45 +185,42 @@ export class PlayerGarageV3 {
         const style = document.createElement('style');
         style.id = 'garage-ers-map-styles';
         style.textContent = `
-            .ers-map-panel { color: #f5f5f5; font-family: 'Space Grotesk', 'Inter', system-ui; }
-            .ers-meta-row { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
-            .ers-meta-row .meta { font-size: 11px; letter-spacing: 0.08em; color: #96a0b3; text-transform: uppercase; }
-            .ers-preset-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 16px; }
-            .ers-preset-chip { border-radius: 12px; padding: 8px 10px; font-size: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.05); cursor: pointer; }
-            .ers-preset-chip.active { border-color: rgba(255,210,76,0.8); background: rgba(255,210,76,0.2); color: #ffd24c; }
-            .ers-preset-chip:disabled { opacity: 0.4; cursor: not-allowed; }
-            .ers-section-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
-            .ers-section-card { background: rgba(255,255,255,0.03); border-radius: 16px; padding: 14px; }
-            .ers-section-card h3 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #96a0b3; }
-            .ers-slider-row { margin-bottom: 12px; }
-            .ers-slider-row label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: #cfd6e6; }
-            .ers-slider-track { width: 100%; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08); position: relative; overflow: hidden; }
-            .ers-slider-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 999px; background: linear-gradient(90deg,#ffd24c,#ff8f3d); }
-            .ers-bucket-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
-            .ers-bucket-card { background: rgba(255,255,255,0.04); border-radius: 14px; padding: 12px; font-size: 12px; }
-            .ers-bucket-card strong { display: block; font-size: 13px; margin-bottom: 4px; }
-            .ers-bucket-bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,0.07); overflow: hidden; margin-top: 6px; }
-            .ers-bucket-bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg,#ffd24c,#ff8f3d); }
-            .ers-trigger-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 12px; }
-            .ers-trigger-card { background: rgba(255,255,255,0.03); border-radius: 14px; padding: 10px; font-size: 12px; }
-            .ers-trigger-card strong { display: block; font-size: 12px; letter-spacing: 0.06em; color: #96a0b3; text-transform: uppercase; margin-bottom: 4px; }
-            .ers-warning-box { margin-top: 14px; font-size: 12px; color: #f9b49f; }
-            .ers-warning-box ul { margin: 6px 0 0; padding-left: 18px; }
-            .ers-preview { margin-top: 16px; background: rgba(255,255,255,0.03); border-radius: 18px; padding: 16px; }
-            .ers-preview h4 { margin: 0 0 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #96a0b3; }
-            .ers-preview-bars { display: flex; align-items: flex-end; gap: 10px; height: 110px; margin-bottom: 12px; }
-            .ers-preview-bar { flex: 1; background: linear-gradient(180deg,#ffd24c,#ff8f3d); border-radius: 12px 12px 6px 6px; position: relative; }
-            .ers-preview-bar span { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #fff; }
-            .ers-preview-bar::after { content: attr(data-label); position: absolute; bottom: -16px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #96a0b3; }
-            .ers-gauge { display: flex; align-items: center; gap: 10px; font-size: 11px; }
-            .ers-gauge-track { flex: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.08); position: relative; overflow: hidden; }
-            .ers-gauge-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 999px; background: linear-gradient(90deg,#55f3c3,#1cb0ff); }
-            .ers-cta-row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
-            .ers-cta-row button { border: none; border-radius: 999px; padding: 9px 18px; font-size: 12px; font-weight: 600; cursor: pointer; }
-            .ers-cta-row .ghost { background: rgba(255,255,255,0.08); color: #f4f6fb; }
-            .ers-cta-row .primary { background: #ffd24c; color: #14151a; }
-            .ers-cta-row button:disabled { opacity: 0.4; cursor: not-allowed; }
-            .ers-locked-banner { margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.05); color: #f4c48a; font-size: 12px; }
+            .ers-map-panel { color: #f5f5f5; font-family: 'Space Grotesk', 'Inter', system-ui; background: #10131a; border-radius: 24px; padding: 14px; max-width: 720px; }
+            .ers-meta-row { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 12px; align-items: center; }
+            .ers-meta-row .meta { font-size: 11px; letter-spacing: 0.1em; color: #8c95ad; text-transform: uppercase; }
+            .ers-soc-chip { background: #1c2230; border-radius: 999px; padding: 5px 12px; font-size: 12px; letter-spacing: 0.08em; }
+            .ers-section-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+            .ers-column-stack { display: flex; flex-direction: column; gap: 8px; }
+            .ers-section-card { background: #0b0e15; border-radius: 18px; padding: 12px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02); }
+            .ers-section-card h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #7f8aa6; }
+            .ers-metric-row { margin-bottom: 6px; font-size: 13px; }
+            .ers-metric-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+            .ers-metric-row span { color: #8f9ab6; }
+            .ers-metric-row strong { font-size: 14px; }
+            .ers-meter { margin-top: 2px; height: 4px; border-radius: 999px; background: #1f2430; overflow: hidden; position: relative; }
+            .ers-meter span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg,#ffd24c,#ff8f3d); }
+            .ers-meter.secondary span { background: linear-gradient(90deg,#5cedbc,#1cb0ff); }
+            .ers-inline-metrics { display: flex; gap: 12px; margin-top: 8px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #8f9ab6; }
+            .ers-inline-metrics strong { display: block; font-size: 18px; color: #fdfdfd; letter-spacing: 0; }
+            .ers-bucket-list { display: flex; flex-direction: column; gap: 12px; }
+            .ers-bucket-card { background: #111623; border-radius: 16px; padding: 12px 14px; }
+            .ers-bucket-card strong { display: block; font-size: 15px; }
+            .ers-bucket-card small { color: #7c87a0; letter-spacing: 0.08em; text-transform: uppercase; font-size: 10px; }
+            .ers-bucket-values { font-size: 12px; color: #9aa5c1; margin-top: 8px; display: flex; justify-content: space-between; gap: 12px; }
+            .ers-bucket-bars { display: flex; gap: 6px; margin-top: 8px; }
+            .ers-bucket-bars span { flex: 1; height: 6px; border-radius: 999px; }
+            .ers-bucket-bars .deploy { background: linear-gradient(90deg,#ffd24c,#ff8f3d); }
+            .ers-bucket-bars .mguh { background: linear-gradient(90deg,#5cedbc,#1cb0ff); }
+            .ers-trigger-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+            .ers-trigger-card { background: #0c1019; border-radius: 16px; padding: 10px; font-size: 12px; }
+            .ers-trigger-card small { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #79819c; }
+            .ers-trigger-card strong { display: block; font-size: 16px; margin: 2px 0; }
+            .ers-trigger-card span { color: #7f879f; }
+            .ers-warning-box { background: #121725; border-radius: 16px; padding: 14px 16px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02); }
+            .ers-warning-title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7f8aa6; margin-bottom: 6px; }
+            .ers-warning-box ul { margin: 0; padding-left: 18px; color: #f7bca3; font-size: 12px; }
+            .ers-warning-box li { margin-bottom: 4px; }
+            .ers-warning-empty { font-size: 12px; color: #9cd7c5; }
         `;
         document.head.appendChild(style);
         this._ersStylesInjected = true;
@@ -272,51 +269,74 @@ export class PlayerGarageV3 {
         if (!puStats || !Object.keys(puStats).length) {
             return '<div class="ers-map-panel">No ERS telemetry available yet.</div>';
         }
+        const formatMJ = (value, digits = 2) => (typeof value === 'number' && !Number.isNaN(value) ? `${value.toFixed(digits)} MJ` : '-- MJ');
+        const renderMeter = (used, total, variant = 'primary') => {
+            const pct = total > 1e-6 ? Math.min((used / total) * 100, 100) : 0;
+            return `<div class="ers-meter ${variant === 'secondary' ? 'secondary' : ''}"><span style="width:${pct}%"></span></div>`;
+        };
+        const resolveBucketTotal = (runtime, config) => (runtime > 1e-5 ? runtime : (config ?? 0));
+
         const socPct = typeof puStats.soc_pct === 'number' ? Math.round(puStats.soc_pct) : null;
         const lapDeploy = typeof puStats.lap_deploy_mj === 'number' ? puStats.lap_deploy_mj : 0;
         const mapName = puStats.map || 'STANDARD';
-        const deployBudget = this.resolveBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap, puStats.deploy_limit_mj || 0);
+        const deployBudgetLimit = puStats.deploy_limit_mj || 4.0;
+        const deployBudget = this.resolveBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap, deployBudgetLimit);
         const deployBudgetConfig = typeof puStats.deploy_mj_per_lap === 'number' ? puStats.deploy_mj_per_lap : null;
-        const targetSoc = typeof puStats.target_soc_end_lap === 'number' ? puStats.target_soc_end_lap : null;
         const defenseReserve = this.resolveBudgetValue(puStats.defense_reserve_available_mj, puStats.defense_reserve_mj_config, 0);
+        const lastAllocation = typeof puStats.last_bucket_allocated_mj === 'number' ? puStats.last_bucket_allocated_mj : 0;
         const defenseReservePct = deployBudget > 1e-6 ? `${Math.round((defenseReserve / deployBudget) * 100)}%` : null;
-        const primary = {
-            totalRuntime: puStats.bucket_primary_total_mj ?? 0,
-            totalConfig: puStats.bucket_primary_config_mj ?? null,
-            used: puStats.bucket_primary_used_mj ?? 0,
-            pctConfig: puStats.bucket_primary_pct,
-        };
-        const secondary = {
-            totalRuntime: puStats.bucket_secondary_total_mj ?? 0,
-            totalConfig: puStats.bucket_secondary_config_mj ?? null,
-            used: puStats.bucket_secondary_used_mj ?? 0,
-            pctConfig: puStats.bucket_secondary_pct,
-        };
-        const exitBucket = {
-            totalRuntime: puStats.bucket_exit_total_mj ?? 0,
-            totalConfig: puStats.bucket_exit_config_mj ?? null,
-            used: puStats.bucket_exit_used_mj ?? 0,
-            pctConfig: puStats.bucket_exit_pct,
-        };
-        const bucketEntries = [
-            { key: 'primary', label: 'Main straights', description: 'Primary bucket', ...primary },
-            { key: 'secondary', label: 'Secondary', description: 'Medium corners', ...secondary },
-            { key: 'exit', label: 'Corner exits', description: 'Acceleration zones', ...exitBucket },
-        ].map(entry => {
-            const targetTotal = entry.totalRuntime > 1e-5 ? entry.totalRuntime : (entry.totalConfig ?? 0);
-            const usedPct = targetTotal > 1e-5 ? (entry.used / targetTotal) * 100 : 0;
+        const socFloorDynamic = typeof puStats.soc_floor_dynamic_pct === 'number' && puStats.soc_floor_dynamic_pct > 0 ? Math.round(puStats.soc_floor_dynamic_pct * 100) : null;
+        const socTargetPct = typeof puStats.soc_target_pct === 'number' && puStats.soc_target_pct > 0 ? Math.round(puStats.soc_target_pct * 100) : (typeof puStats.target_soc_end_lap === 'number' ? Math.round(puStats.target_soc_end_lap * 100) : null);
+
+        const bucketData = (key, label, subtitle) => {
+            const deployRuntime = puStats[`bucket_${key}_total_mj`] ?? 0;
+            const deployConfig = puStats[`bucket_${key}_config_mj`];
+            const deployUsed = puStats[`bucket_${key}_used_mj`] ?? 0;
+            const mguhRuntime = puStats[`mguh_${key}_total_mj`] ?? 0;
+            const mguhConfig = puStats[`mguh_${key}_config_mj`];
+            const mguhUsed = puStats[`mguh_${key}_used_mj`] ?? 0;
+            const deployTotal = resolveBucketTotal(deployRuntime, deployConfig);
+            const mguhTotal = resolveBucketTotal(mguhRuntime, mguhConfig);
+            const pctLabel = this.formatPercentage(puStats[`bucket_${key}_pct`]);
             return {
-                ...entry,
-                targetTotal,
-                pctLabel: this.formatPercentage(entry.pctConfig),
-                usedPct,
+                key,
+                label,
+                subtitle: `${subtitle}${pctLabel ? ` · ${pctLabel}` : ''}`,
+                deployTotal,
+                deployUsed,
+                mguhTotal,
+                mguhUsed,
             };
-        });
-        const bucketCards = bucketEntries.map(entry => this.buildErsBucketCard(entry)).join('');
+        };
+
+        const bucketEntries = [
+            bucketData('primary', 'Main straights', 'Primary bucket'),
+            bucketData('secondary', 'Secondary', 'Medium corners'),
+            bucketData('exit', 'Corner exits', 'Acceleration zones'),
+        ];
+
+        const bucketCards = bucketEntries.map(entry => {
+            const deployLine = `${formatMJ(entry.deployUsed)} / ${formatMJ(entry.deployTotal)} Deploy`;
+            const mguhLine = `${formatMJ(entry.mguhUsed)} / ${formatMJ(entry.mguhTotal)} MGU-H`;
+            return `
+                <div class="ers-bucket-card">
+                    <strong>${entry.label}</strong>
+                    <small>${entry.subtitle}</small>
+                    <div class="ers-bucket-values">
+                        <span>${deployLine}</span>
+                        <span>${mguhLine}</span>
+                    </div>
+                    <div class="ers-bucket-bars">
+                        <span class="deploy" style="width:${entry.deployTotal > 1e-5 ? Math.min((entry.deployUsed / entry.deployTotal) * 100, 100) : 0}%"></span>
+                        <span class="mguh" style="width:${entry.mguhTotal > 1e-5 ? Math.min((entry.mguhUsed / entry.mguhTotal) * 100, 100) : 0}%"></span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
         const lastPriority = typeof puStats.last_priority_score === 'number' ? puStats.last_priority_score : 0;
         const lastBucket = (puStats.last_bucket_key || 'primary').replace(/_/g, ' ');
         const lastDefenseUsed = typeof puStats.last_defense_used_mj === 'number' ? puStats.last_defense_used_mj : 0;
-        const lastAllocated = typeof puStats.last_bucket_allocated_mj === 'number' ? puStats.last_bucket_allocated_mj : 0;
         const playerErsMode = (car?.player_config?.ers_mode || car?.ers_mode || 'Neutral').toLowerCase();
         const inferredMode = (() => {
             if (playerErsMode) return playerErsMode;
@@ -324,93 +344,118 @@ export class PlayerGarageV3 {
             if (puStats.last_push_mode) return 'overtake';
             return 'deploy';
         })();
-        const ersPresetDefs = [
-            { key: 'harvest', label: 'Harvest' },
-            { key: 'neutral', label: 'Neutral (Default)' },
-            { key: 'deploy', label: 'Deploy' },
-            { key: 'overtake', label: 'Overtake' },
-        ];
-        const presetChips = ersPresetDefs.map(preset => {
-            const active = inferredMode === preset.key;
-            return `<button type="button" class="ers-preset-chip ${active ? 'active' : ''}">${preset.label}</button>`;
-        }).join('');
-        const warnings = puStats.warnings_runtime || [];
-        const warningBlock = warnings.length
-            ? `<div class="ers-warning-box"><strong>Runtime warnings</strong><ul>${warnings.map(w => `<li>${this.formatErsWarning(w)}</li>`).join('')}</ul></div>`
-            : '<div class="ers-warning-box" style="color:#9cd7c5;">No runtime warnings.</div>';
-        const previewBars = bucketEntries.map(entry => {
-            const height = entry.targetTotal > 1e-3 ? Math.min((entry.used / (entry.targetTotal || 1)) * 80 + 15, 100) : 12;
-            const pctLabel = entry.targetTotal > 1e-3 ? `${Math.round(entry.usedPct)}%` : '';
-            return `<div class="ers-preview-bar" style="height:${height}%" data-label="${entry.label}"><span>${entry.used.toFixed(2)} MJ${pctLabel ? `<br/><small>${pctLabel}</small>` : ''}</span></div>`;
-        }).join('');
-        const gaugePct = (() => {
-            if (targetSoc && socPct !== null) {
-                return Math.max(Math.min((socPct / targetSoc) * 100, 100), 0);
-            }
-            return socPct !== null ? Math.max(Math.min(socPct, 100), 0) : 0;
-        })();
         const lastIntent = puStats.last_recharge_mode ? 'Recharge' : (puStats.last_push_mode ? 'Push' : (puStats.last_defense_mode ? 'Defense' : 'Standard'));
-        const deployBudgetLabel = (deployBudgetConfig && Math.abs(deployBudget - deployBudgetConfig) > 1e-3)
-            ? `${deployBudget.toFixed(2)} MJ (cfg ${deployBudgetConfig.toFixed(2)} MJ)`
-            : `${deployBudget.toFixed(2)} MJ`;
-        const defenseReserveLabel = defenseReservePct
-            ? `${defenseReserve.toFixed(2)} MJ (${defenseReservePct})`
-            : `${defenseReserve.toFixed(2)} MJ`;
-        const lastAllocationPct = deployBudget > 1e-5 ? `${Math.round((lastAllocated / deployBudget) * 100)}%` : null;
+        const mguhDirectTotal = this.resolveBudgetValue(puStats.mguh_direct_total_mj, puStats.mguh_direct_config_total_mj, 0);
+        const mguhDirectUsed = typeof puStats.mguh_direct_used_mj === 'number' ? puStats.mguh_direct_used_mj : 0;
+        const mguhDirectRemaining = typeof puStats.mguh_direct_remaining_mj === 'number' ? puStats.mguh_direct_remaining_mj : Math.max(mguhDirectTotal - mguhDirectUsed, 0);
+        const mguhUsageRatio = mguhDirectTotal > 1e-5 ? mguhDirectUsed / mguhDirectTotal : 0;
+        const mguhRiskLabel = mguhUsageRatio > 0.85 ? 'Clip risk high' : (mguhUsageRatio > 0.65 ? 'Clip risk medium' : 'Clip risk low');
+
+        const warnings = puStats.warnings_runtime || [];
+        const warningPanel = `
+            <div class="ers-warning-box">
+                <div class="ers-warning-title">Notifications</div>
+                ${warnings.length
+                    ? `<ul>${warnings.map(w => `<li>${this.formatErsWarning(w)}</li>`).join('')}</ul>`
+                    : '<div class="ers-warning-empty">No runtime warnings.</div>'}
+            </div>
+        `;
+
+        const deployMeter = renderMeter(deployBudget, deployBudgetLimit);
+        const defenseMeter = renderMeter(defenseReserve, deployBudget || 1, 'secondary');
+        const lastMeter = renderMeter(lastAllocation, Math.max(deployBudget, 0.0001));
+
         return `
             <div class="ers-map-panel">
                 <div class="ers-meta-row">
                     <div>
                         <div class="meta">ERS MAP</div>
-                        <div style="font-size:18px;">${mapName}</div>
+                        <div style="font-size:18px;">${mapName} · ${inferredMode.charAt(0).toUpperCase() + inferredMode.slice(1)}</div>
                     </div>
-                    <div class="meta">SOC ${socPct ?? '--'}% · Deploy ${lapDeploy.toFixed(2)} MJ</div>
+                    <div class="ers-soc-chip">SOC ${socPct ?? '--'}% · Deploy ${lapDeploy.toFixed(2)} MJ</div>
                 </div>
-                <div class="ers-preset-row">${presetChips}</div>
                 <div class="ers-section-grid">
-                    <div class="ers-section-card">
-                        <h3>Budget & split</h3>
-                        <div class="ers-slider-row">
-                            <label><span>Deploy budget</span><span>${deployBudgetLabel}</span></label>
-                            <div class="ers-slider-track"><div class="ers-slider-fill" style="width:${Math.min((deployBudget / (puStats.deploy_limit_mj || deployBudget || 1)) * 100, 100)}%"></div></div>
+                    <div class="ers-column-stack">
+                        <div class="ers-section-card">
+                            <h3>Budget & split</h3>
+                            <div class="ers-metric-row">
+                                <div class="ers-metric-header">
+                                    <span>Deploy budget</span>
+                                    <strong>${deployBudgetLabel(deployBudget, deployBudgetConfig)}</strong>
+                                </div>
+                                ${deployMeter}
+                            </div>
+                            <div class="ers-metric-row">
+                                <div class="ers-metric-header">
+                                    <span>Defense reserve</span>
+                                    <strong>${defenseReserveLabel(defenseReserve, defenseReservePct)}</strong>
+                                </div>
+                                ${defenseMeter}
+                            </div>
+                            <div class="ers-metric-row">
+                                <div class="ers-metric-header">
+                                    <span>Last allocation</span>
+                                    <strong>${formatMJ(lastAllocation)}</strong>
+                                </div>
+                                ${lastMeter}
+                            </div>
+                            <div class="ers-inline-metrics">
+                                <div>
+                                    <span>SOC floor</span>
+                                    <strong>${socFloorDynamic != null ? `${socFloorDynamic}%` : '--'}</strong>
+                                </div>
+                                <div>
+                                    <span>Target end lap</span>
+                                    <strong>${socTargetPct != null ? `${socTargetPct}%` : '--'}</strong>
+                                </div>
+                            </div>
                         </div>
-                        <div class="ers-slider-row">
-                            <label><span>Defense reserve</span><span>${defenseReserveLabel}</span></label>
-                            <div class="ers-slider-track"><div class="ers-slider-fill" style="width:${Math.min((defenseReserve / 0.5) * 100, 100)}%"></div></div>
-                        </div>
-                        <div class="ers-slider-row">
-                            <label><span>Last allocation</span><span>${lastAllocated.toFixed(2)} MJ${lastAllocationPct ? ` (${lastAllocationPct})` : ''}</span></label>
-                            <div class="ers-slider-track"><div class="ers-slider-fill" style="width:${Math.min((lastAllocated / Math.max(deployBudget, 0.0001)) * 100, 100)}%"></div></div>
-                        </div>
+                        ${warningPanel}
                     </div>
                     <div class="ers-section-card">
                         <h3>Priority buckets</h3>
-                        <div class="ers-bucket-grid">${bucketCards}</div>
+                        <div class="ers-bucket-list">${bucketCards}</div>
                     </div>
                 </div>
-                <div class="ers-section-card" style="margin-top:14px;">
+                <div class="ers-section-card" style="margin-top:8px;">
                     <h3>Triggers & context</h3>
-                    <div class="ers-trigger-grid">
+                    <div class="ers-trigger-row">
                         <div class="ers-trigger-card">
-                            <strong>Priority score</strong>
-                            <div style="font-size:18px;">${(lastPriority * 100).toFixed(0)}%</div>
-                            <div style="font-size:11px; color:#7c889c;">Active bucket · ${lastBucket}</div>
+                            <small>Priority score</small>
+                            <strong>${(lastPriority * 100).toFixed(0)}%</strong>
+                            <span>Active bucket · ${lastBucket}</span>
                         </div>
                         <div class="ers-trigger-card">
-                            <strong>Defense buffer</strong>
-                            <div style="font-size:18px;">${defenseReserve.toFixed(2)} MJ</div>
-                            <div style="font-size:11px; color:#7c889c;">Last used ${lastDefenseUsed.toFixed(2)} MJ</div>
+                            <small>Defense buffer</small>
+                            <strong>${formatMJ(defenseReserve)}</strong>
+                            <span>Last used ${formatMJ(lastDefenseUsed)}</span>
                         </div>
                         <div class="ers-trigger-card">
-                            <strong>Driver intent</strong>
-                            <div style="font-size:18px;">${lastIntent}</div>
-                            <div style="font-size:11px; color:#7c889c;">Car state · ${this.getStateDisplay(this.getCarState(car))}</div>
+                            <small>MGU-H direct</small>
+                            <strong>${formatMJ(mguhDirectUsed)} / ${formatMJ(mguhDirectTotal)}</strong>
+                            <span>${mguhRiskLabel} · Rem ${formatMJ(mguhDirectRemaining)}</span>
+                        </div>
+                        <div class="ers-trigger-card">
+                            <small>Driver intent</small>
+                            <strong>${lastIntent}</strong>
+                            <span>ERS mode · ${inferredMode}</span>
                         </div>
                     </div>
                 </div>
-                ${warningBlock}
             </div>
         `;
+
+        function deployBudgetLabel(runtimeValue, configValue) {
+            if (configValue && Math.abs(runtimeValue - configValue) > 1e-3) {
+                return `${runtimeValue.toFixed(2)} MJ (cfg ${configValue.toFixed(2)} MJ)`;
+            }
+            return `${runtimeValue.toFixed(2)} MJ`;
+        }
+
+        function defenseReserveLabel(value, pctLabel) {
+            const base = `${value.toFixed(2)} MJ`;
+            return pctLabel ? `${base} (${pctLabel})` : base;
+        }
     }
 
     buildLapUsageChip({ label, lapIndex, deploy, harvest, deployBudget, harvestBudget, deployLimit, harvestLimit, mapName }) {

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ERS Map Panel – Proposals</title>
+  <style>
+    body { font-family: "Söhne", "Inter", sans-serif; background:#0f1117; color:#f4f6fb; margin:0; padding:32px; display:flex; gap:32px; flex-wrap:wrap; }
+    h2 { margin:0 0 4px; }
+    h3 { margin:0 0 8px; font-size:12px; letter-spacing:0.06em; color:#9da7bb; text-transform:uppercase; }
+    .ers-panel { background:#1a1d24; border-radius:24px; padding:24px; width:680px; box-shadow:0 20px 60px rgba(0,0,0,0.35); }
+    .ers-panel + .ers-panel { margin-left:0; }
+    .label { font-size:11px; letter-spacing:0.12em; color:#8f98af; text-transform:uppercase; }
+    .soc-chip, .badge { background:#272c37; border-radius:999px; padding:6px 12px; font-size:12px; }
+    .ers-grid { display:flex; gap:16px; flex-wrap:wrap; }
+    .card { background:#11141b; border-radius:18px; padding:18px; flex:1; min-width:280px; }
+    .card.small { min-width:240px; }
+    .meter { height:8px; border-radius:999px; background:#2a2e3a; margin-top:6px; overflow:hidden; }
+    .meter span { display:block; height:100%; background:linear-gradient(90deg,#ffd24c,#ff8f3d); border-radius:999px; }
+    .meter.is-secondary span { background:linear-gradient(90deg,#59f0c0,#1fb4ff); }
+    .meter-row { font-size:13px; margin-bottom:12px; }
+    .meter-row span { color:#9da7bb; }
+    .meter-row strong { float:right; }
+    .meter-row.compact { display:flex; justify-content:space-between; align-items:center; }
+    .mini-grid { display:flex; gap:12px; margin-top:8px; font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:#9da7bb; }
+    .mini-grid strong { display:block; font-size:18px; color:#fefefe; letter-spacing:0; }
+    .bucket { background:#151821; border-radius:14px; padding:12px; margin-bottom:10px; }
+    .bucket small { color:#768099; text-transform:uppercase; letter-spacing:0.06em; font-size:11px; }
+    .bucket-values { font-size:12px; margin-top:6px; color:#9da7bb; display:flex; justify-content:space-between; }
+    .dual-bar { display:flex; gap:4px; margin-top:8px; height:6px; }
+    .dual-bar span { flex:1; border-radius:999px; }
+    .dual-bar .deploy { background:linear-gradient(90deg,#ffd24c,#ff8f3d); }
+    .dual-bar .mguh { background:linear-gradient(90deg,#59f0c0,#1fb4ff); }
+    .chip-row { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
+    .chip { background:#131722; border-radius:16px; padding:12px; font-size:12px; }
+    .chip small { color:#6f7891; letter-spacing:0.08em; text-transform:uppercase; font-size:10px; }
+    .chip strong { display:block; font-size:18px; margin:2px 0; }
+    .chip span { color:#8892aa; }
+    .panel-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
+    .eyebrow { text-transform:uppercase; font-size:11px; letter-spacing:0.12em; color:#909bb4; margin:0; }
+    .badges { display:flex; gap:8px; }
+    .panel-body { display:flex; gap:16px; flex-wrap:wrap; }
+    .column { flex:1; min-width:260px; display:flex; flex-direction:column; gap:12px; }
+    .stat-list { list-style:none; padding:0; margin:0; font-size:13px; }
+    .stat-list li { display:flex; justify-content:space-between; margin-bottom:10px; }
+    .stat-list em { color:#8b94aa; font-style:normal; margin-left:6px; }
+    .targets { display:flex; justify-content:space-between; }
+    .targets div { background:#191d27; border-radius:12px; padding:12px; flex:1; text-align:center; margin-right:8px; }
+    .targets div:last-child { margin-right:0; }
+    .targets small { display:block; color:#8b94aa; text-transform:uppercase; font-size:10px; letter-spacing:0.08em; }
+    .targets strong { font-size:20px; }
+    .warnings { display:flex; flex-wrap:wrap; gap:8px; }
+    .pill { border-radius:999px; padding:6px 12px; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; }
+    .pill.ok { background:rgba(92,237,188,0.18); color:#5cedbc; }
+    .pill.warn { background:rgba(255,164,102,0.16); color:#ffb47f; }
+    .pill.ghost { background:#1f2532; color:#9aa4bb; }
+    .bucket-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .bucket-table th, .bucket-table td { padding:10px; border-bottom:1px solid rgba(255,255,255,0.05); text-align:left; }
+    .bucket-table thead { color:#8c95ad; text-transform:uppercase; letter-spacing:0.08em; font-size:10px; }
+    .timeline { margin-top:12px; }
+    .timeline-row { display:flex; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+    .timeline-row:last-child { border-bottom:none; }
+    .dot { width:10px; height:10px; border-radius:50%; }
+    .dot.primary { background:#ffd24c; }
+    .dot.secondary { background:#59f0c0; }
+    .timeline-row strong { font-size:14px; }
+    .timeline-row p { margin:2px 0 0; font-size:12px; color:#909ab6; }
+    .timeline-row .value { font-weight:600; font-size:14px; }
+  </style>
+</head>
+<body>
+  <!-- Proposal A -->
+  <div class="ers-panel ers-proposal-a">
+    <header class="ers-header">
+      <div>
+        <div class="label">ERS Map</div>
+        <h2>STANDARD · Neutral</h2>
+      </div>
+      <div class="soc-chip">SOC 73% · Deploy 1.92 MJ</div>
+    </header>
+
+    <section class="ers-grid">
+      <div class="card budget">
+        <h3>Budget & split</h3>
+        <div class="meter-row">
+          <span>Deploy budget</span>
+          <strong>3.20 MJ</strong>
+          <div class="meter"><span style="width:68%"></span></div>
+        </div>
+        <div class="meter-row">
+          <span>Defense reserve</span>
+          <strong>0.30 MJ · 9%</strong>
+          <div class="meter is-secondary"><span style="width:45%"></span></div>
+        </div>
+        <div class="meter-row compact">
+          <span>Last allocation</span>
+          <strong>0.18 MJ (6%)</strong>
+        </div>
+        <div class="mini-grid">
+          <div>
+            <span>SOC floor</span>
+            <strong>52%</strong>
+          </div>
+          <div>
+            <span>Target end lap</span>
+            <strong>55%</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="card buckets">
+        <h3>Priority buckets</h3>
+        <div class="bucket">
+          <div>
+            <strong>Main straights</strong>
+            <small>Primary bucket · 50%</small>
+          </div>
+          <div class="bucket-values">
+            <div>Deploy 1.60 / 3.20 MJ</div>
+            <div>MGU-H 0.45 / 0.90 MJ</div>
+          </div>
+          <div class="dual-bar">
+            <span class="deploy" style="width:50%"></span>
+            <span class="mguh" style="width:35%"></span>
+          </div>
+        </div>
+        <div class="bucket">
+          <div>
+            <strong>Secondary</strong>
+            <small>Medium corners · 35%</small>
+          </div>
+          <div class="bucket-values">
+            <div>Deploy 0.92 / 2.10 MJ</div>
+            <div>MGU-H 0.25 / 0.62 MJ</div>
+          </div>
+          <div class="dual-bar">
+            <span class="deploy" style="width:44%"></span>
+            <span class="mguh" style="width:30%"></span>
+          </div>
+        </div>
+        <div class="bucket">
+          <div>
+            <strong>Corner exits</strong>
+            <small>Acceleration zones · 15%</small>
+          </div>
+          <div class="bucket-values">
+            <div>Deploy 0.35 / 0.90 MJ</div>
+            <div>MGU-H 0.08 / 0.25 MJ</div>
+          </div>
+          <div class="dual-bar">
+            <span class="deploy" style="width:39%"></span>
+            <span class="mguh" style="width:22%"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card triggers">
+      <h3>Triggers & context</h3>
+      <div class="chip-row">
+        <div class="chip">
+          <small>Priority score</small>
+          <strong>78%</strong>
+          <span>Active bucket · primary</span>
+        </div>
+        <div class="chip">
+          <small>Defense buffer</small>
+          <strong>0.12 MJ</strong>
+          <span>Last used 0.04 MJ</span>
+        </div>
+        <div class="chip">
+          <small>MGU-H direct</small>
+          <strong>0.78 / 1.77 MJ</strong>
+          <span>Clip risk low</span>
+        </div>
+        <div class="chip">
+          <small>Driver intent</small>
+          <strong>Push</strong>
+          <span>ERS mode · deploy</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Proposal B -->
+  <div class="ers-panel ers-proposal-b">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">PU Manager</p>
+        <h2>ERS Map · Overtake</h2>
+      </div>
+      <div class="badges">
+        <span class="badge">SOC 68%</span>
+        <span class="badge">Deploy lap 2.45 MJ</span>
+      </div>
+    </div>
+
+    <div class="panel-body">
+      <div class="column left">
+        <div class="card small">
+          <h3>Budgets</h3>
+          <ul class="stat-list">
+            <li><span>Deploy budget</span><strong>3.80 MJ</strong><em>cfg 3.60</em></li>
+            <li><span>Defense reserve</span><strong>0.25 MJ</strong><em>7%</em></li>
+            <li><span>MGU-H direct total</span><strong>1.92 MJ</strong><em>remaining 0.54</em></li>
+          </ul>
+        </div>
+
+        <div class="card small">
+          <h3>State targets</h3>
+          <div class="targets">
+            <div>
+              <small>Dynamic floor</small>
+              <strong>50%</strong>
+            </div>
+            <div>
+              <small>Target end lap</small>
+              <strong>58%</strong>
+            </div>
+            <div>
+              <small>DRS bonus</small>
+              <strong>+0.12</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="card small">
+          <h3>Warnings & intent</h3>
+          <div class="warnings">
+            <span class="pill ok">No runtime warnings</span>
+            <span class="pill ghost">Intent: Defense</span>
+            <span class="pill warn">MGU-H clip 12%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="column right">
+        <div class="card">
+          <h3>Bucket allocation</h3>
+          <table class="bucket-table">
+            <thead>
+              <tr>
+                <th>Bucket</th>
+                <th>Deploy</th>
+                <th>MGU-H direct</th>
+                <th>Runtime vs cfg</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Main straights</td>
+                <td>1.95 / 2.30 MJ</td>
+                <td>0.62 / 0.95 MJ</td>
+                <td><span class="pill ok">Runtime 85%</span> <span class="pill ghost">Cfg 50%</span></td>
+              </tr>
+              <tr>
+                <td>Secondary</td>
+                <td>0.70 / 1.10 MJ</td>
+                <td>0.28 / 0.65 MJ</td>
+                <td><span class="pill warn">Runtime 64%</span> <span class="pill ghost">Cfg 35%</span></td>
+              </tr>
+              <tr>
+                <td>Corner exits</td>
+                <td>0.24 / 0.52 MJ</td>
+                <td>0.09 / 0.23 MJ</td>
+                <td><span class="pill ok">Runtime 46%</span> <span class="pill ghost">Cfg 15%</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card timeline">
+          <h3>Last allocation</h3>
+          <div class="timeline-row">
+            <div class="dot primary"></div>
+            <div>
+              <strong>Section 18 · Hangar Straight</strong>
+              <p>Priority 0.92 · Request 0.32 MJ · Delivered 0.30 MJ (0.18 MGU-H)</p>
+            </div>
+            <div class="value">+0.30 MJ</div>
+          </div>
+          <div class="timeline-row">
+            <div class="dot secondary"></div>
+            <div>
+              <strong>Section 19 · Stowe</strong>
+              <p>Priority 0.58 · Battery limited (SOC floor)</p>
+            </div>
+            <div class="value">0.00 MJ</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
