@@ -11,7 +11,33 @@ export class PlayerGarageV3 {
         this.sessionControls = sessionControls;
         this.wasPausedBeforePU = null;
         this.activePuTab = 'stats';
-        this._ersStylesInjected = false;
+        this.ersEditorState = new Map();
+        this.ERS_BUCKET_SETTINGS = {
+            primary: {
+                label: 'Primary Bucket',
+                title: 'Main straights',
+                min: 0,
+                max: 80,
+                defaultPct: 50,
+                pillLabel: 'SOC focus',
+            },
+            secondary: {
+                label: 'Secondary Bucket',
+                title: 'Medium corners',
+                min: 0,
+                max: 70,
+                defaultPct: 35,
+                pillLabel: 'Clip risk',
+            },
+            exit: {
+                label: 'Exit Bucket',
+                title: 'Corner exits',
+                min: 5,
+                max: 60,
+                defaultPct: 15,
+                pillLabel: 'MGU-H assist',
+            },
+        };
         this.tyreOptions = [
             { value: 'soft', label: 'Soft' },
             { value: 'medium', label: 'Medium' },
@@ -128,10 +154,23 @@ export class PlayerGarageV3 {
                 }
             });
             this.overlayContainer.addEventListener('input', (event) => {
-                if (!event.target.dataset.setupField) return;
-                const driver = Number(this.overlayContainer.dataset.driver);
-                if (driver) {
-                    this.handleSetupInput(event, driver, this.overlayContainer);
+                if (event.target.dataset.setupField) {
+                    const driver = Number(this.overlayContainer.dataset.driver);
+                    if (driver) {
+                        this.handleSetupInput(event, driver, this.overlayContainer);
+                    }
+                }
+                if (event.target.dataset.ersBucket) {
+                    this.handleErsBucketInput(event);
+                }
+            });
+            this.overlayContainer.addEventListener('change', (event) => {
+                if (event.target.dataset.ersLock) {
+                    this.handleErsLockChange(event);
+                } else if (event.target.dataset.ersAutoBalance) {
+                    this.handleErsAutoBalanceChange(event);
+                } else if (event.target.dataset.ersBucket) {
+                    this.handleErsBucketInput(event, { forceRefresh: true });
                 }
             });
         }
@@ -182,52 +221,6 @@ export class PlayerGarageV3 {
         return `<div class="pu-lap-chip-row-v3">${chips.join('')}</div>`;
     }
 
-    ensureErsMapStyles() {
-        if (this._ersStylesInjected || typeof document === 'undefined') return;
-        const style = document.createElement('style');
-        style.id = 'garage-ers-map-styles';
-        style.textContent = `
-            .ers-map-panel { color: #f5f5f5; font-family: 'Space Grotesk', 'Inter', system-ui; background: #10131a; border-radius: 24px; padding: 14px; max-width: 720px; }
-            .ers-meta-row { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 12px; align-items: center; }
-            .ers-meta-row .meta { font-size: 11px; letter-spacing: 0.1em; color: #8c95ad; text-transform: uppercase; }
-            .ers-soc-chip { background: #1c2230; border-radius: 999px; padding: 5px 12px; font-size: 12px; letter-spacing: 0.08em; }
-            .ers-section-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
-            .ers-column-stack { display: flex; flex-direction: column; gap: 8px; }
-            .ers-section-card { background: #0b0e15; border-radius: 18px; padding: 12px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02); }
-            .ers-section-card h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #7f8aa6; }
-            .ers-metric-row { margin-bottom: 6px; font-size: 13px; }
-            .ers-metric-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-            .ers-metric-row span { color: #8f9ab6; }
-            .ers-metric-row strong { font-size: 14px; }
-            .ers-meter { margin-top: 2px; height: 4px; border-radius: 999px; background: #1f2430; overflow: hidden; position: relative; }
-            .ers-meter span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg,#ffd24c,#ff8f3d); }
-            .ers-meter.secondary span { background: linear-gradient(90deg,#5cedbc,#1cb0ff); }
-            .ers-inline-metrics { display: flex; gap: 12px; margin-top: 8px; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #8f9ab6; }
-            .ers-inline-metrics strong { display: block; font-size: 18px; color: #fdfdfd; letter-spacing: 0; }
-            .ers-bucket-list { display: flex; flex-direction: column; gap: 12px; }
-            .ers-bucket-card { background: #111623; border-radius: 16px; padding: 12px 14px; }
-            .ers-bucket-card strong { display: block; font-size: 15px; }
-            .ers-bucket-card small { color: #7c87a0; letter-spacing: 0.08em; text-transform: uppercase; font-size: 10px; }
-            .ers-bucket-line { margin-top: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #c3cbe1; }
-            .ers-bucket-line.primary { font-weight: 600; color: #fdfdfd; }
-            .ers-bucket-percent { letter-spacing: 0.08em; text-transform: uppercase; font-size: 11px; color: #7c87a0; }
-            .ers-bucket-values { font-variant-numeric: tabular-nums; }
-            .ers-bucket-meta { display: flex; justify-content: space-between; margin-top: 2px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #6f7791; }
-            .ers-bucket-line.secondary { font-size: 12px; color: #9aa5c1; }
-            .ers-trigger-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-            .ers-trigger-card { background: #0c1019; border-radius: 16px; padding: 10px; font-size: 12px; }
-            .ers-trigger-card small { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #79819c; }
-            .ers-trigger-card strong { display: block; font-size: 16px; margin: 2px 0; }
-            .ers-trigger-card span { color: #7f879f; }
-            .ers-warning-box { background: #121725; border-radius: 16px; padding: 14px 16px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02); }
-            .ers-warning-title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #7f8aa6; margin-bottom: 6px; }
-            .ers-warning-box ul { margin: 0; padding-left: 18px; color: #f7bca3; font-size: 12px; }
-            .ers-warning-box li { margin-bottom: 4px; }
-            .ers-warning-empty { font-size: 12px; color: #9cd7c5; }
-        `;
-        document.head.appendChild(style);
-        this._ersStylesInjected = true;
-    }
 
     formatErsWarning(message) {
         if (!message) return '';
@@ -267,212 +260,391 @@ export class PlayerGarageV3 {
         `;
     }
 
+    handleErsBucketInput(event, { forceRefresh = false } = {}) {
+        const bucketKey = event.target?.dataset?.ersBucket;
+        if (!bucketKey) return;
+        const driverNumber = Number(this.overlayContainer?.dataset?.driver);
+        if (!driverNumber) return;
+        const state = this.ersEditorState.get(driverNumber);
+        if (!state) return;
+        const bucket = state.buckets?.[bucketKey];
+        if (!bucket) return;
+        const rawValue = Number(event.target.value);
+        if (!Number.isFinite(rawValue)) return;
+        const car = this.state.getPlayerCar(driverNumber);
+        const puStats = car?.pu_stats || {};
+        bucket.pct = this.clampNumber(rawValue, bucket.min, bucket.max);
+        if (state.autoBalance) {
+            this.normalizeErsBuckets(state, bucketKey);
+            this.enforceErsTotalConstraint(state, bucketKey);
+        }
+        this.syncErsBucketCards(state, puStats);
+        if (forceRefresh || event.type !== 'input') {
+            this.refreshErsEditorPanel(driverNumber);
+        }
+    }
+
+    handleErsLockChange(event) {
+        const bucketKey = event.target?.dataset?.ersLock;
+        if (!bucketKey) return;
+        const driverNumber = Number(this.overlayContainer?.dataset?.driver);
+        if (!driverNumber) return;
+        const state = this.ersEditorState.get(driverNumber);
+        if (!state || !state.buckets?.[bucketKey]) return;
+        state.buckets[bucketKey].locked = event.target.checked;
+        if (state.autoBalance) {
+            this.normalizeErsBuckets(state, bucketKey);
+        }
+        this.refreshErsEditorPanel(driverNumber);
+    }
+
+    handleErsAutoBalanceChange(event) {
+        if (!event.target?.dataset?.ersAutoBalance) return;
+        const driverNumber = Number(this.overlayContainer?.dataset?.driver);
+        if (!driverNumber) return;
+        const state = this.ersEditorState.get(driverNumber);
+        if (!state) return;
+        state.autoBalance = !!event.target.checked;
+        if (state.autoBalance) {
+            this.normalizeErsBuckets(state, null, true);
+        }
+        this.refreshErsEditorPanel(driverNumber);
+    }
+
+    initializeErsEditorState(driverNumber, puStats = {}, { force = false } = {}) {
+        if (!driverNumber) return null;
+        let state = this.ersEditorState.get(driverNumber);
+        if (!state || force) {
+            state = this.buildErsEditorDefaults(puStats);
+            this.ersEditorState.set(driverNumber, state);
+        }
+        return state;
+    }
+
+    buildErsEditorDefaults(puStats = {}) {
+        const deployLimit = puStats.deploy_limit_mj || 4.0;
+        const deployBudget = this.resolveBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap, deployLimit);
+        const pctFromStats = (key) => {
+            const statKey = `bucket_${key}_pct`;
+            const direct = puStats[statKey];
+            if (typeof direct === 'number' && !Number.isNaN(direct)) {
+                return direct > 1 ? direct : direct * 100;
+            }
+            const bucketTotal = puStats[`bucket_${key}_total_mj`];
+            if (typeof bucketTotal === 'number' && deployBudget > 1e-6) {
+                return (bucketTotal / deployBudget) * 100;
+            }
+            return null;
+        };
+
+        const buckets = {};
+        Object.keys(this.ERS_BUCKET_SETTINGS).forEach(key => {
+            const cfg = this.ERS_BUCKET_SETTINGS[key];
+            const pct = this.clampNumber(pctFromStats(key) ?? cfg.defaultPct, cfg.min, cfg.max);
+            buckets[key] = {
+                ...cfg,
+                pct,
+                locked: false,
+            };
+        });
+
+        const state = {
+            buckets,
+            autoBalance: true,
+        };
+        this.normalizeErsBuckets(state, null, true);
+        state.initial = {
+            autoBalance: state.autoBalance,
+            buckets: this.cloneErsBuckets(state.buckets),
+        };
+        return state;
+    }
+
+    cloneErsBuckets(buckets = {}) {
+        return Object.entries(buckets).reduce((acc, [key, bucket]) => {
+            acc[key] = { ...bucket };
+            return acc;
+        }, {});
+    }
+
+    resetErsEditorState(driverNumber, puStats = {}) {
+        let state = this.ersEditorState.get(driverNumber);
+        if (!state) {
+            state = this.initializeErsEditorState(driverNumber, puStats, { force: true });
+            return state;
+        }
+        const defaults = state.initial || this.buildErsEditorDefaults(puStats);
+        state.autoBalance = defaults.autoBalance;
+        state.buckets = this.cloneErsBuckets(defaults.buckets);
+        return state;
+    }
+
+    refreshErsEditorPanel(driverNumber) {
+        if (!this.overlayContainer) return;
+        const ersPanel = this.overlayContainer.querySelector('section[data-panel="ers-map"]');
+        if (!ersPanel) return;
+        const car = this.state.getPlayerCar(driverNumber);
+        if (!car) return;
+        const puStats = car.pu_stats || {};
+        const isBox = this.getCarState(car) === 'BOX';
+        ersPanel.innerHTML = this.buildErsMapPanel(car, puStats, isBox);
+    }
+
+    syncErsBucketCards(state, puStats = {}) {
+        if (!state || !this.overlayContainer) return;
+        const panel = this.overlayContainer.querySelector('section[data-panel="ers-map"]');
+        if (!panel) return;
+        const formatMJ = (value) => (typeof value === 'number' && !Number.isNaN(value) ? `${value.toFixed(2)} MJ` : '-- MJ');
+        const deployLimit = puStats.deploy_limit_mj || 4.0;
+        const deployBudget = this.resolveBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap, deployLimit);
+        const socTarget = typeof puStats.soc_target_pct === 'number' && puStats.soc_target_pct > 0
+            ? Math.round(puStats.soc_target_pct * 100)
+            : (typeof puStats.target_soc_end_lap === 'number' ? Math.round(puStats.target_soc_end_lap * 100) : '--');
+
+        Object.keys(this.ERS_BUCKET_SETTINGS).forEach(key => {
+            const card = panel.querySelector(`.ers-bucket-card[data-bucket="${key}"]`);
+            if (!card) return;
+            const cfg = this.ERS_BUCKET_SETTINGS[key];
+            const bucket = state.buckets?.[key] || cfg;
+            const pctValue = this.clampNumber(bucket.pct ?? cfg.defaultPct, cfg.min, cfg.max);
+            const slider = card.querySelector('.ers-bucket-slider');
+            if (slider) {
+                slider.value = pctValue.toFixed(0);
+            }
+            const chip = card.querySelector('.percent-chip');
+            if (chip) {
+                chip.textContent = `${pctValue.toFixed(0)}%`;
+            }
+            const targetDeploy = deployBudget > 0 ? (deployBudget * (pctValue / 100)) : 0;
+            const runtimeDeploy = puStats[`bucket_${key}_used_mj`] ?? 0;
+            const valueRow = card.querySelectorAll('.value-row span');
+            if (valueRow[0]) {
+                valueRow[0].textContent = `Target deploy: ${formatMJ(targetDeploy)}`;
+            }
+            if (valueRow[1]) {
+                valueRow[1].textContent = `Realtime: ${formatMJ(runtimeDeploy)}`;
+            }
+            const lockInput = card.querySelector('[data-ers-lock]');
+            if (lockInput) {
+                lockInput.checked = !!bucket.locked;
+            }
+            const pill = card.querySelector('.target-pill');
+            if (pill) {
+                const mguhRealtime = puStats[`mguh_${key}_used_mj`];
+                pill.textContent = this.resolveBucketPillLabel(key, { socTarget, mguhRealtime });
+            }
+        });
+
+        const totalChip = panel.querySelector('.ers-toolbar-summary strong');
+        if (totalChip) {
+            totalChip.textContent = `Total ${Math.round(this.sumErsBucketPct(state))}%`;
+        }
+    }
+
+    normalizeErsBuckets(state, excludeKey = null, force = false) {
+        if (!state) return;
+        if (!state.autoBalance && !force) return;
+        for (let i = 0; i < 6; i += 1) {
+            const total = this.sumErsBucketPct(state);
+            const diff = total - 100;
+            if (!Number.isFinite(diff) || Math.abs(diff) < 0.01) {
+                break;
+            }
+            const adjustableEntries = Object.entries(state.buckets).filter(([key, bucket]) => key !== excludeKey && !bucket.locked);
+            if (!adjustableEntries.length) break;
+            const needReduce = diff > 0;
+            const capacity = adjustableEntries.reduce((sum, [, bucket]) => {
+                const span = needReduce ? (bucket.pct - bucket.min) : (bucket.max - bucket.pct);
+                return sum + Math.max(span, 0);
+            }, 0);
+            if (capacity <= 0) break;
+            adjustableEntries.forEach(([key, bucket]) => {
+                const span = needReduce ? (bucket.pct - bucket.min) : (bucket.max - bucket.pct);
+                if (span <= 0) return;
+                const share = span / capacity;
+                const adjustment = diff * share;
+                bucket.pct = this.clampNumber(bucket.pct - adjustment, bucket.min, bucket.max);
+            });
+        }
+    }
+
+    sumErsBucketPct(state) {
+        if (!state || !state.buckets) return 0;
+        return Object.values(state.buckets).reduce((sum, bucket) => sum + (Number.isFinite(bucket.pct) ? bucket.pct : 0), 0);
+    }
+
+    enforceErsTotalConstraint(state, bucketKey, tolerance = 0.05) {
+        if (!state || !state.buckets) return;
+        const bucket = state.buckets[bucketKey];
+        if (!bucket) return;
+        const total = this.sumErsBucketPct(state);
+        const diff = total - 100;
+        if (Math.abs(diff) <= tolerance) return;
+        const adjusted = this.clampNumber(bucket.pct - diff, bucket.min, bucket.max);
+        bucket.pct = adjusted;
+        const remainingDiff = this.sumErsBucketPct(state) - 100;
+        if (Math.abs(remainingDiff) > tolerance) {
+            this.normalizeErsBuckets(state, bucketKey, true);
+        }
+    }
+
+    clampNumber(value, min = -Infinity, max = Infinity) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) return min;
+        return Math.max(min, Math.min(max, numeric));
+    }
+
+    resolveBucketPillLabel(key, { socTarget, mguhRealtime } = {}) {
+        const cfg = this.ERS_BUCKET_SETTINGS[key] || {};
+        const base = cfg.pillLabel || 'Bucket';
+        let detail = 'Balanced';
+        if (key === 'primary') {
+            if (typeof socTarget === 'number' && !Number.isNaN(socTarget)) {
+                if (socTarget >= 60) detail = 'Push';
+                else if (socTarget >= 48) detail = 'Balanced';
+                else detail = 'Save';
+            }
+        } else if (key === 'secondary') {
+            if (typeof mguhRealtime === 'number' && mguhRealtime > 0) {
+                detail = mguhRealtime > 0.6 ? 'High' : mguhRealtime > 0.25 ? 'Medium' : 'Low';
+            } else {
+                detail = 'Low';
+            }
+        } else if (key === 'exit') {
+            if (typeof mguhRealtime === 'number' && mguhRealtime > 0) {
+                detail = `${mguhRealtime.toFixed(2)} MJ`;
+            } else {
+                detail = 'Assist on';
+            }
+        }
+        return `${base}: ${detail}`;
+    }
+
     buildErsMapPanel(car, puStats, isBox) {
-        this.ensureErsMapStyles();
         if (!puStats || !Object.keys(puStats).length) {
-            return '<div class="ers-map-panel">No ERS telemetry available yet.</div>';
+            return '<div class="ers-editor-panel-empty">No ERS telemetry available yet.</div>';
         }
         const formatMJ = (value, digits = 2) => (typeof value === 'number' && !Number.isNaN(value) ? `${value.toFixed(digits)} MJ` : '-- MJ');
-        const formatMJValue = (value, digits = 2) => (typeof value === 'number' && !Number.isNaN(value) ? value.toFixed(digits) : '--');
-        const renderMeter = (used, total, variant = 'primary') => {
-            const pct = total > 1e-6 ? Math.min((used / total) * 100, 100) : 0;
-            return `<div class="ers-meter ${variant === 'secondary' ? 'secondary' : ''}"><span style="width:${pct}%"></span></div>`;
-        };
-        const resolveBucketTotal = (runtime, config) => (runtime > 1e-5 ? runtime : (config ?? 0));
+        const driverNumber = car?.driver_number;
+        const editorState = driverNumber ? this.initializeErsEditorState(driverNumber, puStats) : null;
+        if (!editorState) {
+            return '<div class="ers-editor-panel-empty">ERS editor unavailable.</div>';
+        }
+        const bucketState = editorState.buckets || {};
+        const autoBalanceEnabled = editorState.autoBalance !== false;
 
-        const socPct = typeof puStats.soc_pct === 'number' ? Math.round(puStats.soc_pct) : null;
-        const lapDeploy = typeof puStats.lap_deploy_mj === 'number' ? puStats.lap_deploy_mj : 0;
         const mapName = puStats.map || 'STANDARD';
-        const deployBudgetLimit = puStats.deploy_limit_mj || 4.0;
-        const deployBudget = this.resolveBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap, deployBudgetLimit);
-        const deployBudgetConfig = typeof puStats.deploy_mj_per_lap === 'number' ? puStats.deploy_mj_per_lap : null;
+        const lapDeploy = typeof puStats.lap_deploy_mj === 'number' ? puStats.lap_deploy_mj : 0;
+        const deployLimit = puStats.deploy_limit_mj || 4.0;
+        const deployBudget = this.resolveBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap, deployLimit);
         const defenseReserve = this.resolveBudgetValue(puStats.defense_reserve_available_mj, puStats.defense_reserve_mj_config, 0);
         const lastAllocation = typeof puStats.last_bucket_allocated_mj === 'number' ? puStats.last_bucket_allocated_mj : 0;
-        const defenseReservePct = deployBudget > 1e-6 ? `${Math.round((defenseReserve / deployBudget) * 100)}%` : null;
-        const socFloorDynamic = typeof puStats.soc_floor_dynamic_pct === 'number' && puStats.soc_floor_dynamic_pct > 0 ? Math.round(puStats.soc_floor_dynamic_pct * 100) : null;
-        const socTargetPct = typeof puStats.soc_target_pct === 'number' && puStats.soc_target_pct > 0 ? Math.round(puStats.soc_target_pct * 100) : (typeof puStats.target_soc_end_lap === 'number' ? Math.round(puStats.target_soc_end_lap * 100) : null);
+        const defenseReservePct = deployBudget > 1e-6 ? `${Math.round((defenseReserve / deployBudget) * 100)}%` : '--';
+        const socFloor = typeof puStats.soc_floor_dynamic_pct === 'number' && puStats.soc_floor_dynamic_pct > 0 ? Math.round(puStats.soc_floor_dynamic_pct * 100) : '--';
+        const socTarget = typeof puStats.soc_target_pct === 'number' && puStats.soc_target_pct > 0
+            ? Math.round(puStats.soc_target_pct * 100)
+            : (typeof puStats.target_soc_end_lap === 'number' ? Math.round(puStats.target_soc_end_lap * 100) : '--');
+        const totalPct = Math.round(this.sumErsBucketPct(editorState));
+        const playerErsMode = car?.player_config?.ers_mode || car?.ers_mode || 'Neutral';
+        const driverName = car?.driver_name || `Driver #${driverNumber || '—'}`;
+        const autoBalanceLabel = autoBalanceEnabled ? 'Auto-balance unlocked buckets' : 'Manual balance';
 
-        const bucketData = (key, label, subtitle) => {
-            const deployRuntime = puStats[`bucket_${key}_total_mj`] ?? 0;
-            const deployConfig = puStats[`bucket_${key}_config_mj`];
-            const deployUsed = puStats[`bucket_${key}_used_mj`] ?? 0;
-            const mguhRuntime = puStats[`mguh_${key}_total_mj`] ?? 0;
-            const mguhConfig = puStats[`mguh_${key}_config_mj`];
-            const mguhUsed = puStats[`mguh_${key}_used_mj`] ?? 0;
-            const deployTotal = resolveBucketTotal(deployRuntime, deployConfig);
-            const mguhTotal = resolveBucketTotal(mguhRuntime, mguhConfig);
-            const pctLabel = this.formatPercentage(puStats[`bucket_${key}_pct`]);
-            return {
-                key,
-                label,
-                subtitle: `${subtitle}${pctLabel ? ` · ${pctLabel}` : ''}`,
-                deployTotal,
-                deployUsed,
-                mguhTotal,
-                mguhUsed,
-                pct: pctLabel ? pctLabel : null,
-            };
-        };
-
-        const bucketEntries = [
-            bucketData('primary', 'Main straights', 'Primary bucket'),
-            bucketData('secondary', 'Secondary', 'Medium corners'),
-            bucketData('exit', 'Corner exits', 'Acceleration zones'),
-        ];
-
-        const bucketCards = bucketEntries.map(entry => {
-            const pctLabelRuntime = entry.pct || null;
-            const pctFallback = deployBudget > 1e-6 && entry.deployTotal > 0 ? `${Math.round((entry.deployTotal / deployBudget) * 100)}%` : null;
-            const pctLabel = pctLabelRuntime || pctFallback || '--';
-            const targetValue = formatMJValue(entry.deployTotal);
-            const realtimeValue = formatMJValue(entry.deployUsed);
-            const mguhRealtime = formatMJ(entry.mguhUsed);
-            const deployLine = `${pctLabel} - ${targetValue} / ${realtimeValue} MJ Deploy`;
+        const bucketCards = Object.keys(this.ERS_BUCKET_SETTINGS).map(key => {
+            const cfg = this.ERS_BUCKET_SETTINGS[key];
+            const bucket = bucketState[key] || cfg;
+            const pctValue = this.clampNumber(bucket.pct ?? cfg.defaultPct, cfg.min, cfg.max);
+            const targetDeploy = deployBudget > 0 ? (deployBudget * (pctValue / 100)) : 0;
+            const runtimeDeploy = puStats[`bucket_${key}_used_mj`] ?? 0;
+            const mguhRealtime = puStats[`mguh_${key}_used_mj`];
+            const pillText = this.resolveBucketPillLabel(key, { socTarget, mguhRealtime });
             return `
-                <div class="ers-bucket-card">
-                    <strong>${entry.label}</strong>
-                    <small>${entry.subtitle}</small>
-                    <div class="ers-bucket-line primary">${deployLine}</div>
-                    <div class="ers-bucket-line secondary">
-                        <span>Realtime MGU-H</span>
-                        <span class="ers-bucket-values">${mguhRealtime}</span>
+                <div class="ers-bucket-card" data-bucket="${key}">
+                    <div class="ers-bucket-header-row">
+                        <div>
+                            <div class="sublabel">${cfg.label}</div>
+                            <div class="bucket-title">${cfg.title}</div>
+                        </div>
+                        <div class="percent-chip">${pctValue.toFixed(0)}%</div>
+                    </div>
+                    <input type="range" class="ers-bucket-slider" value="${pctValue.toFixed(0)}" min="${cfg.min}" max="${cfg.max}" data-ers-bucket="${key}" step="1">
+                    <div class="value-row">
+                        <span>Target deploy: ${formatMJ(targetDeploy)}</span>
+                        <span>Realtime: ${formatMJ(runtimeDeploy)}</span>
+                    </div>
+                    <div class="lock-row">
+                        <label><input type="checkbox" data-ers-lock="${key}" ${bucket.locked ? 'checked' : ''}>Lock percentage</label>
+                        <span class="target-pill">${pillText}</span>
                     </div>
                 </div>
             `;
         }).join('');
 
-        const lastPriority = typeof puStats.last_priority_score === 'number' ? puStats.last_priority_score : 0;
-        const lastBucket = (puStats.last_bucket_key || 'primary').replace(/_/g, ' ');
-        const lastDefenseUsed = typeof puStats.last_defense_used_mj === 'number' ? puStats.last_defense_used_mj : 0;
-        const playerErsMode = (car?.player_config?.ers_mode || car?.ers_mode || 'Neutral').toLowerCase();
-        const inferredMode = (() => {
-            if (playerErsMode) return playerErsMode;
-            if (puStats.last_recharge_mode) return 'harvest';
-            if (puStats.last_push_mode) return 'overtake';
-            return 'deploy';
-        })();
-        const lastIntent = puStats.last_recharge_mode ? 'Recharge' : (puStats.last_push_mode ? 'Push' : (puStats.last_defense_mode ? 'Defense' : 'Standard'));
-        const mguhDirectTotal = this.resolveBudgetValue(puStats.mguh_direct_total_mj, puStats.mguh_direct_config_total_mj, 0);
-        const mguhDirectUsed = typeof puStats.mguh_direct_used_mj === 'number' ? puStats.mguh_direct_used_mj : 0;
-        const mguhDirectRemaining = typeof puStats.mguh_direct_remaining_mj === 'number' ? puStats.mguh_direct_remaining_mj : Math.max(mguhDirectTotal - mguhDirectUsed, 0);
-        const mguhUsageRatio = mguhDirectTotal > 1e-5 ? mguhDirectUsed / mguhDirectTotal : 0;
-        const mguhRiskLabel = mguhUsageRatio > 0.85 ? 'Clip risk high' : (mguhUsageRatio > 0.65 ? 'Clip risk medium' : 'Clip risk low');
-
-        const warnings = puStats.warnings_runtime || [];
-        const warningsActive = warnings.length > 0;
-        const regenClampActive = !!puStats.regen_clamp_active;
-        const warningPanel = `
-            <div class="ers-warning-box">
-                <div class="ers-warning-title">Notifications</div>
-                ${warnings.length
-                    ? `<ul>${warnings.map(w => `<li>${this.formatErsWarning(w)}</li>`).join('')}</ul>`
-                    : '<div class="ers-warning-empty">No runtime warnings.</div>'}
-            </div>
+        const toolbarHtml = `
+            <section class="ers-controls-tile">
+                <h3>Totals & Actions</h3>
+                <div class="ers-bucket-toolbar">
+                    <div class="ers-toolbar-summary">
+                        <strong>Total ${totalPct}%</strong>
+                        <label><input type="checkbox" data-ers-auto-balance="true" ${autoBalanceEnabled ? 'checked' : ''}>${autoBalanceLabel}</label>
+                    </div>
+                    <div class="ers-toolbar-actions">
+                        <button class="ghost-btn" type="button" data-action="ers-reset">Reset preset</button>
+                        <button class="primary-btn" type="button" disabled title="Custom saves coming soon">Save custom map</button>
+                    </div>
+                </div>
+            </section>
         `;
-
-        const deployMeter = renderMeter(deployBudget, deployBudgetLimit);
-        const deployOnTrackMeter = renderMeter(lapDeploy, deployBudget || deployBudgetLimit || 1);
-        const defenseMeter = renderMeter(defenseReserve, deployBudget || 1, 'secondary');
-        const lastMeter = renderMeter(lastAllocation, Math.max(deployBudget, 0.0001));
 
         return `
-            <div class="ers-map-panel">
-                <div class="ers-meta-row">
-                    <div>
-                        <div class="meta">ERS MAP</div>
-                        <div style="font-size:18px;">${mapName} · ${inferredMode.charAt(0).toUpperCase() + inferredMode.slice(1)}</div>
-                    </div>
-                    <div class="ers-soc-chip">SOC ${socPct ?? '--'}% · Deploy ${lapDeploy.toFixed(2)} MJ</div>
-                </div>
-                <div class="ers-section-grid">
-                    <div class="ers-column-stack">
-                        <div class="ers-section-card">
-                            <h3>Budget & split</h3>
-                            <div class="ers-metric-row">
-                                <div class="ers-metric-header">
-                                    <span>Deploy budget</span>
-                                    <strong>${deployBudgetLabel(deployBudget, deployBudgetConfig)}</strong>
-                                </div>
-                                ${deployMeter}
+            <div class="ers-editor-panel">
+                <div class="ers-editor-grid-shell">
+                    <div class="ers-sidebar-stack">
+                        <section class="ers-budget-tile">
+                            <h3>Budget & Split</h3>
+                            <div class="ers-budget-list">
+                                <div class="ers-budget-row"><span>Deploy budget</span><strong>${formatMJ(deployBudget)}</strong></div>
+                                <div class="ers-budget-row"><span>Deploy on track</span><strong>${formatMJ(lapDeploy)}</strong></div>
+                                <div class="ers-budget-row"><span>Defense reserve</span><strong>${formatMJ(defenseReserve)} (${defenseReservePct})</strong></div>
+                                <div class="ers-budget-row"><span>Last allocation</span><strong>${formatMJ(lastAllocation)}</strong></div>
                             </div>
-                            <div class="ers-metric-row">
-                                <div class="ers-metric-header">
-                                    <span>Deploy on track</span>
-                                    <strong>${formatMJ(lapDeploy)}</strong>
-                                </div>
-                                ${deployOnTrackMeter}
-                            </div>
-                            <div class="ers-metric-row">
-                                <div class="ers-metric-header">
-                                    <span>Defense reserve</span>
-                                    <strong>${defenseReserveLabel(defenseReserve, defenseReservePct)}</strong>
-                                </div>
-                                ${defenseMeter}
-                            </div>
-                            <div class="ers-metric-row">
-                                <div class="ers-metric-header">
-                                    <span>Last allocation</span>
-                                    <strong>${formatMJ(lastAllocation)}</strong>
-                                </div>
-                                ${lastMeter}
-                            </div>
-                            <div class="ers-inline-metrics">
+                            <div class="ers-budget-row ers-metrics">
                                 <div>
-                                    <span>SOC floor</span>
-                                    <strong>${socFloorDynamic != null ? `${socFloorDynamic}%` : '--'}</strong>
+                                    <div class="label">SOC floor</div>
+                                    <strong>${socFloor === '--' ? '--' : `${socFloor}%`}</strong>
                                 </div>
                                 <div>
-                                    <span>Target end lap</span>
-                                    <strong>${socTargetPct != null ? `${socTargetPct}%` : '--'}</strong>
+                                    <div class="label">Target lap end</div>
+                                    <strong>${socTarget === '--' ? '--' : `${socTarget}%`}</strong>
                                 </div>
                             </div>
-                        </div>
-                        ${warningPanel}
+                            <div class="ers-note-bar">
+                                <span>Preset: ${mapName} · ${playerErsMode}</span>
+                                <span>Total deploy ${formatMJ(deployBudget)}</span>
+                                <span>Sum must equal 100% (currently ${totalPct}%)</span>
+                            </div>
+                        </section>
+                        ${toolbarHtml}
                     </div>
-                    <div class="ers-section-card">
-                        <h3>Priority buckets</h3>
-                        <div class="ers-bucket-list">${bucketCards}</div>
-                    </div>
-                </div>
-                <div class="ers-section-card" style="margin-top:8px;">
-                    <h3>Triggers & context</h3>
-                    <div class="ers-trigger-row">
-                        <div class="ers-trigger-card">
-                            <small>Priority score</small>
-                            <strong>${(lastPriority * 100).toFixed(0)}%</strong>
-                            <span>Active bucket · ${lastBucket}</span>
+                    <section class="ers-bucket-editor">
+                        <div class="ers-bucket-header">
+                            <div>
+                                <div class="sublabel">ERS MAP</div>
+                                <div class="ers-map-title">${mapName} · ${playerErsMode}</div>
+                                <div class="ers-map-subtitle">${driverName} · ${isBox ? 'In garage' : 'On track'}</div>
+                            </div>
+                            <div class="ers-bucket-tabs">
+                                <div class="map-pill active">Preset</div>
+                                <div class="map-pill">Custom</div>
+                                <div class="map-pill">Import</div>
+                            </div>
                         </div>
-                        <div class="ers-trigger-card">
-                            <small>Defense buffer</small>
-                            <strong>${formatMJ(defenseReserve)}</strong>
-                            <span>Last used ${formatMJ(lastDefenseUsed)}</span>
+                        <div class="ers-editor-grid">
+                            ${bucketCards}
                         </div>
-                        <div class="ers-trigger-card">
-                            <small>MGU-H direct</small>
-                            <strong>${formatMJ(mguhDirectUsed)} / ${formatMJ(mguhDirectTotal)}</strong>
-                            <span>${mguhRiskLabel} · Rem ${formatMJ(mguhDirectRemaining)}</span>
-                        </div>
-                        <div class="ers-trigger-card">
-                            <small>Driver intent</small>
-                            <strong>${lastIntent}</strong>
-                            <span>ERS mode · ${inferredMode}</span>
-                        </div>
-                    </div>
+                    </section>
                 </div>
             </div>
         `;
-
-        function deployBudgetLabel(runtimeValue, configValue) {
-            if (configValue && Math.abs(runtimeValue - configValue) > 1e-3) {
-                return `${runtimeValue.toFixed(2)} MJ (cfg ${configValue.toFixed(2)} MJ)`;
-            }
-            return `${runtimeValue.toFixed(2)} MJ`;
-        }
-
-        function defenseReserveLabel(value, pctLabel) {
-            const base = `${value.toFixed(2)} MJ`;
-            return pctLabel ? `${base} (${pctLabel})` : base;
-        }
     }
 
     buildLapUsageChip({ label, lapIndex, deploy, harvest, deployBudget, harvestBudget, deployLimit, harvestLimit, mapName, mguhDirect, mguhDirectBudget, mguhHarvest }) {
@@ -1793,6 +1965,13 @@ export class PlayerGarageV3 {
             this.activePuTab = tab;
             if (carData) {
                 this.buildPUModal(carData);
+            }
+        } else if (action === 'ers-reset') {
+            const carData = this.state.getPlayerCar(driverNumber);
+            if (carData) {
+                const puStats = carData.pu_stats || {};
+                this.resetErsEditorState(driverNumber, puStats);
+                this.refreshErsEditorPanel(driverNumber);
             }
         }
     }
