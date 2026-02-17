@@ -105,7 +105,7 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
      4. ✅ **Component integration** – verificata interazione aero/tyres/brakes/driver con la nuova logica PU (SessionBridge 3-lap QA run).
 
    - **Roadmap operativa (rollout incrementale)**
-     1. **PU Hybrid V2.1** – implementare consumo MGU-H direct, refactor deployment strategy (section priority, MGU-H awareness), brake migration torque split.
+     1. ✅ **PU Hybrid V2.1** – implementare consumo MGU-H direct, refactor deployment strategy (section priority, MGU-H awareness), brake migration torque split.
         - ✅ Consumo MGU-H direct + budget bucketizzato (LapSimulator `power_unit.py`, 2026-02-16).
         - ✅ Strategia ERS basata su priorità sezioni + SOC target con nuova UI/telemetria ERS Map (Garage V3, 2026-02-16).
         - ✅ Brake migration torque split (regen vs idraulico) con telemetria e warning SOC (2026-02-16).
