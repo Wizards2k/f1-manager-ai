@@ -137,7 +137,7 @@ export class PlayerGarageV3 {
         }
     }
 
-    buildLapUsageChipRow({ mapName, deployLimit, harvestLimit, deployPerLap, harvestPerLap, current, previous, hasPrevTrace, hasPrevWarnings, hasPrevLap }) {
+    buildLapUsageChipRow({ mapName, deployLimit, harvestLimit, deployPerLap, harvestPerLap, mguhDirectBudget, current, previous, hasPrevTrace, hasPrevWarnings, hasPrevLap }) {
         const chips = [];
         if (current) {
             chips.push(this.buildLapUsageChip({
@@ -152,6 +152,7 @@ export class PlayerGarageV3 {
                 deployLimit,
                 harvestLimit,
                 mapName,
+                mguhDirectBudget,
             }));
         }
         const showPrev = previous && (
@@ -174,6 +175,7 @@ export class PlayerGarageV3 {
                 deployLimit,
                 harvestLimit,
                 mapName,
+                mguhDirectBudget,
             }));
         }
         if (!chips.length) return '';
@@ -206,11 +208,12 @@ export class PlayerGarageV3 {
             .ers-bucket-card { background: #111623; border-radius: 16px; padding: 12px 14px; }
             .ers-bucket-card strong { display: block; font-size: 15px; }
             .ers-bucket-card small { color: #7c87a0; letter-spacing: 0.08em; text-transform: uppercase; font-size: 10px; }
-            .ers-bucket-values { font-size: 12px; color: #9aa5c1; margin-top: 8px; display: flex; justify-content: space-between; gap: 12px; }
-            .ers-bucket-bars { display: flex; gap: 6px; margin-top: 8px; }
-            .ers-bucket-bars span { flex: 1; height: 6px; border-radius: 999px; }
-            .ers-bucket-bars .deploy { background: linear-gradient(90deg,#ffd24c,#ff8f3d); }
-            .ers-bucket-bars .mguh { background: linear-gradient(90deg,#5cedbc,#1cb0ff); }
+            .ers-bucket-line { margin-top: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #c3cbe1; }
+            .ers-bucket-line.primary { font-weight: 600; color: #fdfdfd; }
+            .ers-bucket-percent { letter-spacing: 0.08em; text-transform: uppercase; font-size: 11px; color: #7c87a0; }
+            .ers-bucket-values { font-variant-numeric: tabular-nums; }
+            .ers-bucket-meta { display: flex; justify-content: space-between; margin-top: 2px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #6f7791; }
+            .ers-bucket-line.secondary { font-size: 12px; color: #9aa5c1; }
             .ers-trigger-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
             .ers-trigger-card { background: #0c1019; border-radius: 16px; padding: 10px; font-size: 12px; }
             .ers-trigger-card small { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #79819c; }
@@ -270,6 +273,7 @@ export class PlayerGarageV3 {
             return '<div class="ers-map-panel">No ERS telemetry available yet.</div>';
         }
         const formatMJ = (value, digits = 2) => (typeof value === 'number' && !Number.isNaN(value) ? `${value.toFixed(digits)} MJ` : '-- MJ');
+        const formatMJValue = (value, digits = 2) => (typeof value === 'number' && !Number.isNaN(value) ? value.toFixed(digits) : '--');
         const renderMeter = (used, total, variant = 'primary') => {
             const pct = total > 1e-6 ? Math.min((used / total) * 100, 100) : 0;
             return `<div class="ers-meter ${variant === 'secondary' ? 'secondary' : ''}"><span style="width:${pct}%"></span></div>`;
@@ -306,6 +310,7 @@ export class PlayerGarageV3 {
                 deployUsed,
                 mguhTotal,
                 mguhUsed,
+                pct: pctLabel ? pctLabel : null,
             };
         };
 
@@ -316,19 +321,21 @@ export class PlayerGarageV3 {
         ];
 
         const bucketCards = bucketEntries.map(entry => {
-            const deployLine = `${formatMJ(entry.deployUsed)} / ${formatMJ(entry.deployTotal)} Deploy`;
-            const mguhLine = `${formatMJ(entry.mguhUsed)} / ${formatMJ(entry.mguhTotal)} MGU-H`;
+            const pctLabelRuntime = entry.pct || null;
+            const pctFallback = deployBudget > 1e-6 && entry.deployTotal > 0 ? `${Math.round((entry.deployTotal / deployBudget) * 100)}%` : null;
+            const pctLabel = pctLabelRuntime || pctFallback || '--';
+            const targetValue = formatMJValue(entry.deployTotal);
+            const realtimeValue = formatMJValue(entry.deployUsed);
+            const mguhRealtime = formatMJ(entry.mguhUsed);
+            const deployLine = `${pctLabel} - ${targetValue} / ${realtimeValue} MJ Deploy`;
             return `
                 <div class="ers-bucket-card">
                     <strong>${entry.label}</strong>
                     <small>${entry.subtitle}</small>
-                    <div class="ers-bucket-values">
-                        <span>${deployLine}</span>
-                        <span>${mguhLine}</span>
-                    </div>
-                    <div class="ers-bucket-bars">
-                        <span class="deploy" style="width:${entry.deployTotal > 1e-5 ? Math.min((entry.deployUsed / entry.deployTotal) * 100, 100) : 0}%"></span>
-                        <span class="mguh" style="width:${entry.mguhTotal > 1e-5 ? Math.min((entry.mguhUsed / entry.mguhTotal) * 100, 100) : 0}%"></span>
+                    <div class="ers-bucket-line primary">${deployLine}</div>
+                    <div class="ers-bucket-line secondary">
+                        <span>Realtime MGU-H</span>
+                        <span class="ers-bucket-values">${mguhRealtime}</span>
                     </div>
                 </div>
             `;
@@ -352,6 +359,8 @@ export class PlayerGarageV3 {
         const mguhRiskLabel = mguhUsageRatio > 0.85 ? 'Clip risk high' : (mguhUsageRatio > 0.65 ? 'Clip risk medium' : 'Clip risk low');
 
         const warnings = puStats.warnings_runtime || [];
+        const warningsActive = warnings.length > 0;
+        const regenClampActive = !!puStats.regen_clamp_active;
         const warningPanel = `
             <div class="ers-warning-box">
                 <div class="ers-warning-title">Notifications</div>
@@ -362,6 +371,7 @@ export class PlayerGarageV3 {
         `;
 
         const deployMeter = renderMeter(deployBudget, deployBudgetLimit);
+        const deployOnTrackMeter = renderMeter(lapDeploy, deployBudget || deployBudgetLimit || 1);
         const defenseMeter = renderMeter(defenseReserve, deployBudget || 1, 'secondary');
         const lastMeter = renderMeter(lastAllocation, Math.max(deployBudget, 0.0001));
 
@@ -384,6 +394,13 @@ export class PlayerGarageV3 {
                                     <strong>${deployBudgetLabel(deployBudget, deployBudgetConfig)}</strong>
                                 </div>
                                 ${deployMeter}
+                            </div>
+                            <div class="ers-metric-row">
+                                <div class="ers-metric-header">
+                                    <span>Deploy on track</span>
+                                    <strong>${formatMJ(lapDeploy)}</strong>
+                                </div>
+                                ${deployOnTrackMeter}
                             </div>
                             <div class="ers-metric-row">
                                 <div class="ers-metric-header">
@@ -458,17 +475,42 @@ export class PlayerGarageV3 {
         }
     }
 
-    buildLapUsageChip({ label, lapIndex, deploy, harvest, deployBudget, harvestBudget, deployLimit, harvestLimit, mapName }) {
+    buildLapUsageChip({ label, lapIndex, deploy, harvest, deployBudget, harvestBudget, deployLimit, harvestLimit, mapName, mguhDirect, mguhDirectBudget, mguhHarvest }) {
         if (deploy == null && harvest == null) return '';
         const lapLabel = this.formatLapLabel(lapIndex);
-        const deployBudgetStr = deployBudget ? `${deployBudget.toFixed(1)} MJ` : '—';
-        const harvestBudgetStr = harvestBudget ? `${harvestBudget.toFixed(1)} MJ` : '—';
         const deployText = deploy != null ? `${deploy.toFixed(2)} MJ` : '—';
         const harvestText = harvest != null ? `${harvest.toFixed(2)} MJ` : '—';
         const deployRatio = deployBudget ? Math.min((deploy || 0) / deployBudget, 1) : 0;
         const harvestRatio = harvestBudget ? Math.min((harvest || 0) / harvestBudget, 1) : 0;
-        const deployPctLabel = deployBudget ? `${Math.round(deployRatio * 100)}%` : (deploy ? '—' : '0%');
-        const harvestPctLabel = harvestBudget ? `${Math.round(harvestRatio * 100)}%` : (harvest ? '—' : '0%');
+        const formatTargetPct = (ratio, budget) => `${Math.round(ratio * 100)}% of ${budget.toFixed(2)} MJ`;
+        const deployPctLabel = deployBudget ? formatTargetPct(deployRatio, deployBudget) : (deploy ? '—' : '0%');
+        const harvestPctLabel = harvestBudget ? formatTargetPct(harvestRatio, harvestBudget) : (harvest ? '—' : '0%');
+        const mguhValue = typeof mguhDirect === 'number' ? mguhDirect : 0;
+        const hasMguhBudget = typeof mguhDirectBudget === 'number' && mguhDirectBudget > 1e-4;
+        const mguhRatio = hasMguhBudget ? Math.min(mguhValue / mguhDirectBudget, 1) : 0;
+        const showMguh = hasMguhBudget;
+        const mguhPctLabel = showMguh ? formatTargetPct(mguhRatio, mguhDirectBudget) : '';
+        const mguhText = `${mguhValue.toFixed(2)} MJ`;
+        const mguhHarvestValue = typeof mguhHarvest === 'number' ? mguhHarvest : 0;
+        const hasHarvestBudget = harvestBudget > 1e-5;
+        const mguhHarvestRatio = hasHarvestBudget ? Math.min(mguhHarvestValue / harvestBudget, 1) : 0;
+        const showMguhHarvest = hasHarvestBudget && mguhHarvestValue > 1e-4;
+        const mguhHarvestPctLabel = showMguhHarvest ? formatTargetPct(mguhHarvestRatio, harvestBudget) : '';
+        const mguhHarvestText = `${mguhHarvestValue.toFixed(2)} MJ`;
+        const combinedDeployRatio = deployRatio + (showMguh ? mguhRatio : 0);
+        const combinedScale = combinedDeployRatio > 1 ? (1 / combinedDeployRatio) : 1;
+        const deployCombinedPct = deployRatio * combinedScale * 100;
+        const mguhCombinedPct = showMguh ? mguhRatio * combinedScale * 100 : 0;
+        const combinedHarvestRatio = harvestRatio + (showMguhHarvest ? mguhHarvestRatio : 0);
+        const harvestScale = combinedHarvestRatio > 1 ? (1 / combinedHarvestRatio) : 1;
+        const harvestCombinedPct = harvestRatio * harvestScale * 100;
+        const mguhHarvestCombinedPct = showMguhHarvest ? mguhHarvestRatio * harvestScale * 100 : 0;
+        const mguhLegend = showMguh
+            ? `<div class="pu-chip-submetric">MGU-H Direct ${mguhText} <span class="pu-chip-percent">${mguhPctLabel}</span></div>`
+            : '';
+        const mguhHarvestLegend = showMguhHarvest
+            ? `<div class="pu-chip-submetric">MGU-H → ES ${mguhHarvestText} <span class="pu-chip-percent">${mguhHarvestPctLabel}</span></div>`
+            : '';
         return `
             <div class="pu-lap-chip-v3">
                 <div class="pu-chip-header">
@@ -479,12 +521,20 @@ export class PlayerGarageV3 {
                     <div class="pu-chip-metric">
                         <div class="pu-chip-metric-label">Deploy</div>
                         <div class="pu-chip-metric-value">${deployText} <span class="pu-chip-percent">${deployPctLabel}</span></div>
-                        <div class="pu-chip-meter"><span style="width:${deployRatio * 100}%"></span></div>
+                        <div class="pu-chip-progress combined">
+                            <div class="pu-chip-progress-bar deploy" style="width:${deployCombinedPct}%"></div>
+                            ${showMguh ? `<div class="pu-chip-progress-bar mguh" style="width:${mguhCombinedPct}%; left:${deployCombinedPct}%"></div>` : ''}
+                        </div>
+                        ${mguhLegend}
                     </div>
                     <div class="pu-chip-metric">
                         <div class="pu-chip-metric-label">Harvest</div>
                         <div class="pu-chip-metric-value">${harvestText} <span class="pu-chip-percent">${harvestPctLabel}</span></div>
-                        <div class="pu-chip-meter"><span style="width:${harvestRatio * 100}%"></span></div>
+                        <div class="pu-chip-progress combined harvest">
+                            <div class="pu-chip-progress-bar harvest" style="width:${harvestCombinedPct}%"></div>
+                            ${showMguhHarvest ? `<div class="pu-chip-progress-bar mguh-harvest" style="width:${mguhHarvestCombinedPct}%; left:${harvestCombinedPct}%"></div>` : ''}
+                        </div>
+                        ${mguhHarvestLegend}
                     </div>
                 </div>
                 <div class="pu-chip-footer">
@@ -640,10 +690,19 @@ export class PlayerGarageV3 {
                 mguhHarvest: acc.mguhHarvest + mguhHarvest,
             };
         }, { deploy: 0, harvest: 0, mguhDirect: 0, mguhHarvest: 0 });
-        const deploy = hasTrace ? totals.deploy : (typeof fallbackDeploy === 'number' ? fallbackDeploy : 0);
-        const harvest = hasTrace ? totals.harvest : (typeof fallbackHarvest === 'number' ? fallbackHarvest : 0);
-        const mguhDirect = hasTrace ? totals.mguhDirect : (typeof fallbackMguhDirect === 'number' ? fallbackMguhDirect : 0);
-        const mguhHarvest = hasTrace ? totals.mguhHarvest : (typeof fallbackMguhHarvest === 'number' ? fallbackMguhHarvest : 0);
+        const resolveValue = (traceValue, fallbackValue) => {
+            const fallbackValid = typeof fallbackValue === 'number';
+            if (!hasTrace) return fallbackValid ? fallbackValue : traceValue;
+            if (fallbackValid && fallbackValue > traceValue + 1e-4) {
+                return fallbackValue;
+            }
+            return traceValue;
+        };
+
+        const deploy = resolveValue(totals.deploy, fallbackDeploy);
+        const harvest = resolveValue(totals.harvest, fallbackHarvest);
+        const mguhDirect = resolveValue(totals.mguhDirect, fallbackMguhDirect);
+        const mguhHarvest = resolveValue(totals.mguhHarvest, fallbackMguhHarvest);
         const hasData = hasTrace || deploy > 0.0005 || harvest > 0.0005 || mguhDirect > 0.0005 || mguhHarvest > 0.0005;
         return { deploy, harvest, mguhDirect, mguhHarvest, hasData, hasTrace };
     }
@@ -1015,6 +1074,7 @@ export class PlayerGarageV3 {
     buildPUModal(car) {
         if (!this.overlayContainer) return;
         const puStats = car.pu_stats || {};
+        const brakeDiag = car.brake_diagnostics || {};
         const driverName = car.driver_name || `Driver #${car.driver_number}`;
         const carState = this.getCarState(car);
         const isBox = carState === 'BOX';
@@ -1028,14 +1088,19 @@ export class PlayerGarageV3 {
         const lapHarvest = puStats.lap_harvest_mj ?? 0;
         const deployPerLap = puStats.deploy_mj_per_lap ?? 4.0;
         const harvestPerLap = puStats.harvest_mj_per_lap ?? 2.0;
-        const lapMguhDirect = puStats.lap_mguh_direct_mj ?? 0;
-        const lapMguhHarvest = puStats.lap_mguh_harvest_mj ?? 0;
         const lapMguhDirectPrev = puStats.lap_mguh_direct_prev_mj ?? null;
         const lapMguhHarvestPrev = puStats.lap_mguh_harvest_prev_mj ?? null;
+        const lapMguhDirectCurrent = puStats.lap_mguh_direct_mj ?? 0;
+        const lapMguhHarvestCurrent = puStats.lap_mguh_harvest_mj ?? 0;
+        const lapMguhDirect = lapMguhDirectPrev != null ? lapMguhDirectPrev : lapMguhDirectCurrent;
+        const lapMguhHarvest = lapMguhHarvestPrev != null ? lapMguhHarvestPrev : lapMguhHarvestCurrent;
+        const mguhDirectBudget = this.resolveBudgetValue(puStats.mguh_direct_total_mj, puStats.mguh_direct_config_total_mj, 0);
         const deployPct = deployPerLap > 0 ? Math.min((lapDeploy / deployPerLap) * 100, 100) : 0;
         const harvestPct = harvestPerLap > 0 ? Math.min((lapHarvest / harvestPerLap) * 100, 100) : 0;
         const energyBalance = lapHarvest - lapDeploy;
         const warnings = puStats.warnings_runtime || [];
+        const warningsActive = warnings.length > 0;
+        const regenClampActive = !!puStats.regen_clamp_active;
         const warningsPrev = puStats.warnings_runtime_prev || [];
         const trace = puStats.energy_trace || [];
         const tracePrev = puStats.energy_trace_prev || [];
@@ -1043,18 +1108,6 @@ export class PlayerGarageV3 {
         const lapHarvestPrev = puStats.lap_harvest_prev_mj ?? null;
         const lapIdCurrent = puStats.lap_id_current ?? null;
         const lapIdPrev = puStats.lap_id_prev ?? null;
-        
-        console.log('[PU Debug]', {
-            lapIdCurrent,
-            lapIdPrev,
-            lapDeploy,
-            lapHarvest,
-            lapDeployPrev,
-            lapHarvestPrev,
-            traceLength: trace.length,
-            tracePrevLength: tracePrev.length,
-            completedLaps: car.lap_times?.length,
-        });
         const mapName = puStats.map || 'STANDARD';
         const socClass = socPct >= 60 ? 'pu-soc-good' : socPct >= 30 ? 'pu-soc-warn' : 'pu-soc-low';
         
@@ -1064,7 +1117,7 @@ export class PlayerGarageV3 {
             lapIdPrev,
         });
 
-        const currentTotals = this.computeLapTotals(trace, lapDeploy, lapHarvest, lapMguhDirect, lapMguhHarvest);
+        const currentTotals = this.computeLapTotals(trace, lapDeploy, lapHarvest, lapMguhDirectCurrent, lapMguhHarvestCurrent);
         const previousTotals = this.computeLapTotals(tracePrev, lapDeployPrev, lapHarvestPrev, lapMguhDirectPrev, lapMguhHarvestPrev);
 
         const hasPrevWarnings = Array.isArray(warningsPrev) && warningsPrev.length > 0;
@@ -1076,15 +1129,20 @@ export class PlayerGarageV3 {
             harvestLimit,
             deployPerLap,
             harvestPerLap,
+            mguhDirectBudget,
             current: currentTotals.hasData ? {
                 lapIndex: currentLapIndex,
                 deploy: currentTotals.deploy,
                 harvest: currentTotals.harvest,
+                mguhDirect: currentTotals.mguhDirect,
+                mguhHarvest: currentTotals.mguhHarvest,
             } : null,
             previous: (previousLapIndex !== null || previousTotals.hasData || previousTotals.hasTrace) ? {
                 lapIndex: previousLapIndex,
                 deploy: previousTotals.deploy,
                 harvest: previousTotals.harvest,
+                mguhDirect: previousTotals.mguhDirect,
+                mguhHarvest: previousTotals.mguhHarvest,
             } : null,
             hasPrevTrace: previousTotals.hasTrace,
             hasPrevWarnings,
@@ -1093,38 +1151,43 @@ export class PlayerGarageV3 {
 
         const traceRows = this.buildPUTableRows(trace, tracePrev, currentLapIndex, previousLapIndex);
         
+        const brakeTile = this.buildBrakeRegenTile(puStats, brakeDiag, regenClampActive);
+
         const puStatsPanel = `
-            <div class="pu-stats-grid-v3" style="grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px;">
-                <div class="pu-stat-card-v3" style="padding: 10px;">
-                    <div class="pu-stat-label-v3" style="font-size: 10px;">Battery SOC</div>
-                    <div class="pu-stat-value-v3 ${socClass}" style="font-size: 18px; margin: 3px 0;">${socMj.toFixed(1)} MJ</div>
-                    <div class="pu-stat-sub-v3" style="font-size: 9px;">${Math.round(socPct)}% carica</div>
+            <div class="pu-stats-grid-v3" style="margin-bottom: 12px;">
+                <div class="pu-stats-metrics-grid">
+                    <div class="pu-stat-card-v3" style="padding: 10px;">
+                        <div class="pu-stat-label-v3" style="font-size: 10px;">Battery SOC</div>
+                        <div class="pu-stat-value-v3 ${socClass}" style="font-size: 18px; margin: 3px 0;">${socMj.toFixed(1)} MJ</div>
+                        <div class="pu-stat-sub-v3" style="font-size: 9px;">${Math.round(socPct)}% charge</div>
+                    </div>
+                    <div class="pu-stat-card-v3" style="padding: 10px;">
+                        <div class="pu-stat-label-v3" style="font-size: 10px;">Battery Capacity</div>
+                        <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${capacityMj.toFixed(1)} MJ</div>
+                        <div class="pu-stat-sub-v3" style="font-size: 9px;">Total</div>
+                    </div>
+                    <div class="pu-stat-card-v3" style="padding: 10px;">
+                        <div class="pu-stat-label-v3" style="font-size: 10px;">Deploy Limit</div>
+                        <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${deployLimit.toFixed(1)} MJ</div>
+                        <div class="pu-stat-sub-v3" style="font-size: 9px;">Per lap</div>
+                    </div>
+                    <div class="pu-stat-card-v3" style="padding: 10px;">
+                        <div class="pu-stat-label-v3" style="font-size: 10px;">Harvest Limit</div>
+                        <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${harvestLimit.toFixed(1)} MJ</div>
+                        <div class="pu-stat-sub-v3" style="font-size: 9px;">Per lap</div>
+                    </div>
+                    <div class="pu-stat-card-v3" style="padding: 10px;">
+                        <div class="pu-stat-label-v3" style="font-size: 10px;">MGU-H Direct Drive</div>
+                        <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${lapMguhDirect.toFixed(2)} MJ</div>
+                        <div class="pu-stat-sub-v3" style="font-size: 9px;">Last lap</div>
+                    </div>
+                    <div class="pu-stat-card-v3" style="padding: 10px;">
+                        <div class="pu-stat-label-v3" style="font-size: 10px;">MGU-H → ES</div>
+                        <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${lapMguhHarvest.toFixed(2)} MJ</div>
+                        <div class="pu-stat-sub-v3" style="font-size: 9px;">Last lap</div>
+                    </div>
                 </div>
-                <div class="pu-stat-card-v3" style="padding: 10px;">
-                    <div class="pu-stat-label-v3" style="font-size: 10px;">Capacità Batteria</div>
-                    <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${capacityMj.toFixed(1)} MJ</div>
-                    <div class="pu-stat-sub-v3" style="font-size: 9px;">Totale</div>
-                </div>
-                <div class="pu-stat-card-v3" style="padding: 10px;">
-                    <div class="pu-stat-label-v3" style="font-size: 10px;">Deploy Limit</div>
-                    <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${deployLimit.toFixed(1)} MJ</div>
-                    <div class="pu-stat-sub-v3" style="font-size: 9px;">Per lap</div>
-                </div>
-                <div class="pu-stat-card-v3" style="padding: 10px;">
-                    <div class="pu-stat-label-v3" style="font-size: 10px;">Harvest Limit</div>
-                    <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${harvestLimit.toFixed(1)} MJ</div>
-                    <div class="pu-stat-sub-v3" style="font-size: 9px;">Per lap</div>
-                </div>
-                <div class="pu-stat-card-v3" style="padding: 10px;">
-                    <div class="pu-stat-label-v3" style="font-size: 10px;">MGU-H Direct Drive</div>
-                    <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${lapMguhDirect.toFixed(2)} MJ</div>
-                    <div class="pu-stat-sub-v3" style="font-size: 9px;">Ultimo giro</div>
-                </div>
-                <div class="pu-stat-card-v3" style="padding: 10px;">
-                    <div class="pu-stat-label-v3" style="font-size: 10px;">MGU-H → ES</div>
-                    <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${lapMguhHarvest.toFixed(2)} MJ</div>
-                    <div class="pu-stat-sub-v3" style="font-size: 9px;">Ultimo giro</div>
-                </div>
+                ${brakeTile}
             </div>
             ${lapChipRow}
             <div class="pu-trace-container-v3" style="max-height: 280px; overflow-y: auto;">
@@ -1169,6 +1232,86 @@ export class PlayerGarageV3 {
             </div>
         `;
         this.setPauseForPU(true);
+    }
+
+    buildBrakeRegenTile(puStats, brakeDiag, regenClampActive) {
+        const regenSplit = this.formatBrakeSplit(puStats, brakeDiag);
+        const biasLabel = this.formatBrakeBias(brakeDiag);
+        const ductLabel = this.formatBrakeDuct(brakeDiag);
+        const coolingLabel = this.formatBrakeCooling(brakeDiag);
+        const statusClass = regenClampActive ? 'status-pill status-pill--amber pu-brake-chip' : 'status-pill status-pill--green pu-brake-chip';
+        const statusLabel = regenClampActive ? 'Clamp active' : 'Migration active';
+        if (!regenSplit && !biasLabel && !ductLabel && !coolingLabel) {
+            return '<div class="pu-brake-band pu-brake-band--empty">No brake data</div>';
+        }
+
+        const metrics = [
+            regenSplit ? `<div class="pu-brake-band-metric"><span>Split</span><strong>${regenSplit}</strong></div>` : null,
+            biasLabel ? `<div class="pu-brake-band-metric"><span>Bias</span><strong>${biasLabel}</strong></div>` : null,
+            ductLabel ? `<div class="pu-brake-band-metric"><span>Duct target</span><strong>${ductLabel}</strong></div>` : null,
+            coolingLabel ? `<div class="pu-brake-band-metric"><span>Cooling target</span><strong>${coolingLabel}</strong></div>` : null,
+        ].filter(Boolean).join('');
+
+        return `
+            <div class="pu-brake-band">
+                <div class="pu-brake-band-left">
+                    <div class="pu-brake-band-header">
+                        <span class="pu-brake-band-label">Brake Regen</span>
+                        <span class="${statusClass}">${statusLabel}</span>
+                    </div>
+                    <div class="pu-brake-band-metrics">${metrics}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    formatBrakeSplit(puStats, brakeDiag) {
+        const buildLabel = (regenPct, hydraulicPct) => `${regenPct}% regen / ${hydraulicPct}% hydraulic`;
+        const ratio = Array.isArray(puStats.energy_trace) && puStats.energy_trace.length
+            ? puStats.energy_trace[puStats.energy_trace.length - 1].regen_vs_hydraulic
+            : null;
+        if (typeof ratio === 'number' && ratio > 1e-3) {
+            const hydraulicShare = ratio / (1 + ratio);
+            const regenShare = 1 - hydraulicShare;
+            return buildLabel(Math.round(regenShare * 100), Math.round(hydraulicShare * 100));
+        }
+        const base = brakeDiag?.regen_brake_base;
+        if (typeof base === 'number') {
+            const regenPct = Math.round(base * 100);
+            const hydraulicPct = Math.max(0, 100 - regenPct);
+            return buildLabel(regenPct, hydraulicPct);
+        }
+        return null;
+    }
+
+    formatBrakeBias(brakeDiag) {
+        const bias = brakeDiag?.regen_migration_bias;
+        if (typeof bias === 'number' && !Number.isNaN(bias)) {
+            const direction = bias >= 0 ? 'rear' : 'front';
+            return `${Math.abs(bias).toFixed(2)} (${direction})`;
+        }
+        return null;
+    }
+
+    formatBrakeDuct(brakeDiag) {
+        const duct = brakeDiag?.duct_recommendation;
+        if (duct && typeof duct.min_open === 'number' && typeof duct.max_open === 'number') {
+            const formatPct = (value) => `${Math.round(value * 100)}%`;
+            return `${formatPct(duct.min_open)} – ${formatPct(duct.max_open)}`;
+        }
+        return null;
+    }
+
+    formatBrakeCooling(brakeDiag) {
+        const cooling = brakeDiag?.cooling_targets;
+        const formatDelta = (value) => {
+            if (typeof value !== 'number' || Number.isNaN(value)) return '--';
+            return `${value >= 0 ? '+' : ''}${value.toFixed(2)}`;
+        };
+        if (!cooling) return null;
+        const front = `front ${formatDelta(cooling?.front_delta)}`;
+        const rear = `rear ${formatDelta(cooling?.rear_delta)}`;
+        return `${front} · ${rear}`;
     }
 
     togglePUModal(driverNumber, open = true) {
