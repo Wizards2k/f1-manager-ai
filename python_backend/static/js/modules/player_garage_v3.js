@@ -1774,16 +1774,17 @@ export class PlayerGarageV3 {
             const car = this.state.getPlayerCar(driverNumber);
             if (!car) return;
             const chip = card.querySelector('.setup-chip-v3');
-            if (!chip) return;
-            const pct = car.setup_info_percent ?? 0;
-            const thresholds = car.is_player_controlled
-                ? { green: 67, yellow: 34 }
-                : { green: 80, yellow: 40 };
-            chip.classList.remove('setup-chip-red', 'setup-chip-yellow', 'setup-chip-green', 'setup-chip-blink');
-            if (pct >= thresholds.green) chip.classList.add('setup-chip-green');
-            else if (pct >= thresholds.yellow) chip.classList.add('setup-chip-yellow');
-            else chip.classList.add('setup-chip-red');
-            if (pct >= 100) chip.classList.add('setup-chip-blink');
+            if (chip) {
+                const pct = car.setup_info_percent ?? 0;
+                const thresholds = car.is_player_controlled
+                    ? { green: 67, yellow: 34 }
+                    : { green: 80, yellow: 40 };
+                chip.classList.remove('setup-chip-red', 'setup-chip-yellow', 'setup-chip-green', 'setup-chip-blink');
+                if (pct >= thresholds.green) chip.classList.add('setup-chip-green');
+                else if (pct >= thresholds.yellow) chip.classList.add('setup-chip-yellow');
+                else chip.classList.add('setup-chip-red');
+                if (pct >= 100) chip.classList.add('setup-chip-blink');
+            }
         });
     }
 
