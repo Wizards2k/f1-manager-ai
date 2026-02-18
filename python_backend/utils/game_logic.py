@@ -64,6 +64,7 @@ def start_session_for_circuit():
     """Resetta lo stato partendo dal circuito appena caricato e avvia la sessione."""
     global session_start_time, session_start_real_time, accumulated_game_time
     global last_speed_change_time, pause_start_time, is_paused, simulation_ready
+    global game_speed_multiplier
     global session_bridge
 
     start_time = time.time()
@@ -72,6 +73,7 @@ def start_session_for_circuit():
         session_start_real_time = start_time
         accumulated_game_time = 0.0
         last_speed_change_time = start_time
+        game_speed_multiplier = 1.0
         pause_start_time = None
         is_paused = False
         simulation_ready = True
@@ -101,6 +103,7 @@ def mark_simulation_pending(reset_cars=False):
     """Segna la simulazione come in attesa di selezione circuito."""
     global simulation_ready, session_start_time, session_start_real_time
     global accumulated_game_time, last_speed_change_time, pause_start_time, is_paused
+    global game_speed_multiplier
 
     start_time = time.time()
     with state_lock:
