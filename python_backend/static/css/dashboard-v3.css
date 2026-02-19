@@ -869,14 +869,25 @@ timeline-toggle-btn:hover {
     pointer-events: none;
 }
 
+.tt-header-row-v3 {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    margin-bottom: 2px;
+}
+
 .tt-title-v3 {
     font-size: 8px;
     color: #777;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    margin-bottom: 1px;
-    text-align: center;
-    width: 100%;
+}
+
+.tt-legend-v3 {
+    font-size: 6px;
+    color: #555;
+    text-transform: uppercase;
 }
 
 .tt-2x2-v3 {
@@ -887,9 +898,17 @@ timeline-toggle-btn:hover {
 
 .tt-cell-v3 {
     display: flex;
-    align-items: baseline;
-    gap: 3px;
-    justify-content: flex-end;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+}
+
+.tt-header-v3 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 4px;
 }
 
 .tt-pos-v3 {
@@ -898,10 +917,31 @@ timeline-toggle-btn:hover {
     text-transform: uppercase;
 }
 
-.tt-val-v3 {
+.tt-wear-v3 {
+    font-size: 7px;
+    font-weight: 600;
+}
+
+.tt-wear-v3.wear-low { color: #78d4aa; }
+.tt-wear-v3.wear-medium { color: #f4e4a6; }
+.tt-wear-v3.wear-high { color: #ff9b7c; }
+
+.tt-temps-v3 {
+    display: flex;
+    gap: 2px;
+    align-items: baseline;
+}
+
+.tt-surface-v3 {
     font-size: 11px;
     font-weight: 700;
     line-height: 1.2;
+}
+
+.tt-core-v3 {
+    font-size: 9px;
+    color: #999;
+    font-weight: 500;
 }
 
 .tt-window-v3 {
@@ -911,6 +951,44 @@ timeline-toggle-btn:hover {
     text-align: center;
     width: 100%;
     line-height: 1;
+}
+
+.tt-footer-v3 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 2px;
+    font-size: 6px;
+    color: #555;
+    align-items: center;
+}
+
+.tt-legend-item {
+    color: #777;
+}
+
+.tyre-flags {
+    display: flex;
+    gap: 2px;
+    margin-top: 1px;
+}
+
+.tyre-flag {
+    font-size: 6px;
+    font-weight: 700;
+    padding: 1px 2px;
+    border-radius: 2px;
+    text-transform: uppercase;
+}
+
+.tyre-flag.graining {
+    background: #f4e4a6;
+    color: #333;
+}
+
+.tyre-flag.blistering {
+    background: #ff9b7c;
+    color: #333;
 }
 
 /* Tyre temp status colors */

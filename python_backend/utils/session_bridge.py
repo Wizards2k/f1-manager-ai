@@ -818,15 +818,28 @@ class SessionBridge:
         ) / 4.0
         race_car.tire_wear = total_wear / 100.0
 
-        # Tyre temps
+        # Tyre temps (surface + core)
         temps = {}
+        core_temps = {}
+        tyre_states = {}
         wp_map = {
             WheelPosition.LF: "fl", WheelPosition.RF: "fr",
             WheelPosition.LR: "rl", WheelPosition.RR: "rr",
         }
         for wp, key in wp_map.items():
-            temps[key] = entry.state.tyres[wp].surface_temp_c
+            tyre_state = entry.state.tyres[wp]
+            temps[key] = tyre_state.surface_temp_c
+            core_temps[key] = tyre_state.core_temp_c
+            tyre_states[key] = {
+                "wear_pct": tyre_state.wear_pct,
+                "graining": tyre_state.graining_level > 0.1,
+                "blistering": tyre_state.blistering_level > 0.1,
+                "surface_temp": tyre_state.surface_temp_c,
+                "core_temp": tyre_state.core_temp_c,
+            }
         race_car.tire_temps = temps
+        race_car.tire_core_temps = core_temps
+        race_car.tyre_states = tyre_states
 
         # Fuel
         fuel_max_kg = 110.0
