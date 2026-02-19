@@ -859,7 +859,7 @@ timeline-toggle-btn:hover {
 /* Tyre Temps 2x2 Grid (car wheel layout) */
 .tyre-temps-grid-v3 {
     position: absolute;
-    top: 0;
+    top: 80px;
     right: 0;
     display: flex;
     flex-direction: column;
