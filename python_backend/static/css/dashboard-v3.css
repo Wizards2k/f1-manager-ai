@@ -1007,10 +1007,10 @@ timeline-toggle-btn:hover {
     background: linear-gradient(90deg, #5c6bc0, #ffa726);
 }
 .dock-field label {
-    font-size: 7px;
+    font-size: 8px;
     color: #666;
     text-transform: uppercase;
-    letter-spacing: .08em;
+    margin-bottom: 2px;
     font-weight: 600;
     flex-shrink: 0;
 }
@@ -1022,19 +1022,20 @@ timeline-toggle-btn:hover {
     background: #111 !important;
     border: 1px solid #333 !important;
     border-radius: 4px !important;
-    color: #f0f0f0 !important;
-    font-size: 10px !important;
-    padding: 2px 3px !important;
+    color: #ffd24c !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    height: 24px !important;
+    padding: 0 4px !important;
     width: 100% !important;
-    max-width: 100% !important;
-    height: 20px !important;
+    max-width: none !important;
     min-width: 0 !important;
     flex: unset !important;
     box-sizing: border-box !important;
 }
 .dock-field input[type="range"],
 .dock-field .compact-range {
-    height: 14px !important;
+    height: 24px !important;
     padding: 0 !important;
     accent-color: #ffd24c !important;
 }
@@ -1045,10 +1046,10 @@ timeline-toggle-btn:hover {
     letter-spacing: .08em;
     font-weight: 600;
 }
-.dock-val {
+.dock-field .dock-val {
     font-size: 11px;
-    font-weight: 600;
-    color: #f0f0f0;
+    font-weight: 700;
+    color: #d7def1;
 }
 .dock-wear {
     font-size: 10px;
@@ -1058,9 +1059,9 @@ timeline-toggle-btn:hover {
 }
 
 /* Dock grid rows */
-.dock-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-.dock-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
-.dock-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; }
+.dock-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dock-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.dock-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
 .dock-row-4 .dock-fuel { flex: 0 0 70px; }
 .dock-row-4 .dock-stint { flex: 0 0 70px; }
 
