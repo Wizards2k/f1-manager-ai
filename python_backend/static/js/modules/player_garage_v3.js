@@ -1473,13 +1473,25 @@ export class PlayerGarageV3 {
     buildTabTyres(car, { tireHealthPct }) {
         const tyreTemps = car.tire_temps || car.tyre_temps || {};
         const tyreStates = car.tyre_states || {};
+        const rawWindow = car.tire_temp_window;
+        const tempWindow = PlayerGarageV3.extractTempWindow(rawWindow);
         
         const fl = tyreTemps.fl ?? null;
         const fr = tyreTemps.fr ?? null;
         const rl = tyreTemps.rl ?? null;
         const rr = tyreTemps.rr ?? null;
+        
         const fmt = (v) => v != null ? `${Math.round(v)}°C` : '--°C';
-        const cls = (v) => v == null ? 'tt-status-na' : v > 110 ? 'tt-status-hot' : v < 70 ? 'tt-status-cold' : 'tt-status-ok';
+        const getTempClass = (val, range) => {
+            if (val == null || !range) return 'tt-status-na';
+            if (val < range[0]) return 'tt-status-cold';
+            // Leggermente sopra la finestra (es. max + 5 gradi) = giallo
+            if (val > range[1] && val <= range[1] + 5) return 'tt-status-warn';
+            if (val > range[1] + 5) return 'tt-status-hot';
+            return 'tt-status-ok';
+        };
+        
+        const cls = (v) => getTempClass(v, tempWindow);
         
         const brakeFront = car.brake_thermal?.front ?? null;
         const brakeRear = car.brake_thermal?.rear ?? null;
@@ -1508,21 +1520,21 @@ export class PlayerGarageV3 {
 
         return `
             <div class="dock-tyre-grid">
-                <div class="dock-tyre-cell">
-                    <span class="dock-lbl">FL</span>
-                    <span class="dock-val ${cls(fl)}">${fmt(fl)}</span>
+                <div class="dock-tyre-cell ${cls(fl)}">
+                    <span class="dock-lbl" style="color: inherit; opacity: 0.8;">FL</span>
+                    <span class="dock-val">${fmt(fl)}</span>
                 </div>
-                <div class="dock-tyre-cell">
-                    <span class="dock-lbl">FR</span>
-                    <span class="dock-val ${cls(fr)}">${fmt(fr)}</span>
+                <div class="dock-tyre-cell ${cls(fr)}">
+                    <span class="dock-lbl" style="color: inherit; opacity: 0.8;">FR</span>
+                    <span class="dock-val">${fmt(fr)}</span>
                 </div>
-                <div class="dock-tyre-cell">
-                    <span class="dock-lbl">RL</span>
-                    <span class="dock-val ${cls(rl)}">${fmt(rl)}</span>
+                <div class="dock-tyre-cell ${cls(rl)}">
+                    <span class="dock-lbl" style="color: inherit; opacity: 0.8;">RL</span>
+                    <span class="dock-val">${fmt(rl)}</span>
                 </div>
-                <div class="dock-tyre-cell">
-                    <span class="dock-lbl">RR</span>
-                    <span class="dock-val ${cls(rr)}">${fmt(rr)}</span>
+                <div class="dock-tyre-cell ${cls(rr)}">
+                    <span class="dock-lbl" style="color: inherit; opacity: 0.8;">RR</span>
+                    <span class="dock-val">${fmt(rr)}</span>
                 </div>
             </div>
             <div class="dock-row-2">

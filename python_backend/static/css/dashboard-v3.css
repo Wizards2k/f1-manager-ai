@@ -924,6 +924,12 @@ timeline-toggle-btn:hover {
 }
 
 /* Tyre temp status colors */
+.dock-tyre-cell.tt-status-ok { background: #1a4d2e; border-color: #277b47; color: #fff; }
+.dock-tyre-cell.tt-status-cold { background: #1a365d; border-color: #2b6cb0; color: #fff; }
+.dock-tyre-cell.tt-status-warn { background: #745f2a; border-color: #b79234; color: #fff; }
+.dock-tyre-cell.tt-status-hot { background: #742a2a; border-color: #c53030; color: #fff; }
+.dock-tyre-cell.tt-status-na { background: #1e1e1e; border-color: #2a2a2a; color: #666; }
+
 .tt-status-ok { color: #78d4aa; }
 .tt-status-cold { color: #91b9ff; }
 .tt-status-hot { color: #ff9b7c; }
