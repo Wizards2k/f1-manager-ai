@@ -1529,7 +1529,7 @@ export class PlayerGarageV3 {
                     <span class="dock-val">${fmt(fr)}</span>
                 </div>
                 <div class="dock-tyre-cell">
-                    <span class="dock-lbl">Freni F</span>
+                    <span class="dock-lbl">Brake F</span>
                     <span class="dock-val" style="color:#ddd;">${fmt(brakeFront)}</span>
                 </div>
                 <div class="dock-tyre-cell ${cls(rl)}">
@@ -1541,7 +1541,7 @@ export class PlayerGarageV3 {
                     <span class="dock-val">${fmt(rr)}</span>
                 </div>
                 <div class="dock-tyre-cell">
-                    <span class="dock-lbl">Freni R</span>
+                    <span class="dock-lbl">Brake R</span>
                     <span class="dock-val" style="color:#ddd;">${fmt(brakeRear)}</span>
                 </div>
             </div>
