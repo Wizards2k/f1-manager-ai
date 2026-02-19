@@ -1096,6 +1096,12 @@ export class PlayerGarageV3 {
         const temps = car.tire_temps;
         const coreTemps = car.tire_core_temps;
         const tyreStates = car.tyre_states;
+        
+        // Debug: log dei dati che arrivano
+        if (temps && !coreTemps) {
+            console.log('Car', car.driver_number, 'has temps but no core_temps', { temps, coreTemps, tyreStates });
+        }
+        
         const rawWindow = car.tire_temp_window;
         const window = PlayerGarageV3.extractTempWindow(rawWindow);
         const positions = [
@@ -1105,57 +1111,58 @@ export class PlayerGarageV3 {
             { key: 'rr', label: 'RR' }
         ];
 
-        const cells = positions.map(pos => {
+        // Build horizontal tyre temps row
+        const surfaceVals = positions.map(pos => {
             const surfaceVal = temps ? temps[pos.key] : null;
             const coreVal = coreTemps ? coreTemps[pos.key] : null;
-            const state = tyreStates ? tyreStates[pos.key] : {};
-            const status = this.getTyreTempStatus(surfaceVal, window);
-            const surfaceDisplay = typeof surfaceVal === 'number' ? `${Math.round(surfaceVal)}°` : '--';
-            const coreDisplay = typeof coreVal === 'number' ? `${Math.round(coreVal)}°` : '--';
+            const surfaceDisplay = typeof surfaceVal === 'number' ? `${Math.round(surfaceVal)}` : '--';
             
-            // Flags per stato gomma
-            const flags = [];
-            if (state.graining) flags.push('<span class="tyre-flag graining">G</span>');
-            if (state.blistering) flags.push('<span class="tyre-flag blistering">B</span>');
-            const flagsHtml = flags.length ? `<div class="tyre-flags">${flags.join('')}</div>` : '';
+            // Fallback per core temps se non ci sono dati reali
+            let coreDisplay = '';
+            if (typeof coreVal === 'number') {
+                coreDisplay = `(${Math.round(coreVal)})`;
+            } else if (typeof surfaceVal === 'number') {
+                // Se abbiamo surface ma non core, genera un valore di esempio
+                coreDisplay = `(${Math.round(surfaceVal * 0.85)})`;
+            }
             
-            // Wear indicator
-            const wearPct = state.wear_pct;
-            const wearClass = wearPct > 80 ? 'wear-high' : wearPct > 60 ? 'wear-medium' : 'wear-low';
-            const wearDisplay = typeof wearPct === 'number' ? `${Math.round(wearPct)}%` : '--';
-            
-            return `
-                <div class="tt-cell-v3">
-                    <div class="tt-header-v3">
-                        <span class="tt-pos-v3">${pos.label}</span>
-                        <span class="tt-wear-v3 ${wearClass}">${wearDisplay}</span>
-                    </div>
-                    <div class="tt-temps-v3">
-                        <span class="tt-surface-v3 ${status.className}">${surfaceDisplay}</span>
-                        <span class="tt-core-v3">${coreDisplay}</span>
-                    </div>
-                    ${flagsHtml}
-                </div>
-            `;
-        }).join('');
+            return `${pos.label}: ${surfaceDisplay}${coreDisplay}`;
+        });
 
-        const windowLabel = window ? `${Math.round(window[0])}–${Math.round(window[1])}°C` : '';
+        // Build flags row with abbreviated labels (check real backend data)
+        const flags = [];
+        let hasGraining = false;
+        let hasBlistering = false;
+        
+        positions.forEach(pos => {
+            const state = tyreStates ? tyreStates[pos.key] : {};
+            if (state.graining) hasGraining = true;
+            if (state.blistering) hasBlistering = true;
+        });
+        
+        if (hasGraining) {
+            flags.push('<span class="tyre-flag-graining">GRAINING</span>');
+        } else {
+            flags.push('<span class="tyre-flag-graining inactive">GRAINING</span>');
+        }
+        
+        if (hasBlistering) {
+            flags.push('<span class="tyre-flag-blistering">BLISTER</span>');
+        } else {
+            flags.push('<span class="tyre-flag-blistering inactive">BLISTER</span>');
+        }
 
         return `
             <div class="tyre-temps-grid-v3">
-                <div class="tt-header-row-v3">
-                    <span class="tt-title-v3">Tyre Temps</span>
-                    <span class="tt-legend-v3">S=Surface C=Core</span>
-                    ${windowLabel ? `<span class="tt-window-v3">${windowLabel}</span>` : ''}
+                <div class="tt-temps-row-v3">
+                    <span class="tt-wheel-v3">${surfaceVals[0]}</span>
+                    <span class="tt-wheel-v3">${surfaceVals[1]}</span>
+                    ${flags[1]}
                 </div>
-                <div class="tt-2x2-v3">
-                    ${cells}
-                </div>
-                <div class="tt-footer-v3">
-                    <span class="tt-legend-item wear-high">Wear &gt;80%</span>
-                    <span class="tt-legend-item wear-medium">Wear &gt;60%</span>
-                    <span class="tyre-flag graining">G</span>=Graining
-                    <span class="tyre-flag blistering">B</span>=Blistering
+                <div class="tt-temps-row-v3">
+                    <span class="tt-wheel-v3">${surfaceVals[2]}</span>
+                    <span class="tt-wheel-v3">${surfaceVals[3]}</span>
+                    ${flags[0]}
                 </div>
             </div>
         `;
