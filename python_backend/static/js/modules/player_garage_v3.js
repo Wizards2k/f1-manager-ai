@@ -1370,56 +1370,44 @@ export class PlayerGarageV3 {
         const tireWear = Math.max(0, Math.min(1, car.tire_wear ?? 0));
         const tireWearPct = Math.round(tireWear * 100);
         const fuel = Math.round(car.fuel_percent ?? car.player_config?.fuel_percent ?? 100);
-        const s1 = car.current_lap_sectors?.sector1;
-        const s2 = car.current_lap_sectors?.sector2;
-        const s3 = car.current_lap_sectors?.sector3;
-        const bestLap = typeof car.best_lap_time === 'number' ? car.best_lap_time : null;
-        const fmt = (v) => v != null ? v.toFixed(2) : '--';
-        const fmtLap = (v) => v != null ? `${Math.floor(v/60)}:${(v%60).toFixed(3).padStart(6,'0')}` : '--:--';
         return `
-            <div class="dock-sector-strip">
-                <div class="dock-sector-item"><span class="dock-lbl">Lap</span><span class="dock-val">${fmtLap(bestLap)}</span></div>
-                <div class="dock-sector-item"><span class="dock-lbl">S1</span><span class="dock-val">${fmt(s1)}</span></div>
-                <div class="dock-sector-item"><span class="dock-lbl">S2</span><span class="dock-val">${fmt(s2)}</span></div>
-                <div class="dock-sector-item"><span class="dock-lbl">S3</span><span class="dock-val">${fmt(s3)}</span></div>
-            </div>
             <div class="dock-row-4">
-                <div class="dock-field">
+                <div class="dock-field" style="flex: 1.5;">
                     <label>Compound</label>
                     <select class="select-compact-v3" data-field="tyre_compound" ${isBox ? '' : 'disabled'}>
                         ${this.tyreOptions.map(opt => `<option value="${opt.value}" ${opt.value === tyreChoice ? 'selected' : ''}>${opt.label}</option>`).join('')}
                     </select>
                 </div>
-                <div class="dock-field dock-tyre-health">
+                <div class="dock-field dock-tyre-health" style="flex: 1.2;">
                     <label>Tyre %</label>
                     <span class="dock-val">${tireHealthPct}%</span>
                     <div class="dock-pbar dock-pbar-tyre"><div class="dock-pbar-fill" style="width:${tireHealthPct}%"></div></div>
                 </div>
-                <div class="dock-field dock-fuel">
+                <div class="dock-field dock-fuel" style="flex: 1;">
                     <label>Fuel %</label>
                     <input class="input-compact-v3" type="number" data-field="fuel_percent" min="1" max="100" value="${fuelPercent}" ${isBox ? '' : 'disabled'}>
                 </div>
-                <div class="dock-field dock-stint">
+                <div class="dock-field dock-stint" style="flex: 1;">
                     <label>Stint (${maxStint})</label>
                     <input class="input-compact-v3" type="number" data-field="stint_target_laps" min="1" max="${maxStint}" value="${stintTarget}" ${isBox ? '' : 'disabled'}>
                 </div>
             </div>
-            <div class="dock-row-3">
-                <div class="dock-field">
+            <div class="dock-row-3" style="margin-top: 8px;">
+                <div class="dock-field" style="flex: 1.2;">
                     <label>ICE map</label>
                     <select class="select-compact-v3" data-field="ice_mode">
                         ${this.iceOptions.map(mode => `<option value="${mode}" ${mode === iceMode ? 'selected' : ''}>${mode}</option>`).join('')}
                     </select>
                 </div>
-                <div class="dock-field">
+                <div class="dock-field" style="flex: 1.2;">
                     <label>ERS mode</label>
                     <select class="select-compact-v3" data-field="ers_mode">
                         ${this.ersOptions.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
                     </select>
                 </div>
-                <div class="dock-field">
+                <div class="dock-field" style="flex: 1.5;">
                     <label>Push (${paceLevel})</label>
-                    <input class="compact-range" type="range" data-field="pace_level" min="1" max="10" value="${paceLevel}">
+                    <input class="compact-range" type="range" data-field="pace_level" min="1" max="10" value="${paceLevel}" style="margin-top: 4px;">
                 </div>
             </div>
         `;
