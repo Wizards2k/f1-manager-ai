@@ -129,11 +129,12 @@ export class PlayerGarageV3 {
         ];
         this.setupOpenDrivers = new Set();
         this.setupDrafts = new Map();
-        this.notificationTimers = new WeakMap();
+        this.notificationTimers = new Map();
         this.hudTimers = new WeakMap();
         this.pendingSendDrivers = new Set();
         this.lastDriverFeedback = new Map();
         this.RUNTIME_FIELDS = new Set(['pace_level', 'ice_mode', 'ers_mode']);
+        this.statusTimer = null;
         this.bindEvents();
     }
 
@@ -879,16 +880,36 @@ export class PlayerGarageV3 {
         return { deploy, harvest, mguhDirect, mguhHarvest, hasData, hasTrace };
     }
 
-    setStatus(message, tone = 'info') {
+    setStatus(message, tone = 'info', autoHideMs = 4000) {
         if (!this.statusMsg) return;
-        this.statusMsg.textContent = message || '';
         const baseClass = 'garage-status-line';
         this.statusMsg.className = `${baseClass}${tone ? ' ' + tone : ''}`;
+        this.statusMsg.textContent = message || '';
+
+        if (this.statusTimer) {
+            clearTimeout(this.statusTimer);
+            this.statusTimer = null;
+        }
+
+        if (!message || autoHideMs <= 0) {
+            if (!message) {
+                this.statusMsg.className = baseClass;
+            }
+            return;
+        }
+
+        this.statusTimer = setTimeout(() => {
+            this.statusMsg.textContent = '';
+            this.statusMsg.className = baseClass;
+            this.statusTimer = null;
+        }, autoHideMs);
     }
 
     pushNotification(message, tone = 'info') {
         if (!this.notificationsContainer || !message) return;
         const toast = document.createElement('div');
+        const toastId = `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        toast.dataset.toastId = toastId;
         toast.className = `garage-toast-v3 ${tone}`;
         toast.textContent = message;
         this.notificationsContainer.appendChild(toast);
@@ -902,22 +923,27 @@ export class PlayerGarageV3 {
         }
 
         const timer = setTimeout(() => this.dismissToast(toast), 4500);
-        this.notificationTimers.set(toast, timer);
+        this.notificationTimers.set(toastId, timer);
     }
 
     dismissToast(toast, immediate = false) {
         if (!toast) return;
-        const timer = this.notificationTimers.get(toast);
+        const toastId = toast.dataset.toastId;
+        const timer = toastId ? this.notificationTimers.get(toastId) : undefined;
         if (timer) {
             clearTimeout(timer);
-            this.notificationTimers.delete(toast);
+            if (toastId) this.notificationTimers.delete(toastId);
         }
         if (immediate) {
             toast.remove();
             return;
         }
-        toast.classList.add('hide');
-        setTimeout(() => toast.remove(), 220);
+        toast.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(8px)';
+        setTimeout(() => {
+            if (toast.parentNode) toast.remove();
+        }, 280);
     }
 
     pushHudBanner({ title = 'EVENT', body, tone = 'info', duration = 4000 } = {}) {
