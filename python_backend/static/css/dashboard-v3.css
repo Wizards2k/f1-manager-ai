@@ -501,7 +501,8 @@ timeline-toggle-btn:hover {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    overflow: visible;
+    overflow: hidden;
+    max-height: 270px;
 }
 
 .car-card-v3 header {
@@ -926,6 +927,188 @@ timeline-toggle-btn:hover {
 .tt-status-cold { color: #91b9ff; }
 .tt-status-hot { color: #ff9b7c; }
 .tt-status-na { color: #666; }
+
+/* ── Dock Tab System ─────────────────────────────────────── */
+.dock-tab-nav {
+    display: flex;
+    border-bottom: 1px solid #252525;
+    flex-shrink: 0;
+}
+.dock-tab-btn {
+    flex: 1;
+    padding: 5px 0;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #555;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+}
+.dock-tab-btn.active { color: #ffd24c; border-bottom-color: #ffd24c; }
+.dock-tab-btn:hover:not(.active) { color: #888; }
+
+.dock-tab-body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+.dock-tab-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px 0;
+    overflow: hidden;
+}
+
+/* Dock shared field */
+.dock-field {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: #1e1e1e;
+    border: 1px solid #2a2a2a;
+    border-radius: 5px;
+    padding: 3px 5px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+.dock-field label {
+    font-size: 7px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.dock-field select,
+.dock-field input[type="number"],
+.dock-field input[type="range"],
+.dock-field .select-compact-v3,
+.dock-field .input-compact-v3 {
+    background: #111 !important;
+    border: 1px solid #333 !important;
+    border-radius: 4px !important;
+    color: #f0f0f0 !important;
+    font-size: 10px !important;
+    padding: 2px 3px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 20px !important;
+    min-width: 0 !important;
+    flex: unset !important;
+    box-sizing: border-box !important;
+}
+.dock-field input[type="range"],
+.dock-field .compact-range {
+    height: 14px !important;
+    padding: 0 !important;
+    accent-color: #ffd24c !important;
+}
+.dock-lbl {
+    font-size: 7px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-weight: 600;
+}
+.dock-val {
+    font-size: 11px;
+    font-weight: 600;
+    color: #f0f0f0;
+}
+.dock-wear {
+    font-size: 10px;
+    font-weight: 700;
+    color: #ffd24c;
+    margin-top: 1px;
+}
+
+/* Dock grid rows */
+.dock-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.dock-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+.dock-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+
+/* Sector strip */
+.dock-sector-strip {
+    display: flex;
+    gap: 3px;
+    background: #111;
+    border-radius: 5px;
+    padding: 4px 6px;
+    flex-shrink: 0;
+}
+.dock-sector-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+}
+.dock-sector-item .dock-val { font-size: 10px; color: #ffd24c; }
+
+/* ERS meter */
+.dock-ers-meter {
+    background: #111;
+    border-radius: 5px;
+    padding: 5px 7px;
+    flex-shrink: 0;
+}
+.dock-ers-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 3px;
+}
+.dock-ers-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 8px;
+    color: #888;
+    margin-top: 3px;
+}
+
+/* Tyre grid 2x2 */
+.dock-tyre-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+}
+.dock-tyre-cell {
+    background: #1e1e1e;
+    border: 1px solid #2a2a2a;
+    border-radius: 5px;
+    padding: 3px 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Tyre flags */
+.dock-tyre-flags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+.dock-flag {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    flex: 1;
+    text-align: center;
+}
+.flag-ok   { background: rgba(76,175,80,.2); color: #69f0ae; }
+.flag-warn { background: rgba(244,67,54,.2); color: #ff6b6b; }
+.flag-info { background: rgba(255,193,7,.2); color: #ffd740; }
 
 /* Legacy grid support */
 .field-span-2 { grid-column: span 2; }

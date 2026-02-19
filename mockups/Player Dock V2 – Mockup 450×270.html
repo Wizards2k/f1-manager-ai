@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<!-- saved from url=(0115)file:///Users/wizards/Documents/Documenti%20-%20MacBook%20Air%20di%20Massimo/F1%20Manager%20AI/mockups/dock_v2.html -->
+<html lang="it"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Player Dock V2 – Mockup 450×270</title>
+<style>
+/* ─── Reset ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #050505;
+  font-family: "SF Pro Display", "Segoe UI", sans-serif;
+  color: #f0f0f0;
+  padding: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  align-items: flex-start;
+}
+h2 {
+  width: 100%;
+  font-size: 13px;
+  color: #555;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: -16px;
+}
+
+/* ─── Card container ─────────────────────────────────────── */
+.card {
+  width: 450px;
+  height: 270px;
+  background: #161616;
+  border: 1px solid #2a2a2a;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* ─── Header ─────────────────────────────────────────────── */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid #222;
+  flex-shrink: 0;
+}
+.driver-info { display: flex; align-items: center; gap: 8px; }
+.driver-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #c60000; border: 2px solid rgba(255,255,255,.2);
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.driver-name { font-size: 13px; font-weight: 700; letter-spacing: .06em; }
+.driver-sub  { font-size: 9px; color: #777; letter-spacing: .1em; text-transform: uppercase; margin-top: 1px; }
+.badges { display: flex; gap: 5px; align-items: center; }
+.badge {
+  font-size: 9px; font-weight: 700; letter-spacing: .1em;
+  padding: 2px 7px; border-radius: 999px; text-transform: uppercase;
+}
+.badge-box  { background: #252525; color: #aaa; }
+.badge-data { background: #c60000; color: #fff; }
+.badge-inlap { background: #ff8c00; color: #000; }
+
+/* ─── Tab nav ────────────────────────────────────────────── */
+.tab-nav {
+  display: flex;
+  border-bottom: 1px solid #222;
+  flex-shrink: 0;
+}
+.tab-btn {
+  flex: 1; padding: 5px 0;
+  background: #161616; border: none; outline: none;
+  font-size: 10px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase; color: #555; cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color .15s, border-color .15s;
+}
+.tab-btn.active { color: #ffd24c; border-bottom-color: #ffd24c; }
+
+/* ─── Tab body ───────────────────────────────────────────── */
+.tab-body {
+  flex: 1;
+  overflow: hidden;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ─── Footer actions ─────────────────────────────────────── */
+.card-footer {
+  display: flex; gap: 6px; padding: 6px 12px;
+  border-top: 1px solid #222; flex-shrink: 0;
+}
+.btn {
+  flex: 1; padding: 7px 0; border: none; border-radius: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; cursor: pointer;
+}
+.btn-send  { background: #ffd24c; color: #000; }
+.btn-box   { background: #8b1a1a; color: #fff; }
+.btn-setup { background: #252525; color: #ddd; }
+
+/* ─── Utility ────────────────────────────────────────────── */
+.row { display: flex; gap: 4px; }
+.col { display: flex; flex-direction: column; gap: 2px; }
+.label {
+  font-size: 8px; color: #666; text-transform: uppercase;
+  letter-spacing: .1em; font-weight: 600;
+}
+.val { font-size: 11px; font-weight: 600; }
+.val-sm { font-size: 11px; font-weight: 600; }
+
+.field {
+  background: #1e1e1e; border: 1px solid #2a2a2a;
+  border-radius: 5px; padding: 3px 5px;
+  display: flex; flex-direction: column; gap: 1px;
+  flex: 1;
+}
+.field select, .field input[type=number] {
+  background: #111; border: 1px solid #333; border-radius: 4px;
+  color: #f0f0f0; font-size: 10px; padding: 1px 3px; width: 100%;
+}
+
+/* Sector strip */
+.sector-strip {
+  display: flex; gap: 4px;
+  background: #111; border-radius: 5px; padding: 4px 6px;
+  flex-shrink: 0;
+}
+.sector-item { flex: 1; text-align: center; }
+.sector-item .label { margin-bottom: 1px; }
+.sector-item .val-sm { color: #ffd24c; }
+.sector-item .val-sm.no { color: #444; }
+
+/* Grid 2 col */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+.g4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; }
+
+/* Slider */
+.slider-row { display: flex; align-items: center; gap: 4px; }
+.slider-row input[type=range] { flex: 1; accent-color: #ffd24c; }
+.slider-row .slider-val {
+  font-size: 10px; font-weight: 700; color: #ffd24c;
+  min-width: 16px; text-align: center;
+}
+
+/* Progress bar */
+.pbar { height: 5px; border-radius: 999px; background: #222; overflow: hidden; }
+.pbar-fill { height: 100%; border-radius: 999px; }
+.pbar-fuel  .pbar-fill { background: linear-gradient(90deg,#fbc02d,#ff6f00); width: 100%; }
+.pbar-tyre  .pbar-fill { background: linear-gradient(90deg,#5c6bc0,#ffa726); width: 78%; }
+.pbar-soc   .pbar-fill { background: linear-gradient(90deg,#f44336,#ffd740,#69f0ae); width: 73%; }
+
+/* Aero mini bar */
+.abar { height: 4px; border-radius: 999px; background: #222; overflow: hidden; margin-top: 3px; }
+.abar-fill { height: 100%; border-radius: 999px; }
+.abar-bal  .abar-fill { background: linear-gradient(90deg,#f44336,#ffd740,#66bb6a); width: 48%; }
+.abar-drag .abar-fill { background: linear-gradient(90deg,#4fc3f7,#ab47bc); width: 72%; }
+.abar-cool .abar-fill { background: linear-gradient(90deg,#26c6da,#00e676); width: 65%; }
+
+/* Tyre temp grid */
+.tyre-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 3px;
+}
+.tyre-cell {
+  background: #1e1e1e; border: 1px solid #2a2a2a;
+  border-radius: 5px; padding: 3px 5px;
+}
+.tyre-cell .label { margin-bottom: 1px; }
+.tyre-cell .val-sm { color: #fff; }
+.tyre-cell .pbar { margin-top: 2px; }
+.tyre-cell .pbar-fill { background: linear-gradient(90deg,#4CAF50,#FFC107,#f44336); }
+
+/* ERS meter */
+.ers-meter {
+  background: #111; border-radius: 5px; padding: 5px 7px;
+}
+.ers-meter .label { margin-bottom: 3px; }
+.ers-stats { display: flex; justify-content: space-between; font-size: 9px; color: #888; margin-top: 3px; }
+
+/* Section title */
+.sec-title { font-size: 8px; color: #555; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 2px; }
+</style>
+
+<script>
+// Aggiorna valore slider Driver Push
+document.addEventListener('DOMContentLoaded', () => {
+  const sliders = document.querySelectorAll('input[type="range"]');
+  sliders.forEach(slider => {
+    const valSpan = slider.parentElement.querySelector('.slider-val');
+    if (valSpan) {
+      valSpan.textContent = slider.value;
+      slider.addEventListener('input', () => {
+        valSpan.textContent = slider.value;
+      });
+    }
+  });
+});
+</script>
+
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     MOCKUP 1 — TAB PILOTA
+═══════════════════════════════════════════════════════ -->
+<h2>Mockup 1 · Tab Pilota</h2>
+<div class="card">
+
+  <!-- Header -->
+  <div class="card-header">
+    <div class="driver-info">
+      <div class="driver-num">16</div>
+      <div>
+        <div class="driver-name">CHARLES LECLERC</div>
+        <div class="driver-sub">Ready in Box</div>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge badge-box">BOX</span>
+      <span class="badge badge-data">DATA</span>
+    </div>
+  </div>
+
+  <!-- Tab nav -->
+  <div class="tab-nav">
+    <button class="tab-btn active">Pilota</button>
+    <button class="tab-btn">Motore</button>
+    <button class="tab-btn">Tyres</button>
+  </div>
+
+  <!-- Tab body: PILOTA -->
+  <div class="tab-body">
+
+    <!-- Sector times -->
+    <div class="sector-strip">
+      <div class="sector-item">
+        <div class="label">Lap</div>
+        <div class="val-sm no">NO LAP</div>
+      </div>
+      <div class="sector-item">
+        <div class="label">S1</div>
+        <div class="val-sm no">--.-</div>
+      </div>
+      <div class="sector-item">
+        <div class="label">S2</div>
+        <div class="val-sm no">--.-</div>
+      </div>
+      <div class="sector-item">
+        <div class="label">S3</div>
+        <div class="val-sm no">--.-</div>
+      </div>
+      <div class="sector-item">
+        <div class="label">Best</div>
+        <div class="val-sm no">--:--.-</div>
+      </div>
+    </div>
+
+    <!-- Row 1: Compound + Tyre% + Fuel% + Stint -->
+    <div class="g4">
+      <div class="field">
+        <div class="label">Compound</div>
+        <select><option>Medium</option><option>Hard</option><option>Soft</option></select>
+      </div>
+      <div class="field">
+        <div class="label">Tyre %</div>
+        <div class="val-sm">78%</div>
+        <div class="pbar pbar-tyre"><div class="pbar-fill"></div></div>
+      </div>
+      <div class="field">
+        <div class="label">Fuel %</div>
+        <input type="number" value="100" min="1" max="100">
+      </div>
+      <div class="field">
+        <div class="label">Stint Laps</div>
+        <input type="number" value="8" min="1" max="30">
+      </div>
+    </div>
+
+    <!-- Row 2: ICE Map + ERS Map -->
+    <div class="g2">
+      <div class="field">
+        <div class="label">ICE Map</div>
+        <select><option>Standard</option><option>Attack</option><option>Conserve</option></select>
+      </div>
+      <div class="field">
+        <div class="label">ERS Map</div>
+        <select><option>Neutral</option><option>Overtake</option><option>Harvest</option></select>
+      </div>
+    </div>
+
+    <!-- Row 3: Driver Push slider -->
+    <div class="field">
+      <div class="label">Driver Push</div>
+      <div class="slider-row">
+        <span class="label">1</span>
+        <input type="range" min="1" max="10" value="5">
+        <span class="slider-val">5</span>
+        <span class="label">10</span>
+      </div>
+    </div>
+
+  </div><!-- /tab-body -->
+
+  <!-- Footer -->
+  <div class="card-footer">
+    <button class="btn btn-send">Send Out</button>
+    <button class="btn btn-box">Box</button>
+    <button class="btn btn-setup">Setup</button>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MOCKUP 2 — TAB MOTORE
+═══════════════════════════════════════════════════════ -->
+<h2>Mockup 2 · Tab Motore</h2>
+<div class="card">
+
+  <div class="card-header">
+    <div class="driver-info">
+      <div class="driver-num" style="background:#e53935;">44</div>
+      <div>
+        <div class="driver-name">LEWIS HAMILTON</div>
+        <div class="driver-sub">Ready in Box</div>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge badge-box">BOX</span>
+      <span class="badge badge-data">DATA</span>
+    </div>
+  </div>
+
+  <div class="tab-nav">
+    <button class="tab-btn">Pilota</button>
+    <button class="tab-btn active">Motore</button>
+    <button class="tab-btn">Tyres</button>
+  </div>
+
+  <!-- Tab body: MOTORE -->
+  <div class="tab-body">
+
+    <!-- SOC meter -->
+    <div class="ers-meter">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="label">Batteria SOC</div>
+        <span style="font-size:11px; font-weight:700; color:#69f0ae;">4.0 MJ (73%)</span>
+      </div>
+      <div class="pbar pbar-soc"><div class="pbar-fill"></div></div>
+      <div class="ers-stats">
+        <span>Deploy: 0.0 / 3.2 MJ</span>
+        <span>Harvest: 0.2 MJ/lap</span>
+        <span>Lap Budget: —</span>
+      </div>
+    </div>
+
+    <!-- ERS Map + ICE Map -->
+    <div class="g2">
+      <div class="field">
+        <div class="label">ERS Map</div>
+        <select><option>Neutral</option><option>Overtake</option><option>Harvest</option></select>
+      </div>
+      <div class="field">
+        <div class="label">ICE Map</div>
+        <select><option>Standard</option><option>Attack</option><option>Conserve</option></select>
+      </div>
+    </div>
+
+    <!-- Temperature Motore + Power Output -->
+    <div class="g3">
+      <div class="field">
+        <div class="label">ERS Deploy Rate</div>
+        <div class="val-sm">3.2 MJ/lap</div>
+      </div>
+      <div class="field">
+        <div class="label">MGU-H Direct</div>
+        <div class="val-sm">On <span style="color:#888;">(boost mode)</span></div>
+      </div>
+      <div class="field">
+        <div class="label">SOC Target</div>
+        <div class="val-sm">70% <span style="color:#888;">(end lap)</span></div>
+      </div>
+      <div class="field" style="grid-column:span 2;">
+        <div class="label">MGU-H ES</div>
+        <div class="val-sm">4.0 MJ <span style="color:#888;">(charged)</span></div>
+        <div class="pbar"><div class="pbar-fill" style="background:linear-gradient(90deg,#69f0ae,#ffd740,#f44336); width:100%;"></div></div>
+      </div>
+    </div>
+
+    <!-- ERS mode display -->
+    <div style="display:flex; gap:5px;">
+      <div class="tag tag-ok" style="flex:1; padding:5px 0;">⚡ Neutral Mode</div>
+      <div class="tag tag-info" style="flex:1; padding:5px 0;">🔥 ICE Standard</div>
+    </div>
+
+  </div>
+
+  <div class="card-footer">
+    <button class="btn btn-send">Send Out</button>
+    <button class="btn btn-box">Box</button>
+    <button class="btn btn-setup">Setup</button>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MOCKUP 3 — TAB TYRES
+═══════════════════════════════════════════════════════ -->
+<h2>Mockup 3 · Tab Tyres</h2>
+<div class="card">
+
+  <div class="card-header">
+    <div class="driver-info">
+      <div class="driver-num" style="background:#ff8c00; color:#000;">55</div>
+      <div>
+        <div class="driver-name">CARLOS SAINZ</div>
+        <div class="driver-sub">In Lap</div>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge badge-inlap">IN LAP</span>
+      <span class="badge badge-data">DATA</span>
+    </div>
+  </div>
+
+  <div class="tab-nav">
+    <button class="tab-btn">Pilota</button>
+    <button class="tab-btn">Motore</button>
+    <button class="tab-btn active">Tyres</button>
+  </div>
+
+  <!-- Tab body: TYRES -->
+  <div class="tab-body">
+
+    <!-- Temperature Gomme -->
+    <div class="sec-title">Temperature Gomme</div>
+    <div class="tyre-grid">
+      <div class="tyre-cell">
+        <div class="label">FL</div>
+        <div class="val-sm">120°C <span style="color:#888;">(90°C)</span></div>
+        <div class="pbar"><div class="pbar-fill" style="width:82%;"></div></div>
+      </div>
+      <div class="tyre-cell">
+        <div class="label">FR</div>
+        <div class="val-sm">115°C <span style="color:#888;">(85°C)</span></div>
+        <div class="pbar"><div class="pbar-fill" style="width:78%;"></div></div>
+      </div>
+      <div class="tyre-cell">
+        <div class="label">RL</div>
+        <div class="val-sm">123°C <span style="color:#888;">(92°C)</span></div>
+        <div class="pbar"><div class="pbar-fill" style="width:85%;"></div></div>
+      </div>
+      <div class="tyre-cell">
+        <div class="label">RR</div>
+        <div class="val-sm">115°C <span style="color:#888;">(87°C)</span></div>
+        <div class="pbar"><div class="pbar-fill" style="width:80%;"></div></div>
+      </div>
+    </div>
+
+    <!-- Temperature Freni + Info Aero -->
+    <div class="g2">
+      <div>
+        <div class="sec-title" style="margin-bottom:4px;">Freni</div>
+        <div class="g2">
+          <div class="field">
+            <div class="label">Front</div>
+            <div class="val-sm">--°C</div>
+          </div>
+          <div class="field">
+            <div class="label">Rear</div>
+            <div class="val-sm">--°C</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="sec-title" style="margin-bottom:4px;">Info Aero</div>
+        <div class="col" style="gap:4px;">
+          <div>
+            <div class="label">Balance 48%</div>
+            <div class="abar abar-bal"><div class="abar-fill"></div></div>
+          </div>
+          <div>
+            <div class="label">Drag 72</div>
+            <div class="abar abar-drag"><div class="abar-fill"></div></div>
+          </div>
+          <div>
+            <div class="label">Cooling +0.2</div>
+            <div class="abar abar-cool"><div class="abar-fill"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tyre flags -->
+    <div class="row">
+      <div class="tag tag-warn" style="flex:1;">Blister Front 0.3</div>
+      <div class="tag tag-info" style="flex:1;">Graining Rear 0.2</div>
+      <div class="tag tag-ok" style="flex:1;">Health 78%</div>
+    </div>
+
+  </div>
+
+  <div class="card-footer">
+    <button class="btn btn-send">Send Out</button>
+    <button class="btn btn-box">Box</button>
+    <button class="btn btn-setup">Setup</button>
+  </div>
+</div>
+
+
+
+</body></html>

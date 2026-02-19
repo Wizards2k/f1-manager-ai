@@ -1317,6 +1317,18 @@ export class PlayerGarageV3 {
         const isPendingSend = this.pendingSendDrivers.has(car.driver_number);
         const sendDisabled = !isBox || isPendingSend;
         const sendLabel = 'Send Out';
+        const puStats = car.pu_stats || {};
+        const socMj = puStats.soc_mj ?? 0;
+        const socPct = puStats.soc_pct ?? 0;
+        const lapDeploy = puStats.lap_deploy_mj ?? 0;
+        const deployLimit = puStats.deploy_mj_per_lap ?? 4.0;
+        const lapHarvest = puStats.lap_harvest_mj ?? 0;
+        const lapMguhDirect = puStats.lap_mguh_direct_prev_mj ?? puStats.lap_mguh_direct_mj ?? 0;
+        const lapMguhEs = puStats.lap_mguh_harvest_prev_mj ?? puStats.lap_mguh_harvest_mj ?? 0;
+        const socClass = socPct >= 60 ? 'pu-soc-good' : socPct >= 30 ? 'pu-soc-warn' : 'pu-soc-low';
+        const tabPilota = this.buildTabPilota(car, { tyreChoice, fuelPercent, stintTarget, maxStint, paceLevel, iceMode, ersMode, tireHealthPct, isBox, brakeChipPreview });
+        const tabMotore = this.buildTabMotore(car, { socMj, socPct, lapDeploy, deployLimit, lapHarvest, lapMguhDirect, lapMguhEs, socClass, iceMode, ersMode });
+        const tabTyres = this.buildTabTyres(car, { tireHealthPct });
         return `
             <div class="car-card-v3" data-driver="${car.driver_number}" data-state="${currentState}">
                 <header>
@@ -1335,53 +1347,16 @@ export class PlayerGarageV3 {
                     </div>
                 </header>
                 ${telemetry}
-                <div class="controls-area-v3">
-                    <div class="controls-left-v3">
-                        <div class="ctrl-row-v3">
-                            <div class="ctrl-cell-v3 ctrl-compound-v3">
-                                <label>Tyre compound</label>
-                                <div class="tyre-row-v3">
-                                    <select class="select-compact-v3" data-field="tyre_compound" ${isBox ? '' : 'disabled'}>
-                                        ${this.tyreOptions.map(opt => `<option value="${opt.value}" ${opt.value === tyreChoice ? 'selected' : ''}>${opt.label}</option>`).join('')}
-                                    </select>
-                                    <span class="wear-indicator-v3">${tireHealthPct}%</span>
-                                </div>
-                            </div>
-                            <div class="ctrl-cell-v3 ctrl-fuel-v3">
-                                <label>Fuel %</label>
-                                <input class="input-compact-v3" type="number" data-field="fuel_percent" min="1" max="100" value="${fuelPercent}" ${isBox ? '' : 'disabled'}>
-                            </div>
-                            <div class="ctrl-cell-v3 ctrl-stint-v3">
-                                <label>Stint laps (${maxStint})</label>
-                                <input class="input-compact-v3" type="number" data-field="stint_target_laps" min="1" max="${maxStint}" value="${stintTarget}" ${isBox ? '' : 'disabled'}>
-                            </div>
-                        </div>
-                        <div class="ctrl-row-v3">
-                            <div class="ctrl-cell-v3 ctrl-ice-v3">
-                                <label>ICE map</label>
-                                <select class="select-compact-v3" data-field="ice_mode">
-                                    ${this.iceOptions.map(mode => `<option value="${mode}" ${mode === iceMode ? 'selected' : ''}>${mode}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div class="ctrl-cell-v3 ctrl-ers-v3">
-                                <label>ERS mode</label>
-                                <select class="select-compact-v3" data-field="ers_mode">
-                                    ${this.ersOptions.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
-                                </select>
-                            </div>
-                            <div class="ctrl-cell-v3 ctrl-push-v3">
-                                <label>Driver push (${paceLevel})</label>
-                                <input class="compact-range" type="range" data-field="pace_level" min="1" max="10" value="${paceLevel}">
-                            </div>
-                            <div class="ctrl-cell-v3 ctrl-brake-inline">
-                                <label>Brake ducts</label>
-                                ${brakeChipPreview}
-                            </div>
-                        </div>
-                    </div>
-                    ${tyreTemps}
+                <div class="dock-tab-nav">
+                    <button class="dock-tab-btn active" data-action="switch-dock-tab" data-tab="pilota">Pilota</button>
+                    <button class="dock-tab-btn" data-action="switch-dock-tab" data-tab="motore">Motore</button>
+                    <button class="dock-tab-btn" data-action="switch-dock-tab" data-tab="tyres">Tyres</button>
                 </div>
-                ${this.buildPUInlineBar(car)}
+                <div class="dock-tab-body">
+                    <div class="dock-tab-pane" data-tab="pilota">${tabPilota}</div>
+                    <div class="dock-tab-pane" data-tab="motore" style="display:none;">${tabMotore}</div>
+                    <div class="dock-tab-pane" data-tab="tyres" style="display:none;">${tabTyres}</div>
+                </div>
                 <div class="car-actions-v3 with-setup">
                     <div class="drive-actions">
                         <button class="btn-send${isPendingSend ? ' pending' : ''}" data-action="send" ${sendDisabled ? 'disabled' : ''}>${sendLabel}</button>
@@ -1391,6 +1366,180 @@ export class PlayerGarageV3 {
                 </div>
             </div>
         `;
+    }
+
+    buildTabPilota(car, { tyreChoice, fuelPercent, stintTarget, maxStint, paceLevel, iceMode, ersMode, tireHealthPct, isBox, brakeChipPreview }) {
+        const tireWear = Math.max(0, Math.min(1, car.tire_wear ?? 0));
+        const tireWearPct = Math.round(tireWear * 100);
+        const fuel = Math.round(car.fuel_percent ?? car.player_config?.fuel_percent ?? 100);
+        const s1 = car.current_lap_sectors?.sector1;
+        const s2 = car.current_lap_sectors?.sector2;
+        const s3 = car.current_lap_sectors?.sector3;
+        const bestLap = typeof car.best_lap_time === 'number' ? car.best_lap_time : null;
+        const fmt = (v) => v != null ? v.toFixed(2) : '--';
+        const fmtLap = (v) => v != null ? `${Math.floor(v/60)}:${(v%60).toFixed(3).padStart(6,'0')}` : '--:--';
+        return `
+            <div class="dock-sector-strip">
+                <div class="dock-sector-item"><span class="dock-lbl">Lap</span><span class="dock-val">${fmtLap(bestLap)}</span></div>
+                <div class="dock-sector-item"><span class="dock-lbl">S1</span><span class="dock-val">${fmt(s1)}</span></div>
+                <div class="dock-sector-item"><span class="dock-lbl">S2</span><span class="dock-val">${fmt(s2)}</span></div>
+                <div class="dock-sector-item"><span class="dock-lbl">S3</span><span class="dock-val">${fmt(s3)}</span></div>
+            </div>
+            <div class="dock-row-4">
+                <div class="dock-field">
+                    <label>Compound</label>
+                    <select class="select-compact-v3" data-field="tyre_compound" ${isBox ? '' : 'disabled'}>
+                        ${this.tyreOptions.map(opt => `<option value="${opt.value}" ${opt.value === tyreChoice ? 'selected' : ''}>${opt.label}</option>`).join('')}
+                    </select>
+                    <span class="dock-wear">${tireHealthPct}%</span>
+                </div>
+                <div class="dock-field">
+                    <label>Fuel %</label>
+                    <input class="input-compact-v3" type="number" data-field="fuel_percent" min="1" max="100" value="${fuelPercent}" ${isBox ? '' : 'disabled'}>
+                </div>
+                <div class="dock-field">
+                    <label>Stint (${maxStint})</label>
+                    <input class="input-compact-v3" type="number" data-field="stint_target_laps" min="1" max="${maxStint}" value="${stintTarget}" ${isBox ? '' : 'disabled'}>
+                </div>
+            </div>
+            <div class="dock-row-3">
+                <div class="dock-field">
+                    <label>ICE map</label>
+                    <select class="select-compact-v3" data-field="ice_mode">
+                        ${this.iceOptions.map(mode => `<option value="${mode}" ${mode === iceMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="dock-field">
+                    <label>ERS mode</label>
+                    <select class="select-compact-v3" data-field="ers_mode">
+                        ${this.ersOptions.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="dock-field">
+                    <label>Push (${paceLevel})</label>
+                    <input class="compact-range" type="range" data-field="pace_level" min="1" max="10" value="${paceLevel}">
+                </div>
+            </div>
+        `;
+    }
+
+    buildTabMotore(car, { socMj, socPct, lapDeploy, deployLimit, lapHarvest, lapMguhDirect, lapMguhEs, socClass, iceMode, ersMode }) {
+        const deployPct = deployLimit > 0 ? Math.min((lapDeploy / deployLimit) * 100, 100) : 0;
+        return `
+            <div class="dock-ers-meter">
+                <div class="dock-ers-header">
+                    <span class="dock-lbl">Batteria SOC</span>
+                    <span class="dock-val ${socClass}">${socMj.toFixed(1)} MJ (${Math.round(socPct)}%)</span>
+                </div>
+                <div class="pu-bar-track-v3"><div class="pu-bar-fill-v3" style="width:${socPct}%"></div></div>
+                <div class="dock-ers-stats">
+                    <span>Deploy: ${lapDeploy.toFixed(1)} / ${deployLimit.toFixed(1)} MJ</span>
+                    <span>Harvest: ${lapHarvest.toFixed(1)} MJ</span>
+                </div>
+            </div>
+            <div class="dock-row-2">
+                <div class="dock-field">
+                    <label>ERS Map</label>
+                    <select class="select-compact-v3" data-field="ers_mode">
+                        ${this.ersOptions.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="dock-field">
+                    <label>ICE Map</label>
+                    <select class="select-compact-v3" data-field="ice_mode">
+                        ${this.iceOptions.map(mode => `<option value="${mode}" ${mode === iceMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+            <div class="dock-row-3">
+                <div class="dock-field">
+                    <label>ERS Deploy Rate</label>
+                    <span class="dock-val">${deployLimit.toFixed(1)} MJ/lap</span>
+                </div>
+                <div class="dock-field">
+                    <label>MGU-H Direct</label>
+                    <span class="dock-val">${lapMguhDirect.toFixed(2)} MJ</span>
+                </div>
+                <div class="dock-field">
+                    <label>MGU-H ES</label>
+                    <span class="dock-val">${lapMguhEs.toFixed(2)} MJ</span>
+                </div>
+            </div>
+        `;
+    }
+
+    buildTabTyres(car, { tireHealthPct }) {
+        const fl = car.tire_temp_fl ?? car.tyre_temps?.fl ?? null;
+        const fr = car.tire_temp_fr ?? car.tyre_temps?.fr ?? null;
+        const rl = car.tire_temp_rl ?? car.tyre_temps?.rl ?? null;
+        const rr = car.tire_temp_rr ?? car.tyre_temps?.rr ?? null;
+        const fmt = (v) => v != null ? `${Math.round(v)}°C` : '--°C';
+        const cls = (v) => v == null ? 'tt-status-na' : v > 110 ? 'tt-status-hot' : v < 70 ? 'tt-status-cold' : 'tt-status-ok';
+        const brakeFront = car.brake_thermal?.front ?? null;
+        const brakeRear = car.brake_thermal?.rear ?? null;
+        const aeroBalance = car.aero_balance != null ? `${(car.aero_balance * 100).toFixed(0)}%` : '--';
+        const dragIndex = car.drag_index != null ? car.drag_index.toFixed(2) : '--';
+        const coolingMargin = car.cooling_margin != null ? `${car.cooling_margin > 0 ? '+' : ''}${car.cooling_margin.toFixed(2)}` : '--';
+        const graining = car.tyre_graining ?? 0;
+        const blistering = car.tyre_blistering ?? 0;
+        return `
+            <div class="dock-tyre-grid">
+                <div class="dock-tyre-cell">
+                    <span class="dock-lbl">FL</span>
+                    <span class="dock-val ${cls(fl)}">${fmt(fl)}</span>
+                </div>
+                <div class="dock-tyre-cell">
+                    <span class="dock-lbl">FR</span>
+                    <span class="dock-val ${cls(fr)}">${fmt(fr)}</span>
+                </div>
+                <div class="dock-tyre-cell">
+                    <span class="dock-lbl">RL</span>
+                    <span class="dock-val ${cls(rl)}">${fmt(rl)}</span>
+                </div>
+                <div class="dock-tyre-cell">
+                    <span class="dock-lbl">RR</span>
+                    <span class="dock-val ${cls(rr)}">${fmt(rr)}</span>
+                </div>
+            </div>
+            <div class="dock-row-2">
+                <div class="dock-field">
+                    <label>Freni Front</label>
+                    <span class="dock-val">${fmt(brakeFront)}</span>
+                </div>
+                <div class="dock-field">
+                    <label>Freni Rear</label>
+                    <span class="dock-val">${fmt(brakeRear)}</span>
+                </div>
+            </div>
+            <div class="dock-row-3">
+                <div class="dock-field">
+                    <label>Aero Bal.</label>
+                    <span class="dock-val">${aeroBalance}</span>
+                </div>
+                <div class="dock-field">
+                    <label>Drag</label>
+                    <span class="dock-val">${dragIndex}</span>
+                </div>
+                <div class="dock-field">
+                    <label>Cooling</label>
+                    <span class="dock-val">${coolingMargin}</span>
+                </div>
+            </div>
+            <div class="dock-tyre-flags">
+                <span class="dock-flag ${graining > 0.1 ? 'flag-warn' : 'flag-ok'}">Grain ${graining.toFixed(2)}</span>
+                <span class="dock-flag ${blistering > 0.1 ? 'flag-warn' : 'flag-ok'}">Blister ${blistering.toFixed(2)}</span>
+                <span class="dock-flag flag-info">Health ${tireHealthPct}%</span>
+            </div>
+        `;
+    }
+
+    switchDockTab(carCard, tabName) {
+        carCard.querySelectorAll('.dock-tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabName);
+        });
+        carCard.querySelectorAll('.dock-tab-pane').forEach(pane => {
+            pane.style.display = pane.dataset.tab === tabName ? '' : 'none';
+        });
     }
 
     buildTelemetryStrip(car) {
@@ -2418,6 +2567,8 @@ export class PlayerGarageV3 {
             }
             const payload = this.buildSetupPayloadFromDraft(driverNumber, carData);
             this.submitSetupConfig(driverNumber, payload, state);
+        } else if (action === 'switch-dock-tab') {
+            this.switchDockTab(card, actionBtn.dataset.tab);
         }
     }
 
