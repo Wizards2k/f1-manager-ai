@@ -126,6 +126,7 @@ export class PlayerGarageV3 {
         this.notificationTimers = new Map();
         this.hudTimers = new WeakMap();
         this.pendingSendDrivers = new Set();
+        this.pendingBoxDrivers = new Set();
         this.lastDriverFeedback = new Map();
         this.RUNTIME_FIELDS = new Set(['pace_level', 'ice_mode', 'ers_mode']);
         this.statusTimer = null;
@@ -1310,7 +1311,9 @@ export class PlayerGarageV3 {
         else if (infoPct >= thresholds.yellow) infoChipColor = 'setup-chip-yellow';
 
         const isPendingSend = this.pendingSendDrivers.has(car.driver_number);
+        const isPendingBox = this.pendingBoxDrivers.has(car.driver_number);
         const sendDisabled = !isBox || isPendingSend;
+        const boxDisabled = isBox || isPendingBox;
         const sendLabel = 'Send Out';
         const puStats = car.pu_stats || {};
         const socMj = puStats.soc_mj || 0;
@@ -1355,9 +1358,9 @@ export class PlayerGarageV3 {
                 <div class="car-actions-v3 with-setup">
                     <div class="drive-actions">
                         <button class="btn-send${isPendingSend ? ' pending' : ''}" data-action="send" ${sendDisabled ? 'disabled' : ''}>${sendLabel}</button>
-                        <button class="btn-box" data-action="box" ${isBox ? 'disabled' : ''}>Box</button>
+                        <button class="btn-box${isPendingBox ? ' pending' : ''}" data-action="box" ${boxDisabled ? 'disabled' : ''}>Box</button>
                     </div>
-                    <button class="btn-setup-v3" data-action="setup" ${isBox ? '' : 'disabled'}>Setup</button>
+                    <button class="btn-setup-v3" data-action="setup">Setup</button>
                 </div>
             </div>
         `;
@@ -1773,12 +1776,13 @@ export class PlayerGarageV3 {
         const tabBaseStyle = 'flex:1;border:1px solid rgba(255,255,255,0.14);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;background:rgba(255,255,255,0.04);color:#d7def1;cursor:pointer;';
         const inactiveStyle = `${tabBaseStyle}`;
         const activeStyle = `${tabBaseStyle}background:#ffd24c;color:#10141b;border-color:#ffd24c;`;
+        const disabledStyle = `${tabBaseStyle}opacity:0.4;cursor:not-allowed;`;
         
-        let setupBtnStyle = inactiveStyle;
-        let statsBtnStyle = inactiveStyle;
-        let ersBtnStyle = inactiveStyle;
+        let setupBtnStyle = isBox ? activeStyle : disabledStyle;
+        let statsBtnStyle = (!isBox && this.activePuTab === 'stats') ? activeStyle : inactiveStyle;
+        let ersBtnStyle = (!isBox && this.activePuTab === 'ers-map') ? activeStyle : inactiveStyle;
         
-        if (this.activePuTab === 'setup') setupBtnStyle = activeStyle;
+        if (this.activePuTab === 'setup' && isBox) setupBtnStyle = activeStyle;
         else if (this.activePuTab === 'stats') statsBtnStyle = activeStyle;
         else if (this.activePuTab === 'ers-map') ersBtnStyle = activeStyle;
 
@@ -1796,7 +1800,7 @@ export class PlayerGarageV3 {
                     <button class="pu-modal-close-v3" data-action="close-pu">×</button>
                 </div>
                 <div class="pu-modal-tabs-v3" style="display:flex; gap:8px; margin-bottom:14px;">
-                    <button class="pu-tab-btn" style="${setupBtnStyle}" data-action="switch-pu-tab" data-tab="setup">Setup Vettura</button>
+                    <button class="pu-tab-btn" style="${setupBtnStyle}" data-action="switch-pu-tab" data-tab="setup" ${!isBox ? 'disabled' : ''}>Setup Vettura</button>
                     <button class="pu-tab-btn" style="${statsBtnStyle}" data-action="switch-pu-tab" data-tab="stats">PU / Motore</button>
                     <button class="pu-tab-btn" style="${ersBtnStyle}" data-action="switch-pu-tab" data-tab="ers-map">Mappa ERS</button>
                 </div>
@@ -1901,7 +1905,14 @@ export class PlayerGarageV3 {
         if (open) {
             const car = this.state.getPlayerCar(driverNumber);
             if (car) {
-                if (defaultTab) this.activePuTab = defaultTab;
+                const carState = this.getCarState(car);
+                const isBox = carState === 'BOX';
+                if (defaultTab) {
+                    this.activePuTab = defaultTab;
+                } else {
+                    // Auto-select tab based on car state
+                    this.activePuTab = isBox ? 'setup' : 'stats';
+                }
                 this.buildPUModal(car);
             }
         } else {
@@ -2283,7 +2294,7 @@ export class PlayerGarageV3 {
     }
 
     toggleSetupOverlay(driverNumber, open = true) {
-        this.togglePUModal(driverNumber, open, 'setup');
+        this.togglePUModal(driverNumber, open);
     }
 
     resetSetupOverlayState() {
@@ -2548,7 +2559,16 @@ export class PlayerGarageV3 {
                 this.setStatus('Car already in the garage.', 'error');
                 return;
             }
-            this.requestPlayerBox(driverNumber);
+            actionBtn.disabled = true;
+            this.pendingBoxDrivers.add(driverNumber);
+            this.applyLocalCarState(driverNumber, { state: 'IN_LAP' });
+            this.render(true);
+            const boxed = await this.requestPlayerBox(driverNumber);
+            if (!boxed) {
+                this.pendingBoxDrivers.delete(driverNumber);
+                this.applyLocalCarState(driverNumber, { state: 'ON_TRACK' });
+                this.render(true);
+            }
         } else if (action === 'setup') {
             this.toggleSetupOverlay(driverNumber, true);
         } else if (action === 'pu-details') {
