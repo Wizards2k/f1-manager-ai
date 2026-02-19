@@ -1391,13 +1391,17 @@ export class PlayerGarageV3 {
                     <select class="select-compact-v3" data-field="tyre_compound" ${isBox ? '' : 'disabled'}>
                         ${this.tyreOptions.map(opt => `<option value="${opt.value}" ${opt.value === tyreChoice ? 'selected' : ''}>${opt.label}</option>`).join('')}
                     </select>
-                    <span class="dock-wear">${tireHealthPct}%</span>
                 </div>
-                <div class="dock-field">
+                <div class="dock-field dock-tyre-health">
+                    <label>Tyre %</label>
+                    <span class="dock-val">${tireHealthPct}%</span>
+                    <div class="dock-pbar dock-pbar-tyre"><div class="dock-pbar-fill" style="width:${tireHealthPct}%"></div></div>
+                </div>
+                <div class="dock-field dock-fuel">
                     <label>Fuel %</label>
                     <input class="input-compact-v3" type="number" data-field="fuel_percent" min="1" max="100" value="${fuelPercent}" ${isBox ? '' : 'disabled'}>
                 </div>
-                <div class="dock-field">
+                <div class="dock-field dock-stint">
                     <label>Stint (${maxStint})</label>
                     <input class="input-compact-v3" type="number" data-field="stint_target_laps" min="1" max="${maxStint}" value="${stintTarget}" ${isBox ? '' : 'disabled'}>
                 </div>

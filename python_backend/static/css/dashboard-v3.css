@@ -979,6 +979,22 @@ timeline-toggle-btn:hover {
     min-width: 0;
     overflow: hidden;
 }
+
+/* Dock progress bar */
+.dock-pbar {
+    height: 4px;
+    border-radius: 999px;
+    background: #222;
+    overflow: hidden;
+    margin-top: 2px;
+}
+.dock-pbar-fill {
+    height: 100%;
+    border-radius: 999px;
+}
+.dock-pbar-tyre .dock-pbar-fill {
+    background: linear-gradient(90deg, #5c6bc0, #ffa726);
+}
 .dock-field label {
     font-size: 7px;
     color: #666;
@@ -1033,7 +1049,9 @@ timeline-toggle-btn:hover {
 /* Dock grid rows */
 .dock-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
 .dock-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
-.dock-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+.dock-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; }
+.dock-row-4 .dock-fuel { flex: 0 0 70px; }
+.dock-row-4 .dock-stint { flex: 0 0 70px; }
 
 /* Sector strip */
 .dock-sector-strip {
