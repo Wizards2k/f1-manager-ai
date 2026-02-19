@@ -110,6 +110,11 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
         - ✅ Strategia ERS basata su priorità sezioni + SOC target con nuova UI/telemetria ERS Map (Garage V3, 2026-02-16).
         - ✅ Brake migration torque split (regen vs idraulico) con telemetria e warning SOC (2026-02-16).
      2. **Brake Calibration & Migration** – usare i profili frenata per calcolare coppie regen/idrauliche, loggare warning e visualizzarli (bias/duct/cooling) nella UI.
+       - ✅ Script `brake_calibration.py`: integra `braking_energy_mj` per sezione e produce `config/calibration/brakes/<circuit>.json` con heat_capacity, fade_threshold, cooling_coeff, ratio regen/idraulico.
+       - ✅ Aggiornare la pipeline `build_circuit_profiles.py`/loader per fondere i parametri calibrati nei derived `config/circuits/derived/<circuit>/brake_params.json`.
+       - ✅ Estendere il LapSimulator (BrakeSystem + Degradation loop) per leggere i nuovi coeff, calcolare torque split regen/idraulico per sezione e generare warning termici.
+       - [ ] Surface FE/HUD: mostrare bias/duct guidance e warning brake fade nei pannelli Garage/PU secondo `docs/v3-migration-spec.md`.
+       - [ ] QA & test: ampliare `test_calibration_and_telemetry.py` e preparare report di validazione componente per circuito.
      3. **Tyre Model V2** – integrare i parametri derivati (temp window, gaussian, graining/blistering) nel simulatore e mostrare trend degrado/termico.
      4. **Aero Package dettagliato** – applicare DF/drag/handling penalty avanzati nel runtime e surface UI con indicatori aero balance/cooling.
      5. **Automazione & QA** – pipeline `calibration.yml`, watchdog FastF1 vs sim, manifest + dashboard Plotly e checklist QA dedicate.

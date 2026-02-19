@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Garage Card – Brake Chip Mock</title>
+    <style>
+        :root {
+            font-family: "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+            --bg: #090909;
+            --card-bg: #141414;
+            --card-border: #262626;
+            --label: #d5d5d5;
+            --value: #fefefe;
+            --accent: #ffd55f;
+            --chip-border: rgba(255,255,255,0.24);
+            color: var(--value);
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at top, #111 0%, #050505 80%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px;
+        }
+
+        .car-card {
+            width: 860px;
+            border-radius: 18px;
+            border: 1px solid var(--card-border);
+            background: linear-gradient(145deg, #171717 0%, #0f0f0f 80%);
+            box-shadow: 0 25px 60px rgba(0,0,0,0.45);
+            padding: 26px 30px 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .driver-block {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+        }
+
+        .team-dot {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            background: #ba0c2f;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .driver-labels {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            text-transform: uppercase;
+        }
+
+        .driver-status {
+            font-size: 11px;
+            letter-spacing: 0.16em;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .state-pills {
+            display: flex;
+            gap: 8px;
+        }
+
+        .pill {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            padding: 4px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.14);
+        }
+
+        .pill.state {
+            background: #262626;
+        }
+
+        .pill.data {
+            background: rgba(255,62,108,0.2);
+            color: #ff6d88;
+        }
+
+        .ctrl-area {
+            background: rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .ctrl-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 160px)) 170px 1fr;
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        .ctrl-row.secondary {
+            grid-template-columns: repeat(2, minmax(0, 150px)) 260px 1fr;
+            align-items: center;
+        }
+
+        .ctrl-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+
+        .ctrl-cell label {
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.6);
+        }
+
+        select,
+        input[type="number"] {
+            background: #0d0d0d;
+            border-radius: 8px;
+            border: 1px solid #2b2b2b;
+            color: var(--value);
+            padding: 8px 10px;
+            font-size: 13px;
+        }
+
+        .wear-indicator {
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            color: #81f0ae;
+        }
+
+        .tyre-temps-inline {
+            display: grid;
+            grid-template-columns: repeat(2, auto);
+            grid-template-rows: repeat(2, auto);
+            gap: 6px 10px;
+            font-size: 12px;
+        }
+
+        .tyre-temps-inline span {
+            font-weight: 600;
+            color: #9fd5ff;
+        }
+
+        .driver-push {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .driver-push input[type="range"] {
+            flex: 0 0 50%;
+            accent-color: #3f87ff;
+        }
+
+        .slider-space {
+            flex: 1;
+            border: 1px dashed rgba(255,255,255,0.2);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .chip-slot {
+            border: 1px dashed rgba(255,255,255,0.25);
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            letter-spacing: 0.18em;
+            color: rgba(255,255,255,0.55);
+        }
+
+        .footer-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pu-inline {
+            display: flex;
+            gap: 22px;
+        }
+
+        .pu-inline span {
+            font-size: 13px;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .buttons button {
+            border: none;
+            border-radius: 12px;
+            padding: 12px 34px;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        .send {
+            background: #f7c942;
+        }
+
+        .box {
+            background: #bb3b3b;
+            color: #fff3f3;
+        }
+
+        .setup {
+            border: 1px solid rgba(255,255,255,0.3);
+            color: var(--value);
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="car-card">
+        <header>
+            <div class="driver-block">
+                <div class="team-dot">16</div>
+                <div class="driver-labels">
+                    <strong>Charles Leclerc</strong>
+                    <span class="driver-status">Ready in box</span>
+                </div>
+            </div>
+            <div class="state-pills">
+                <span class="pill state">Box</span>
+                <span class="pill data">Data</span>
+            </div>
+        </header>
+
+        <div class="ctrl-area">
+            <div class="ctrl-row">
+                <div class="ctrl-cell">
+                    <label>Tyre compound</label>
+                    <select>
+                        <option>Medium</option>
+                        <option>Soft</option>
+                    </select>
+                    <span class="wear-indicator">100%</span>
+                </div>
+                <div class="ctrl-cell">
+                    <label>Fuel %</label>
+                    <input type="number" value="100">
+                </div>
+                <div class="ctrl-cell">
+                    <label>Stint laps (13)</label>
+                    <input type="number" value="13">
+                </div>
+                <div class="ctrl-cell tyre-temps">
+                    <label>Tyre °C</label>
+                    <div class="tyre-temps-inline">
+                        <span>FL 95°</span>
+                        <span>FR 95°</span>
+                        <span>RL 95°</span>
+                        <span>RR 95°</span>
+                    </div>
+                </div>
+                <div class="ctrl-cell chip-slot">
+                    Space reserved for brake ducts chips
+                </div>
+            </div>
+
+            <div class="ctrl-row secondary">
+                <div class="ctrl-cell">
+                    <label>ICE map</label>
+                    <select>
+                        <option>Standard</option>
+                    </select>
+                </div>
+                <div class="ctrl-cell">
+                    <label>ERS mode</label>
+                    <select>
+                        <option>Neutral</option>
+                    </select>
+                </div>
+                <div class="ctrl-cell driver-push">
+                    <label>Driver push (5)</label>
+                    <input type="range" value="5" min="1" max="10">
+                </div>
+                <div class="slider-space">
+                    Freed space (approx. 50%) for inline brake ducts or extra data
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-bar">
+            <div class="pu-inline">
+                <span>ERS SOC 4.0 MJ (73%)</span>
+                <span>Deploy 0.0 / 3.2 MJ</span>
+                <span>Lap budget ▬▬▬▬▬▬</span>
+            </div>
+            <div class="buttons">
+                <button class="send">Send Out</button>
+                <button class="box">Box</button>
+                <button class="setup">Setup</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

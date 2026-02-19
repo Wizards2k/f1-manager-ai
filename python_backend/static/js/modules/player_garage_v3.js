@@ -55,17 +55,11 @@ export class PlayerGarageV3 {
         };
         this.BOX_ONLY_FIELDS = new Set(['tyre_compound', 'fuel_percent', 'stint_target_laps']);
         this.SETUP_FIELDS = [
-            'front_wing',
-            'rear_wing',
-            'beam_wing',
-            'ride_height_front',
-            'ride_height_rear',
-            'suspension_front',
-            'suspension_rear',
-            'antiroll_front',
-            'antiroll_rear',
-            'brake_balance',
-            'brake_duct'
+            'front_wing', 'rear_wing', 'beam_wing',
+            'ride_height_front', 'ride_height_rear',
+            'suspension_front', 'suspension_rear',
+            'antiroll_front', 'antiroll_rear',
+            'brake_balance', 'brake_duct'
         ];
         this.setupDefaults = {
             front_wing: 50,
@@ -848,6 +842,23 @@ export class PlayerGarageV3 {
         return `pu:${fields.join(':')}`;
     }
 
+    brakeCoolingSignature(brakeCooling) {
+        if (!brakeCooling || (!brakeCooling.front && !brakeCooling.rear)) {
+            return 'bc:none';
+        }
+        const axes = ['front', 'rear'].map(axis => {
+            const data = brakeCooling[axis];
+            if (!data) return `${axis}:na`;
+            const vals = [
+                typeof data.current_open === 'number' ? data.current_open.toFixed(3) : 'null',
+                data.status || 'na',
+                typeof data.blink_until === 'number' ? data.blink_until.toFixed(2) : 'null'
+            ];
+            return `${axis}:${vals.join(':')}`;
+        });
+        return `bc:${axes.join('|')}`;
+    }
+
     computeLapTotals(trace = [], fallbackDeploy = 0, fallbackHarvest = 0, fallbackMguhDirect = 0, fallbackMguhHarvest = 0) {
         const hasTrace = Array.isArray(trace) && trace.length > 0;
         const totals = trace.reduce((acc, entry) => {
@@ -1064,6 +1075,86 @@ export class PlayerGarageV3 {
         `;
     }
 
+    buildBrakeChipPreview(car) {
+        const cooling = car.brake_cooling || {};
+        const isBox = this.getCarState(car) === 'BOX';
+        const nowSeconds = Date.now() / 1000;
+        const axes = ['front', 'rear'];
+        const chips = axes
+            .map(axis => this.buildBrakeChip(
+                axis,
+                this.resolveBrakeAxisData(car, axis, cooling, isBox),
+                nowSeconds,
+            ))
+            .join('');
+        return `<div class="brake-chip-preview">${chips}</div>`;
+    }
+
+    buildBrakeChip(axis, axisData, nowSeconds = Date.now() / 1000) {
+        const axisLabel = axis === 'front' ? 'Front' : 'Rear';
+        const state = this.getBrakeChipState(axisData, nowSeconds);
+        const classes = ['brake-chip-mini', state.statusClass];
+        if (state.shouldBlink) classes.push('brake-chip-blink');
+        return `
+            <span class="${classes.join(' ')}" data-bc-axis="${axis}">
+                <span class="bc-axis">${axisLabel}</span>
+                <span class="bc-value">${state.valueText}</span>
+            </span>
+        `;
+    }
+
+    resolveBrakeAxisData(car, axis, coolingOverride = null, isBoxOverride = null) {
+        const cooling = coolingOverride || car.brake_cooling || {};
+        const configPct = this.getBrakeDuctConfigPercent(car);
+        const configRatio = configPct !== null
+            ? Math.max(0, Math.min(100, configPct)) / 100
+            : null;
+        const isBox = typeof isBoxOverride === 'boolean' ? isBoxOverride : this.getCarState(car) === 'BOX';
+
+        let axisData = cooling[axis];
+        if (axisData) {
+            if ((isBox || typeof axisData.current_open !== 'number') && configRatio !== null) {
+                axisData = { ...axisData, current_open: configRatio };
+            }
+        } else if (configRatio !== null) {
+            axisData = { current_open: configRatio, status: 'na' };
+        }
+        return axisData;
+    }
+
+    getBrakeDuctConfigPercent(car) {
+        const setupValue = car.player_config?.setup?.brake_duct;
+        if (typeof setupValue === 'number') return setupValue;
+        const legacyValue = car.player_config?.brake_duct;
+        return typeof legacyValue === 'number' ? legacyValue : null;
+    }
+
+    getBrakeChipState(axisData, nowSeconds = Date.now() / 1000) {
+        const status = axisData?.status || 'na';
+        const statusClass = this.mapBrakeStatusToClass(status);
+        const valueText = this.formatPercent(axisData?.current_open);
+        const shouldBlink = axisData?.blink_until ? nowSeconds < axisData.blink_until : false;
+        return { statusClass, valueText, shouldBlink };
+    }
+
+    mapBrakeStatusToClass(status) {
+        switch (status) {
+            case 'ok':
+                return 'brake-chip-ok';
+            case 'warn':
+                return 'brake-chip-warn';
+            case 'bad':
+                return 'brake-chip-bad';
+            default:
+                return 'brake-chip-na';
+        }
+    }
+
+    formatPercent(value) {
+        if (typeof value !== 'number' || Number.isNaN(value)) return '--%';
+        return `${Math.round(value * 100)}%`;
+    }
+
     buildCarCard(car) {
         const tyreChoice = car.player_config?.tyre_compound || car.current_tire || 'medium';
         const fuelPercent = car.player_config?.fuel_percent ?? car.fuel_percent ?? 100;
@@ -1083,6 +1174,7 @@ export class PlayerGarageV3 {
         const isBox = currentState === 'BOX';
         const telemetry = this.buildTelemetryStrip(car);
         const tyreTemps = this.buildTyreTempsSection(car);
+        const brakeChipPreview = this.buildBrakeChipPreview(car);
         const infoPct = car.setup_info_percent ?? 0;
         const thresholds = car.is_player_controlled
             ? { green: 67, yellow: 34 }
@@ -1150,6 +1242,10 @@ export class PlayerGarageV3 {
                             <div class="ctrl-cell-v3 ctrl-push-v3">
                                 <label>Driver push (${paceLevel})</label>
                                 <input class="compact-range" type="range" data-field="pace_level" min="1" max="10" value="${paceLevel}">
+                            </div>
+                            <div class="ctrl-cell-v3 ctrl-brake-inline">
+                                <label>Brake ducts</label>
+                                ${brakeChipPreview}
                             </div>
                         </div>
                     </div>
@@ -1785,7 +1881,28 @@ export class PlayerGarageV3 {
                 else chip.classList.add('setup-chip-red');
                 if (pct >= 100) chip.classList.add('setup-chip-blink');
             }
+
+            const cooling = car.brake_cooling;
+            const isBox = this.getCarState(car) === 'BOX';
+            const nowSeconds = Date.now() / 1000;
+            card.querySelectorAll('.brake-chip-mini').forEach(chipEl => {
+                const axis = chipEl.dataset.bcAxis;
+                const axisData = this.resolveBrakeAxisData(car, axis, cooling, isBox);
+                this.applyBrakeChipState(chipEl, axisData, nowSeconds);
+            });
         });
+    }
+
+    applyBrakeChipState(chipEl, axisData, nowSeconds) {
+        if (!chipEl) return;
+        const state = this.getBrakeChipState(axisData, nowSeconds);
+        chipEl.classList.remove('brake-chip-ok', 'brake-chip-warn', 'brake-chip-bad', 'brake-chip-na', 'brake-chip-blink');
+        chipEl.classList.add(state.statusClass);
+        if (state.shouldBlink) {
+            chipEl.classList.add('brake-chip-blink');
+        }
+        const valueEl = chipEl.querySelector('.bc-value');
+        if (valueEl) valueEl.textContent = state.valueText;
     }
 
     render(force = false) {
@@ -1805,7 +1922,7 @@ export class PlayerGarageV3 {
             return;
         }
 
-        const fp = cars.map(c => `${c.driver_number}:${c.state}:${c.total_laps}:${c.current_tire}:${c.tire_age}:${this.puStatsSignature(c.pu_stats)}`).join('|');
+        const fp = cars.map(c => `${c.driver_number}:${c.state}:${c.total_laps}:${c.current_tire}:${c.tire_age}:${this.puStatsSignature(c.pu_stats)}:${this.brakeCoolingSignature(c.brake_cooling)}`).join('|');
         if (!force && fp === this._lastRenderFp) return;
         this._lastRenderFp = fp;
 
@@ -1859,7 +1976,11 @@ export class PlayerGarageV3 {
         const draft = this.setupDrafts.get(driverNumber) || {};
         const payload = {};
         this.SETUP_FIELDS.forEach(field => {
-            payload[field] = draft[field] ?? car.player_config?.setup?.[field] ?? car[field] ?? this.setupDefaults[field];
+            payload[field] = draft[field]
+                ?? car.player_config?.setup?.[field]
+                ?? car.player_config?.[field]
+                ?? car[field]
+                ?? this.setupDefaults[field];
         });
         return payload;
     }
@@ -1906,6 +2027,40 @@ export class PlayerGarageV3 {
 
     async sendPlayerConfig(driverNumber, payload, state, options = {}) {
         const allowedPayload = { ...payload };
+        const card = this.cardsContainer?.querySelector(`[data-driver="${driverNumber}"]`);
+        const car = this.state.getPlayerCar(driverNumber);
+
+        const clampNumericField = (field, min, max, round = true) => {
+            if (typeof allowedPayload[field] !== 'number' || Number.isNaN(allowedPayload[field])) return;
+            const raw = round ? Math.round(allowedPayload[field]) : allowedPayload[field];
+            const clamped = Math.max(min, Math.min(max, raw));
+            if (clamped !== allowedPayload[field]) {
+                allowedPayload[field] = clamped;
+                if (card) {
+                    const input = card.querySelector(`[data-field="${field}"]`);
+                    if (input) input.value = clamped;
+                }
+            } else if (round && raw !== allowedPayload[field]) {
+                allowedPayload[field] = raw;
+            }
+        };
+
+        const maxStint = car?.max_stint_laps ?? car?.stint_target_laps ?? 12;
+        clampNumericField('stint_target_laps', 1, maxStint);
+        clampNumericField('fuel_percent', 1, 100);
+        clampNumericField('pace_level', 1, 10);
+
+        if (typeof allowedPayload.tyre_compound === 'string') {
+            const normalized = allowedPayload.tyre_compound.toLowerCase();
+            if (normalized !== allowedPayload.tyre_compound) {
+                allowedPayload.tyre_compound = normalized;
+                if (card) {
+                    const select = card.querySelector('[data-field="tyre_compound"]');
+                    if (select) select.value = normalized;
+                }
+            }
+        }
+
         if (state !== 'BOX') {
             delete allowedPayload.tyre_compound;
             delete allowedPayload.fuel_percent;

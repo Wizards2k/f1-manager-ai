@@ -8,7 +8,7 @@ Reference: docs/lap-physics-spec-v0.5.md §3.3 Passo 5
 """
 from __future__ import annotations
 
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from .data_types import (
     AeroForces,
@@ -23,6 +23,38 @@ from .data_types import (
     SectionEvent,
     clamp,
 )
+
+
+def _find_critical_section(config: CircuitConfig, section_id: str) -> Dict[str, Any]:
+    for entry in config.brake_critical_sections or []:
+        if entry.get("id") == section_id:
+            return entry
+    return {}
+
+
+def _compute_regen_factor(brake_profile: Dict[str, Any], section: SectionContext) -> float | None:
+    if not brake_profile:
+        return None
+    base = brake_profile.get("regen_brake_base")
+    if base is None:
+        return None
+    energy = section.braking_energy_mj
+    energy_window = brake_profile.get("brake_energy_window", {})
+    regen_range = brake_profile.get("regen_brake_factor_range", {})
+    min_factor = regen_range.get("min", max(0.0, base - 0.3))
+    max_factor = regen_range.get("max", min(0.95, base + 0.3))
+    factor = base
+    p75 = energy_window.get("p75")
+    p90 = energy_window.get("p90")
+    if p90 and energy >= p90:
+        factor = max(min_factor, base - 0.15)
+    elif p75 and energy <= p75 * 0.9:
+        factor = min(max_factor, base + 0.1)
+    return clamp(factor, min_factor, max_factor)
+
+
+def _format_section_name(critical: Dict[str, Any], section: SectionContext) -> str:
+    return critical.get("name") or section.name or section.section_id
 
 
 # ---------------------------------------------------------------------------
@@ -51,6 +83,8 @@ def update_brakes(
     events: List[SectionEvent] = []
     brakes = car_state.brakes
     bp = config.brake_params
+    brake_profile = config.brake_profile or {}
+    critical_section = _find_critical_section(config, section.section_id)
 
     # --- Energy distribution (front/rear based on bias) ---
     bias_front = brakes.bias_front_pct / 100.0 + driver.brake_bias_adjust
@@ -62,10 +96,33 @@ def update_brakes(
     energy_front = braking_energy * bias_front
     energy_rear = braking_energy * bias_rear
 
+    # Apply regen split (mostly rear axle) from calibration profile
+    regen_factor = _compute_regen_factor(brake_profile, section)
+    regen_cap = 0.6
+    ratio = brake_profile.get("hydraulic_vs_regen_ratio") if brake_profile else None
+    if isinstance(ratio, (int, float)) and ratio > 0:
+        regen_cap = clamp(1.0 / (ratio + 1.0), 0.1, 0.8)
+    regen_energy = 0.0
+    if regen_factor is not None and braking_energy > 0.05:
+        regen_share = clamp(regen_factor, 0.0, regen_cap)
+        regen_energy = energy_rear * regen_share
+        energy_rear *= (1.0 - regen_share)
+        if regen_energy > 0.0:
+            events.append(SectionEvent(
+                event_type="regen_split",
+                severity=regen_share,
+                message=f"Regen brake active ({regen_share:.0%})",
+            ))
+
     # --- Heat generation ---
     # heat_in = energy / heat_capacity (higher capacity → less temp rise)
     heat_in_front = energy_front / max(bp.heat_capacity_front, 0.1)
     heat_in_rear = energy_rear / max(bp.heat_capacity_rear, 0.1)
+
+    if critical_section:
+        crit_factor = max(critical_section.get("heat_factor", 1.0), 1.0)
+        heat_in_front *= crit_factor
+        heat_in_rear *= crit_factor
 
     # Heat quality: better system disperses heat more efficiently
     heat_in_front *= (2.0 - bp.heat_quality)  # quality 1.0 → factor 1.0
@@ -81,6 +138,23 @@ def update_brakes(
 
     cool_front = duct_cooling * air_speed_factor * (brakes.temp_front_c - env.air_temp_c) * 0.002
     cool_rear = duct_cooling * air_speed_factor * (brakes.temp_rear_c - env.air_temp_c) * 0.002
+
+    duct_rec = brake_profile.get("duct_recommendation", {})
+    if duct_rec and braking_energy >= 1.0:
+        min_open = duct_rec.get("min_open")
+        max_open = duct_rec.get("max_open")
+        if isinstance(min_open, (int, float)) and brakes.duct_opening + 1e-3 < min_open:
+            events.append(SectionEvent(
+                event_type="brake_duct_low",
+                severity=min(1.0, (min_open - brakes.duct_opening) * 2),
+                message="Brake ducts too closed for current braking load",
+            ))
+        if isinstance(max_open, (int, float)) and brakes.duct_opening - 1e-3 > max_open:
+            events.append(SectionEvent(
+                event_type="brake_duct_high",
+                severity=min(1.0, (brakes.duct_opening - max_open) * 2),
+                message="Brake ducts more open than recommended",
+            ))
 
     # --- Temperature update ---
     delta_t_front = (heat_in_front - cool_front) / max(bp.thermal_mass_front, 0.1) * dt_s
@@ -141,6 +215,21 @@ def update_brakes(
             severity=brakes.fade_level,
             message="Brake fade detected",
         ))
+
+    if critical_section and braking_energy >= 1.0:
+        section_name = _format_section_name(critical_section, section)
+        if brakes.temp_front_c > bp.fade_threshold_front_c - 10:
+            events.append(SectionEvent(
+                event_type="brake_hot_section",
+                severity=min(1.0, (brakes.temp_front_c - (bp.fade_threshold_front_c - 10)) / 100.0),
+                message=f"{section_name}: front brakes near critical temp",
+            ))
+        if regen_energy > 0.0 and critical_section.get("braking_energy_mj", 0) > 1.5:
+            events.append(SectionEvent(
+                event_type="regen_limit",
+                severity=min(1.0, regen_energy / max(braking_energy, 0.01)),
+                message=f"{section_name}: regen limit reached",
+            ))
 
     if braking_efficiency > 1.05 and braking_energy >= 0.5:
         events.append(SectionEvent(
