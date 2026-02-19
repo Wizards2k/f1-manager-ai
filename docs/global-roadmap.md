@@ -1,7 +1,7 @@
 ---
 title: Roadmap Globale – Physics 2.0 Release
 version: 0.1
-last_updated: 2026-02-07
+last_updated: 2026-02-19
 scope: "Coordinare tutte le iniziative necessarie per rilasciare F1 Manager AI con fisica 2.0, multi-car e setup engine rinnovato"
 ---
 
@@ -113,8 +113,8 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
        - ✅ Script `brake_calibration.py`: integra `braking_energy_mj` per sezione e produce `config/calibration/brakes/<circuit>.json` con heat_capacity, fade_threshold, cooling_coeff, ratio regen/idraulico.
        - ✅ Aggiornare la pipeline `build_circuit_profiles.py`/loader per fondere i parametri calibrati nei derived `config/circuits/derived/<circuit>/brake_params.json`.
        - ✅ Estendere il LapSimulator (BrakeSystem + Degradation loop) per leggere i nuovi coeff, calcolare torque split regen/idraulico per sezione e generare warning termici.
-       - [ ] Surface FE/HUD: mostrare bias/duct guidance e warning brake fade nei pannelli Garage/PU secondo `docs/v3-migration-spec.md`.
-       - [ ] QA & test: ampliare `test_calibration_and_telemetry.py` e preparare report di validazione componente per circuito.
+       - ✅ Surface FE/HUD: Garage V3 mostra ora guidance freni (bias/duct) accanto al feedback pilota, toast dinamici + HUD banner gestiscono `brake_hot_section` / `brake_duct_low|high` con auto-resize per messaggi lunghi (`player_garage_v3.js`, `socket_bridge.js`, `dashboard-v3.css`).
+       - ✅ QA & test: esteso `test_calibration_and_telemetry.py` con validazione completa di `brake_cooling`, `brake_thermal`, status checks e threshold verification. Creato script `brake_validation_report.py` per report HTML/JSON di validazione componenti per tutti i circuiti con test multi-configurazione duct e SessionBridge integration.
      3. **Tyre Model V2** – integrare i parametri derivati (temp window, gaussian, graining/blistering) nel simulatore e mostrare trend degrado/termico.
      4. **Aero Package dettagliato** – applicare DF/drag/handling penalty avanzati nel runtime e surface UI con indicatori aero balance/cooling.
      5. **Automazione & QA** – pipeline `calibration.yml`, watchdog FastF1 vs sim, manifest + dashboard Plotly e checklist QA dedicate.

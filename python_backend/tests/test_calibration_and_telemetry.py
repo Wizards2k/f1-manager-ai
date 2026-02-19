@@ -338,3 +338,37 @@ def test_session_bridge_three_laps_per_circuit(circuit_id):
         assert diagnostics.get("critical_sections") == config.brake_critical_sections
         assert diagnostics.get("current_section_id") is not None
         assert diagnostics.get("current_braking_energy_mj") is not None
+
+        # Validate brake cooling data structure
+        cooling = getattr(car, "brake_cooling", {})
+        assert isinstance(cooling, dict), f"brake_cooling should be dict for car {car.driver_number}"
+        assert "front" in cooling, f"Missing front brake cooling for car {car.driver_number}"
+        assert "rear" in cooling, f"Missing rear brake cooling for car {car.driver_number}"
+        
+        # Validate brake cooling structure
+        for axis in ["front", "rear"]:
+            axis_data = cooling[axis]
+            assert isinstance(axis_data, dict), f"brake_cooling[{axis}] should be dict"
+            assert "current_open" in axis_data, f"Missing current_open for {axis} brake cooling"
+            assert "status" in axis_data, f"Missing status for {axis} brake cooling"
+            assert axis_data["status"] in ["ok", "warn", "bad", "na"], f"Invalid status {axis_data['status']} for {axis}"
+        
+        # Validate brake thermal data structure
+        thermal = getattr(car, "brake_thermal", {})
+        assert isinstance(thermal, dict), f"brake_thermal should be dict for car {car.driver_number}"
+        assert "front" in thermal, f"Missing front brake thermal for car {car.driver_number}"
+        assert "rear" in thermal, f"Missing rear brake thermal for car {car.driver_number}"
+        
+        # Validate brake thermal values
+        for axis in ["front", "rear"]:
+            temp = thermal[axis]
+            assert isinstance(temp, (int, float)), f"brake_thermal[{axis}] should be numeric"
+            assert 0 <= temp <= 1200, f"Unrealistic {axis} brake temperature: {temp}°C"
+        
+        # Validate brake thermal thresholds
+        thresholds = thermal.get("thresholds", {})
+        if thresholds:
+            assert "front_c" in thresholds, "Missing front fade threshold"
+            assert "rear_c" in thresholds, "Missing rear fade threshold"
+            assert isinstance(thresholds["front_c"], (int, float)), "Front threshold should be numeric"
+            assert isinstance(thresholds["rear_c"], (int, float)), "Rear threshold should be numeric"
