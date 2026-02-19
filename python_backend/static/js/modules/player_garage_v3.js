@@ -1639,7 +1639,7 @@ export class PlayerGarageV3 {
         `;
     }
 
-    buildPUModal(car) {
+    async buildPUModal(car) {
         if (!this.overlayContainer) return;
         const puStats = car.pu_stats || {};
         const brakeDiag = car.brake_diagnostics || {};
@@ -1773,23 +1773,37 @@ export class PlayerGarageV3 {
         const tabBaseStyle = 'flex:1;border:1px solid rgba(255,255,255,0.14);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;background:rgba(255,255,255,0.04);color:#d7def1;cursor:pointer;';
         const inactiveStyle = `${tabBaseStyle}`;
         const activeStyle = `${tabBaseStyle}background:#ffd24c;color:#10141b;border-color:#ffd24c;`;
-        const statsBtnStyle = this.activePuTab === 'stats' ? activeStyle : inactiveStyle;
-        const ersBtnStyle = this.activePuTab === 'ers-map' ? activeStyle : inactiveStyle;
+        
+        let setupBtnStyle = inactiveStyle;
+        let statsBtnStyle = inactiveStyle;
+        let ersBtnStyle = inactiveStyle;
+        
+        if (this.activePuTab === 'setup') setupBtnStyle = activeStyle;
+        else if (this.activePuTab === 'stats') statsBtnStyle = activeStyle;
+        else if (this.activePuTab === 'ers-map') ersBtnStyle = activeStyle;
 
         this.overlayContainer.dataset.driver = car.driver_number;
         this.overlayContainer.classList.add('is-visible', 'pu-modal-active');
         this.overlayContainer.classList.remove('is-hiding');
+        
+        // Render Setup Panel
+        const setupHtml = await this.renderSetupPanelHtml(car, isBox);
+        
         this.overlayContainer.innerHTML = `
             <div class="pu-modal-v3">
                 <div class="pu-modal-header-v3">
-                    <div class="pu-modal-title-v3">⚡ PU Manager — ${driverName}</div>
+                    <div class="pu-modal-title-v3">🔧 Gestione Vettura — ${driverName}</div>
                     <button class="pu-modal-close-v3" data-action="close-pu">×</button>
                 </div>
                 <div class="pu-modal-tabs-v3" style="display:flex; gap:8px; margin-bottom:14px;">
-                    <button class="pu-tab-btn" style="${statsBtnStyle}" data-action="switch-pu-tab" data-tab="stats">Telemetry</button>
-                    <button class="pu-tab-btn" style="${ersBtnStyle}" data-action="switch-pu-tab" data-tab="ers-map">ERS Map</button>
+                    <button class="pu-tab-btn" style="${setupBtnStyle}" data-action="switch-pu-tab" data-tab="setup">Setup Vettura</button>
+                    <button class="pu-tab-btn" style="${statsBtnStyle}" data-action="switch-pu-tab" data-tab="stats">PU / Motore</button>
+                    <button class="pu-tab-btn" style="${ersBtnStyle}" data-action="switch-pu-tab" data-tab="ers-map">Mappa ERS</button>
                 </div>
                 <div class="pu-modal-body-v3">
+                    <section data-panel="setup" style="${this.activePuTab === 'setup' ? '' : 'display:none;'}">
+                        ${setupHtml}
+                    </section>
                     <section data-panel="stats" style="${this.activePuTab === 'stats' ? '' : 'display:none;'}">
                         ${puStatsPanel}
                     </section>
@@ -1882,11 +1896,12 @@ export class PlayerGarageV3 {
         return `${front} · ${rear}`;
     }
 
-    togglePUModal(driverNumber, open = true) {
+    togglePUModal(driverNumber, open = true, defaultTab = null) {
         if (!this.overlayContainer) return;
         if (open) {
             const car = this.state.getPlayerCar(driverNumber);
             if (car) {
+                if (defaultTab) this.activePuTab = defaultTab;
                 this.buildPUModal(car);
             }
         } else {
@@ -2109,11 +2124,8 @@ export class PlayerGarageV3 {
         }).join('');
     }
 
-    async buildSetupOverlay(car, isBox) {
-        if (!this.overlayContainer) return;
+    async renderSetupPanelHtml(car, isBox) {
         const driverNumber = car.driver_number;
-        const driverName = car.driver_name || `Driver`;
-
         if (!this.circuitMapping) await this.fetchCircuitMapping();
 
         const setupState = this.getSetupPayload(car);
@@ -2155,21 +2167,10 @@ export class PlayerGarageV3 {
             fbClass = 'no-feedback';
             progressHtml = `<div class="setup-progress-v3"><div class="setup-progress-bar-v3" style="width:${Math.min(pctLabel, 100)}%;background:${barColor}"></div></div>`;
         }
-        const circuitLabel = this.state?.circuitId || '';
 
-        this.overlayContainer.dataset.driver = driverNumber;
-        this.overlayContainer.classList.add('is-visible');
-        this.overlayContainer.classList.remove('is-hiding');
-        this.overlayContainer.innerHTML = `
-            <div class="setup-panel-v3">
-                <div class="setup-hdr-v3">
-                    <div>
-                        <h4>Setup – #${driverNumber} ${driverName}</h4>
-                        <span class="setup-pill-v3">${isBox ? 'In garage' : 'On track'}${circuitLabel ? ' • ' + circuitLabel : ''}</span>
-                    </div>
-                    <button class="setup-close-v3" data-action="close-setup" aria-label="Close setup">×</button>
-                </div>
-                <div class="setup-fb-row-v3 ${fbClass}">
+        return `
+            <div class="setup-panel-v3" style="width:100%; max-width:none; padding:0; box-shadow:none; background:transparent;">
+                <div class="setup-fb-row-v3 ${fbClass}" style="margin-top:0;">
                     ${score ? `<span class="setup-fb-score-v3 ${this._scoreColorClass || ''}">${score}</span>` : ''}
                     <span class="setup-fb-msg-v3">${feedbackMsg}</span>
                 </div>
@@ -2282,26 +2283,7 @@ export class PlayerGarageV3 {
     }
 
     toggleSetupOverlay(driverNumber, open = true) {
-        if (!this.overlayContainer) return;
-        if (open) {
-            this.setupOpenDrivers.add(driverNumber);
-            const car = this.state.getPlayerCar(driverNumber);
-            if (car) {
-                this.overlayContainer.classList.add('is-visible');
-                this.overlayContainer.classList.remove('is-hiding');
-                this.buildSetupOverlay(car, car?.state === 'BOX');
-            }
-        } else {
-            this.setupOpenDrivers.delete(driverNumber);
-            const panel = this.overlayContainer.querySelector('.setup-panel-v3');
-            if (panel) {
-                this.overlayContainer.classList.add('is-hiding');
-                panel.classList.add('closing');
-                panel.addEventListener('animationend', () => this.resetSetupOverlayState(), { once: true });
-            } else {
-                this.resetSetupOverlayState();
-            }
-        }
+        this.togglePUModal(driverNumber, open, 'setup');
     }
 
     resetSetupOverlayState() {
@@ -2447,15 +2429,13 @@ export class PlayerGarageV3 {
     }
 
     handleOverlayAction(driverNumber, action, target = null) {
-        if (action === 'close-setup') {
-            this.toggleSetupOverlay(driverNumber, false);
-        } else if (action === 'close-pu') {
+        if (action === 'close-setup' || action === 'close-pu') {
             this.togglePUModal(driverNumber, false);
         } else if (action === 'reset-setup') {
             this.resetSetupDraft(driverNumber);
             const carData = this.state.getPlayerCar(driverNumber);
             if (carData) {
-                this.buildSetupOverlay(carData, this.getCarState(carData) === 'BOX');
+                this.buildPUModal(carData);
             }
         } else if (action === 'apply-setup') {
             const carData = this.state.getPlayerCar(driverNumber);
@@ -2666,9 +2646,9 @@ export class PlayerGarageV3 {
             const latestCar = data.car || this.state.getPlayerCar(driverNumber);
             const currentState = latestCar ? this.getCarState(latestCar) : state;
             if (currentState === 'BOX') {
-                this.toggleSetupOverlay(driverNumber, false);
+                this.togglePUModal(driverNumber, false);
             } else {
-                this.buildSetupOverlay(latestCar, currentState === 'BOX');
+                this.buildPUModal(latestCar);
             }
             // Apply any pending tyres/fuel changes
             const card = this.cardsContainer.querySelector(`[data-driver="${driverNumber}"]`);
