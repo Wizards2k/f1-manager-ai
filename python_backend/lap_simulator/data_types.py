@@ -198,6 +198,7 @@ class BrakeState:
     fade_level: float = 0.0              # 0 = no fade, 1 = full fade
     duct_opening: float = 0.5            # 0-1 from setup
     bias_front_pct: float = 55.0         # brake balance
+    snapshot: Dict[str, Any] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------

@@ -25,6 +25,25 @@ from .data_types import (
 )
 
 
+# Calibrated multipliers to align heat build-up / dissipation with telemetry window
+HEAT_GAIN_MULTIPLIER = 6.5
+COOLING_GAIN_MULTIPLIER = 0.45
+
+
+def _format_temp_snapshot(brakes: BrakeState, config: CircuitConfig) -> Dict[str, Any]:
+    profile = config.brake_profile or {}
+    fade = profile.get("fade_threshold", {})
+    params = config.brake_params
+    return {
+        "front": brakes.temp_front_c,
+        "rear": brakes.temp_rear_c,
+        "thresholds": {
+            "front_c": fade.get("front_c", params.fade_threshold_front_c if params else 850.0),
+            "rear_c": fade.get("rear_c", params.fade_threshold_rear_c if params else 750.0),
+        },
+    }
+
+
 def _find_critical_section(config: CircuitConfig, section_id: str) -> Dict[str, Any]:
     for entry in config.brake_critical_sections or []:
         if entry.get("id") == section_id:
@@ -71,7 +90,7 @@ def update_brakes(
     dt_s: float,
     v_kph: float,
     driver_skills: DriverSkills | None = None,
-) -> Tuple[float, List[SectionEvent]]:
+) -> Tuple[float, List[SectionEvent], Dict[str, Any]]:
     """
     Update brake thermal state, fade, wear and return braking efficiency.
 
@@ -116,8 +135,8 @@ def update_brakes(
 
     # --- Heat generation ---
     # heat_in = energy / heat_capacity (higher capacity → less temp rise)
-    heat_in_front = energy_front / max(bp.heat_capacity_front, 0.1)
-    heat_in_rear = energy_rear / max(bp.heat_capacity_rear, 0.1)
+    heat_in_front = (energy_front / max(bp.heat_capacity_front, 0.1)) * HEAT_GAIN_MULTIPLIER
+    heat_in_rear = (energy_rear / max(bp.heat_capacity_rear, 0.1)) * HEAT_GAIN_MULTIPLIER
 
     if critical_section:
         crit_factor = max(critical_section.get("heat_factor", 1.0), 1.0)
@@ -136,8 +155,11 @@ def update_brakes(
     )
     air_speed_factor = max(v_kph / 300.0, 0.1)
 
-    cool_front = duct_cooling * air_speed_factor * (brakes.temp_front_c - env.air_temp_c) * 0.002
-    cool_rear = duct_cooling * air_speed_factor * (brakes.temp_rear_c - env.air_temp_c) * 0.002
+    base_cooling = duct_cooling * air_speed_factor * 0.002 * COOLING_GAIN_MULTIPLIER
+    temp_delta_front = max(brakes.temp_front_c - env.air_temp_c, 0.0)
+    temp_delta_rear = max(brakes.temp_rear_c - env.air_temp_c, 0.0)
+    cool_front = base_cooling * temp_delta_front
+    cool_rear = base_cooling * temp_delta_rear
 
     duct_rec = brake_profile.get("duct_recommendation", {})
     if duct_rec and braking_energy >= 1.0:
@@ -245,4 +267,4 @@ def update_brakes(
             message="Front brakes critically hot!",
         ))
 
-    return braking_efficiency, events
+    return braking_efficiency, events, _format_temp_snapshot(brakes, config)

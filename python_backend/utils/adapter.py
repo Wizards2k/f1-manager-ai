@@ -19,6 +19,12 @@ from lap_simulator.data_types import (
     TyreCompound,
 )
 from lap_simulator.lap_simulator import CarEntry, LapResult
+from services.setup_engine_service import SetupEngineService
+
+try:
+    import config
+except ImportError:  # pragma: no cover - optional during tests
+    config = None
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +90,42 @@ def pilot_to_driver_skills(pilot) -> DriverSkills:
         smoothness=getattr(pilot, "stile_sottosterzo", 60),
         setup_finding=getattr(pilot, "ricerca_assetto", 60),
     )
+def _default_setup_value(field: str, fallback: int = 50) -> int:
+    """Lazy import DEFAULT_SETUP_CONFIG to avoid circular imports."""
+    try:
+        from models import DEFAULT_SETUP_CONFIG  # type: ignore
+        return int(DEFAULT_SETUP_CONFIG.get(field, fallback))
+    except Exception:  # pragma: no cover - keep simulation running on import errors
+        return fallback
+
+
+def _compute_brake_duct_opening(car, circuit_id: Optional[str] = None) -> float:
+    """Map the saved setup slider to the physical duct opening (0-1 range)."""
+    setup = getattr(car, "player_config", {}).get("setup", {})
+    slider_value = setup.get("brake_duct")
+    if slider_value is None:
+        slider_value = _default_setup_value("brake_duct", 50)
+
+    try:
+        slider = max(0, min(100, int(slider_value)))
+    except (TypeError, ValueError):
+        slider = 50
+
+    circuit_code = circuit_id or (getattr(config, "current_circuit", None) if config else None)
+
+    min_open = 0.25
+    max_open = 0.7
+    try:
+        _, mapping = SetupEngineService.get_circuit_mapping(circuit_code)
+        cfg = mapping.get("brake_duct") if isinstance(mapping, dict) else None
+        if isinstance(cfg, dict):
+            min_open = float(cfg.get("min_open", min_open))
+            max_open = float(cfg.get("max_open", max_open))
+    except Exception:  # pragma: no cover - mapping fallback
+        pass
+
+    opening = min_open + (max_open - min_open) * (slider / 100.0)
+    return max(0.0, min(1.0, opening))
 
 
 # ---------------------------------------------------------------------------
@@ -111,6 +153,7 @@ def racecar_to_car_entry(
     push_level = 0.90 + (pace - 1) * (0.20 / 9)  # 1→0.90, 5→0.989, 10→1.10
 
     state = SimCarState(car_id=car_id)
+    state.brakes.duct_opening = _compute_brake_duct_opening(car)
 
     # Set fuel from game fuel_percent
     fuel_pct = getattr(car, "fuel_percent", 100)

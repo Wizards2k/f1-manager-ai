@@ -139,7 +139,7 @@ def update_section(
     )
     all_events.extend(tyre_events)
 
-    braking_efficiency, brake_events = update_brakes(
+    braking_efficiency, brake_events, brake_snapshot = update_brakes(
         car_state=car_state,
         section=section,
         env=env,
@@ -150,6 +150,7 @@ def update_section(
         v_kph=v_estimate,
         driver_skills=driver_skills,
     )
+    car_state.brakes.snapshot = brake_snapshot
     all_events.extend(brake_events)
 
     # ===================================================================

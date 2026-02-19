@@ -840,6 +840,7 @@ class SessionBridge:
         # Brake diagnostics (per section + circuit profile)
         race_car.brake_diagnostics = self._build_brake_diagnostics(section)
         race_car.brake_cooling = self._build_brake_cooling(entry, race_car)
+        race_car.brake_thermal = getattr(entry.state.brakes, "snapshot", None) or {}
 
     def _build_pu_stats(self, entry) -> Dict[str, Any]:
         if not self.circuit_config:

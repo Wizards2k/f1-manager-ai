@@ -382,6 +382,7 @@ class RaceCar:
         # Telemetry/diagnostics exposed to frontend & tools
         self.pu_stats: Dict[str, Any] = {}
         self.brake_diagnostics: Dict[str, Any] = {}
+        self.brake_thermal: Dict[str, Any] = {"front": None, "rear": None}
         self.brake_cooling: Dict[str, Any] = {}
         self.brake_cooling_warnings: Dict[str, Optional[float]] = {
             "front": None,

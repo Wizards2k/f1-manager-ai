@@ -771,6 +771,12 @@ timeline-toggle-btn:hover {
     color: #ffd363;
 }
 
+.brake-chip-cold {
+    border-color: rgba(111, 172, 255, 0.5) !important;
+    background: rgba(111, 172, 255, 0.12) !important;
+    color: #9bc6ff;
+}
+
 .brake-chip-bad {
     border-color: rgba(255, 120, 120, 0.55) !important;
     background: rgba(255, 120, 120, 0.12) !important;
