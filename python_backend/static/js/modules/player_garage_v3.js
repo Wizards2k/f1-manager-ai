@@ -2553,6 +2553,10 @@ export class PlayerGarageV3 {
                 this.pendingSendDrivers.delete(driverNumber);
                 this.applyLocalCarState(driverNumber, { state: 'BOX', is_on_track: false });
                 this.render(true);
+            } else {
+                // Success: clear box pending state and re-enable Box button
+                this.pendingBoxDrivers.delete(driverNumber);
+                this.render(true);
             }
         } else if (action === 'box') {
             if (state === 'BOX') {
