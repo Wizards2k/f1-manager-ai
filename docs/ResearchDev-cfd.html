@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisi Funzionale Integrale - F1 Simulator</title>
+    <style>
+        :root { --f1-red: #e10600; --f1-black: #15151e; --f1-grey: #38383f; --f1-light: #f1f1f1; }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: var(--f1-black); background: #fdfdfd; margin: 0; padding: 0; }
+        .container { max-width: 1100px; margin: 40px auto; padding: 20px; }
+        header { background: var(--f1-black); color: white; padding: 40px 20px; text-align: center; border-bottom: 5px solid var(--f1-red); }
+        h1 { margin: 0; font-size: 2.5em; text-transform: uppercase; letter-spacing: 2px; }
+        h2 { color: var(--f1-red); border-bottom: 2px solid var(--f1-red); padding-bottom: 10px; margin-top: 40px; text-transform: uppercase; }
+        h3 { background: var(--f1-light); padding: 10px; border-left: 5px solid var(--f1-grey); margin-top: 25px; }
+        p { margin: 15px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th, td { padding: 15px; text-align: left; border: 1px solid #ddd; }
+        th { background-color: var(--f1-grey); color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .highlight-box { background: #fff5f5; border: 1px solid #ffcccc; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .code-block { background: #1e1e1e; color: #dcdcdc; padding: 20px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 0.9em; overflow-x: auto; line-height: 1.4; }
+        .tag { display: inline-block; background: var(--f1-red); color: white; padding: 3px 10px; border-radius: 3px; font-size: 0.8em; font-weight: bold; margin-bottom: 10px; }
+        .footer { text-align: center; margin-top: 50px; padding: 20px; color: #666; font-size: 0.8em; border-top: 1px solid #ddd; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Documento di Analisi Funzionale Integrale</h1>
+    <p>Sistemi Elettrici, Dinamica di Frenata e Ciclo di Sviluppo R&D (Spec. 2026)</p>
+</header>
+
+<div class="container">
+
+    <section>
+        <h2>1. Architettura Power Unit e Flussi ERS</h2>
+        <p>Il sistema simula una PU ibrida dove il recupero termico (MGU-H) è il fattore differenziante per la velocità massima.</p>
+        
+        <h3>1.1 Il Segreto del Direct Drive (MGU-H → MGU-K)</h3>
+        <p>L'energia generata dall'MGU-H può alimentare direttamente l'MGU-K senza passare per la batteria. Questo processo non è soggetto al limite regolamentare di 4 MJ/giro.</p>
+        <table>
+            <tr>
+                <th>Tipo Pista</th>
+                <th>Energia Totale Richiesta</th>
+                <th>Quota Batteria (ES)</th>
+                <th>Quota Direct Drive (H→K)</th>
+            </tr>
+            <tr>
+                <td>Monza (Power)</td>
+                <td>~7.5 MJ</td>
+                <td>4.0 MJ (Max Regolamentare)</td>
+                <td><strong>3.5 MJ (Bypass)</strong></td>
+            </tr>
+            <tr>
+                <td>Monaco (Street)</td>
+                <td>~2.5 MJ</td>
+                <td>2.0 MJ</td>
+                <td><strong>0.5 MJ</strong></td>
+            </tr>
+        </table>
+
+        <h3>1.2 Energy Store (Batteria) e Voltaggio</h3>
+        <p>La batteria è modellata con una capacità reale di <strong>5.8 MJ</strong> per gestire il "Voltage Sag". Quando il SOC scende sotto il 15%, la potenza disponibile cala drasticamente.</p>
+        <div class="highlight-box">
+            <strong>Formula Logica ECU:</strong><br>
+            <code>Potenza_K_Totale (120kW) = Energia_MGU_H + Energia_Batteria</code><br>
+            <em>Solo la quota 'Energia_Batteria' viene scalata dal contatore 4MJ/giro.</em>
+        </div>
+    </section>
+
+    <section>
+        <h2>2. Impianto Frenante e Gestione Termica</h2>
+        <p>Simulazione dell'asse anteriore idraulico e asse posteriore gestito dal Brake-by-Wire (BBW).</p>
+        
+        <h3>2.1 Finestra Operativa dei Dischi in Carbonio</h3>
+        <ul>
+            <li><strong>Sotto 350°C:</strong> Coefficiente di attrito instabile (Glazing).</li>
+            <li><strong>500°C - 950°C:</strong> Finestra ottimale di lavoro.</li>
+            <li><strong>Oltre 1100°C:</strong> Ossidazione rapida e "fading" della frenata.</li>
+        </ul>
+
+        <h3>2.2 Brake Migration (BMIG)</h3>
+        <p>Il bilanciamento della frenata (BBAL) varia dinamicamente in base alla pressione esercitata sul pedale dal pilota:</p>
+        <ul>
+            <li><strong>Alta Pressione (Inizio staccata):</strong> Spostamento del bias all'anteriore (+2-4%) per stabilizzare l'auto in fase di decelerazione massima.</li>
+            <li><strong>Bassa Pressione (Ingresso curva):</strong> Spostamento del bias al posteriore (-2-3%) per ridurre il sottosterzo e favorire la rotazione.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>3. Ciclo di Sviluppo Componenti (R&D Cycle)</h2>
+        <p>Ogni evoluzione tecnica segue un processo in tre stadi per gestire l'incertezza e la correlazione.</p>
+        
+        <div class="highlight-box">
+            <strong>Fase 1: CFD (Teoria)</strong><br>
+            Il giocatore usa gli slider per definire la geometria. Il sistema restituisce una stima teorica (es: +5% Downforce) con un'incertezza del 5-8%.
+        </div>
+
+        <div class="highlight-box">
+            <strong>Fase 2: Galleria del Vento (Validazione)</strong><br>
+            Si consumano ore Wind Tunnel (limitate). La galleria corregge il CFD. Esempio: "Il guadagno reale è solo del 3.5%, il CFD era troppo ottimista". Incertezza ridotta all'1%.
+        </div>
+
+        <div class="highlight-box">
+            <strong>Fase 3: La Pista (Verdetto)</strong><br>
+            Il pezzo viene testato in FP1. Se la "Correlazione" della fabbrica è bassa, il pezzo potrebbe non funzionare affatto o causare instabilità non viste prima.
+        </div>
+    </section>
+
+    <section>
+        <h2>4. Matrice delle Aree e Slider di Sviluppo</h2>
+
+        <h3>4.1 AREA: Aerodinamica Esterna</h3>
+        <p><span class="tag">Componenti:</span> Ala Anteriore/Posteriore, Fondo Piatto, Diffusore, Pance, Beam Wing.</p>
+        <table>
+            <tr><th>Slider</th><th>Azione</th><th>Trade-off</th></tr>
+            <tr><td>Angle of Attack</td><td>Inclinazione profili</td><td>+Downforce / +Drag</td></tr>
+            <tr><td>Outwash</td><td>Deviazione flussi laterali</td><td>Pulisce il fondo / Difficoltà in scia</td></tr>
+            <tr><td>Ride Height Sens.</td><td>Ottimizzazione Venturi</td><td>Efficienza al suolo / Instabilità sui cordoli</td></tr>
+        </table>
+
+        <h3>4.2 AREA: Power Unit & Ibrido</h3>
+        <p><span class="tag">Componenti:</span> Camera Combustione, Turbo, MGU-H, MGU-K, Collettori, Aspirazione.</p>
+        <table>
+            <tr><th>Slider</th><th>Azione</th><th>Trade-off</th></tr>
+            <tr><td>Intake Velocity</td><td>Pressione aria in ingresso</td><td>+CV Motore Termico / -Affidabilità</td></tr>
+            <tr><td>Turbo Backpressure</td><td>Regolazione turbina</td><td>+Efficienza MGU-H / +Turbo-lag</td></tr>
+            <tr><td>Exhaust Scavenging</td><td>Geometria scarichi</td><td>Efficienza termica / Surriscaldamento</td></tr>
+        </table>
+
+        <h3>4.3 AREA: Thermal Management (Packaging)</h3>
+        <p><span class="tag">Componenti:</span> Radiatori, Intercooler, Prese d'aria, Brake Ducts, Sfiati posteriori.</p>
+        <table>
+            <tr><th>Slider</th><th>Azione</th><th>Trade-off</th></tr>
+            <tr><td>Inlet Size</td><td>Dimensione bocche aria</td><td>Affidabilità termica / -Velocità di punta</td></tr>
+            <tr><td>Core Density</td><td>Massa pacchi radianti</td><td>Scambio termico rapido / +Peso e Ingombro</td></tr>
+            <tr><td>Brake Airflow</td><td>Canalizzazione freni</td><td>Temp. freni costante / Turbolenza aero</td></tr>
+        </table>
+    </section>
+
+    <section>
+        <h2>5. Esempio Struttura Dati (JSON)</h2>
+        <div class="code-block">
+<pre>
+{
+  "project_id": "RW26_SPOON_EVO",
+  "area": "Aerodynamics",
+  "status": "Validated_WindTunnel",
+  "sliders": {
+    "aoa": 12.5,
+    "outwash": 0.65,
+    "ride_height_sens": 0.80
+  },
+  "physics_results": {
+    "cl_delta": 0.048,
+    "cd_delta": 0.015,
+    "thermal_drag_penalty": 0.005,
+    "correlation_factor": 0.96
+  }
+}
+</pre>
+        </div>
+    </section>
+
+    <div class="footer">
+        Documento Generato per Sviluppo Simulatore F1 - Copyright 2026 - Riservato
+    </div>
+
+</div>
+
+</body>
+</html>
+

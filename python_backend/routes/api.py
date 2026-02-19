@@ -155,6 +155,7 @@ def register_routes(app):
                 'is_player_controlled': car.is_player_controlled,
                 'player_config': car.player_config if car.is_player_controlled else None,
                 'setup_recommendation': car.setup_feedback if car.is_player_controlled else None,
+                'brake_cooling': getattr(car, 'brake_cooling', {}),
             })
         return jsonify(cars_data)
 

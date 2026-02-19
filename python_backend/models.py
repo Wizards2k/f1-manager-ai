@@ -378,9 +378,16 @@ class RaceCar:
         self.last_sector_times = {'sector1': None, 'sector2': None, 'sector3': None}
         self.best_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
         self.current_lap_debug: Optional[Dict[str, Any]] = None
-        
-        # Gestione stint
-        self.stint_target_laps = random.randint(8, 15)
+
+        # Telemetry/diagnostics exposed to frontend & tools
+        self.pu_stats: Dict[str, Any] = {}
+        self.brake_diagnostics: Dict[str, Any] = {}
+        self.brake_thermal: Dict[str, Any] = {"front": None, "rear": None}
+        self.brake_cooling: Dict[str, Any] = {}
+        self.brake_cooling_warnings: Dict[str, Optional[float]] = {
+            "front": None,
+            "rear": None,
+        }
         self.stint_laps_remaining = self.stint_target_laps
         self.box_time_until = 0
         self.session_start_time = None

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PU Manager – ERS Map Bucket Editor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #05080f;
+      --panel: #0d111a;
+      --panel-soft: #111622;
+      --panel-accent: #141c2b;
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #e7ecff;
+      --text-soft: #8d9cc0;
+      --accent: #ffd24c;
+      --primary: #4ccbff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 24px;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .pu-modal {
+      width: 960px;
+      background: #0b0f17;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 40px 80px rgba(0, 0, 0, 0.55);
+      overflow: hidden;
+    }
+
+    .pu-header {
+      padding: 24px 32px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .pu-title {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+
+    .pu-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .pu-tab {
+      padding: 8px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #7f8cb2;
+    }
+
+    .pu-tab.active {
+      border-color: var(--accent);
+      color: #151921;
+      background: var(--accent);
+    }
+
+    .pu-body {
+      padding: 0 26px 26px;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .tile {
+      background: var(--panel);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tile h3 {
+      margin: 0;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.22em;
+      color: var(--text-soft);
+    }
+
+    .budget-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .budget-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: #cad4f4;
+    }
+
+    .label {
+      color: var(--text-soft);
+      font-size: 12px;
+    }
+
+    .sublabel {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .bucket-editor {
+      background: var(--panel-soft);
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .bucket-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .bucket-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .map-pill {
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      color: var(--text-soft);
+    }
+
+    .map-pill.active {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .note-bar {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-soft);
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed rgba(255, 255, 255, 0.08);
+    }
+
+    .note-bar span {
+      white-space: nowrap;
+    }
+
+    .editor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
+      gap: 14px;
+    }
+
+    .bucket-card {
+      background: var(--panel);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .bucket-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .bucket-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .percent-chip {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--primary);
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(255, 210, 76, 0.25);
+      cursor: pointer;
+    }
+
+    .value-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    .lock-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    .lock-row label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .lock-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+    }
+
+    .target-pill {
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-size: 10px;
+      background: rgba(76, 203, 255, 0.08);
+      color: var(--primary);
+    }
+
+    .bucket-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 12px;
+      color: var(--text-soft);
+      flex-wrap: wrap;
+    }
+
+    .bucket-toolbar .footer-actions {
+      margin-top: 0;
+    }
+
+    .ghost-btn,
+    .primary-btn {
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .ghost-btn {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: transparent;
+      color: var(--text);
+    }
+
+    .primary-btn {
+      border: 1px solid #05080f;
+      background: var(--accent);
+      color: #05080f;
+    }
+  </style>
+</head>
+<body>
+  <div class="pu-modal">
+    <header class="pu-header">
+      <div>
+        <div class="sublabel">PU MANAGER</div>
+        <div class="pu-title">Charles Leclerc · ERS Map Editor</div>
+      </div>
+      <div class="pu-tabs">
+        <div class="pu-tab">Telemetry</div>
+        <div class="pu-tab active">ERS Map</div>
+      </div>
+    </header>
+
+    <section class="pu-body">
+      <div class="tile" style="gap: 14px;">
+        <h3>Budget & Split</h3>
+        <div class="budget-list">
+          <div class="budget-row"><span>Deploy budget</span><strong>3.20 MJ</strong></div>
+          <div class="budget-row"><span>Deploy on track</span><strong>2.88 MJ</strong></div>
+          <div class="budget-row"><span>Defense reserve</span><strong>0.18 MJ (6%)</strong></div>
+          <div class="budget-row"><span>Last allocation</span><strong>1.02 MJ</strong></div>
+        </div>
+        <div class="budget-row">
+          <div>
+            <div class="label">SOC floor</div>
+            <strong>48%</strong>
+          </div>
+          <div>
+            <div class="label">Target lap end</div>
+            <strong>58%</strong>
+          </div>
+        </div>
+        <div class="note-bar">
+          <span>Preset: Suzuka · Neutral</span>
+          <span>Total deploy 3.20 MJ</span>
+          <span>Sum must equal 100%</span>
+        </div>
+      </div>
+
+      <div class="bucket-editor">
+        <div class="bucket-header">
+          <div>
+            <div class="sublabel">ERS MAP</div>
+            <div style="font-size: 20px; font-weight: 600;">STANDARD · Neutral</div>
+          </div>
+          <div class="bucket-tabs">
+            <div class="map-pill active">Preset</div>
+            <div class="map-pill">Custom</div>
+            <div class="map-pill">Import</div>
+          </div>
+        </div>
+
+        <div class="editor-grid">
+          <div class="bucket-card">
+            <div class="bucket-header-row">
+              <div>
+                <div class="sublabel">Primary Bucket</div>
+                <div class="bucket-title">Main straights</div>
+              </div>
+              <div class="percent-chip">50%</div>
+            </div>
+            <input type="range" class="slider" value="50" min="0" max="70" />
+            <div class="value-row">
+              <span>Target deploy: 1.60 MJ</span>
+              <span>Realtime: 1.12 MJ</span>
+            </div>
+            <div class="lock-row">
+              <label><input type="checkbox" />Lock percentage</label>
+              <span class="target-pill">SOC focus: Push</span>
+            </div>
+          </div>
+
+          <div class="bucket-card">
+            <div class="bucket-header-row">
+              <div>
+                <div class="sublabel">Secondary Bucket</div>
+                <div class="bucket-title">Medium corners</div>
+              </div>
+              <div class="percent-chip">35%</div>
+            </div>
+            <input type="range" class="slider" value="35" min="0" max="60" />
+            <div class="value-row">
+              <span>Target deploy: 1.12 MJ</span>
+              <span>Realtime: 0.84 MJ</span>
+            </div>
+            <div class="lock-row">
+              <label><input type="checkbox" />Lock percentage</label>
+              <span class="target-pill">Clip risk: Low</span>
+            </div>
+          </div>
+
+          <div class="bucket-card">
+            <div class="bucket-header-row">
+              <div>
+                <div class="sublabel">Exit Bucket</div>
+                <div class="bucket-title">Corner exits</div>
+              </div>
+              <div class="percent-chip">15%</div>
+            </div>
+            <input type="range" class="slider" value="15" min="10" max="40" />
+            <div class="value-row">
+              <span>Target deploy: 0.48 MJ</span>
+              <span>Realtime: 0.31 MJ</span>
+            </div>
+            <div class="lock-row">
+              <label><input type="checkbox" />Lock percentage</label>
+              <span class="target-pill">MGU-H assist: 0.22 MJ</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bucket-toolbar">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <strong style="letter-spacing:0.1em; font-size:12px;">Total 100%</strong>
+            <label style="display:flex; align-items:center; gap:6px;">
+              <input type="checkbox" checked style="width:16px;height:16px; accent-color: var(--accent);" />Auto-balance unlocked buckets
+            </label>
+          </div>
+          <div class="footer-actions" style="display:flex; gap:10px;">
+            <button class="ghost-btn">Reset preset</button>
+            <button class="primary-btn">Save custom map</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<div class="pu-modal">
+  <header class="pu-modal__header">
+    <h2>⚡ PU Manager — Lewis Hamilton</h2>
+    <div class="pu-modal__tabs">
+      <button class="active">Telemetry</button>
+      <button>ERS Map</button>
+    </div>
+  </header>
+
+  <section class="pu-modal__grid pu-modal__grid--metrics">
+    <article class="tile">
+      <span class="tile__label">Battery SOC</span>
+      <strong class="tile__value">4.0 MJ</strong>
+      <small class="tile__meta">73% carica</small>
+    </article>
+
+    <article class="tile">
+      <span class="tile__label">Capacità batteria</span>
+      <strong class="tile__value">5.5 MJ</strong>
+      <small class="tile__meta">Totale</small>
+    </article>
+
+    <article class="tile">
+      <span class="tile__label">Deploy limit</span>
+      <strong class="tile__value">4.0 MJ</strong>
+      <small class="tile__meta">Per lap</small>
+    </article>
+
+    <article class="tile">
+      <span class="tile__label">Harvest limit</span>
+      <strong class="tile__value">2.0 MJ</strong>
+      <small class="tile__meta">Per lap</small>
+    </article>
+
+    <article class="tile">
+      <span class="tile__label">MGU-H direct drive</span>
+      <strong class="tile__value">0.00 MJ</strong>
+      <small class="tile__meta">Ultimo giro</small>
+    </article>
+
+    <article class="tile">
+      <span class="tile__label">MGU-H → ES</span>
+      <strong class="tile__value">0.00 MJ</strong>
+      <small class="tile__meta">Ultimo giro</small>
+    </article>
+  </section>
+
+  <section class="tile tile--regen tile--band">
+    <div class="band-row">
+      <span class="band-label">Brake Regen</span>
+      <div class="band-metric">
+        <span>Split</span>
+        <strong>55% regen / 45% hydraulic</strong>
+      </div>
+      <div class="band-metric">
+        <span>Bias</span>
+        <strong>+0.12 (rear)</strong>
+      </div>
+      <div class="band-metric">
+        <span>Duct target</span>
+        <strong>0.55 – 0.78</strong>
+      </div>
+      <div class="band-metric">
+        <span>Cooling target</span>
+        <strong>front −0.08 · rear −0.05</strong>
+      </div>
+      <div class="band-status">
+        <strong class="status-pill status-pill--green">Migration attiva</strong>
+      </div>
+    </div>
+  </section>
+</div>
+
+<style>
+.pu-modal { background:#111; color:#f7f7f7; padding:28px; border-radius:20px; width:940px; margin:auto; font-family:"Space Grotesk",sans-serif; }
+.pu-modal__header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+.pu-modal__tabs button { background:#1c1c1f; color:#a5a5a5; border:none; padding:8px 22px; border-radius:999px; margin-left:8px; cursor:pointer; }
+.pu-modal__tabs button.active { background:#f4b800; color:#000; }
+.pu-modal__grid { display:grid; gap:14px; }
+.pu-modal__grid--metrics { grid-template-columns:repeat(3, minmax(220px,1fr)); }
+.tile { background:#1b1b1f; border-radius:14px; padding:16px; box-shadow:0 6px 18px rgba(0,0,0,0.35); }
+.tile__label { font-size:12px; text-transform:uppercase; color:#8a8a94; letter-spacing:0.08em; }
+.tile__value { font-size:28px; display:block; margin-top:6px; color:#fff; }
+.tile__meta { font-size:12px; color:#777; }
+.tile--regen { background:linear-gradient(135deg,#1d232b 0%,#232f3c 60%,#1b1e23 100%); border:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; justify-content:space-between; }
+.tile--band { margin-top:18px; grid-column:1/-1; padding:18px 22px; }
+.tile__badge { font-size:11px; letter-spacing:0.14em; color:#94ffcf; margin-bottom:10px; }
+.tile__row { display:flex; justify-content:space-between; font-size:14px; margin-bottom:6px; }
+.tile__row--nowrap span,
+.tile__row--nowrap strong { white-space:nowrap; }
+.tile__row--cooling { align-items:flex-start; }
+.cooling-values { display:flex; flex-direction:column; gap:2px; text-align:right; }
+.tile__row strong { font-size:15px; }
+.tile__row--status { margin-top:auto; justify-content:flex-end; }
+.status-pill { font-size:12px; padding:3px 10px; border-radius:999px; text-transform:uppercase; letter-spacing:0.08em; }
+.status-pill--green { background:rgba(120,255,160,0.18); color:#7df5a0; border:1px solid rgba(120,255,160,0.35); }
+.band-row { display:flex; align-items:center; gap:24px; flex-wrap:nowrap; }
+.band-label { text-transform:uppercase; letter-spacing:0.14em; font-size:12px; color:#94ffcf; }
+.band-metric { display:flex; align-items:center; gap:6px; font-size:13px; color:#a5b4c4; }
+.band-metric strong { font-size:15px; color:#f4f8ff; }
+.band-status { margin-left:auto; }
+</style>

@@ -112,6 +112,8 @@ def race_simulation():
                 'blue_flag': bridge.get_car_blue_flag(str(car.driver_number)) if bridge and bridge.active else False,
                 'pu_stats': getattr(car, 'pu_stats', {}),
                 'brake_diagnostics': getattr(car, 'brake_diagnostics', {}),
+                'brake_cooling': getattr(car, 'brake_cooling', {}),
+                'brake_thermal': getattr(car, 'brake_thermal', {}),
             })
         
         session_flag = bridge.session_flag if bridge and bridge.active else 'green'

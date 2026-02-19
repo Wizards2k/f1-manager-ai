@@ -139,6 +139,15 @@ export class SocketBridge {
                 case 'ai_setup_converged':
                     message = `${baseName}: Setup OK – thresholds met`;
                     break;
+                case 'brake_hot_section':
+                    message = `${baseName}: ${payload.message || 'Brakes near critical temperature'}`;
+                    break;
+                case 'brake_duct_low':
+                    message = `${baseName}: ${payload.message || 'Brake ducts too closed'}`;
+                    break;
+                case 'brake_duct_high':
+                    message = `${baseName}: ${payload.message || 'Brake ducts too open'}`;
+                    break;
                 default:
                     if (event.event_type?.startsWith('battle_')) {
                         message = payload.message
@@ -204,6 +213,11 @@ export class SocketBridge {
                 return 'Setup';
             case 'ai_setup_adjustment':
                 return 'Setup';
+            case 'brake_hot_section':
+                return 'Brake Warning';
+            case 'brake_duct_low':
+            case 'brake_duct_high':
+                return 'Brake Duct';
             default:
                 return 'Event';
         }
@@ -214,6 +228,12 @@ export class SocketBridge {
             return 'error';
         }
         if (eventType === 'battle_blocked' || eventType === 'battle_side_by_side') {
+            return 'warning';
+        }
+        if (eventType === 'brake_hot_section') {
+            return 'error';
+        }
+        if (eventType === 'brake_duct_low' || eventType === 'brake_duct_high') {
             return 'warning';
         }
         if (eventType === 'ai_setup_converged') {

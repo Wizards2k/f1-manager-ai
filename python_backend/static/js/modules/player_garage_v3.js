@@ -55,17 +55,11 @@ export class PlayerGarageV3 {
         };
         this.BOX_ONLY_FIELDS = new Set(['tyre_compound', 'fuel_percent', 'stint_target_laps']);
         this.SETUP_FIELDS = [
-            'front_wing',
-            'rear_wing',
-            'beam_wing',
-            'ride_height_front',
-            'ride_height_rear',
-            'suspension_front',
-            'suspension_rear',
-            'antiroll_front',
-            'antiroll_rear',
-            'brake_balance',
-            'brake_duct'
+            'front_wing', 'rear_wing', 'beam_wing',
+            'ride_height_front', 'ride_height_rear',
+            'suspension_front', 'suspension_rear',
+            'antiroll_front', 'antiroll_rear',
+            'brake_balance', 'brake_duct'
         ];
         this.setupDefaults = {
             front_wing: 50,
@@ -849,6 +843,36 @@ export class PlayerGarageV3 {
         return `pu:${fields.join(':')}`;
     }
 
+    brakeCoolingSignature(brakeCooling) {
+        if (!brakeCooling || (!brakeCooling.front && !brakeCooling.rear)) {
+            return 'bc:none';
+        }
+        const axes = ['front', 'rear'].map(axis => {
+            const data = brakeCooling[axis];
+            if (!data) return `${axis}:na`;
+            const vals = [
+                typeof data.current_open === 'number' ? data.current_open.toFixed(3) : 'null',
+                data.status || 'na',
+                typeof data.blink_until === 'number' ? data.blink_until.toFixed(2) : 'null'
+            ];
+            return `${axis}:${vals.join(':')}`;
+        });
+        return `bc:${axes.join('|')}`;
+    }
+
+    brakeThermalSignature(brakeThermal) {
+        if (!brakeThermal || (!('front' in brakeThermal) && !('rear' in brakeThermal))) {
+            return 'bt:none';
+        }
+        const thresholds = brakeThermal.thresholds || {};
+        const axes = ['front', 'rear'].map(axis => {
+            const value = brakeThermal[axis];
+            const fade = axis === 'front' ? thresholds.front_c : thresholds.rear_c;
+            return `${axis}:${typeof value === 'number' ? value.toFixed(1) : 'na'}:${typeof fade === 'number' ? fade.toFixed(0) : 'na'}`;
+        });
+        return `bt:${axes.join('|')}`;
+    }
+
     computeLapTotals(trace = [], fallbackDeploy = 0, fallbackHarvest = 0, fallbackMguhDirect = 0, fallbackMguhHarvest = 0) {
         const hasTrace = Array.isArray(trace) && trace.length > 0;
         const totals = trace.reduce((acc, entry) => {
@@ -920,6 +944,15 @@ export class PlayerGarageV3 {
             for (let i = 0; i < overflow; i += 1) {
                 this.dismissToast(toasts[i], true);
             }
+        }
+
+        // Auto-resize toast if text is too long
+        const lineHeight = 18;
+        const maxLines = 4;
+        const maxHeight = lineHeight * maxLines;
+        if (toast.scrollHeight > maxHeight) {
+            toast.style.maxHeight = `${maxHeight}px`;
+            toast.style.overflowY = 'auto';
         }
 
         const timer = setTimeout(() => this.dismissToast(toast), 4500);
@@ -1090,6 +1123,123 @@ export class PlayerGarageV3 {
         `;
     }
 
+    buildBrakeChipPreview(car) {
+        const thermal = car.brake_thermal || {};
+        const nowSeconds = Date.now() / 1000;
+        const axes = ['front', 'rear'];
+        const chips = axes
+            .map(axis => this.buildBrakeChip(
+                axis,
+                this.resolveBrakeAxisData(car, axis, thermal),
+                nowSeconds,
+            ))
+            .join('');
+        return `<div class="brake-chip-preview">${chips}</div>`;
+    }
+
+    buildBrakeChip(axis, axisData, nowSeconds = Date.now() / 1000) {
+        const axisLabel = axis === 'front' ? 'Front' : 'Rear';
+        const state = this.getBrakeChipState(axisData, nowSeconds);
+        const classes = ['brake-chip-mini', state.statusClass];
+        if (state.shouldBlink) classes.push('brake-chip-blink');
+        return `
+            <span class="${classes.join(' ')}" data-bc-axis="${axis}">
+                <span class="bc-axis">${axisLabel}</span>
+                <span class="bc-value">${state.valueText}</span>
+            </span>
+        `;
+    }
+
+    resolveBrakeAxisData(car, axis, thermalOverride = null) {
+        const thermal = thermalOverride || car.brake_thermal || {};
+        const axisValue = thermal[axis];
+        if (typeof axisValue !== 'number') return null;
+
+        const thresholds = thermal.thresholds || {};
+        const fadeFront = thresholds.front_c;
+        const fadeRear = thresholds.rear_c;
+        const fadeThreshold = axis === 'front' ? fadeFront : fadeRear;
+        const target = this.getBrakeTempTarget(car, axis, fadeThreshold);
+
+        return {
+            value_c: axisValue,
+            thresholds: {
+                fade_c: fadeThreshold,
+                target,
+            },
+        };
+    }
+
+    getBrakeTempTarget(car, axis, fadeThreshold) {
+        const profileTargets = car.brake_diagnostics?.cooling_targets || {};
+        const delta = axis === 'front'
+            ? profileTargets.front_delta
+            : profileTargets.rear_delta;
+        const baseCenter = typeof fadeThreshold === 'number'
+            ? fadeThreshold - 80
+            : axis === 'front' ? 620 : 520;
+        const offset = typeof delta === 'number' ? delta * 100 : 0;
+        const center = baseCenter + offset;
+        const tolerance = 40;
+        return [center - tolerance, center + tolerance];
+    }
+
+    getBrakeChipState(axisData, nowSeconds = Date.now() / 1000) {
+        if (!axisData) {
+            return {
+                statusClass: 'brake-chip-na',
+                valueText: '--°C',
+                shouldBlink: false,
+            };
+        }
+
+        const value = axisData.value_c;
+        const fadeLimit = axisData.thresholds?.fade_c;
+        const target = axisData.thresholds?.target;
+        const statusClass = this.mapBrakeTempToClass(value, target, fadeLimit);
+        const valueText = this.formatTemp(value);
+        return {
+            statusClass,
+            valueText,
+            shouldBlink: false,
+        };
+    }
+
+    mapBrakeTempToClass(value, target, fadeLimit) {
+        if (typeof value !== 'number') return 'brake-chip-na';
+        if (Array.isArray(target) && target.length >= 2) {
+            const [min, max] = target;
+            const coldThreshold = min - 40;
+            const lowWarnThreshold = min - 20;
+            const highWarnThreshold = max + 10;
+
+            if (value < coldThreshold) return 'brake-chip-cold';
+            if (value < lowWarnThreshold) return 'brake-chip-warn';
+            if (value >= min && value <= max) return 'brake-chip-ok';
+            if (value > highWarnThreshold) {
+                if (typeof fadeLimit === 'number' && value >= fadeLimit) {
+                    return 'brake-chip-bad';
+                }
+                return 'brake-chip-warn';
+            }
+        }
+        if (typeof fadeLimit === 'number' && value >= fadeLimit) {
+            return 'brake-chip-bad';
+        }
+        if (Array.isArray(target) && target.length >= 2) {
+            const [, max] = target;
+            if (typeof max === 'number' && value > max) return 'brake-chip-warn';
+            const [min] = target;
+            if (typeof min === 'number' && value < min) return 'brake-chip-cold';
+        }
+        return 'brake-chip-warn';
+    }
+
+    formatTemp(value) {
+        if (typeof value !== 'number' || Number.isNaN(value)) return '--°C';
+        return `${Math.round(value)}°C`;
+    }
+
     buildCarCard(car) {
         const tyreChoice = car.player_config?.tyre_compound || car.current_tire || 'medium';
         const fuelPercent = car.player_config?.fuel_percent ?? car.fuel_percent ?? 100;
@@ -1109,6 +1259,7 @@ export class PlayerGarageV3 {
         const isBox = currentState === 'BOX';
         const telemetry = this.buildTelemetryStrip(car);
         const tyreTemps = this.buildTyreTempsSection(car);
+        const brakeChipPreview = this.buildBrakeChipPreview(car);
         const infoPct = car.setup_info_percent ?? 0;
         const thresholds = car.is_player_controlled
             ? { green: 67, yellow: 34 }
@@ -1176,6 +1327,10 @@ export class PlayerGarageV3 {
                             <div class="ctrl-cell-v3 ctrl-push-v3">
                                 <label>Driver push (${paceLevel})</label>
                                 <input class="compact-range" type="range" data-field="pace_level" min="1" max="10" value="${paceLevel}">
+                            </div>
+                            <div class="ctrl-cell-v3 ctrl-brake-inline">
+                                <label>Brake ducts</label>
+                                ${brakeChipPreview}
                             </div>
                         </div>
                     </div>
@@ -1643,7 +1798,18 @@ export class PlayerGarageV3 {
             }
             const msgEl = fbRow.querySelector('.setup-fb-msg-v3');
             if (msgEl && eval_.message) {
-                msgEl.textContent = eval_.message;
+                const brakeWarnings = this.buildBrakeWarningsFromFeedback(validation);
+                const fullMessage = brakeWarnings ? `${eval_.message}\n${brakeWarnings}` : eval_.message;
+                msgEl.textContent = fullMessage;
+                
+                // Auto-resize feedback message if too long
+                const lineHeight = 18;
+                const maxLines = 3;
+                const maxHeight = lineHeight * maxLines;
+                if (msgEl.scrollHeight > maxHeight) {
+                    msgEl.style.maxHeight = `${maxHeight}px`;
+                    msgEl.style.overflowY = 'auto';
+                }
             }
         }
         const catsEl = this.overlayContainer.querySelector('.setup-cats-v3');
@@ -1672,6 +1838,40 @@ export class PlayerGarageV3 {
         if (score100 >= 60) return 'score-yellow';
         if (score100 >= 40) return 'score-orange';
         return 'score-red';
+    }
+
+    buildBrakeWarningsFromFeedback(validation) {
+        const car = this.state.getPlayerCar?.();
+        if (!car) return null;
+        
+        const warnings = [];
+        const brakeCooling = car.brake_cooling || {};
+        const brakeThermal = car.brake_thermal || {};
+        
+        // Check brake duct warnings
+        ['front', 'rear'].forEach(axis => {
+            const cooling = brakeCooling[axis];
+            if (cooling?.status === 'low') {
+                warnings.push(`${axis === 'front' ? 'Front' : 'Rear'} brake ducts too closed`);
+            } else if (cooling?.status === 'high') {
+                warnings.push(`${axis === 'front' ? 'Front' : 'Rear'} brake ducts too open`);
+            }
+        });
+        
+        // Check brake temperature warnings
+        ['front', 'rear'].forEach(axis => {
+            const temp = brakeThermal[axis];
+            const thresholds = brakeThermal.thresholds || {};
+            const fadeThreshold = axis === 'front' ? thresholds.front_c : thresholds.rear_c;
+            
+            if (typeof temp === 'number' && typeof fadeThreshold === 'number') {
+                if (temp >= fadeThreshold - 10) {
+                    warnings.push(`${axis === 'front' ? 'Front' : 'Rear'} brakes near critical temperature`);
+                }
+            }
+        });
+        
+        return warnings.length > 0 ? warnings.join('. ') : null;
     }
 
     buildCategoryChips(categories) {
@@ -1811,7 +2011,34 @@ export class PlayerGarageV3 {
                 else chip.classList.add('setup-chip-red');
                 if (pct >= 100) chip.classList.add('setup-chip-blink');
             }
+
+            const thermal = car.brake_thermal;
+            const nowSeconds = Date.now() / 1000;
+            card.querySelectorAll('.brake-chip-mini').forEach(chipEl => {
+                const axis = chipEl.dataset.bcAxis;
+                const axisData = this.resolveBrakeAxisData(car, axis, thermal);
+                const blinkUntil = this.resolveBrakeBlink(car, axis);
+                this.applyBrakeChipState(chipEl, axisData, nowSeconds, blinkUntil);
+            });
         });
+    }
+
+    resolveBrakeBlink(car, axis) {
+        if (!car?.brake_cooling) return null;
+        const data = car.brake_cooling[axis];
+        return typeof data?.blink_until === 'number' ? data.blink_until : null;
+    }
+
+    applyBrakeChipState(chipEl, axisData, nowSeconds, blinkUntil) {
+        if (!chipEl) return;
+        const state = this.getBrakeChipState(axisData, nowSeconds);
+        chipEl.classList.remove('brake-chip-ok', 'brake-chip-warn', 'brake-chip-bad', 'brake-chip-na', 'brake-chip-blink');
+        chipEl.classList.add(state.statusClass);
+        if (state.shouldBlink || (typeof blinkUntil === 'number' && nowSeconds < blinkUntil)) {
+            chipEl.classList.add('brake-chip-blink');
+        }
+        const valueEl = chipEl.querySelector('.bc-value');
+        if (valueEl) valueEl.textContent = state.valueText;
     }
 
     render(force = false) {
@@ -1831,7 +2058,7 @@ export class PlayerGarageV3 {
             return;
         }
 
-        const fp = cars.map(c => `${c.driver_number}:${c.state}:${c.total_laps}:${c.current_tire}:${c.tire_age}:${this.puStatsSignature(c.pu_stats)}`).join('|');
+        const fp = cars.map(c => `${c.driver_number}:${c.state}:${c.total_laps}:${c.current_tire}:${c.tire_age}:${this.puStatsSignature(c.pu_stats)}:${this.brakeCoolingSignature(c.brake_cooling)}:${this.brakeThermalSignature(c.brake_thermal)}`).join('|');
         if (!force && fp === this._lastRenderFp) return;
         this._lastRenderFp = fp;
 
@@ -1885,7 +2112,11 @@ export class PlayerGarageV3 {
         const draft = this.setupDrafts.get(driverNumber) || {};
         const payload = {};
         this.SETUP_FIELDS.forEach(field => {
-            payload[field] = draft[field] ?? car.player_config?.setup?.[field] ?? car[field] ?? this.setupDefaults[field];
+            payload[field] = draft[field]
+                ?? car.player_config?.setup?.[field]
+                ?? car.player_config?.[field]
+                ?? car[field]
+                ?? this.setupDefaults[field];
         });
         return payload;
     }
@@ -1932,6 +2163,40 @@ export class PlayerGarageV3 {
 
     async sendPlayerConfig(driverNumber, payload, state, options = {}) {
         const allowedPayload = { ...payload };
+        const card = this.cardsContainer?.querySelector(`[data-driver="${driverNumber}"]`);
+        const car = this.state.getPlayerCar(driverNumber);
+
+        const clampNumericField = (field, min, max, round = true) => {
+            if (typeof allowedPayload[field] !== 'number' || Number.isNaN(allowedPayload[field])) return;
+            const raw = round ? Math.round(allowedPayload[field]) : allowedPayload[field];
+            const clamped = Math.max(min, Math.min(max, raw));
+            if (clamped !== allowedPayload[field]) {
+                allowedPayload[field] = clamped;
+                if (card) {
+                    const input = card.querySelector(`[data-field="${field}"]`);
+                    if (input) input.value = clamped;
+                }
+            } else if (round && raw !== allowedPayload[field]) {
+                allowedPayload[field] = raw;
+            }
+        };
+
+        const maxStint = car?.max_stint_laps ?? car?.stint_target_laps ?? 12;
+        clampNumericField('stint_target_laps', 1, maxStint);
+        clampNumericField('fuel_percent', 1, 100);
+        clampNumericField('pace_level', 1, 10);
+
+        if (typeof allowedPayload.tyre_compound === 'string') {
+            const normalized = allowedPayload.tyre_compound.toLowerCase();
+            if (normalized !== allowedPayload.tyre_compound) {
+                allowedPayload.tyre_compound = normalized;
+                if (card) {
+                    const select = card.querySelector('[data-field="tyre_compound"]');
+                    if (select) select.value = normalized;
+                }
+            }
+        }
+
         if (state !== 'BOX') {
             delete allowedPayload.tyre_compound;
             delete allowedPayload.fuel_percent;

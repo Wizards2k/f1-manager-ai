@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 import random
 import os
+import time
 from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass, field
@@ -84,6 +85,9 @@ SLOW_LAP_SPEED_FACTOR = 0.75    # slow/cooldown lap
 MIN_CAR_GAP_M = 40.0            # minimum gap between cars on track (metres)
 BLUE_FLAG_CLEAR_TICKS = 5
 BLUE_FLAG_PROXIMITY_THRESHOLD_M = 250.0
+
+BRAKE_WARN_TOLERANCE = 0.05
+BRAKE_WARN_BLINK_WINDOW_S = 3.0
 
 # Session categorization for blue flag policy
 PRACTICE_SESSION_KINDS = {"FP1", "FP2", "FP3", "P1", "P2", "P3", "Q", "QUALI", "QUALIFYING"}
@@ -448,6 +452,7 @@ class SessionBridge:
                 entry.state.car_id = car_id
                 car.pu_stats = self._build_pu_stats(entry)
                 car.brake_diagnostics = self._build_brake_diagnostics(None)
+                car.brake_cooling = self._build_brake_cooling(entry, car)
             except Exception as exc:
                 logger.warning("Failed to seed PU stats for %s: %s", car_id, exc)
 
@@ -642,6 +647,8 @@ class SessionBridge:
                     ts.sector_dt_acc = 0.0
 
                 # Update RaceCar with section data/telemetry
+                for ev in result.events:
+                    self._update_brake_warning(race_car, ev.event_type)
                 self._apply_section_to_racecar(race_car, entry, result, section)
 
                 # Advance to next section
@@ -832,6 +839,8 @@ class SessionBridge:
 
         # Brake diagnostics (per section + circuit profile)
         race_car.brake_diagnostics = self._build_brake_diagnostics(section)
+        race_car.brake_cooling = self._build_brake_cooling(entry, race_car)
+        race_car.brake_thermal = getattr(entry.state.brakes, "snapshot", None) or {}
 
     def _build_pu_stats(self, entry) -> Dict[str, Any]:
         if not self.circuit_config:
@@ -977,6 +986,60 @@ class SessionBridge:
                 }
             )
         return diagnostics
+
+    def _update_brake_warning(self, race_car, event_type: str) -> None:
+        axis = {
+            "brake_hot_section": "front",
+            "brake_duct_low": "front",
+            "brake_duct_high": "front",
+        }.get(event_type)
+        if axis is None:
+            return
+        if not hasattr(race_car, "brake_cooling_warnings"):
+            race_car.brake_cooling_warnings = {"front": None, "rear": None}
+        race_car.brake_cooling_warnings[axis] = time.time()
+
+    def _build_brake_cooling(self, entry, race_car) -> Dict[str, Any]:
+        if not self.circuit_config:
+            return {}
+        profile = self.circuit_config.brake_profile or {}
+        duct = profile.get("duct_recommendation") or {}
+        min_open = duct.get("min_open") if isinstance(duct.get("min_open"), (int, float)) else None
+        max_open = duct.get("max_open") if isinstance(duct.get("max_open"), (int, float)) else None
+        warnings = getattr(race_car, "brake_cooling_warnings", {"front": None, "rear": None})
+
+        def _status(value: Optional[float], low: Optional[float], high: Optional[float]) -> str:
+            if value is None or low is None or high is None:
+                return "na"
+            if low <= value <= high:
+                return "ok"
+            pad_low = max(0.0, low - BRAKE_WARN_TOLERANCE)
+            pad_high = min(1.0, high + BRAKE_WARN_TOLERANCE)
+            if pad_low <= value <= pad_high:
+                return "warn"
+            return "bad"
+
+        cooling = {}
+        blink_until = {}
+        current = getattr(entry.state.brakes, "duct_opening", None)
+        for axis in ("front", "rear"):
+            last_warning = warnings.get(axis)
+            cooling[axis] = {
+                "current_open": current,
+                "min_open": min_open,
+                "max_open": max_open,
+                "status": _status(current, min_open, max_open),
+                "last_warning_time": last_warning,
+            }
+            blink_until[axis] = (
+                last_warning + BRAKE_WARN_BLINK_WINDOW_S if last_warning is not None else None
+            )
+            cooling[axis]["blink_until"] = blink_until[axis]
+
+        return {
+            "front": cooling["front"],
+            "rear": cooling["rear"],
+        }
 
     # ------------------------------------------------------------------
     # Player commands
