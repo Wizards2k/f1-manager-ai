@@ -1521,30 +1521,28 @@ export class PlayerGarageV3 {
         return `
             <div class="dock-tyre-grid">
                 <div class="dock-tyre-cell ${cls(fl)}">
-                    <span class="dock-lbl" style="color: inherit; opacity: 0.8;">FL</span>
+                    <span class="dock-lbl">FL</span>
                     <span class="dock-val">${fmt(fl)}</span>
                 </div>
                 <div class="dock-tyre-cell ${cls(fr)}">
-                    <span class="dock-lbl" style="color: inherit; opacity: 0.8;">FR</span>
+                    <span class="dock-lbl">FR</span>
                     <span class="dock-val">${fmt(fr)}</span>
                 </div>
+                <div class="dock-tyre-cell">
+                    <span class="dock-lbl">Freni F</span>
+                    <span class="dock-val" style="color:#ddd;">${fmt(brakeFront)}</span>
+                </div>
                 <div class="dock-tyre-cell ${cls(rl)}">
-                    <span class="dock-lbl" style="color: inherit; opacity: 0.8;">RL</span>
+                    <span class="dock-lbl">RL</span>
                     <span class="dock-val">${fmt(rl)}</span>
                 </div>
                 <div class="dock-tyre-cell ${cls(rr)}">
-                    <span class="dock-lbl" style="color: inherit; opacity: 0.8;">RR</span>
+                    <span class="dock-lbl">RR</span>
                     <span class="dock-val">${fmt(rr)}</span>
                 </div>
-            </div>
-            <div class="dock-row-2">
-                <div class="dock-field">
-                    <label>Freni Front</label>
-                    <span class="dock-val">${fmt(brakeFront)}</span>
-                </div>
-                <div class="dock-field">
-                    <label>Freni Rear</label>
-                    <span class="dock-val">${fmt(brakeRear)}</span>
+                <div class="dock-tyre-cell">
+                    <span class="dock-lbl">Freni R</span>
+                    <span class="dock-val" style="color:#ddd;">${fmt(brakeRear)}</span>
                 </div>
             </div>
             <div class="dock-row-3">

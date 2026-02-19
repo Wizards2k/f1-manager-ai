@@ -1103,20 +1103,30 @@ timeline-toggle-btn:hover {
     margin-top: 3px;
 }
 
-/* Tyre grid 2x2 */
+/* Tyre grid 3x3 */
 .dock-tyre-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 3px;
 }
 .dock-tyre-cell {
     background: #1e1e1e;
     border: 1px solid #2a2a2a;
     border-radius: 5px;
-    padding: 3px 5px;
+    padding: 6px;
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+.dock-tyre-cell .dock-lbl {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.6);
+}
+.dock-tyre-cell .dock-val {
+    font-size: 14px;
+    font-weight: 700;
 }
 
 /* Tyre flags */
