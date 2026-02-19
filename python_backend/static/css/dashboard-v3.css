@@ -947,16 +947,16 @@ timeline-toggle-btn:hover {
     background: transparent;
     border: none;
     border-bottom: 2px solid transparent;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: .08em;
+    color: #e0e0e0;
+    font-size: 11px;
+    font-weight: 700;
     text-transform: uppercase;
-    color: #555;
+    letter-spacing: .05em;
     cursor: pointer;
     transition: color .15s, border-color .15s;
 }
 .dock-tab-btn.active { color: #ffd24c; border-bottom-color: #ffd24c; }
-.dock-tab-btn:hover:not(.active) { color: #888; }
+.dock-tab-btn:hover:not(.active) { color: #ffffff; }
 
 .dock-tab-body {
     flex: 1;
