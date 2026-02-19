@@ -1097,11 +1097,6 @@ export class PlayerGarageV3 {
         const coreTemps = car.tire_core_temps;
         const tyreStates = car.tyre_states;
         
-        // Debug: log dei dati che arrivano
-        if (temps && !coreTemps) {
-            console.log('Car', car.driver_number, 'has temps but no core_temps', { temps, coreTemps, tyreStates });
-        }
-        
         const rawWindow = car.tire_temp_window;
         const window = PlayerGarageV3.extractTempWindow(rawWindow);
         const positions = [
@@ -1318,14 +1313,14 @@ export class PlayerGarageV3 {
         const sendDisabled = !isBox || isPendingSend;
         const sendLabel = 'Send Out';
         const puStats = car.pu_stats || {};
-        const socMj = puStats.soc_mj ?? 0;
-        const socPct = puStats.soc_pct ?? 0;
-        const lapDeploy = puStats.lap_deploy_mj ?? 0;
-        const deployLimit = puStats.deploy_mj_per_lap ?? 4.0;
-        const lapHarvest = puStats.lap_harvest_mj ?? 0;
-        const lapMguhDirect = puStats.lap_mguh_direct_prev_mj ?? puStats.lap_mguh_direct_mj ?? 0;
-        const lapMguhEs = puStats.lap_mguh_harvest_prev_mj ?? puStats.lap_mguh_harvest_mj ?? 0;
-        const socClass = socPct >= 60 ? 'pu-soc-good' : socPct >= 30 ? 'pu-soc-warn' : 'pu-soc-low';
+        const socMj = puStats.soc_mj || 0;
+        const socPct = puStats.soc_pct || 0;
+        const lapDeploy = puStats.lap_deploy_mj || 0;
+        const deployLimit = puStats.deploy_limit_mj || 4.0;
+        const lapHarvest = puStats.lap_harvest_mj || 0;
+        const lapMguhDirect = puStats.mguh_direct_used_mj || 0;
+        const lapMguhEs = puStats.mguh_es_used_mj || 0;
+        const socClass = socPct < 30 ? 'pu-critical' : socPct < 60 ? 'pu-low' : 'pu-ok';
         const tabPilota = this.buildTabPilota(car, { tyreChoice, fuelPercent, stintTarget, maxStint, paceLevel, iceMode, ersMode, tireHealthPct, isBox, brakeChipPreview });
         const tabMotore = this.buildTabMotore(car, { socMj, socPct, lapDeploy, deployLimit, lapHarvest, lapMguhDirect, lapMguhEs, socClass, iceMode, ersMode });
         const tabTyres = this.buildTabTyres(car, { tireHealthPct });
@@ -1473,19 +1468,41 @@ export class PlayerGarageV3 {
     }
 
     buildTabTyres(car, { tireHealthPct }) {
-        const fl = car.tire_temp_fl ?? car.tyre_temps?.fl ?? null;
-        const fr = car.tire_temp_fr ?? car.tyre_temps?.fr ?? null;
-        const rl = car.tire_temp_rl ?? car.tyre_temps?.rl ?? null;
-        const rr = car.tire_temp_rr ?? car.tyre_temps?.rr ?? null;
+        const tyreTemps = car.tire_temps || car.tyre_temps || {};
+        const tyreStates = car.tyre_states || {};
+        
+        const fl = tyreTemps.fl ?? null;
+        const fr = tyreTemps.fr ?? null;
+        const rl = tyreTemps.rl ?? null;
+        const rr = tyreTemps.rr ?? null;
         const fmt = (v) => v != null ? `${Math.round(v)}°C` : '--°C';
         const cls = (v) => v == null ? 'tt-status-na' : v > 110 ? 'tt-status-hot' : v < 70 ? 'tt-status-cold' : 'tt-status-ok';
+        
         const brakeFront = car.brake_thermal?.front ?? null;
         const brakeRear = car.brake_thermal?.rear ?? null;
+        
         const aeroBalance = car.aero_balance != null ? `${(car.aero_balance * 100).toFixed(0)}%` : '--';
         const dragIndex = car.drag_index != null ? car.drag_index.toFixed(2) : '--';
         const coolingMargin = car.cooling_margin != null ? `${car.cooling_margin > 0 ? '+' : ''}${car.cooling_margin.toFixed(2)}` : '--';
-        const graining = car.tyre_graining ?? 0;
-        const blistering = car.tyre_blistering ?? 0;
+        
+        // Calculate aggregate graining and blistering
+        let graining = 0;
+        let blistering = 0;
+        let validTyres = 0;
+        ['fl', 'fr', 'rl', 'rr'].forEach(pos => {
+            const state = tyreStates[pos];
+            if (state) {
+                graining += state.graining ? 1 : 0; // or state.graining_level if that exists
+                blistering += state.blistering ? 1 : 0;
+                validTyres++;
+            }
+        });
+        
+        const grainingDisplay = validTyres > 0 && graining > 0 ? 'Yes' : 'No';
+        const blisteringDisplay = validTyres > 0 && blistering > 0 ? 'Yes' : 'No';
+        const grainingWarn = graining > 0;
+        const blisteringWarn = blistering > 0;
+
         return `
             <div class="dock-tyre-grid">
                 <div class="dock-tyre-cell">
@@ -1530,8 +1547,8 @@ export class PlayerGarageV3 {
                 </div>
             </div>
             <div class="dock-tyre-flags">
-                <span class="dock-flag ${graining > 0.1 ? 'flag-warn' : 'flag-ok'}">Grain ${graining.toFixed(2)}</span>
-                <span class="dock-flag ${blistering > 0.1 ? 'flag-warn' : 'flag-ok'}">Blister ${blistering.toFixed(2)}</span>
+                <span class="dock-flag ${grainingWarn ? 'flag-warn' : 'flag-ok'}">Grain ${grainingDisplay}</span>
+                <span class="dock-flag ${blisteringWarn ? 'flag-warn' : 'flag-ok'}">Blister ${blisteringDisplay}</span>
                 <span class="dock-flag flag-info">Health ${tireHealthPct}%</span>
             </div>
         `;
@@ -2471,7 +2488,7 @@ export class PlayerGarageV3 {
             console.log('[GarageV3] Sending car out:', driverNumber);
             const res = await fetch(`/api/player/car/${driverNumber}/send_out`, { method: 'POST' });
             const data = await res.json();
-            console.log('[GarageV3] Send out response:', data);
+            // console.log('[GarageV3] Send out response:', data);
             if (!res.ok) throw new Error(data.error || 'Send out failed');
             this.setStatus(`Car #${driverNumber} released.`, 'success');
             if (this.pushHudBanner) {

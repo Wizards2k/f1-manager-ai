@@ -502,7 +502,8 @@ timeline-toggle-btn:hover {
     flex-direction: column;
     gap: 4px;
     overflow: hidden;
-    max-height: 270px;
+    height: 265px;
+    flex-shrink: 0;
 }
 
 .car-card-v3 header {
@@ -957,6 +958,7 @@ timeline-toggle-btn:hover {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    flex-shrink: 1;
 }
 .dock-tab-pane {
     display: flex;
@@ -964,6 +966,9 @@ timeline-toggle-btn:hover {
     gap: 4px;
     padding: 4px 0;
     overflow: hidden;
+    min-height: 0;
+    flex-shrink: 1;
+    height: 100%;
 }
 
 /* Dock shared field */
