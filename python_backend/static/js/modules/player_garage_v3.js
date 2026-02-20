@@ -2293,6 +2293,59 @@ export class PlayerGarageV3 {
         return `tt:${temps.fl || 'na'}:${temps.fr || 'na'}:${temps.rl || 'na'}:${temps.rr || 'na'}`;
     }
 
+    updateContinuousData(cars) {
+        if (!this.cardsContainer) return;
+        cars.forEach(car => {
+            const cardEl = this.cardsContainer.querySelector(`.car-card-v3[data-driver="${car.driver_number}"]`);
+            if (!cardEl) return;
+
+            // 1. Telemetry Strip
+            const telStrip = cardEl.querySelector('.telemetry-strip-v3');
+            if (telStrip) {
+                telStrip.outerHTML = this.buildTelemetryStrip(car);
+            }
+
+            // 2. Tyres Tab
+            const tireWear = typeof car.tire_wear === 'number' ? Math.max(0, Math.min(1, car.tire_wear)) : 0;
+            const tireHealthPct = Math.round((1 - tireWear) * 100);
+            const tyresTab = cardEl.querySelector('.dock-tab-pane[data-tab="tyres"]');
+            if (tyresTab) {
+                tyresTab.innerHTML = this.buildTabTyres(car, { tireHealthPct });
+            }
+
+            // 3. Motore Tab
+            const puStats = car.pu_stats || {};
+            const socMj = puStats.soc_mj || 0;
+            const socPct = puStats.soc_pct || 0;
+            const lapDeploy = puStats.lap_deploy_mj || 0;
+            const deployLimit = this.state.getErsBudget()?.deploy_limit_mj || 4.0;
+            const lapHarvest = puStats.lap_harvest_mj || 0;
+            const lapMguhDirect = puStats.lap_mguh_direct_mj || 0;
+            const lapMguhEs = puStats.mguh_es_used_mj || 0;
+            const socClass = socPct < 30 ? 'pu-critical' : socPct < 60 ? 'pu-low' : 'pu-ok';
+            const iceMode = car.player_config?.ice_mode || car.ice_mode || 'Standard';
+            const ersMode = car.player_config?.ers_mode || car.ers_mode || 'Neutral';
+            
+            const motoreTab = cardEl.querySelector('.dock-tab-pane[data-tab="motore"]');
+            if (motoreTab) {
+                motoreTab.innerHTML = this.buildTabMotore(car, { socMj, socPct, lapDeploy, deployLimit, lapHarvest, lapMguhDirect, lapMguhEs, socClass, iceMode, ersMode });
+            }
+
+            // 4. Update minor elements in Pilota tab
+            const wearInd = cardEl.querySelector('.wear-indicator-v3');
+            if (wearInd) wearInd.textContent = `${tireHealthPct}%`;
+
+            // 5. PU Inline Bar
+            const puInline = cardEl.querySelector('.pu-inline-v3');
+            if (puInline) {
+                puInline.outerHTML = this.buildPUInlineBar(car);
+            }
+        });
+        
+        // Also update brake chips and other chips
+        this.updateDataChips();
+    }
+
     render(force = false) {
         if (!this.cardsContainer) {
             console.warn('[GarageV3] cardsContainer non trovato, render annullato');
@@ -2310,12 +2363,19 @@ export class PlayerGarageV3 {
             return;
         }
 
-        const fp = cars.map(c => `${c.driver_number}:${c.state}:${c.total_laps}:${c.current_tire}:${c.tire_age}:${this.puStatsSignature(c.pu_stats)}:${this.brakeCoolingSignature(c.brake_cooling)}:${this.brakeThermalSignature(c.brake_thermal)}:${this.aeroSignature(c)}:${this.telemetrySignature(c)}:${this.tireTempsSignature(c)}`).join('|');
-        if (!force && fp === this._lastRenderFp) return;
+        // Extremely lightweight fingerprint: ONLY render on discrete changes to avoid losing focus and DOM thrashing
+        // Telemetry, Tyres, Aero, Brakes and PU stats are continuous and handled by updateContinuousData
+        const fp = cars.map(c => `${c.driver_number}:${c.state}:${c.total_laps}:${c.current_tire}:${c.tire_age}`).join('|');
+        if (!force && fp === this._lastRenderFp) {
+            // If DOM isn't rebuilt, update the continuous telemetry/aero/temps directly
+            this.updateContinuousData(cars);
+            return;
+        }
         this._lastRenderFp = fp;
 
         this.cardsContainer.innerHTML = cars.map(car => this.buildCarCard(car)).join('');
         this.updateDataChips();
+        // this.updateContinuousData(cars); // non serve più forzarlo all'inizio, è già tutto in buildCarCard
     }
 
     toggleSetupOverlay(driverNumber, open = true) {
