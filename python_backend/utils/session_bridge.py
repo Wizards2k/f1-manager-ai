@@ -855,6 +855,15 @@ class SessionBridge:
         race_car.brake_cooling = self._build_brake_cooling(entry, race_car)
         race_car.brake_thermal = getattr(entry.state.brakes, "snapshot", None) or {}
 
+        # Aero package data for UI
+        if hasattr(entry.state, 'aero_forces') and entry.state.aero_forces:
+            aero_forces = entry.state.aero_forces
+            race_car.aero_balance = aero_forces.aero_balance
+            # Normalize drag index relative to reference drag (typically ~30.0)
+            drag_ref = getattr(aero_forces, 'drag_ref', 30.0)
+            race_car.drag_index = aero_forces.drag_eff / drag_ref if drag_ref > 0 else 0.0
+            race_car.cooling_margin = aero_forces.cooling_margin
+
     def _build_pu_stats(self, entry) -> Dict[str, Any]:
         if not self.circuit_config:
             return {}

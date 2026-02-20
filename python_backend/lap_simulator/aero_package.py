@@ -200,4 +200,5 @@ def compute_forces(
         cooling_capacity=cooling_reduced,
         cooling_margin=0.0,  # computed after PU step
         airflow_penalty=airflow_penalty,
+        drag_ref=30.0,       # reference drag for index normalization
     )

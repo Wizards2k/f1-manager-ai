@@ -365,6 +365,7 @@ class AeroForces:
     cooling_capacity: float = 0.0
     cooling_margin: float = 0.0
     airflow_penalty: float = 0.0         # dirty air / wake
+    drag_ref: float = 30.0               # reference drag for index normalization
 
 
 # ---------------------------------------------------------------------------
