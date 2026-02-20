@@ -98,6 +98,9 @@ def update_section(
         airflow_penalty=airflow_penalty,
         drs_active=drs_active,
     )
+    
+    # Store aero_forces in car_state for UI and telemetry
+    car_state.aero_forces = aero_forces
 
     # ===================================================================
     # STEP 4 – Power Unit (Passo 4)
