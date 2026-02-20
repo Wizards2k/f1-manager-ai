@@ -446,6 +446,8 @@ def _ensure_bucket_budget(
     pct_sum = max(primary_pct + secondary_pct + exit_pct, 1e-6)
 
     defense_reserve = map_budget.get("defense_reserve_mj", map_params.defense_reserve_mj)
+    if pu_state.active_map == EngineMapName.QUALY:
+        defense_reserve = 0.0
     defense_reserve = clamp(defense_reserve, 0.0, deploy_total * 0.6)
     available = max(deploy_total - defense_reserve, 0.0)
 
@@ -516,6 +518,12 @@ def _apply_bucket_allocation(
         pu_state.last_bucket_allocated_mj = 0.0
         pu_state.last_defense_used_mj = 0.0
         return 0.0
+
+    if pu_state.active_map == EngineMapName.QUALY:
+        total_attr, used_attr = _bucket_attrs(bucket_key)
+        used = getattr(pu_state, used_attr, 0.0)
+        setattr(pu_state, used_attr, used + requested_mj)
+        return requested_mj
 
     allocated = 0.0
     remaining_request = requested_mj

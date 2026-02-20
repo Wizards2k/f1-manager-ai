@@ -4,8 +4,8 @@
     "last_updated": "2026-02-08",
     "notes": "Global default PU reliability (non calibrated). Circuit/weather/setup modifiers adjust cooling; da ritarare su dati FastF1.",
     "circuit_id": "it-1953_imola",
-    "setup_profile_key": "enzo_e_dino_ferrari",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "emilia_romagna",
+    "built_at": "2026-02-20T20:37:40Z",
     "circuit_name": "Autodromo Enzo e Dino Ferrari",
     "telemetry_source": "python_backend/data/circuits/it-1953_imola_Telemetry.json"
   },

@@ -12,8 +12,8 @@
       "total_brake": 9.645,
       "brake_density": 1.6727367325702394
     },
-    "setup_profile_key": "suzuka_racing",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "japanese",
+    "built_at": "2026-02-20T20:37:40Z",
     "circuit_name": "Suzuka International Racing Course",
     "telemetry_source": "python_backend/data/circuits/jp-1962_suzuka_Telemetry.json"
   },

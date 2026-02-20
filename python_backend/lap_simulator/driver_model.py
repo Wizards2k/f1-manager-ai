@@ -153,12 +153,21 @@ def compute_inputs(
         map_params = DEFAULT_MAP_PARAMS
     map_budget = _lookup_map_budget(config, active_map)
     target_soc = map_budget.get("target_soc_end_lap")
+    
+    is_qualy = (active_map == EngineMapName.QUALY)
+    
     if target_soc is None:
-        target_soc = 0.55
-    target_soc = clamp(target_soc, 0.2, 0.95)
-    reserve_soc = clamp(target_soc + 0.1, 0.25, 0.98)
-    late_soc_floor = clamp(target_soc - 0.12, 0.05, 0.9)
+        target_soc = 0.05 if is_qualy else 0.55
+        
+    min_soc_clamp = 0.02 if is_qualy else 0.2
+    target_soc = clamp(target_soc, min_soc_clamp, 0.95)
+    
+    reserve_soc = clamp(target_soc + 0.1, min_soc_clamp + 0.05, 0.98)
+    late_soc_floor = clamp(target_soc - 0.12, 0.02, 0.9)
     dynamic_soc_floor = reserve_soc - (reserve_soc - late_soc_floor) * lap_progress
+
+    if is_qualy and not is_corner:
+        ers_push_mode = True
 
     if car_state and getattr(car_state, "pu", None):
         car_state.pu.soc_floor_dynamic_pct = dynamic_soc_floor

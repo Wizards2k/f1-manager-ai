@@ -4,8 +4,8 @@
     "last_updated": "2026-02-08",
     "notes": "Global default PU reliability (non calibrated). Circuit/weather/setup modifiers adjust cooling; da ritarare su dati FastF1.",
     "circuit_id": "sa-2021_jeddah",
-    "setup_profile_key": "jeddah_corniche",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "saudi_arabian",
+    "built_at": "2026-02-20T20:37:40Z",
     "circuit_name": "Jeddah Corniche Circuit",
     "telemetry_source": "python_backend/data/circuits/sa-2021_jeddah_Telemetry.json"
   },

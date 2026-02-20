@@ -4,13 +4,13 @@
     "last_updated": "2026-02-08",
     "notes": "Global default brake parameters (non calibrated). Circuit/setup modifiers (Telemetry + config/setup/setup_mapping_v2.json) regolano duct/cooling. Da ritarare con dati FastF1/fitting e sostituire ai fallback.",
     "derived_context": {
-      "heavy_brake_events": 4,
+      "heavy_brake_events": 0,
       "brake_duct_requirement": "medium",
-      "cooling_multiplier": 1.16
+      "cooling_multiplier": 1.0
     },
     "circuit_id": "cn-2004_shanghai",
-    "setup_profile_key": "shanghai",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "chinese",
+    "built_at": "2026-02-20T20:37:39Z",
     "circuit_name": "Shanghai International Circuit",
     "telemetry_source": "python_backend/data/circuits/cn-2004_shanghai_Telemetry.json"
   },
@@ -29,7 +29,7 @@
         "rear": 750
       },
       "fade_sensitivity_c_per_unit": 15.0,
-      "cooling_coeff": 1.16,
+      "cooling_coeff": 1.0,
       "heat_quality": 1.0
     },
     "performance": {
@@ -46,7 +46,7 @@
         "rear": 780
       },
       "fade_sensitivity_c_per_unit": 16.0,
-      "cooling_coeff": 1.218,
+      "cooling_coeff": 1.05,
       "heat_quality": 1.05
     },
     "endurance": {
@@ -63,7 +63,7 @@
         "rear": 720
       },
       "fade_sensitivity_c_per_unit": 14.0,
-      "cooling_coeff": 1.1019999999999999,
+      "cooling_coeff": 0.95,
       "heat_quality": 0.98
     }
   },

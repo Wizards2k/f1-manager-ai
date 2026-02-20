@@ -4,13 +4,13 @@
     "last_updated": "2026-02-08",
     "notes": "Global default brake parameters (non calibrated). Circuit/setup modifiers (Telemetry + config/setup/setup_mapping_v2.json) regolano duct/cooling. Da ritarare con dati FastF1/fitting e sostituire ai fallback.",
     "derived_context": {
-      "heavy_brake_events": 7,
+      "heavy_brake_events": 2,
       "brake_duct_requirement": "medium",
-      "cooling_multiplier": 1.2
+      "cooling_multiplier": 1.08
     },
     "circuit_id": "us-2022_miami",
     "setup_profile_key": "miami",
-    "built_at": "2026-02-15T11:05:42Z",
+    "built_at": "2026-02-20T20:37:40Z",
     "circuit_name": "Miami International Autodrome",
     "telemetry_source": "python_backend/data/circuits/us-2022_miami_Telemetry.json"
   },
@@ -29,7 +29,7 @@
         "rear": 750
       },
       "fade_sensitivity_c_per_unit": 15.0,
-      "cooling_coeff": 1.2,
+      "cooling_coeff": 1.08,
       "heat_quality": 1.0
     },
     "performance": {
@@ -46,7 +46,7 @@
         "rear": 780
       },
       "fade_sensitivity_c_per_unit": 16.0,
-      "cooling_coeff": 1.26,
+      "cooling_coeff": 1.1340000000000001,
       "heat_quality": 1.05
     },
     "endurance": {
@@ -63,7 +63,7 @@
         "rear": 720
       },
       "fade_sensitivity_c_per_unit": 14.0,
-      "cooling_coeff": 1.14,
+      "cooling_coeff": 1.026,
       "heat_quality": 0.98
     }
   },

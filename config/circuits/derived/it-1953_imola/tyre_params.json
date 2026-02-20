@@ -12,8 +12,8 @@
       "total_brake": 11.365000000000002,
       "brake_density": 2.330803937653815
     },
-    "setup_profile_key": "enzo_e_dino_ferrari",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "emilia_romagna",
+    "built_at": "2026-02-20T20:37:40Z",
     "circuit_name": "Autodromo Enzo e Dino Ferrari",
     "telemetry_source": "python_backend/data/circuits/it-1953_imola_Telemetry.json"
   },

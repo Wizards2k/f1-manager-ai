@@ -12,8 +12,8 @@
       "total_brake": 12.476999999999999,
       "brake_density": 2.935074100211714
     },
-    "setup_profile_key": "interlagos",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "sao_paulo",
+    "built_at": "2026-02-20T20:37:39Z",
     "circuit_name": "Interlagos",
     "telemetry_source": "python_backend/data/circuits/br-1940_sao_paulo_Telemetry.json"
   },

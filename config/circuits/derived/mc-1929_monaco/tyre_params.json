@@ -13,7 +13,7 @@
       "brake_density": 2.958891595615104
     },
     "setup_profile_key": "monaco",
-    "built_at": "2026-02-15T11:05:42Z",
+    "built_at": "2026-02-20T20:37:40Z",
     "circuit_name": "Circuit de Monaco",
     "telemetry_source": "python_backend/data/circuits/mc-1929_monaco_Telemetry.json"
   },

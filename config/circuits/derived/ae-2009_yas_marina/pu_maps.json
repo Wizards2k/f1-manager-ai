@@ -19,8 +19,8 @@
       "brake_energy_peak": 2.573,
       "circuit_length_m": 5249.9
     },
-    "setup_profile_key": "yas_marina",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "abu_dhabi",
+    "built_at": "2026-02-20T20:37:39Z",
     "circuit_name": "Yas Marina Circuit",
     "telemetry_source": "python_backend/data/circuits/ae-2009_yas_marina_Telemetry.json"
   },

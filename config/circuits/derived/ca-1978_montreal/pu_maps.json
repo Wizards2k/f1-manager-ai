@@ -19,8 +19,8 @@
       "brake_energy_peak": 2.928,
       "circuit_length_m": 4273.8
     },
-    "setup_profile_key": "gilles_villeneuve",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "canadian",
+    "built_at": "2026-02-20T20:37:39Z",
     "circuit_name": "Circuit Gilles-Villeneuve",
     "telemetry_source": "python_backend/data/circuits/ca-1978_montreal_Telemetry.json"
   },

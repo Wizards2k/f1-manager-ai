@@ -4,8 +4,8 @@
     "last_updated": "2026-02-08",
     "notes": "Global default PU reliability (non calibrated). Circuit/weather/setup modifiers adjust cooling; da ritarare su dati FastF1.",
     "circuit_id": "be-1925_spa_francorchamps",
-    "setup_profile_key": "spa_francorchamps",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "belgian",
+    "built_at": "2026-02-20T20:37:39Z",
     "circuit_name": "Circuit de Spa-Francorchamps",
     "telemetry_source": "python_backend/data/circuits/be-1925_spa_francorchamps_Telemetry.json"
   },

@@ -19,8 +19,8 @@
       "brake_energy_peak": 3.543,
       "circuit_length_m": 4229.099999999999
     },
-    "setup_profile_key": "zandvoort",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "dutch",
+    "built_at": "2026-02-20T20:37:40Z",
     "circuit_name": "Circuit Zandvoort",
     "telemetry_source": "python_backend/data/circuits/nl-1948_zandvoort_Telemetry.json"
   },

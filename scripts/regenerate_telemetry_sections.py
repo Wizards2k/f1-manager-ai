@@ -169,6 +169,59 @@ def load_points(telemetry_data: Dict[str, Any], circuit_length: float) -> List[T
 # Step 2: Detect brake events and apexes
 # ---------------------------------------------------------------------------
 
+def calculate_apex_radius(points: List[TelemetryPoint]) -> Optional[float]:
+    """Calculate the curve radius at the apex using 3 points (apex and ±15m)."""
+    if len(points) < 3:
+        return None
+    
+    # Trova l'apex (punto più lento)
+    apex_idx = 0
+    min_v = points[0].speed
+    for i, p in enumerate(points):
+        if p.speed < min_v:
+            min_v = p.speed
+            apex_idx = i
+            
+    p2 = points[apex_idx]
+    
+    # Distanza di campionamento dinamica: ~0.5 secondi di percorrenza alla velocità dell'apice
+    # Curve lente (70 km/h) -> ~10 metri
+    # Curve veloci (250 km/h) -> ~35 metri
+    v_apex_ms = max(p2.speed, 30.0) / 3.6
+    sample_dist = max(8.0, v_apex_ms * 0.5)
+    
+    # Prendi un punto prima dell'apex
+    p1 = points[0]
+    for i in range(apex_idx, -1, -1):
+        if p2.distance - points[i].distance >= sample_dist:
+            p1 = points[i]
+            break
+            
+    # Prendi un punto dopo l'apex
+    p3 = points[-1]
+    for i in range(apex_idx, len(points)):
+        if points[i].distance - p2.distance >= sample_dist:
+            p3 = points[i]
+            break
+            
+    if p1 == p2 or p2 == p3:
+        return None
+        
+    # Lati del triangolo
+    a = math.hypot(p1.x - p2.x, p1.y - p2.y)
+    b = math.hypot(p2.x - p3.x, p2.y - p3.y)
+    c = math.hypot(p1.x - p3.x, p1.y - p3.y)
+    
+    s = (a + b + c) / 2
+    area_sq = s * (s - a) * (s - b) * (s - c)
+    if area_sq <= 1e-5:
+        return 1000.0 # Sostanzialmente dritto
+        
+    area = math.sqrt(area_sq)
+    r = (a * b * c) / (4 * area)
+    
+    return min(r, 1000.0)
+
 def detect_brake_events(points: List[TelemetryPoint]) -> List[BrakeEvent]:
     """Find contiguous zones where car is braking or decelerating."""
     events: List[BrakeEvent] = []
@@ -376,9 +429,8 @@ def _build_section(
     for i in range(len(pts) - 1):
         ds = pts[i + 1].distance - pts[i].distance
         if ds > 0:
-            v_avg_ms = ((pts[i].speed + pts[i + 1].speed) / 2.0) / 3.6
-            if v_avg_ms > 0.5:
-                dt_ref += ds / v_avg_ms
+            avg_v = (pts[i].speed + pts[i + 1].speed) / 2.0
+            dt_ref += ds / (avg_v / 3.6)
 
     # Braking energy: ΔKE from entry to min speed
     v_entry_ms = v_entry / 3.6
@@ -390,35 +442,35 @@ def _build_section(
     # DRS
     drs_active = any(p.drs in DRS_ACTIVE_VALUES for p in pts)
 
-    # Radius (circle fit on curve points)
-    radius = _compute_radius(pts) if kind_hint == "Corner" else None
-
-    # Classify
+    # Classify kind
     kind = _classify_section(v_min, v_max, v_entry, v_exit, pts, kind_hint)
-
-    # Heat/cool factors
     heat_factor, cool_factor = _heat_cool_factors(kind)
 
-    return SectionV2(
+    # Radius for corners
+    radius_m = None
+    if "Corner" in kind:
+        radius_m = calculate_apex_radius(pts)
+
+    sec = SectionV2(
         kind=kind,
         start_m=start_m,
         end_m=end_m,
         length_m=length_m,
         corner_number=corner_number,
-        v_entry_kph=v_entry,
-        v_exit_kph=v_exit,
-        v_min_kph=v_min,
-        v_max_kph=v_max,
-        avg_speed_kph=avg_speed,
-        dt_ref_s=dt_ref,
-        braking_energy_mj=braking_energy,
+        v_entry_kph=round(v_entry, 1),
+        v_exit_kph=round(v_exit, 1),
+        v_min_kph=round(v_min, 1),
+        v_max_kph=round(v_max, 1),
+        avg_speed_kph=round(avg_speed, 1),
+        dt_ref_s=round(dt_ref, 3),
+        braking_energy_mj=round(braking_energy, 2),
         drs_active=drs_active,
-        radius_m=radius,
-        heat_factor=heat_factor,
-        cool_factor=cool_factor,
-        point_start_idx=start_idx,
-        point_end_idx=end_idx,
+        radius_m=round(radius_m, 1) if radius_m is not None else None,
+        heat_factor=round(heat_factor, 2),
+        cool_factor=round(cool_factor, 2)
     )
+
+    return sec
 
 
 def _classify_section(

@@ -12,8 +12,8 @@
       "total_brake": 10.841999999999999,
       "brake_density": 2.536733738886289
     },
-    "setup_profile_key": "gilles_villeneuve",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "canadian",
+    "built_at": "2026-02-20T20:37:39Z",
     "circuit_name": "Circuit Gilles-Villeneuve",
     "telemetry_source": "python_backend/data/circuits/ca-1978_montreal_Telemetry.json"
   },

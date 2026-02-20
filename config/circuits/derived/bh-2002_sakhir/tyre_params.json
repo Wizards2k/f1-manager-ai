@@ -13,7 +13,7 @@
       "brake_density": 2.104213273676361
     },
     "setup_profile_key": "bahrain",
-    "built_at": "2026-02-15T11:05:42Z",
+    "built_at": "2026-02-20T20:37:39Z",
     "circuit_name": "Bahrain International Circuit",
     "telemetry_source": "python_backend/data/circuits/bh-2002_sakhir_Telemetry.json"
   },

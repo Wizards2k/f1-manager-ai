@@ -12,8 +12,8 @@
       "total_brake": 12.769,
       "brake_density": 2.0925925925925926
     },
-    "setup_profile_key": "jeddah_corniche",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "saudi_arabian",
+    "built_at": "2026-02-20T20:37:40Z",
     "circuit_name": "Jeddah Corniche Circuit",
     "telemetry_source": "python_backend/data/circuits/sa-2021_jeddah_Telemetry.json"
   },

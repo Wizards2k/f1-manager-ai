@@ -6,13 +6,13 @@ Questo documento rappresenta la guida completa e dettagliata per calibrare le pr
 **Obiettivo:** Impostare i parametri base (Telaio/Aero/Power Unit) dei team allineati all’inizio stagione 2025.
 
 **Passi Operativi per la Realizzazione:**
-1. **Estrazione dati reali:** Creare uno script (`tools/fetch_fastf1_baselines.py`) che scarica da FastF1 i dati di Qualifica e Gara per i circuiti target (Melbourne, Bahrain, Jeddah).
-2. **Calcolo metriche aggregate:** Calcolare per ogni team il gap percentuale sul giro secco (Pole = 100%), la velocità di punta (Vmax in trap), la velocità a centro curva (Vmin) e il consumo carburante medio.
-3. **Mappatura parametri fisici:** 
+- [x] 1. **Estrazione dati reali:** Creare uno script (`tools/fetch_fastf1_baselines.py`) che scarica da FastF1 i dati sia di Qualifica che di Gara per i circuiti target (Melbourne, Bahrain, Jeddah).
+- [x] 2. **Calcolo metriche aggregate (Gap Combinato):** Calcolare per ogni team il gap percentuale. Ponderare il risultato usando un mix Qualifica/Gara (es. 40% Qualifica + 60% passo Gara, quest'ultimo calcolato sulla mediana dei giri puliti e normalizzato per il carico di carburante). Estrarre anche Vmax in trap, Vmin e consumo carburante medio.
+- [x] 3. **Mappatura parametri fisici:** 
    - Suddividere i team in tier (Top, Mid, Back).
    - Assegnare `baseline_delta` (offset grip/aero) scalando i valori entro un range di tolleranza rigido (±5%).
    - Assegnare modificatori Power Unit (`k_power`, `mguh_direct_ratio`) per differenziare i motoristi.
-4. **Scrittura file configurazione:** Salvare i risultati nei file JSON dei team in `python_backend/data/teams/` assicurandosi che il LapSimulator li legga all'avvio.
+- [x] 4. **Scrittura file configurazione:** Salvare i risultati nei file JSON dei team in `python_backend/data/teams/` assicurandosi che il LapSimulator li legga all'avvio.
 
 ## Fase 2 – Validazione Tempi Sim vs Reale
 **Obiettivo:** Assicurare che i tempi simulati coincidano con la realtà (focus sui Top Team), regolando la fisica senza offset artificiali sul cronometro.

@@ -5,12 +5,12 @@
     "notes": "Global default brake parameters (non calibrated). Circuit/setup modifiers (Telemetry + config/setup/setup_mapping_v2.json) regolano duct/cooling. Da ritarare con dati FastF1/fitting e sostituire ai fallback.",
     "derived_context": {
       "heavy_brake_events": 0,
-      "brake_duct_requirement": "medium",
+      "brake_duct_requirement": null,
       "cooling_multiplier": 1.0
     },
     "circuit_id": "at-1969_spielberg",
-    "setup_profile_key": "red_bull_ring",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "default",
+    "built_at": "2026-02-20T20:37:39Z",
     "circuit_name": "Red Bull Ring",
     "telemetry_source": "python_backend/data/circuits/at-1969_spielberg_Telemetry.json"
   },

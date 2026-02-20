@@ -13,7 +13,7 @@
       "brake_density": 1.5387369791666665
     },
     "setup_profile_key": "las_vegas",
-    "built_at": "2026-02-15T11:05:42Z",
+    "built_at": "2026-02-20T20:37:40Z",
     "circuit_name": "Las Vegas Strip Circuit",
     "telemetry_source": "python_backend/data/circuits/us-2023_las_vegas_Telemetry.json"
   },

@@ -22,7 +22,6 @@ export class TimelinePanelV3 {
         this.sessionControls = sessionControls;
         this.isOpen = false;
         this.wasPausedBeforeOpen = null;
-        console.log('[TimelinePanel] Constructor - panelElement:', this.panelElement);
         this.bindEvents();
         this.render();
     }

@@ -12,8 +12,8 @@
       "total_brake": 8.609,
       "brake_density": 1.6486020681731137
     },
-    "setup_profile_key": "albert",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "australian",
+    "built_at": "2026-02-20T20:37:39Z",
     "circuit_name": "Albert Park Grand Prix Circuit",
     "telemetry_source": "python_backend/data/circuits/au-1953_melbourne_Telemetry.json"
   },

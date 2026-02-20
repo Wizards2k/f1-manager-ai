@@ -12,8 +12,8 @@
       "total_brake": 10.629000000000001,
       "brake_density": 2.4440101172683377
     },
-    "setup_profile_key": "hungaroring",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "hungarian",
+    "built_at": "2026-02-20T20:37:40Z",
     "circuit_name": "Hungaroring",
     "telemetry_source": "python_backend/data/circuits/hu-1986_budapest_Telemetry.json"
   },

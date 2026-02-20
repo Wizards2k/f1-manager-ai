@@ -12,8 +12,8 @@
       "total_brake": 8.986,
       "brake_density": 2.0887959088795913
     },
-    "setup_profile_key": "red_bull_ring",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "default",
+    "built_at": "2026-02-20T20:37:39Z",
     "circuit_name": "Red Bull Ring",
     "telemetry_source": "python_backend/data/circuits/at-1969_spielberg_Telemetry.json"
   },

@@ -187,7 +187,7 @@ def build_pu_maps(global_pu_maps: Dict[str, Any], setup_entry: Dict[str, Any]) -
 
 def build_damage(global_damage: Dict[str, Any], setup_entry: Dict[str, Any], pirelli_context: Dict[str, Any]) -> Dict[str, Any]:
     derived = deepcopy(global_damage)
-    track_features = pirelli_context.get("track_features", {})
+    track_features = pirelli_context.get("track_features") or {}
     bumps = track_features.get("bumps", 0) or 0
     kerbs = track_features.get("kerbs", 0) or 0
 

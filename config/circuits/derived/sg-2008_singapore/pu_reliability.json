@@ -4,8 +4,8 @@
     "last_updated": "2026-02-08",
     "notes": "Global default PU reliability (non calibrated). Circuit/weather/setup modifiers adjust cooling; da ritarare su dati FastF1.",
     "circuit_id": "sg-2008_singapore",
-    "setup_profile_key": "marina_bay",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "singapore",
+    "built_at": "2026-02-20T20:37:40Z",
     "circuit_name": "Marina Bay Street Circuit",
     "telemetry_source": "python_backend/data/circuits/sg-2008_singapore_Telemetry.json"
   },

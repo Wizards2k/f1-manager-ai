@@ -5,12 +5,12 @@
     "notes": "Global default brake parameters (non calibrated). Circuit/setup modifiers (Telemetry + config/setup/setup_mapping_v2.json) regolano duct/cooling. Da ritarare con dati FastF1/fitting e sostituire ai fallback.",
     "derived_context": {
       "heavy_brake_events": 0,
-      "brake_duct_requirement": "high",
+      "brake_duct_requirement": "medium",
       "cooling_multiplier": 1.0
     },
     "circuit_id": "es-1991_barcelona",
-    "setup_profile_key": "barcelona_catalunya",
-    "built_at": "2026-02-15T11:05:42Z",
+    "setup_profile_key": "spanish",
+    "built_at": "2026-02-20T20:37:39Z",
     "circuit_name": "Circuit de Barcelona-Catalunya",
     "telemetry_source": "python_backend/data/circuits/es-1991_barcelona_Telemetry.json"
   },
@@ -69,8 +69,8 @@
   },
   "defaults": {
     "duct_opening_range": {
-      "min_open": 0.334,
-      "max_open": 0.784
+      "min_open": 0.274,
+      "max_open": 0.724
     },
     "bias_range_pct": {
       "min_pct": 53.0,

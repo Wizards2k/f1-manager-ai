@@ -473,6 +473,7 @@ class CarState:
     pu: PUState = field(default_factory=PUState)
     damage: DamageState = field(default_factory=DamageState)
     driver_mental: DriverMentalState = field(default_factory=DriverMentalState)
+    aero_forces: AeroForces = field(default_factory=AeroForces)
     ers_mode: str = "Neutral"           # Harvest / Neutral / Deploy / Overtake
     # lap tracking
     current_section_idx: int = 0
