@@ -1132,8 +1132,8 @@ export class PlayerGarageV3 {
         
         positions.forEach(pos => {
             const state = tyreStates ? tyreStates[pos.key] : {};
-            if (state.graining) hasGraining = true;
-            if (state.blistering) hasBlistering = true;
+            if (state && state.graining) hasGraining = true;
+            if (state && state.blistering) hasBlistering = true;
         });
         
         if (hasGraining) {
@@ -2318,7 +2318,7 @@ export class PlayerGarageV3 {
             const socMj = puStats.soc_mj || 0;
             const socPct = puStats.soc_pct || 0;
             const lapDeploy = puStats.lap_deploy_mj || 0;
-            const deployLimit = this.state.getErsBudget()?.deploy_limit_mj || 4.0;
+            const deployLimit = puStats.deploy_limit_mj || 4.0;
             const lapHarvest = puStats.lap_harvest_mj || 0;
             const lapMguhDirect = puStats.lap_mguh_direct_mj || 0;
             const lapMguhEs = puStats.mguh_es_used_mj || 0;
