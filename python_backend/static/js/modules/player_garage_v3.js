@@ -2278,9 +2278,24 @@ export class PlayerGarageV3 {
         if (valueEl) valueEl.textContent = state.valueText;
     }
 
+    aeroSignature(car) {
+        return `aero:${car.aero_balance || 'na'}:${car.drag_index || 'na'}:${car.cooling_margin || 'na'}`;
+    }
+
+    telemetrySignature(car) {
+        const sectors = car.current_lap_sectors || {};
+        const lapTime = Array.isArray(car.lap_times) && car.lap_times.length ? car.lap_times[car.lap_times.length - 1] : 'na';
+        return `tel:${sectors.sector1 || 'na'}:${sectors.sector2 || 'na'}:${sectors.sector3 || 'na'}:${lapTime}`;
+    }
+
+    tireTempsSignature(car) {
+        const temps = car.tire_temps || {};
+        return `tt:${temps.fl || 'na'}:${temps.fr || 'na'}:${temps.rl || 'na'}:${temps.rr || 'na'}`;
+    }
+
     render(force = false) {
-        if (!this.cardsContainer) return;
-        if (!force && this.cardsContainer.contains(document.activeElement)) {
+        if (!this.cardsContainer) {
+            console.warn('[GarageV3] cardsContainer non trovato, render annullato');
             return;
         }
 
@@ -2295,7 +2310,7 @@ export class PlayerGarageV3 {
             return;
         }
 
-        const fp = cars.map(c => `${c.driver_number}:${c.state}:${c.total_laps}:${c.current_tire}:${c.tire_age}:${this.puStatsSignature(c.pu_stats)}:${this.brakeCoolingSignature(c.brake_cooling)}:${this.brakeThermalSignature(c.brake_thermal)}`).join('|');
+        const fp = cars.map(c => `${c.driver_number}:${c.state}:${c.total_laps}:${c.current_tire}:${c.tire_age}:${this.puStatsSignature(c.pu_stats)}:${this.brakeCoolingSignature(c.brake_cooling)}:${this.brakeThermalSignature(c.brake_thermal)}:${this.aeroSignature(c)}:${this.telemetrySignature(c)}:${this.tireTempsSignature(c)}`).join('|');
         if (!force && fp === this._lastRenderFp) return;
         this._lastRenderFp = fp;
 
@@ -2486,7 +2501,7 @@ export class PlayerGarageV3 {
 
     async sendPlayerCarOut(driverNumber) {
         try {
-            console.log('[GarageV3] Sending car out:', driverNumber);
+            // console.log('[GarageV3] Sending car out:', driverNumber);
             const res = await fetch(`/api/player/car/${driverNumber}/send_out`, { method: 'POST' });
             const data = await res.json();
             // console.log('[GarageV3] Send out response:', data);
