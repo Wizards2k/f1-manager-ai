@@ -1366,23 +1366,41 @@ export class PlayerGarageV3 {
         `;
     }
 
+    buildPilotaSectorStrip(car) {
+        const bestLap = typeof car.best_lap_time === 'number' ? car.best_lap_time : null;
+        const fmtLap = (v) => v != null ? `${Math.floor(v/60)}:${(v%60).toFixed(3).padStart(6,'0')}` : '--:--';
+        
+        const getStatus = (current, best) => {
+            if (!current) return 'idle';
+            if (!best || current < best - 0.02) return 'purple';
+            if (current <= best + 0.1) return 'green';
+            return 'yellow';
+        };
+
+        const sectorsHtml = ['sector1', 'sector2', 'sector3'].map((key, i) => {
+            const current = car.current_lap_sectors?.[key];
+            const best = car.best_sectors?.[key];
+            const status = getStatus(current, best);
+            const val = current ? current.toFixed(2) : '--';
+            const colorColor = status === 'purple' ? '#d633ff' : status === 'green' ? '#33ff33' : status === 'yellow' ? '#ffeb33' : '#ddd';
+            return `<div class="dock-sector-item"><span class="dock-lbl" style="font-size: 6px;">S${i+1}</span><span class="dock-val" style="font-size: 10px; color: ${colorColor};">${val}</span></div>`;
+        }).join('');
+
+        return `
+            <div class="dock-sector-strip" style="margin-bottom: 6px; padding: 2px 4px;">
+                <div class="dock-sector-item"><span class="dock-lbl" style="font-size: 6px;">Lap</span><span class="dock-val" style="font-size: 10px;">${fmtLap(bestLap)}</span></div>
+                ${sectorsHtml}
+            </div>
+        `;
+    }
+
     buildTabPilota(car, { tyreChoice, fuelPercent, stintTarget, maxStint, paceLevel, iceMode, ersMode, tireHealthPct, isBox, brakeChipPreview }) {
         const tireWear = Math.max(0, Math.min(1, car.tire_wear ?? 0));
         const tireWearPct = Math.round(tireWear * 100);
         const fuel = Math.round(car.fuel_percent ?? car.player_config?.fuel_percent ?? 100);
-        const s1 = car.current_lap_sectors?.sector1;
-        const s2 = car.current_lap_sectors?.sector2;
-        const s3 = car.current_lap_sectors?.sector3;
-        const bestLap = typeof car.best_lap_time === 'number' ? car.best_lap_time : null;
-        const fmt = (v) => v != null ? v.toFixed(2) : '--';
-        const fmtLap = (v) => v != null ? `${Math.floor(v/60)}:${(v%60).toFixed(3).padStart(6,'0')}` : '--:--';
+        
         return `
-            <div class="dock-sector-strip" style="margin-bottom: 6px; padding: 2px 4px;">
-                <div class="dock-sector-item"><span class="dock-lbl" style="font-size: 6px;">Lap</span><span class="dock-val" style="font-size: 10px;">${fmtLap(bestLap)}</span></div>
-                <div class="dock-sector-item"><span class="dock-lbl" style="font-size: 6px;">S1</span><span class="dock-val" style="font-size: 10px;">${fmt(s1)}</span></div>
-                <div class="dock-sector-item"><span class="dock-lbl" style="font-size: 6px;">S2</span><span class="dock-val" style="font-size: 10px;">${fmt(s2)}</span></div>
-                <div class="dock-sector-item"><span class="dock-lbl" style="font-size: 6px;">S3</span><span class="dock-val" style="font-size: 10px;">${fmt(s3)}</span></div>
-            </div>
+            ${this.buildPilotaSectorStrip(car)}
             <div class="dock-row-4">
                 <div class="dock-field" style="flex: 1.5;">
                     <label>Compound</label>
@@ -2305,6 +2323,12 @@ export class PlayerGarageV3 {
                 telStrip.outerHTML = this.buildTelemetryStrip(car);
             }
 
+            // 1b. Pilota Sector Strip
+            const pilotaSectorStrip = cardEl.querySelector('.dock-sector-strip');
+            if (pilotaSectorStrip) {
+                pilotaSectorStrip.outerHTML = this.buildPilotaSectorStrip(car);
+            }
+
             // 2. Tyres Tab
             const tireWear = typeof car.tire_wear === 'number' ? Math.max(0, Math.min(1, car.tire_wear)) : 0;
             const tireHealthPct = Math.round((1 - tireWear) * 100);
@@ -2373,9 +2397,24 @@ export class PlayerGarageV3 {
         }
         this._lastRenderFp = fp;
 
+        // Save active tabs before full render to prevent resetting to "Pilota"
+        const activeTabs = {};
+        this.cardsContainer.querySelectorAll('.car-card-v3').forEach(card => {
+            const activeBtn = card.querySelector('.dock-tab-btn.active');
+            if (activeBtn) {
+                activeTabs[card.dataset.driver] = activeBtn.dataset.tab;
+            }
+        });
+
         this.cardsContainer.innerHTML = cars.map(car => this.buildCarCard(car)).join('');
+        
+        // Restore active tabs
+        Object.entries(activeTabs).forEach(([driver, tabName]) => {
+            const card = this.cardsContainer.querySelector(`.car-card-v3[data-driver="${driver}"]`);
+            if (card) this.switchDockTab(card, tabName);
+        });
+
         this.updateDataChips();
-        // this.updateContinuousData(cars); // non serve più forzarlo all'inizio, è già tutto in buildCarCard
     }
 
     toggleSetupOverlay(driverNumber, open = true) {
