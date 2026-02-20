@@ -16,10 +16,14 @@ export class MapModuleV3 {
         this.carMarkers = new Map();
         this.circuitLine = null;
         this.lastBounds = null;
+        this.rotationAngle = 0;
+        this.centerPoint = null;
 
         this.map = L.map('circuit-map', {
-            center: [45.6216, 45.6216],
-            zoom: 15,
+            crs: L.CRS.Simple,
+            center: [0, 0],
+            zoom: 1,
+            minZoom: -20,
             zoomControl: false,
             dragging: false,
             touchZoom: false,
@@ -32,14 +36,28 @@ export class MapModuleV3 {
             zoomDelta: 0.25,
         });
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '',
-            subdomains: 'abcd',
-            maxZoom: 19
-        }).addTo(this.map);
-
+        // Background is now handled by CSS (transparent/dark)
         // V3: NO resize listeners, NO ResizeObserver
         // Map fills container via CSS only
+    }
+
+    // Helper to project GPS to local meters (approximate equirectangular)
+    gpsToMeters(lon, lat, centerLon, centerLat) {
+        const R = 6371000; // Earth radius in meters
+        const rad = Math.PI / 180;
+        const x = R * (lon - centerLon) * rad * Math.cos(centerLat * rad);
+        const y = R * (lat - centerLat) * rad;
+        return [x, y];
+    }
+
+    // Rotate point [x, y] around origin [0, 0] by angle (radians)
+    rotatePoint(x, y, angle) {
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        return [
+            x * cos - y * sin,
+            x * sin + y * cos
+        ];
     }
 
     async loadCircuitGeometry() {
@@ -70,10 +88,64 @@ export class MapModuleV3 {
             throw new Error('Circuit geometry not available');
         }
         
-        const coordinates = geometry.coordinates.map(coord => [coord[1], coord[0]]);
+        // 1. Find center of bounding box to use as origin
+        let minLon = Infinity, maxLon = -Infinity;
+        let minLat = Infinity, maxLat = -Infinity;
+        
+        geometry.coordinates.forEach(coord => {
+            const [lon, lat] = coord;
+            if (lon < minLon) minLon = lon;
+            if (lon > maxLon) maxLon = lon;
+            if (lat < minLat) minLat = lat;
+            if (lat > maxLat) maxLat = lat;
+        });
+
+        this.centerPoint = {
+            lon: (minLon + maxLon) / 2,
+            lat: (minLat + maxLat) / 2
+        };
+
+        // 2. Convert to local Cartesian coordinates (meters)
+        const localPoints = geometry.coordinates.map(coord => 
+            this.gpsToMeters(coord[0], coord[1], this.centerPoint.lon, this.centerPoint.lat)
+        );
+
+        // 3. Find the longest axis to determine rotation angle
+        let maxDistSq = 0;
+        let furthestPair = [localPoints[0], localPoints[0]];
+
+        const step = Math.max(1, Math.floor(localPoints.length / 100));
+        for (let i = 0; i < localPoints.length; i += step) {
+            for (let j = i + 1; j < localPoints.length; j += step) {
+                const dx = localPoints[i][0] - localPoints[j][0];
+                const dy = localPoints[i][1] - localPoints[j][1];
+                const distSq = dx * dx + dy * dy;
+                if (distSq > maxDistSq) {
+                    maxDistSq = distSq;
+                    furthestPair = [localPoints[i], localPoints[j]];
+                }
+            }
+        }
+
+        const dx = furthestPair[1][0] - furthestPair[0][0];
+        const dy = furthestPair[1][1] - furthestPair[0][1];
+        let axisAngle = Math.atan2(dy, dx);
+        
+        // Normalize angle to be between -PI/2 and PI/2 to prevent 180-degree upside-down flips
+        if (axisAngle > Math.PI / 2) axisAngle -= Math.PI;
+        if (axisAngle < -Math.PI / 2) axisAngle += Math.PI;
+        
+        // Force perfect horizontal alignment to maximize space usage
+        this.rotationAngle = -axisAngle;
+
+        // 4. Rotate all points
+        const rotatedPoints = localPoints.map(p => this.rotatePoint(p[0], p[1], this.rotationAngle));
+
+        // Leaflet expects [y, x] for its LatLng representation even in CRS.Simple
+        const leafletCoords = rotatedPoints.map(p => [p[1], p[0]]);
 
         // White circuit line
-        this.circuitLine = L.polyline(coordinates, {
+        this.circuitLine = L.polyline(leafletCoords, {
             color: '#ffffff',
             weight: 4,
             opacity: 0.8
@@ -82,7 +154,7 @@ export class MapModuleV3 {
         this.fitBoundsWithPadding(this.circuitLine.getBounds());
 
         // Red accent line
-        L.polyline(coordinates, {
+        L.polyline(leafletCoords, {
             color: '#e10600',
             weight: 6,
             opacity: 0.3
@@ -113,7 +185,7 @@ export class MapModuleV3 {
     }
 
     updateCarMarker(car) {
-        if (car.state === 'BOX') {
+        if (car.state === 'BOX' || !this.centerPoint) {
             const marker = this.carMarkers.get(car.driver_number);
             if (marker) {
                 this.map.removeLayer(marker);
@@ -122,13 +194,28 @@ export class MapModuleV3 {
             return;
         }
 
+        // 1. Convert GPS to local Cartesian
+        const [localX, localY] = this.gpsToMeters(
+            car.position[0], 
+            car.position[1], 
+            this.centerPoint.lon, 
+            this.centerPoint.lat
+        );
+
+        // 2. Rotate to match circuit
+        const [rotX, rotY] = this.rotatePoint(localX, localY, this.rotationAngle);
+
+        // 3. Update marker (Leaflet expects [y, x])
+        const latLng = [rotY, rotX];
+
         let marker = this.carMarkers.get(car.driver_number);
         if (!marker) {
             marker = this.createCarMarker(car);
+            marker.setLatLng(latLng);
             marker.addTo(this.map);
             this.carMarkers.set(car.driver_number, marker);
         } else {
-            marker.setLatLng([car.position[1], car.position[0]]);
+            marker.setLatLng(latLng);
         }
     }
 
@@ -140,24 +227,14 @@ export class MapModuleV3 {
     fitBoundsWithPadding(bounds) {
         if (!this.map || !bounds) return;
         this.lastBounds = bounds;
-        // Slightly tighten bounds so the circuit line occupies more of the canvas
-        const tightenedBounds = bounds.pad(-0.08);
-        // Shift circuit upward so it's visually centered above the dock
-        this.map.fitBounds(tightenedBounds, { 
-            paddingTopLeft: [20, 20],
-            paddingBottomRight: [20, 130] 
-        });
-        const currentZoom = this.map.getZoom();
-        if (typeof currentZoom === 'number') {
-            console.debug('[MapV3] fitBounds zoom', currentZoom);
-        }
-        // Apply a deterministic zoom-out on the next frame to guarantee it runs after fitBounds
-        requestAnimationFrame(() => {
-            const latestZoom = this.map.getZoom();
-            if (typeof latestZoom !== 'number') return;
-            const adjustedZoom = latestZoom - 0.80;
-            this.map.setZoom(adjustedZoom);
-            console.debug('[MapV3] applied zoom offset', { previous: latestZoom, adjusted: adjustedZoom });
+        
+        // Let Leaflet handle the exact centering and zooming using only pixel padding.
+        // paddingTopLeft: [left, top] padding in pixels
+        // paddingBottomRight: [right, bottom] padding in pixels
+        // We leave 280px at the bottom for the player docks (which are 265px + margins)
+        this.map.fitBounds(bounds, { 
+            paddingTopLeft: [50, 50],
+            paddingBottomRight: [50, 280]
         });
     }
 
