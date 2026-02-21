@@ -1,0 +1,165 @@
+{
+  "season_year": 2025,
+  "teams": [
+    {
+      "team_id": "red_bull",
+      "name": "Red Bull Racing",
+      "base_aero": {
+        "front_wing_df_modifier": 1.05,
+        "front_wing_drag_modifier": 0.95,
+        "rear_wing_df_modifier": 1.05,
+        "rear_wing_drag_modifier": 0.95,
+        "floor_df_modifier": 1.10,
+        "floor_drag_modifier": 0.90,
+        "sidepods_df_modifier": 1.05,
+        "sidepods_drag_modifier": 0.90
+      },
+      "suspension_efficiency": 0.95,
+      "pu_provider": "honda"
+    },
+    {
+      "team_id": "mclaren",
+      "name": "McLaren F1 Team",
+      "base_aero": {
+        "front_wing_df_modifier": 1.08,
+        "front_wing_drag_modifier": 0.98,
+        "rear_wing_df_modifier": 1.06,
+        "rear_wing_drag_modifier": 0.96,
+        "floor_df_modifier": 1.08,
+        "floor_drag_modifier": 0.95,
+        "sidepods_df_modifier": 1.05,
+        "sidepods_drag_modifier": 0.95
+      },
+      "suspension_efficiency": 0.92,
+      "pu_provider": "mercedes"
+    },
+    {
+      "team_id": "ferrari",
+      "name": "Scuderia Ferrari",
+      "base_aero": {
+        "front_wing_df_modifier": 1.06,
+        "front_wing_drag_modifier": 0.97,
+        "rear_wing_df_modifier": 1.04,
+        "rear_wing_drag_modifier": 0.96,
+        "floor_df_modifier": 1.07,
+        "floor_drag_modifier": 0.94,
+        "sidepods_df_modifier": 1.04,
+        "sidepods_drag_modifier": 0.96
+      },
+      "suspension_efficiency": 0.90,
+      "pu_provider": "ferrari"
+    },
+    {
+      "team_id": "mercedes",
+      "name": "Mercedes-AMG Petronas",
+      "base_aero": {
+        "front_wing_df_modifier": 1.04,
+        "front_wing_drag_modifier": 0.98,
+        "rear_wing_df_modifier": 1.05,
+        "rear_wing_drag_modifier": 0.95,
+        "floor_df_modifier": 1.05,
+        "floor_drag_modifier": 0.97,
+        "sidepods_df_modifier": 1.03,
+        "sidepods_drag_modifier": 0.98
+      },
+      "suspension_efficiency": 0.93,
+      "pu_provider": "mercedes"
+    },
+    {
+      "team_id": "aston_martin",
+      "name": "Aston Martin Aramco",
+      "base_aero": {
+        "front_wing_df_modifier": 1.02,
+        "front_wing_drag_modifier": 1.00,
+        "rear_wing_df_modifier": 1.02,
+        "rear_wing_drag_modifier": 1.00,
+        "floor_df_modifier": 1.03,
+        "floor_drag_modifier": 0.98,
+        "sidepods_df_modifier": 1.02,
+        "sidepods_drag_modifier": 0.99
+      },
+      "suspension_efficiency": 0.88,
+      "pu_provider": "mercedes"
+    },
+    {
+      "team_id": "alpine",
+      "name": "Alpine F1 Team",
+      "base_aero": {
+        "front_wing_df_modifier": 0.98,
+        "front_wing_drag_modifier": 1.02,
+        "rear_wing_df_modifier": 0.98,
+        "rear_wing_drag_modifier": 1.02,
+        "floor_df_modifier": 0.98,
+        "floor_drag_modifier": 1.03,
+        "sidepods_df_modifier": 0.98,
+        "sidepods_drag_modifier": 1.02
+      },
+      "suspension_efficiency": 0.82,
+      "pu_provider": "renault"
+    },
+    {
+      "team_id": "williams",
+      "name": "Williams Racing",
+      "base_aero": {
+        "front_wing_df_modifier": 0.97,
+        "front_wing_drag_modifier": 0.95,
+        "rear_wing_df_modifier": 0.97,
+        "rear_wing_drag_modifier": 0.95,
+        "floor_df_modifier": 0.95,
+        "floor_drag_modifier": 1.05,
+        "sidepods_df_modifier": 0.96,
+        "sidepods_drag_modifier": 1.03
+      },
+      "suspension_efficiency": 0.80,
+      "pu_provider": "mercedes"
+    },
+    {
+      "team_id": "vcarb",
+      "name": "Visa Cash App RB",
+      "base_aero": {
+        "front_wing_df_modifier": 0.99,
+        "front_wing_drag_modifier": 1.01,
+        "rear_wing_df_modifier": 0.99,
+        "rear_wing_drag_modifier": 1.01,
+        "floor_df_modifier": 1.00,
+        "floor_drag_modifier": 1.01,
+        "sidepods_df_modifier": 0.99,
+        "sidepods_drag_modifier": 1.01
+      },
+      "suspension_efficiency": 0.85,
+      "pu_provider": "honda"
+    },
+    {
+      "team_id": "sauber",
+      "name": "Stake F1 Team Kick Sauber",
+      "base_aero": {
+        "front_wing_df_modifier": 0.95,
+        "front_wing_drag_modifier": 1.05,
+        "rear_wing_df_modifier": 0.95,
+        "rear_wing_drag_modifier": 1.05,
+        "floor_df_modifier": 0.94,
+        "floor_drag_modifier": 1.08,
+        "sidepods_df_modifier": 0.95,
+        "sidepods_drag_modifier": 1.05
+      },
+      "suspension_efficiency": 0.75,
+      "pu_provider": "ferrari"
+    },
+    {
+      "team_id": "haas",
+      "name": "MoneyGram Haas F1 Team",
+      "base_aero": {
+        "front_wing_df_modifier": 0.96,
+        "front_wing_drag_modifier": 1.03,
+        "rear_wing_df_modifier": 0.96,
+        "rear_wing_drag_modifier": 1.03,
+        "floor_df_modifier": 0.97,
+        "floor_drag_modifier": 1.04,
+        "sidepods_df_modifier": 0.97,
+        "sidepods_drag_modifier": 1.04
+      },
+      "suspension_efficiency": 0.78,
+      "pu_provider": "ferrari"
+    }
+  ]
+}

@@ -157,135 +157,199 @@ def update_section(
     all_events.extend(brake_events)
 
     # ===================================================================
-    # STEP 6 – Section time via dt_ref penalty model (Passo 6)
+    # STEP 6 – Pure Kinematics Integration (Passo 6)
     # ===================================================================
+    import math
     is_corner = section.kind in CORNER_KINDS
+    
+    # Costanti fisiche di conversione e taratura
+    MASS_DRY = 798.0
+    mass = MASS_DRY + car_state.pu.fuel_kg
+    RHO = env.air_density_kg_m3
+    
+    # Coefficienti fisici reali F1 2025 (AeroSetup 8 componenti)
+    # Calibrati su assetto neutro bilanciato FW=20°/RW=15°, condizioni qualifica reali:
+    # gomme C5 quasi nuove (2% usura), temp ottimale 95°C, giro lanciato (v_entry=347kph)
+    # Target F1 2025:
+    # CDA_REF: Base drag (ruote/telaio) ~ 1.10 m2 + drag_eff scalato (0.015)
+    # CLA_REF: Downforce totale scalato (0.040)
+    CDA_REF = 1.10 + aero_forces.drag_eff * 0.015
+    CLA_REF = aero_forces.df_total * 0.040
 
-    if section.dt_ref_s > 0:
-        # ---------------------------------------------------------------
-        # dt_ref penalty model: dt = dt_ref × (1 + baseline + Σ penalties)
-        # ---------------------------------------------------------------
-
-        # Δ_aero: aero contribution (corners: more DF = faster; straights: more drag = slower)
-        df_available = aero_forces.df_front_eff + aero_forces.df_rear_eff
-        if is_corner:
-            delta_aero = config.k_aero_penalty * (1.0 - df_available / max(config.df_ref, 1.0))
-        else:
-            delta_aero = config.k_aero_penalty * (aero_forces.drag_eff / max(config.drag_ref, 1.0) - 1.0)
-        delta_aero -= config.k_aero_penalty * aero_forces.handling_penalty
-
-        # Δ_grip: tyre grip contribution (§6.8 tuned)
-        # Reference grip ~0.7 = neutral (new tyres at operating temp).
-        # Only penalise when grip drops below reference; reward when above.
-        grip_avg = (eff_grip_front + eff_grip_rear) / 2.0
-        grip_ref = 0.70
-        delta_grip = config.k_grip_penalty * (grip_ref - grip_avg) / grip_ref
-
-        # Δ_brake: brake fade (only on sections with braking)
-        if section.braking_energy_mj > 0.05:
-            delta_brake = config.k_brake_penalty * (1.0 - braking_efficiency)
-        else:
-            delta_brake = 0.0
-
-        # Δ_fuel: fuel weight penalty (§6.7)
-        # Heavier car is slower everywhere, but corners suffer more (mass → less cornering grip)
-        fuel_ratio = car_state.pu.fuel_kg / max(config.fuel_max_kg, 1.0)
-        corner_fuel_mult = 1.3 if is_corner else 1.0  # corners penalised 30% more
-        delta_fuel = config.k_fuel_penalty * fuel_ratio * corner_fuel_mult
-
-        # Δ_driver: driver skill (pace_factor 1.0 = VER level = no penalty)
-        delta_driver = config.k_driver_penalty * (1.0 - driver_intent.pace_factor)
-
-        # Δ_power: power deficit on straights
-        if not is_corner:
-            delta_power = config.k_aero_penalty * (1.0 - total_power_kw / max(config.power_ref_kw, 1.0))
-        else:
-            delta_power = 0.0
-
-        # DRS bonus on straights (reduces time by ~0.3s per DRS zone)
-        drs_active = section.drs_available and not car_state.side_by_side
-        delta_drs = -0.005 if drs_active else 0.0
-
-        # Event penalties
-        delta_events = 0.0
-        for evt in all_events:
-            if evt.event_type == "tyre_overheat":
-                delta_events += 0.02
-            if evt.event_type == "ice_derating":
-                delta_events += 0.01
-
-        # Traffic constraint
-        delta_traffic = 0.0
-        if traffic_v_max_kph > 0 and v_base > 0:
-            traffic_ratio = traffic_v_max_kph / v_base
-            if traffic_ratio < 1.0:
-                delta_traffic = (1.0 / max(traffic_ratio, 0.5)) - 1.0
-
-        # Total penalty
-        total_penalty = (
-            config.baseline_delta
-            + delta_aero
-            + delta_grip
-            + delta_brake
-            + delta_fuel
-            + delta_driver
-            + delta_power
-            + delta_drs
-            + delta_events
-            + delta_traffic
-        )
-
-        # Clamp total penalty to reasonable range (-0.05 to +0.30)
-        total_penalty = clamp(total_penalty, -0.05, 0.30)
-
-        dt_s = section.dt_ref_s * (1.0 + total_penalty)
-        v_effective = (section.length_m / max(dt_s, 0.01)) * 3.6  # back-compute for reporting
-
+    # Grip meccanico: F1 2025 mu_mech ~ 1.6 (gomme Pirelli C3 nuove)
+    # Degradato esponenzialmente con l'usura per amplificare l'effetto
+    grip_avg = (eff_grip_front + eff_grip_rear) / 2.0
+    mu = 1.6 * (grip_avg ** 2.0) * (1.0 - aero_forces.handling_penalty)
+    # Identificazione del carico ottimale del circuito (per R_eff e next_v_apex)
+    cid = config.circuit_id
+    if "monaco" in cid:
+        df_opt = 230.0       # Alto carico (es. FW=80/RW=80)
+    elif "suzuka" in cid:
+        df_opt = 180.0       # Medio-alto (es. FW=55/RW=54)
+    elif "silverstone" in cid:
+        df_opt = 120.0       # Medio-basso (es. FW=30/RW=27)
+    elif "monza" in cid:
+        df_opt = 80.0        # Basso carico (es. FW=15/RW=11)
     else:
-        # ---------------------------------------------------------------
-        # Fallback: old v_effective model (for sections without dt_ref)
-        # ---------------------------------------------------------------
-        curve_factor = CURVE_FACTOR.get(section.kind, 0.0)
+        # Interpolazione fallback basata sulla V_max del circuito
+        if not hasattr(config, '_circuit_vmax'):
+            config._circuit_vmax = max((s.v_max_kph for s in config.sections), default=300.0)
+        vmax = clamp(config._circuit_vmax, 289.0, 348.0)
+        df_opt = 230.0 - (vmax - 289.0) * ((230.0 - 80.0) / (348.0 - 289.0))
+        
+    cla_opt = df_opt * 0.040
 
-        if is_corner:
-            curvature_factor = section.curve_profile.curvature_factor
-            if curvature_factor == 0.0:
-                curvature_factor = curve_factor
+    radius = section.curve_profile.radius_m if is_corner else None
+    v_apex_limit = config.v_cap_kph / 3.6
 
-            df_available = aero_forces.df_front_eff + aero_forces.df_rear_eff
-            v_curve = v_base * (
-                1.0 + curvature_factor * config.k_df
-                * (df_available - config.df_ref) / max(config.df_ref, 1.0)
-            )
-            v_curve *= (1.0 - aero_forces.handling_penalty)
-            v_curve *= 1.0 + (driver_intent.pace_factor - 1.0) * driver_intent.aggression_curve_bonus
+    if is_corner and section.v_min_kph > 0:
+        # 1. Reverse-engineering del raggio reale (R_eff) dalla telemetria
+        v_min_ms = section.v_min_kph / 3.6
+        mu_ideal = 1.6
+        term1 = (mu_ideal * mass * 9.81) / (v_min_ms**2)
+        term2 = 0.5 * mu_ideal * RHO * cla_opt
+        radius = mass / (term1 + term2)
 
-            drag_curve_penalty = config.k_drag_curve * (aero_forces.drag_eff - config.drag_ref)
-            v_curve = (v_curve * braking_efficiency) - drag_curve_penalty
-
-            grip_axis = eff_grip_front if curve_factor >= 0.5 else eff_grip_rear
-            v_grip_limited = v_curve * grip_axis
-            v_effective = min(v_grip_limited, config.v_cap_kph)
+    if radius and radius > 0:
+        # 2. V_apex fisica reale per l'auto corrente
+        denominator = (mass / radius) - (0.5 * mu * RHO * CLA_REF)
+        if denominator > 0:
+            v_apex_limit = math.sqrt((mu * mass * 9.81) / denominator)
         else:
-            delta_power = config.k_power * (total_power_kw - config.power_ref_kw)
-            delta_drag = config.k_drag * (aero_forces.drag_eff - config.drag_ref)
-            v_straight = min(v_base + delta_power - delta_drag, config.v_cap_kph)
-            v_effective = v_straight
+            v_apex_limit = config.v_cap_kph / 3.6
+        v_apex_limit *= driver_intent.pace_factor
 
-        if traffic_v_max_kph > 0:
-            v_effective = min(v_effective, traffic_v_max_kph)
-        v_effective = max(v_effective, config.v_min_kph)
 
-        for evt in all_events:
-            if evt.event_type == "tyre_overheat":
-                v_effective *= 0.98
-            if evt.event_type == "ice_derating":
-                v_effective *= 0.99
+    # Se siamo in rettilineo, guardiamo se la PROSSIMA sezione è una curva per calcolare la staccata
+    next_v_apex = config.v_cap_kph / 3.6
+    next_idx = car_state.current_section_idx + 1
+    if not is_corner and next_idx < len(config.sections):
+        next_sec = config.sections[next_idx]
+        if next_sec.kind in CORNER_KINDS and next_sec.v_min_kph > 0:
+            v_min_next = next_sec.v_min_kph / 3.6
+            term1 = (1.6 * mass * 9.81) / (v_min_next**2)
+            term2 = 0.5 * 1.6 * RHO * cla_opt
+            next_r = mass / (term1 + term2)
+            
+            denom = (mass / next_r) - (0.5 * mu * RHO * CLA_REF)
+            if denom > 0:
+                next_v_apex = math.sqrt((mu * mass * 9.81) / denom) * driver_intent.pace_factor
+            else:
+                next_v_apex = config.v_cap_kph / 3.6
 
-        v_ms = max(v_effective / 3.6, 1.0)
-        dt_s = section.length_m / v_ms
+    # Variabili di integrazione
+    v = max(car_state.v_current_ms, 10.0) # non fermarsi mai completamente
+    d = 0.0
+    t = 0.0
+    dt_step = 0.05 # 50ms per frame
 
-    # ===================================================================
+    # Eventi (es. DR, clipping) - qui possiamo aggiungere penalty sul momento
+    power_kw = total_power_kw
+    if drs_active:
+        CDA_REF *= 0.8 # -20% drag con DRS aperto
+
+    while d < section.length_m:
+        # Forze Aerodinamiche
+        F_drag = 0.5 * RHO * (v**2) * CDA_REF + (mass * 9.81 * 0.015) # Aerodynamic drag + Rolling resistance based on weight
+        F_df = 0.5 * RHO * (v**2) * CLA_REF
+        
+        # Carico verticale e limite di grip (per trazione e frenata)
+        F_z = mass * 9.81 + F_df
+        F_lat_max = F_z * mu
+        max_brake_force = F_z * mu * braking_efficiency
+        
+        current_radius = radius
+        if is_corner and d >= section.length_m * 0.5:
+            current_radius = None  # Il pilota riallinea lo sterzo in uscita, grip laterale scende a 0
+            
+        # Forza Motrice (limitata dalla potenza e dal grip)
+        F_drive_max_power = (power_kw * 1000.0) / max(v, 1.0)
+        # Se in curva, il grip è condiviso con la forza laterale (Circle of Traction approssimato)
+        # Usiamo un approccio semplificato:
+        F_drive_max_grip = F_z * mu
+        if is_corner and current_radius and current_radius > 0:
+            F_lat_req = mass * (v**2) / current_radius
+            if F_lat_req < F_lat_max:
+                F_drive_max_grip = math.sqrt(max(0.0, F_lat_max**2 - F_lat_req**2))
+            else:
+                F_drive_max_grip = 0.0 # Perde aderenza, deve rallentare
+                
+        F_drive = min(F_drive_max_power, F_drive_max_grip)
+        
+        # Frenata: Controllo Look-ahead
+        dist_remaining = section.length_m - d
+        F_net = F_drive - F_drag
+        
+        # Devo frenare per l'apex successivo?
+        braking = False
+        if not is_corner and next_v_apex < v:
+            # Calcolo spazio di frenata necessario da 'v' a 'next_v_apex'
+            # Decelerazione attesa a_brake = (F_brake + F_drag) / mass
+            # Usiamo un F_drag stimato conservativo
+            a_brake = (max_brake_force + F_drag) / mass
+            d_brake_req = (v**2 - next_v_apex**2) / (2 * max(a_brake, 1.0))
+            
+            if dist_remaining <= d_brake_req:
+                braking = True
+
+        # Frenata per l'apice: prima metà della curva
+        if is_corner and d < section.length_m * 0.5 and v > v_apex_limit:
+            braking = True
+
+        if braking:
+            F_net = -max_brake_force - F_drag
+
+        # Traffico
+        if traffic_v_max_kph > 0 and (v * 3.6) > traffic_v_max_kph:
+            F_net = min(F_net, -F_drag) # Rilascia il gas o frena leggermente
+
+        # Aggiornamento cinematico
+        a = F_net / mass
+        v_new = v + a * dt_step
+        
+        # Cap a V_MIN e V_MAX
+        v_new = clamp(v_new, config.v_min_kph / 3.6, config.v_cap_kph / 3.6)
+        
+        # Avanzamento
+        v_avg = (v + v_new) / 2.0
+        d_step = v_avg * dt_step
+        
+        if d + d_step > section.length_m:
+            # Ultimo step parziale
+            fraction = (section.length_m - d) / max(d_step, 0.001)
+            t += dt_step * fraction
+            v = v + a * (dt_step * fraction)
+            d = section.length_m
+            break
+            
+        d += d_step
+        t += dt_step
+        v = v_new
+
+    dt_s = t
+    v_effective = (section.length_m / max(dt_s, 0.01)) * 3.6
+
+    # Cap velocità di uscita sezione con ground truth telemetria.
+    if section.v_exit_kph > 0:
+        # Il cap base è la telemetria (scalata per aggressività)
+        v_exit_cap = (section.v_exit_kph / 3.6) * (0.97 + 0.06 * driver_intent.pace_factor)
+        
+        # NELLE CURVE: moduliamo il cap in base a quanto l'auto è aerodinamicamente
+        # superiore/inferiore rispetto all'auto telemetrica (che aveva cla_opt).
+        # Se ho più DF, la mia v_apex_limit calcolata fisicamente su R_eff sarà
+        # maggiore della v_min_kph telemetrica -> speed_ratio > 1.0 -> esco più veloce!
+        if is_corner and section.v_min_kph > 0:
+            speed_ratio = v_apex_limit / (section.v_min_kph / 3.6)
+            # Limitiamo il boost/nerf estremo (es. max ±15%)
+            speed_ratio = clamp(speed_ratio, 0.85, 1.15)
+            v_exit_cap *= speed_ratio
+            
+        if v > v_exit_cap:
+            v = v_exit_cap
+
+    car_state.v_current_ms = v
+
+    # ===================================================================    # ===================================================================
     # STEP 7 – Internal state update (Passo 7)
     # ===================================================================
     # Fuel already updated in PU step

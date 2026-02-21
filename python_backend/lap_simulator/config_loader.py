@@ -295,7 +295,7 @@ def load_circuit_config(
     global_pu_maps = root / "config" / "pu" / "pu_maps_global_default.json"
     global_pu_rel = root / "config" / "pu" / "pu_reliability_global_default.json"
     global_damage = root / "config" / "damage" / "damage_coeffs_global_default.json"
-    telemetry_path = root / "python_backend" / "data" / "circuits" / f"{circuit_id}_Telemetry.json"
+    telemetry_path = root / "python_backend" / "data" / "circuits" / "2025" / f"{circuit_id}_Telemetry.json"
 
     # --- Telemetry (sections) ---
     telem = _load_json(telemetry_path)
@@ -360,5 +360,5 @@ def load_circuit_config(
         ers_budget=ers_budget,
         regen_profile=regen_profile,
         soc_warnings=soc_warnings,
-        reference_lap_time_s=ref_lap_time if ref_lap_time > 0 else sum_dt_ref,
+        reference_lap_time_s=sum_dt_ref # Force 2025 telemetry sum,
     )

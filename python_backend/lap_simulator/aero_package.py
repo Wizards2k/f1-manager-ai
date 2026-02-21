@@ -41,11 +41,30 @@ def _component_df_drag(
     df  = base_downforce * angle_term * speed_factor * damage_factor
     drag = base_drag * angle_term * damage_factor
     """
-    angle_term = 1.0 + comp.angle_sensitivity * (comp.angle_deg - comp.angle_ref_deg)
-    angle_term = max(angle_term, 0.3)  # safety floor
+    delta_angle = comp.angle_deg - comp.angle_ref_deg
+    
+    # 1. Stallo Aerodinamico: oltre i +15 gradi l'ala satura e non genera più DF utile
+    if delta_angle > 15.0:
+        effective_delta_df = 15.0 + (delta_angle - 15.0) * 0.1
+    elif delta_angle < -10.0:
+        effective_delta_df = -10.0 + (delta_angle + 10.0) * 0.2
+    else:
+        effective_delta_df = delta_angle
+        
+    angle_term_df = 1.0 + comp.angle_sensitivity * effective_delta_df
+    angle_term_df = max(angle_term_df, 0.1)
 
-    df = comp.base_downforce * angle_term * speed_factor * comp.damage_factor
-    drag = comp.base_drag * angle_term * comp.damage_factor
+    # 2. Drag Indotto: inclinare troppo un'ala fuori progetto crea una resistenza esponenziale
+    if delta_angle > 0:
+        induced_penalty = (delta_angle / 20.0) ** 2
+        angle_term_drag = 1.0 + comp.angle_sensitivity * delta_angle + (comp.angle_sensitivity * induced_penalty * 5.0)
+    else:
+        angle_term_drag = 1.0 + comp.angle_sensitivity * delta_angle
+        
+    angle_term_drag = max(angle_term_drag, 0.1)
+
+    df = comp.base_downforce * angle_term_df * speed_factor * comp.damage_factor
+    drag = comp.base_drag * angle_term_drag * comp.damage_factor
     return df, drag
 
 

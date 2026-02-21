@@ -32,8 +32,8 @@ from typing import List, Tuple
 # Constants
 # ---------------------------------------------------------------------------
 
-ICE_BASE_POWER_KW = 550.0          # baseline ICE power at 100% map
-ERS_MAX_KW = 120.0                 # FIA limit (MGU-K output)
+ICE_BASE_POWER_KW = 750.0          # F1 2025 ICE ~750kW (1000hp hybrid unit)
+ERS_MAX_KW = 160.0                 # MGU-K deploy peak (FIA limit ~160kW in 2025)
 ERS_MAX_ENERGY_MJ = 4.0            # max battery capacity
 ERS_DEPLOY_LIMIT_MJ_PER_LAP = 4.0
 ERS_RECOVERY_LIMIT_MJ_PER_LAP = 2.0

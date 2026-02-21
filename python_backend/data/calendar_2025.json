@@ -1,0 +1,245 @@
+{
+  "season_year": 2025,
+  "events": [
+    {
+      "round": 1,
+      "event_name": "Australian Grand Prix",
+      "circuit_id": "au-1953_melbourne",
+      "weekend_start": "2025-03-14",
+      "compounds": ["C5", "C4", "C3"],
+      "expected_air_temp_c": 22.0,
+      "expected_track_temp_c": 35.0,
+      "rain_probability": 0.20
+    },
+    {
+      "round": 2,
+      "event_name": "Chinese Grand Prix",
+      "circuit_id": "cn-2004_shanghai",
+      "weekend_start": "2025-03-21",
+      "compounds": ["C4", "C3", "C2"],
+      "expected_air_temp_c": 19.0,
+      "expected_track_temp_c": 29.0,
+      "rain_probability": 0.40
+    },
+    {
+      "round": 3,
+      "event_name": "Japanese Grand Prix",
+      "circuit_id": "jp-1962_suzuka",
+      "weekend_start": "2025-04-04",
+      "compounds": ["C3", "C2", "C1"],
+      "expected_air_temp_c": 18.0,
+      "expected_track_temp_c": 26.0,
+      "rain_probability": 0.45
+    },
+    {
+      "round": 4,
+      "event_name": "Bahrain Grand Prix",
+      "circuit_id": "bh-2002_sakhir",
+      "weekend_start": "2025-04-11",
+      "compounds": ["C3", "C2", "C1"],
+      "expected_air_temp_c": 26.0,
+      "expected_track_temp_c": 30.0,
+      "rain_probability": 0.05
+    },
+    {
+      "round": 5,
+      "event_name": "Saudi Arabian Grand Prix",
+      "circuit_id": "sa-2021_jeddah",
+      "weekend_start": "2025-04-18",
+      "compounds": ["C4", "C3", "C2"],
+      "expected_air_temp_c": 28.0,
+      "expected_track_temp_c": 33.0,
+      "rain_probability": 0.01
+    },
+    {
+      "round": 6,
+      "event_name": "Miami Grand Prix",
+      "circuit_id": "us-2022_miami",
+      "weekend_start": "2025-05-02",
+      "compounds": ["C4", "C3", "C2"],
+      "expected_air_temp_c": 29.0,
+      "expected_track_temp_c": 45.0,
+      "rain_probability": 0.30
+    },
+    {
+      "round": 7,
+      "event_name": "Emilia Romagna Grand Prix",
+      "circuit_id": "it-1953_imola",
+      "weekend_start": "2025-05-16",
+      "compounds": ["C5", "C4", "C3"],
+      "expected_air_temp_c": 21.0,
+      "expected_track_temp_c": 32.0,
+      "rain_probability": 0.35
+    },
+    {
+      "round": 8,
+      "event_name": "Monaco Grand Prix",
+      "circuit_id": "mc-1929_monaco",
+      "weekend_start": "2025-05-23",
+      "compounds": ["C6", "C5", "C4"],
+      "expected_air_temp_c": 24.0,
+      "expected_track_temp_c": 40.0,
+      "rain_probability": 0.15
+    },
+    {
+      "round": 9,
+      "event_name": "Spanish Grand Prix",
+      "circuit_id": "es-1991_barcelona",
+      "weekend_start": "2025-05-30",
+      "compounds": ["C3", "C2", "C1"],
+      "expected_air_temp_c": 25.0,
+      "expected_track_temp_c": 42.0,
+      "rain_probability": 0.10
+    },
+    {
+      "round": 10,
+      "event_name": "Canadian Grand Prix",
+      "circuit_id": "ca-1978_montreal",
+      "weekend_start": "2025-06-13",
+      "compounds": ["C5", "C4", "C3"],
+      "expected_air_temp_c": 22.0,
+      "expected_track_temp_c": 35.0,
+      "rain_probability": 0.40
+    },
+    {
+      "round": 11,
+      "event_name": "Austrian Grand Prix",
+      "circuit_id": "at-1969_spielberg",
+      "weekend_start": "2025-06-27",
+      "compounds": ["C5", "C4", "C3"],
+      "expected_air_temp_c": 24.0,
+      "expected_track_temp_c": 38.0,
+      "rain_probability": 0.35
+    },
+    {
+      "round": 12,
+      "event_name": "British Grand Prix",
+      "circuit_id": "gb-1948_silverstone",
+      "weekend_start": "2025-07-04",
+      "compounds": ["C3", "C2", "C1"],
+      "expected_air_temp_c": 20.0,
+      "expected_track_temp_c": 30.0,
+      "rain_probability": 0.45
+    },
+    {
+      "round": 13,
+      "event_name": "Belgian Grand Prix",
+      "circuit_id": "be-1925_spa_francorchamps",
+      "weekend_start": "2025-07-25",
+      "compounds": ["C4", "C3", "C2"],
+      "expected_air_temp_c": 19.0,
+      "expected_track_temp_c": 28.0,
+      "rain_probability": 0.60
+    },
+    {
+      "round": 14,
+      "event_name": "Hungarian Grand Prix",
+      "circuit_id": "hu-1986_budapest",
+      "weekend_start": "2025-08-01",
+      "compounds": ["C5", "C4", "C3"],
+      "expected_air_temp_c": 28.0,
+      "expected_track_temp_c": 45.0,
+      "rain_probability": 0.20
+    },
+    {
+      "round": 15,
+      "event_name": "Dutch Grand Prix",
+      "circuit_id": "nl-1948_zandvoort",
+      "weekend_start": "2025-08-29",
+      "compounds": ["C3", "C2", "C1"],
+      "expected_air_temp_c": 21.0,
+      "expected_track_temp_c": 32.0,
+      "rain_probability": 0.40
+    },
+    {
+      "round": 16,
+      "event_name": "Italian Grand Prix",
+      "circuit_id": "it-1922_monza",
+      "weekend_start": "2025-09-05",
+      "compounds": ["C5", "C4", "C3"],
+      "expected_air_temp_c": 26.0,
+      "expected_track_temp_c": 40.0,
+      "rain_probability": 0.15
+    },
+    {
+      "round": 17,
+      "event_name": "Azerbaijan Grand Prix",
+      "circuit_id": "az-2016_baku",
+      "weekend_start": "2025-09-19",
+      "compounds": ["C5", "C4", "C3"],
+      "expected_air_temp_c": 25.0,
+      "expected_track_temp_c": 38.0,
+      "rain_probability": 0.10
+    },
+    {
+      "round": 18,
+      "event_name": "Singapore Grand Prix",
+      "circuit_id": "sg-2008_singapore",
+      "weekend_start": "2025-10-03",
+      "compounds": ["C5", "C4", "C3"],
+      "expected_air_temp_c": 29.0,
+      "expected_track_temp_c": 34.0,
+      "rain_probability": 0.50
+    },
+    {
+      "round": 19,
+      "event_name": "United States Grand Prix",
+      "circuit_id": "us-2012_austin",
+      "weekend_start": "2025-10-17",
+      "compounds": ["C4", "C3", "C2"],
+      "expected_air_temp_c": 27.0,
+      "expected_track_temp_c": 39.0,
+      "rain_probability": 0.25
+    },
+    {
+      "round": 20,
+      "event_name": "Mexico City Grand Prix",
+      "circuit_id": "mx-1962_mexico_city",
+      "weekend_start": "2025-10-24",
+      "compounds": ["C5", "C4", "C3"],
+      "expected_air_temp_c": 23.0,
+      "expected_track_temp_c": 42.0,
+      "rain_probability": 0.20
+    },
+    {
+      "round": 21,
+      "event_name": "São Paulo Grand Prix",
+      "circuit_id": "br-1940_sao_paulo",
+      "weekend_start": "2025-11-07",
+      "compounds": ["C4", "C3", "C2"],
+      "expected_air_temp_c": 24.0,
+      "expected_track_temp_c": 38.0,
+      "rain_probability": 0.55
+    },
+    {
+      "round": 22,
+      "event_name": "Las Vegas Grand Prix",
+      "circuit_id": "us-2023_las_vegas",
+      "weekend_start": "2025-11-20",
+      "compounds": ["C5", "C4", "C3"],
+      "expected_air_temp_c": 15.0,
+      "expected_track_temp_c": 17.0,
+      "rain_probability": 0.05
+    },
+    {
+      "round": 23,
+      "event_name": "Qatar Grand Prix",
+      "circuit_id": "qa-2004_lusail",
+      "weekend_start": "2025-11-28",
+      "compounds": ["C3", "C2", "C1"],
+      "expected_air_temp_c": 26.0,
+      "expected_track_temp_c": 32.0,
+      "rain_probability": 0.02
+    },
+    {
+      "round": 24,
+      "event_name": "Abu Dhabi Grand Prix",
+      "circuit_id": "ae-2009_yas_marina",
+      "weekend_start": "2025-12-05",
+      "compounds": ["C5", "C4", "C3"],
+      "expected_air_temp_c": 25.0,
+      "expected_track_temp_c": 29.0,
+      "rain_probability": 0.05
+    }
+  ]
+}

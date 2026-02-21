@@ -480,6 +480,7 @@ class CarState:
     section_progress: float = 0.0        # 0-1 within current section
     lap_time_acc_s: float = 0.0
     lap_number: int = 1
+    v_current_ms: float = 0.0  # current simulated speed
     # battle signals
     overtake_window: float = 0.0         # 0-1
     attack_cooldown: int = 0             # sections remaining
