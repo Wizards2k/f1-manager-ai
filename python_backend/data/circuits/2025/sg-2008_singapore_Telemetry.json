@@ -8650,5 +8650,100 @@
         "y": -401.3606681956008
       }
     ]
+  },
+  "tyres": {
+    "compound_bias": {
+      "SOFT": 1.15,
+      "MEDIUM": 1.05,
+      "HARD": 0.938
+    },
+    "wear_multipliers": {
+      "front": 1.0,
+      "rear": 1.0
+    },
+    "temperature_targets": {
+      "air_c": [
+        20,
+        32
+      ],
+      "track_c": [
+        25,
+        45
+      ]
+    },
+    "pirelli_metadata": {
+      "season": 2025,
+      "compounds_info": {
+        "standard_deltas": {
+          "C1_C2": 0.65,
+          "C2_C3": 0.55,
+          "C3_C4": 0.5,
+          "C4_C5": 0.6,
+          "C5_C6": 0.45
+        },
+        "global_wear_base": {
+          "C1": 0.05,
+          "C2": 0.08,
+          "C3": 0.12,
+          "C4": 0.18,
+          "C5": 0.25,
+          "C6": 0.35
+        }
+      }
+    },
+    "pirelli_package": {
+      "round": 18,
+      "gp": "Singapore",
+      "track": "Marina Bay",
+      "nomination": {
+        "hard": "C3",
+        "medium": "C4",
+        "soft": "C5"
+      },
+      "lap_time_delta_hint": 0.52,
+      "wear_rate_base": "Basso-Medio",
+      "notes": "Umidit\u00e0 e calore favoriscono degrado termico."
+    }
+  },
+  "fuel_mass": {
+    "fuel_lap_delta_ms": 0.035,
+    "max_stint_laps": 15,
+    "pit_delta_seconds": 24.0
+  },
+  "weather": {
+    "air_temp_c": [
+      15,
+      35
+    ],
+    "track_temp_c": [
+      20,
+      50
+    ],
+    "rain_probability": 0.1,
+    "grip_evolution_curve": [
+      0.85,
+      0.92,
+      1.0
+    ],
+    "wind": {
+      "speed_kmh": [
+        0,
+        25
+      ],
+      "direction_deg": 0
+    }
+  },
+  "reliability": {
+    "yellow_flag_prob": 0.08,
+    "safety_car_prob": 0.05,
+    "mechanical_failure_bias": 0.03
+  },
+  "visual": {
+    "render_speed_scale": 1.0,
+    "map_offset": {
+      "x": 0.0,
+      "y": 0.0
+    },
+    "map_scale": 1.0
   }
 }
