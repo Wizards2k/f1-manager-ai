@@ -69,6 +69,14 @@ def update_section(
     # STEP 1 – Input & initial state (Passo 1)
     # ===================================================================
     v_base = section.v_base_kph
+    
+    # CORREZIONE: Se la velocità corrente è maggiore della v_entry del settore,
+    # significa che c'è una frenata nella transizione tra settori (waypoints HD).
+    # Applichiamo questa frenata prima di iniziare la simulazione del settore.
+    if section.v_entry_kph > 0 and car_state.v_current_ms * 3.6 > section.v_entry_kph:
+        car_state.v_current_ms = section.v_entry_kph / 3.6
+    
+    v_entry_kph = car_state.v_current_ms * 3.6
     v_estimate = v_base  # initial speed estimate for calculations
 
     # ===================================================================
@@ -203,18 +211,32 @@ def update_section(
     v_apex_limit = config.v_cap_kph / 3.6
 
     if is_corner and section.v_min_kph > 0:
-        # 1. Reverse-engineering del raggio reale (R_eff) dalla telemetria
+        # CORREZIONE: usa raggio dal JSON se disponibile e valido
+        if radius is None or radius <= 0:
+            # Fallback: reverse-engineering del raggio da v_min (solo se il JSON non fornisce uno valido)
+            v_min_ms = section.v_min_kph / 3.6
+            mu_ideal = 1.6
+            term1 = (mu_ideal * mass * 9.81) / (v_min_ms**2)
+            term2 = 0.5 * mu_ideal * RHO * cla_opt
+            radius = mass / (term1 + term2)
+        
+    mu_target = mu
+    telemetry_mu = section.telemetry_mu if hasattr(section, 'telemetry_mu') else 0.0
+    if telemetry_mu and telemetry_mu > 0:
+        mu_target = min(mu_target, telemetry_mu)
+    if radius and radius > 0 and section.v_min_kph > 0:
         v_min_ms = section.v_min_kph / 3.6
-        mu_ideal = 1.6
-        term1 = (mu_ideal * mass * 9.81) / (v_min_ms**2)
-        term2 = 0.5 * mu_ideal * RHO * cla_opt
-        radius = mass / (term1 + term2)
+        telem_den = (mass * 9.81) / max(v_min_ms**2, 1e-4) + 0.5 * RHO * CLA_REF
+        if telem_den > 0:
+            mu_from_vmin = (mass / radius) / telem_den
+            mu_target = min(mu_target, mu_from_vmin)
+            mu_target = max(0.4, mu_target)
 
     if radius and radius > 0:
         # 2. V_apex fisica reale per l'auto corrente
-        denominator = (mass / radius) - (0.5 * mu * RHO * CLA_REF)
+        denominator = (mass / radius) - (0.5 * mu_target * RHO * CLA_REF)
         if denominator > 0:
-            v_apex_limit = math.sqrt((mu * mass * 9.81) / denominator)
+            v_apex_limit = math.sqrt((mu_target * mass * 9.81) / denominator)
         else:
             v_apex_limit = config.v_cap_kph / 3.6
         v_apex_limit *= driver_intent.pace_factor
@@ -226,10 +248,14 @@ def update_section(
     if not is_corner and next_idx < len(config.sections):
         next_sec = config.sections[next_idx]
         if next_sec.kind in CORNER_KINDS and next_sec.v_min_kph > 0:
-            v_min_next = next_sec.v_min_kph / 3.6
-            term1 = (1.6 * mass * 9.81) / (v_min_next**2)
-            term2 = 0.5 * 1.6 * RHO * cla_opt
-            next_r = mass / (term1 + term2)
+            # CORREZIONE: usa raggio dal JSON della sezione successiva se disponibile
+            next_r = next_sec.curve_profile.radius_m
+            if next_r is None or next_r <= 0:
+                # Fallback: ricalcola da v_min
+                v_min_next = next_sec.v_min_kph / 3.6
+                term1 = (1.6 * mass * 9.81) / (v_min_next**2)
+                term2 = 0.5 * 1.6 * RHO * cla_opt
+                next_r = mass / (term1 + term2)
             
             denom = (mass / next_r) - (0.5 * mu * RHO * CLA_REF)
             if denom > 0:
@@ -276,110 +302,24 @@ def update_section(
             F_lat_max = F_z * mu
             max_brake_force = F_z * mu * braking_efficiency
             
-            # === ACCELERAZIONE BASEATA SU DATI TELEMETRICI REALI ===
-            # Dall'analisi della telemetria HD Monaco, l'accelerazione reale segue:
-            # - 40-100 km/h: ~6 m/s² (uscita curve, grip limitato)
-            # - 100-160 km/h: ~12 m/s² (range ottimale)  
-            # - 160-220 km/h: ~8 m/s² (drag crescente)
-            # - 220-280 km/h: ~4 m/s² (limite potenza)
-            # - 280+ km/h: ~2 m/s² (massima velocità)
-            v_kph = v * 3.6
-            if v_kph < 100:
-                a_max_telemetry = 6.0 + (v_kph / 100.0) * 6.0  # 6->12 m/s²
-            elif v_kph < 160:
-                a_max_telemetry = 12.0
-            elif v_kph < 220:
-                a_max_telemetry = 12.0 - ((v_kph - 160) / 60.0) * 4.0  # 12->8 m/s²
-            elif v_kph < 280:
-                a_max_telemetry = 8.0 - ((v_kph - 220) / 60.0) * 4.0  # 8->4 m/s²
-            else:
-                a_max_telemetry = 4.0 - min(((v_kph - 280) / 40.0) * 2.0, 2.0)  # 4->2 m/s²
+            # === ACCELERAZIONE DERIVATA DA V_REF ===
+            # Invece di usare un modello di forze teoriche, calcoliamo l'accelerazione
+            # necessaria per raggiungere esattamente la velocità indicata dalla telemetria
+            # per il prossimo waypoint.
+            v_target = next_wp.v_ref_kph / 3.6 if next_wp.v_ref_kph > 0 else v
             
-            # Applica factor in base all'aggressività del pilota
-            a_max_telemetry *= (0.8 + 0.4 * driver_intent.pace_factor)
+            # Non applichiamo il pace_factor qui, la telemetria è il ground truth.
+            # Il pace_factor verrà gestito a livello macro o penalizzando il tempo finale.
             
-            # Se in curva, riduci accelerazione disponibile (traction circle)
-            F_lat_req = 0.0
-            if wp.radius_m and wp.radius_m < 5000.0:
-                F_lat_req = mass * (v**2) / wp.radius_m
-                if F_lat_req >= F_lat_max:
-                    a_max_telemetry *= 0.1  # Quasi nessuna accelerazione se grip saturo
-                else:
-                    # Riduci accelerazione proporzionalmente al grip usato lateralmente
-                    grip_ratio = F_lat_req / F_lat_max
-                    a_max_telemetry *= (1.0 - grip_ratio * 0.5)  # Max -50% in curva stretta
+            # Calcolo cinematico dell'accelerazione: v² = v₀² + 2as  ->  a = (v² - v₀²) / 2s
+            a = (v_target**2 - v**2) / (2 * max(dist_step, 0.1))
             
-            F_drive = a_max_telemetry * mass
-            F_net = F_drive - F_drag
-            
-            # Calculate apex speed limit for current waypoint (if corner)
-            # Usa V_REF come target fisico principale, non il calcolo teorico
-            current_v_apex = config.v_cap_kph / 3.6
-            if wp.v_ref_kph > 0:
-                # La telemetria reale è il ground truth fisico - usa come target
-                current_v_apex = (wp.v_ref_kph / 3.6) * driver_intent.pace_factor
-            elif wp.radius_m and wp.radius_m < 5000.0:
-                # Fallback solo se manca v_ref
-                denom = (mass / wp.radius_m) - (0.5 * mu * RHO * CLA_REF)
-                if denom > 0:
-                    current_v_apex = math.sqrt((mu * mass * 9.81) / denom) * driver_intent.pace_factor
-            
-            # Coasting dynamics if grip saturated
-            if wp.radius_m and wp.radius_m < 5000.0 and F_lat_req >= F_lat_max:
-                F_net = F_drive - (F_drag * 0.2)
-                
-            # Apex braking: if current radius is tight and we're too fast, brake
-            if wp.radius_m and wp.radius_m < 500.0 and v > current_v_apex:
-                F_net = -max_brake_force - F_drag
-                
-            # Look-ahead braking: find the SLOWEST waypoint in range
-            # We need to brake for the minimum speed, not just the first slower point
-            lookahead_steps = int(250.0 / max(dist_step, 1.0))
-            braking = False
-            min_future_v = v  # Start with current speed
-            min_future_dist = 0.0
-            
-            for j in range(i+1, min(i + lookahead_steps, len(waypoints))):
-                future_wp = waypoints[j]
-                # Usa v_ref come target speed
-                if future_wp.v_ref_kph > 0:
-                    future_v_apex = (future_wp.v_ref_kph / 3.6) * driver_intent.pace_factor
-                elif future_wp.radius_m and future_wp.radius_m < 500.0:
-                    # Fallback solo se manca v_ref
-                    denom = (mass / future_wp.radius_m) - (0.5 * mu * RHO * CLA_REF)
-                    if denom > 0:
-                        future_v_apex = math.sqrt((mu * mass * 9.81) / denom) * driver_intent.pace_factor
-                    else:
-                        continue
-                else:
-                    continue
-                
-                # Track the minimum speed in the look-ahead range
-                if future_v_apex < min_future_v:
-                    min_future_v = future_v_apex
-                    min_future_dist = future_wp.dist_m - wp.dist_m
-            
-            # Now check if we need to brake for the slowest point found
-            if min_future_v < v and min_future_dist > 0:
-                a_brake = (max_brake_force + F_drag) / mass
-                d_brake_req = (v**2 - min_future_v**2) / (2 * max(a_brake, 1.0))
-                
-                if min_future_dist <= d_brake_req:
-                    braking = True
-                        
-            if braking:
-                F_net = -max_brake_force - F_drag
-                
             # Traffico
             if traffic_v_max_kph > 0 and (v * 3.6) > traffic_v_max_kph:
-                F_net = min(F_net, -F_drag)
+                a = min(a, -F_drag/mass)
                 
-            a = F_net / mass
-            
-            # dt step calculation based on current v
-            dt_step = dist_step / max(v, 1.0)
-            
-            v_new = v + a * dt_step
+            # La nuova velocità è esattamente il target (limitato ai cap)
+            v_new = v_target
             v_new = clamp(v_new, config.v_min_kph / 3.6, config.v_cap_kph / 3.6)
             
             # Avanzamento esatto allo step
@@ -598,7 +538,8 @@ def update_section(
 
     return SectionResult(
         dt_s=dt_s,
-        v_exit_kph=v_effective,
+        v_exit_kph=car_state.v_current_ms * 3.6,
+        v_entry_kph=v_entry_kph,
         v_effective_kph=v_effective,
         v_max_kph=v_max_reached_ms * 3.6,
         events=all_events,

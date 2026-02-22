@@ -79,6 +79,7 @@ def _parse_section(raw: Dict[str, Any]) -> SectionContext:
         curvature_factor = 1.0 / radius * 100  # normalised
 
     v_entry = raw.get("v_entry_kph", raw.get("v_entry", 0.0))
+    telemetry_mu = raw.get("telemetry_mu", raw.get("target_g_lat", 0.0))
     v_exit = raw.get("v_exit_kph", raw.get("v_exit", 0.0))
     v_min = raw.get("v_min_kph", raw.get("v_min", 0.0))
     v_max = raw.get("v_max_kph", raw.get("v_max", 0.0))
@@ -106,7 +107,9 @@ def _parse_section(raw: Dict[str, Any]) -> SectionContext:
         curve_profile=CurveProfile(
             radius_m=radius,
             curvature_factor=curvature_factor,
+            apex_ratio=raw.get("apex_ratio", 0.5),
         ),
+        gradient_pct=raw.get("gradient_pct", 0.0),
         bumpiness_factor=bumpiness,
         kerb_severity=kerb,
         heat_factor=raw.get("heat_factor", heat_f),
@@ -114,6 +117,7 @@ def _parse_section(raw: Dict[str, Any]) -> SectionContext:
         braking_energy_mj=braking_energy,
         drs_available=raw.get("drs_active", raw.get("drs_available", False)),
         dt_ref_s=dt_ref,
+        telemetry_mu=telemetry_mu,
     )
 
 
@@ -295,16 +299,39 @@ def load_circuit_config(
     global_pu_maps = root / "config" / "pu" / "pu_maps_global_default.json"
     global_pu_rel = root / "config" / "pu" / "pu_reliability_global_default.json"
     global_damage = root / "config" / "damage" / "damage_coeffs_global_default.json"
+    
+    # Try HD first, then fallback to standard Telemetry
+    telemetry_hd_path = root / "python_backend" / "data" / "circuits" / "2025" / f"{circuit_id}_HD.json"
     telemetry_path = root / "python_backend" / "data" / "circuits" / "2025" / f"{circuit_id}_Telemetry.json"
 
     # --- Telemetry (sections) ---
-    telem = _load_json(telemetry_path)
-    geometry = telem.get("geometry", {})
-    sections_raw = geometry.get("sections", [])
-    sections = [_parse_section(s) for s in sections_raw]
-    sector_markers = geometry.get("sector_markers", [])
-    circuit_length = geometry.get("circuit_length", sum(s.length_m for s in sections))
-    meta = telem.get("metadata", {})
+    is_hd = telemetry_hd_path.exists()
+    telem = _load_json(telemetry_hd_path) if is_hd else _load_json(telemetry_path)
+    
+    if is_hd:
+        sections_raw = telem.get("macro_sectors", [])
+        sections = [_parse_section(s) for s in sections_raw]
+        circuit_length = telem.get("total_length_m", sum(s.length_m for s in sections))
+        meta = {"circuit_id": telem.get("circuit_id")}
+        sector_markers = []
+        
+        # Build Waypoint objects and attach to sections
+        from .data_types import Waypoint
+        waypoints_raw = telem.get("waypoints", [])
+        all_waypoints = [Waypoint(**wp) for wp in waypoints_raw]
+        
+        for section in sections:
+            section.waypoints = [wp for wp in all_waypoints if wp.macro_sector_id == section.section_id]
+            # Assicuriamo che la lunghezza del macro-settore corrisponda alla somma dei micro-settori
+            if section.waypoints:
+                section.length_m = section.waypoints[-1].dist_m - section.waypoints[0].dist_m
+    else:
+        geometry = telem.get("geometry", {})
+        sections_raw = geometry.get("sections", [])
+        sections = [_parse_section(s) for s in sections_raw]
+        sector_markers = geometry.get("sector_markers", [])
+        circuit_length = geometry.get("circuit_length", sum(s.length_m for s in sections))
+        meta = telem.get("metadata", {})
 
     # --- Tyres ---
     tyre_path = derived_dir / "tyre_params.json" if derived_dir.exists() else global_tyres

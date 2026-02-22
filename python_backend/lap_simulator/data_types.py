@@ -11,8 +11,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
-
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -74,7 +73,26 @@ class CurveProfile:
     banking_deg: float = 0.0
     curvature_factor: float = 0.0
     complex_corner: bool = False
+    apex_ratio: float = 0.5
 
+
+@dataclass
+class Waypoint:
+    """HD telemetry waypoint for micro-sector integration."""
+    dist_m: float
+    v_ref_kph: float
+    elevation_m: float
+    slope_deg: float
+    radius_m: float
+    camber_deg: float
+    target_g_lat: float
+    steering_angle_deg: float
+    throttle_pct: int
+    brake_pct: int
+    drs_active: bool
+    surface_type: str
+    macro_sector_id: str
+    section_kind: str
 
 @dataclass
 class SectionContext:
@@ -90,6 +108,7 @@ class SectionContext:
     v_max_kph: float = 0.0
     corner_number: int = 0
     curve_profile: CurveProfile = field(default_factory=CurveProfile)
+    gradient_pct: float = 0.0            # pendenza media della sezione (positivo = salita)
     # track surface modifiers
     bumpiness_factor: float = 0.0        # 0-1, from pirelli profile
     kerb_severity: float = 0.0           # 0-1
@@ -98,6 +117,8 @@ class SectionContext:
     braking_energy_mj: float = 0.0       # reference braking energy for section
     drs_available: bool = False
     dt_ref_s: float = 0.0                # reference time from telemetry integration
+    telemetry_mu: float = 0.0            # derived mechanical grip (from HD telemetry)
+    waypoints: List[Waypoint] = field(default_factory=list)  # HD waypoints for this section
 
 
 @dataclass
@@ -513,7 +534,9 @@ class SectionResult:
     """Return value of Car.update_section()."""
     dt_s: float = 0.0                    # time spent in section
     v_exit_kph: float = 0.0              # exit speed
+    v_entry_kph: float = 0.0             # entry speed at section start
     v_effective_kph: float = 0.0         # effective speed through section
+    v_max_kph: float = 0.0               # peak speed reached during the section
     events: List[SectionEvent] = field(default_factory=list)
     # signals for BattleResolver
     overtake_window: float = 0.0
