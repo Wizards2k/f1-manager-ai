@@ -1,0 +1,76 @@
+# Specifica refactor: Team, Auto, PowerUnit, Pilota (e classi correlate)
+
+## Obiettivo
+Separare le responsabilità tra entità di dominio (Team, Auto, PowerUnit, Pilota, Pit Crew) eliminando campi ibridi e introducendo classi dedicate per motore e telaio. Il Team diventa un contenitore di risorse (piloti, auto, PU) senza parametri tecnici duplicati.
+
+## Stato attuale (feb 2026)
+- `Team` (@python_backend/models/models.py) include campi ibridi (forza_auto, affidabilita, aerodinamica, meccanica, pitstop_skill) e `power_unit` come stringa.
+- Dataset `TEAMS` (@python_backend/data/teams/__init__.py) istanzia 10 scuderie 2025 e assegna `team_id` incrementale.
+- Logica motore già presente in `lap_simulator/power_unit.py` + `PUState`/`EngineMapParams` in `data_types.py`, ma non esiste una classe dati “PowerUnit” a livello roster.
+
+## Target modello dati
+
+### Team (ridisegnato)
+- Campi mantenuti: `nome_scuderia`, `sigla_scuderia`, `nazionalita`, `colore_team`, `sponsor_principale`, `simulator_quality`, `team_id` (assegnato dal loader).
+- Campi rimossi: `forza_auto`, `affidabilita`, `meccanica`, `pitstop_skill`.
+- Campi spostati: `aerodinamica` → sarà proprietà di `Auto`.
+- Campi convertiti/nuovi:
+  - `power_unit: PowerUnit` (istanza classe dedicata, non stringa).
+  - `auto: Auto` (istanza chassis/aero/meccanica, escluso motore).
+  - `pilota1: Pilota`
+  - `pilota2: Pilota`
+  - `pilota_riserva: Pilota | None` (aka simulatore/reserve).
+
+### PowerUnit (nuova entità roster)
+- Identità (obbligatorio ID in testa): `pu_id`, `nome`, `fornitore`, `anno`, `spec_version`.
+- Componenti separati:
+  - `ice`: include `ice_id`, `nome`, `potenza_pct` (0–120%), parametri termici/affidabilità (derivabili da `PUReliabilityParams`).
+  - `mgu_k`: `mgu_k_id`, `nome`, `max_kw`, efficienza, termica.
+  - `mgu_h`: `mgu_h_id`, `nome`, `base_kw`, `direct_ratio_default`, efficienza, termica.
+  - `battery`: `battery_id`, `nome`, `capacity_mj`, `max_charge_kw`, `max_discharge_kw`, termica.
+- Mappe separate ICE/ERS (nuove classi dati):
+  - **Mappa ICE**: `ice_map_id`, `nome`, `power_pct` (0–120%).
+  - **Mappa ERS** (interfaccia modale ERS): `ers_map_id`, `nome`, `deploy_budget_mj`, `bucket_primary_pct`, `bucket_secondary_pct`, `bucket_exit_pct` (range suggerito 1–120%).
+- Dati statici comuni: budget ERS, affidabilità (`PUReliabilityParams`), fuel tank capacità, limiti recupero/consumo, `regen_profile`.
+- Factory: metodo per creare `PUState` runtime (stato vettura) valorizzando mappa ICE/ERS di default.
+
+### Auto (nuova entità roster)
+- Dati statici: pacchetto aero (front/rear/beam wing, floor/diffuser, cooling area), componenti meccaniche (sospensioni, antiroll, ride height base), brake ducts, peso base, grip meccanico baseline.
+- Output: factory per `AeroSetup`/`CarState` iniziale e profili di cooling/drag/downforce.
+- Identità: `auto_id`, `nome`, `anno`, `team_ref` opzionale.
+
+### Pilota (esistente, da referenziare)
+- Nessun cambio nel modello; Team usa campi nominativi `pilota1/2/riserva` al posto della lista.
+
+### Pit Crew / Operations (futuro)
+- Nuova classe dedicata per skill pitstop, efficienza operativa e tempi box. Rimossa da `Team` per ora.
+
+## Migrazioni dati
+- Aggiornare `python_backend/data/teams/__init__.py`:
+  - Usare `pilota1`, `pilota2`, `pilota_riserva` da `PILOTS`.
+  - Passare `power_unit` come istanza dal registry `data/power_units.py`.
+  - Passare `auto` come istanza dal registry `data/cars.py` (o sezione dedicata).
+- Rimuovere l’uso di `forza_auto`, `affidabilita`, `meccanica`, `pitstop_skill` nei consumatori (UI/garage, builder roster, simulator adapters).
+
+## Impatti attesi
+- **Simulazione**: costruzione `RaceCar` richiederà composizione `Auto` + `PowerUnit` + Pilota → genera `CarState` e `PUState` coerenti con la fisica.
+- **UI/garage**: indicatori di performance dovranno leggere attributi di `Auto` (DF/drag/cooling) e `PowerUnit` (mappe, reliability) invece dei campi legacy.
+- **Script dataset**: generatori dovranno creare istanze `PowerUnit` e `Auto` per ogni team.
+
+## Piano di implementazione
+1. **Definizioni modelli**: creare `PowerUnit` e `Auto` in `python_backend/models/` con factory per `PUState`/`CarState` e setup base.
+2. **Refactor Team**: aggiornare `Team` in `models.py` con campi nuovi; rimuovere legacy.
+3. **Registry dati**: creare `data/power_units.py` e `data/cars.py` (o moduli equivalenti) con roster 2025, importati da `data/teams/__init__.py`.
+4. **Migrazione dataset**: aggiornare `TEAMS` per usare `pilota1/2/riserva`, `power_unit`, `auto`.
+5. **Consumatori**: adattare builder di gara/garage per leggere i nuovi campi; rimuovere riferimenti a campi eliminati.
+6. **Test**: aggiungere test di integrità roster (Team→Auto/PU/Piloti) e factory di costruzione `RaceCar`.
+
+## Decisioni aperte
+- Nome campo riserva: `pilota_riserva` (proposto) vs `pilota_simulatore`.
+- Collocazione `Auto`: campo diretto su Team (proposto) vs mapping esterno.
+- Struttura registry: moduli separati `power_units.py` e `cars.py` o integrazione in `teams/__init__.py`.
+
+## Glossario
+- **PU**: Power Unit (ICE + ERS + fuel tank).
+- **Auto**: chassis + aero + meccanica escluso motore.
+- **Pilota**: entità con skill e stile di guida.
