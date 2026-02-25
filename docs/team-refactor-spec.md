@@ -57,6 +57,30 @@ Separare le responsabilità tra entità di dominio (Team, Auto, PowerUnit, Pilot
 - **UI/garage**: indicatori di performance dovranno leggere attributi di `Auto` (DF/drag/cooling) e `PowerUnit` (mappe, reliability) invece dei campi legacy.
 - **Script dataset**: generatori dovranno creare istanze `PowerUnit` e `Auto` per ogni team.
 
+## Dataset sandbox (solo analisi)
+- **Posizione**: `python_backend/tmp_data/` ospita i moduli `power_units_2025.py`, `cars_2025.py` e `teams_2025.py` che generano roster 2025 temporanei sfruttando le misure di gap estratte dai primi tre GP.
+- **Origine dati**: i gap percentuali derivano da manifest/telemetria FastF1 (Bahrain, Jeddah, Australia) e sono stati convertiti in scaling factor separati per aero, grip e power unit per ogni team, mantenendo la baseline McLaren.
+- **Skill piloti**: gli attributi sono stati assegnati secondo le fasce Top/Mid/Rookie (range 90–96, 75–85, 50–74) già validati nella pipeline Piloti, con associazione pilota/team coerente con il 2025.
+- **Isolamento**: i file sandbox non sono importati da nessun modulo di gioco esistente; `data/teams/__init__.py` continua a usare i registri ufficiali e non fa riferimento a questa cartella. Lavorare in questa area permette iterazioni veloci senza influenzare la build principale.
+
+### Classifica gap (primi 3 GP)
+I gap riportati nella sandbox sono stati ordinati rispetto a McLaren (baseline 0%) e servono come riferimento per calibrare i parametri delle nuove istanze `Auto` e `PowerUnit`. La classifica è la seguente:
+
+| Team | Gap medio vs McLaren |
+| --- | --- |
+| McLaren | +0.0% |
+| Red Bull Racing | +0.8% |
+| Ferrari | +1.2% |
+| Mercedes | +1.8% |
+| Aston Martin | +2.5% |
+| Alpine | +3.2% |
+| Haas | +4.1% |
+| Williams | +4.8% |
+| Sauber | +5.5% |
+| RB | +6.8% |
+
+Questi gap sono applicati a componenti aero/grip/PU (distribuiti rispettivamente 40/35/25%) per generare i valori delle 10 auto tecniche nel modulo `cars_2025.py` (tutte le configurazioni sono già definite ma rimangono scollegate dal gioco principale). In particolare la sandbox contiene un `AeroPackage`, sospensioni, ride height e valori di grip per ciascuna delle 10 squadre, che generano output coerenti con i gap sopra riportati.
+
 ## Piano di implementazione
 1. **Definizioni modelli**: creare `PowerUnit` e `Auto` in `python_backend/models/` con factory per `PUState`/`CarState` e setup base.
 2. **Refactor Team**: aggiornare `Team` in `models.py` con campi nuovi; rimuovere legacy.
