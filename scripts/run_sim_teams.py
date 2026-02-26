@@ -2,11 +2,14 @@
 import argparse
 import sys
 import json
+from contextlib import contextmanager
+from copy import deepcopy
 from pathlib import Path
 from typing import Dict, List
 
 sys.path.append(str(Path(__file__).resolve().parent.parent / "python_backend"))
 
+from lap_simulator import power_unit as lap_power_unit
 from lap_simulator.lap_simulator import LapSimulator, CarEntry
 from lap_simulator.data_types import (
     CarState, EnvContext, AeroSetup, DriverSkills, TyreCompound, TyreState, WheelPosition
@@ -31,6 +34,49 @@ EXPECTED_GAPS = {
     "SAU": 5.5,
     "RBRB": 6.8,
 }
+
+ENGINE_SUPPLIER_BY_TEAM = {
+    "MCL": "Mercedes",
+    "MER": "Mercedes",
+    "WIL": "Mercedes",
+    "AST": "Mercedes",
+    "RBR": "Red Bull",
+    "RBRB": "Red Bull",
+    "FER": "Ferrari",
+    "HAAS": "Ferrari",
+    "SAU": "Ferrari",
+    "ALP": "Renault",
+}
+
+ENGINE_PENALTIES = {
+    "Mercedes": 0.0,
+    "Red Bull": 0.01,
+    "Ferrari": 0.015,
+    "Renault": 0.03,
+}
+
+BASE_ICE_POWER_KW = lap_power_unit.ICE_BASE_POWER_KW
+
+
+@contextmanager
+def override_ice_power(ice_kw: float):
+    original = lap_power_unit.ICE_BASE_POWER_KW
+    lap_power_unit.ICE_BASE_POWER_KW = ice_kw
+    try:
+        yield
+    finally:
+        lap_power_unit.ICE_BASE_POWER_KW = original
+
+
+def _scale_power_unit_ers(pu, penalty: float):
+    if penalty <= 0:
+        return pu
+    scaled = deepcopy(pu)
+    for ers_map in scaled.ers_maps.values():
+        ers_map.ers_output_kw *= (1.0 - penalty)
+        ers_map.mguh_power_kw *= (1.0 - penalty)
+        ers_map.deploy_budget_mj *= (1.0 - penalty)
+    return scaled
 
 def build_car_entry(team_code: str, circuit_id: str) -> CarEntry:
     """Build a CarEntry from sandbox team data for a given circuit."""
@@ -71,8 +117,13 @@ def build_car_entry(team_code: str, circuit_id: str) -> CarEntry:
     aero.front_wing.angle_deg = aero_pkg.ala_anteriore.angolo_inclinazione
     aero.rear_wing.angle_deg = aero_pkg.ala_posteriore.angolo_inclinazione
     
-    # PUState from power unit
-    pu_state, _ = pu.make_pu_state()
+    # PUState from power unit (apply supplier penalties)
+    supplier = ENGINE_SUPPLIER_BY_TEAM.get(team_code, "Mercedes")
+    penalty = ENGINE_PENALTIES.get(supplier, 0.0)
+    ice_power = BASE_ICE_POWER_KW * (1.0 - penalty)
+    scaled_pu = _scale_power_unit_ers(pu, penalty)
+    with override_ice_power(ice_power):
+        pu_state, _ = scaled_pu.make_pu_state()
     state.pu = pu_state
     
     return CarEntry(car_id=team_code, state=state, aero_setup=aero, driver_skills=skills, push_level=1.0)
