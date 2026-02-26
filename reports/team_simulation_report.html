@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Simulation Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        h1 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th, td { padding: 12px; text-align: center; border-bottom: 1px solid #ddd; }
+        th { background-color: #4CAF50; color: white; font-weight: bold; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #f1f1f1; }
+        .pos { font-weight: bold; }
+        .team { text-align: left; font-weight: bold; }
+        .gap-pos { color: #2196F3; }
+        .gap-neg { color: #f44336; }
+        .delta-pos { color: #4CAF50; }
+        .delta-neg { color: #ff9800; }
+        .section { font-size: 0.9em; color: #666; }
+        .summary { background: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <h1>Team Simulation Report - Silverstone</h1>
+    
+    <div class="summary">
+        <p><strong>Circuit:</strong> gb-1948_silverstone</p>
+        <p><strong>Baseline:</strong> McLaren (MCL)</p>
+        <p><strong>Mode:</strong> Qualifying (Soft tyres, 2.5kg fuel, Deploy ERS)</p>
+        <p><strong>Teams:</strong> 10 sandbox teams based on 2025 performance gaps</p>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>POS</th>
+                <th>TEAM</th>
+                <th>LAP TIME</th>
+                <th>EXPECTED GAP</th>
+                <th>SIMULATED GAP</th>
+                <th>Δ (SIM - EXP)</th>
+                <th>SECTOR TIMES</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            <tr>
+                <td class="pos">1</td>
+                <td class="team">MCL</td>
+                <td>84.920s</td>
+                <td class="gap-pos">+0.00%</td>
+                <td class="gap-pos">+0.00%</td>
+                <td class="delta-pos">+0.00%</td>
+                <td class="section">9.370 | 4.435 | 3.719 | 10.507 | 2.835 | 0.877 | 3.944 | 21.200 | 1.203 | 11.155 | 1.941 | 4.329 | 5.233 | 4.173</td>
+            </tr>
+
+            <tr>
+                <td class="pos">2</td>
+                <td class="team">RBR</td>
+                <td>84.921s</td>
+                <td class="gap-pos">+0.80%</td>
+                <td class="gap-pos">+0.00%</td>
+                <td class="delta-neg">-0.80%</td>
+                <td class="section">9.370 | 4.435 | 3.719 | 10.507 | 2.835 | 0.877 | 3.944 | 21.200 | 1.203 | 11.155 | 1.941 | 4.329 | 5.233 | 4.173</td>
+            </tr>
+
+            <tr>
+                <td class="pos">3</td>
+                <td class="team">FER</td>
+                <td>84.921s</td>
+                <td class="gap-pos">+1.20%</td>
+                <td class="gap-pos">+0.00%</td>
+                <td class="delta-neg">-1.20%</td>
+                <td class="section">9.370 | 4.435 | 3.719 | 10.507 | 2.835 | 0.877 | 3.944 | 21.200 | 1.203 | 11.155 | 1.941 | 4.329 | 5.233 | 4.173</td>
+            </tr>
+
+            <tr>
+                <td class="pos">4</td>
+                <td class="team">MER</td>
+                <td>84.921s</td>
+                <td class="gap-pos">+1.80%</td>
+                <td class="gap-pos">+0.00%</td>
+                <td class="delta-neg">-1.80%</td>
+                <td class="section">9.370 | 4.435 | 3.719 | 10.507 | 2.835 | 0.877 | 3.944 | 21.200 | 1.203 | 11.155 | 1.941 | 4.329 | 5.233 | 4.173</td>
+            </tr>
+
+            <tr>
+                <td class="pos">5</td>
+                <td class="team">AST</td>
+                <td>84.921s</td>
+                <td class="gap-pos">+2.50%</td>
+                <td class="gap-pos">+0.00%</td>
+                <td class="delta-neg">-2.50%</td>
+                <td class="section">9.370 | 4.435 | 3.719 | 10.507 | 2.835 | 0.877 | 3.944 | 21.200 | 1.203 | 11.155 | 1.941 | 4.329 | 5.233 | 4.173</td>
+            </tr>
+
+            <tr>
+                <td class="pos">6</td>
+                <td class="team">HAAS</td>
+                <td>84.921s</td>
+                <td class="gap-pos">+4.10%</td>
+                <td class="gap-pos">+0.00%</td>
+                <td class="delta-neg">-4.10%</td>
+                <td class="section">9.370 | 4.435 | 3.719 | 10.507 | 2.835 | 0.877 | 3.944 | 21.200 | 1.203 | 11.155 | 1.941 | 4.329 | 5.233 | 4.173</td>
+            </tr>
+
+            <tr>
+                <td class="pos">7</td>
+                <td class="team">ALP</td>
+                <td>84.922s</td>
+                <td class="gap-pos">+3.20%</td>
+                <td class="gap-pos">+0.00%</td>
+                <td class="delta-neg">-3.20%</td>
+                <td class="section">9.370 | 4.435 | 3.719 | 10.507 | 2.835 | 0.878 | 3.944 | 21.200 | 1.203 | 11.155 | 1.941 | 4.329 | 5.233 | 4.173</td>
+            </tr>
+
+            <tr>
+                <td class="pos">8</td>
+                <td class="team">RBRB</td>
+                <td>84.922s</td>
+                <td class="gap-pos">+6.80%</td>
+                <td class="gap-pos">+0.00%</td>
+                <td class="delta-neg">-6.80%</td>
+                <td class="section">9.370 | 4.435 | 3.719 | 10.507 | 2.835 | 0.878 | 3.944 | 21.200 | 1.203 | 11.155 | 1.941 | 4.329 | 5.233 | 4.173</td>
+            </tr>
+
+            <tr>
+                <td class="pos">9</td>
+                <td class="team">SAU</td>
+                <td>84.922s</td>
+                <td class="gap-pos">+5.50%</td>
+                <td class="gap-pos">+0.00%</td>
+                <td class="delta-neg">-5.50%</td>
+                <td class="section">9.370 | 4.435 | 3.719 | 10.507 | 2.835 | 0.878 | 3.944 | 21.200 | 1.203 | 11.155 | 1.941 | 4.329 | 5.233 | 4.173</td>
+            </tr>
+
+            <tr>
+                <td class="pos">10</td>
+                <td class="team">WIL</td>
+                <td>84.922s</td>
+                <td class="gap-pos">+4.80%</td>
+                <td class="gap-pos">+0.00%</td>
+                <td class="delta-neg">-4.80%</td>
+                <td class="section">9.370 | 4.435 | 3.719 | 10.507 | 2.835 | 0.878 | 3.944 | 21.200 | 1.203 | 11.155 | 1.941 | 4.329 | 5.233 | 4.173</td>
+            </tr>
+
+        </tbody>
+    </table>
+    
+    <div class="summary">
+        <h3>Analysis</h3>
+        <p><strong>Gap Accuracy:</strong> All teams show identical simulated times to McLaren, indicating the sandbox scaling factors are not yet translated into LapSimulator penalties.</p>
+        <p><strong>Next Steps:</strong> Map sandbox aero/grip/power unit scaling to LapSimulator penalty coefficients (delta_aero, delta_grip, delta_power) to reflect expected gaps.</p>
+    </div>
+</body>
+</html>
