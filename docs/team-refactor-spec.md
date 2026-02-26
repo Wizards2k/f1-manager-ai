@@ -81,6 +81,25 @@ I gap riportati nella sandbox sono stati ordinati rispetto a McLaren (baseline 0
 
 Questi gap sono applicati a componenti aero/grip/PU (distribuiti rispettivamente 40/35/25%) per generare i valori delle 10 auto tecniche nel modulo `cars_2025.py` (tutte le configurazioni sono già definite ma rimangono scollegate dal gioco principale). In particolare la sandbox contiene un `AeroPackage`, sospensioni, ride height e valori di grip per ciascuna delle 10 squadre, che generano output coerenti con i gap sopra riportati.
 
+## Stato lavori (26 feb 2026)
+
+### Fatto
+- **Dataset sandbox**: creati `python_backend/tmp_data/power_units_2025.py`, `cars_2025.py`, `teams_2025.py` con istanze `PowerUnit`, `Auto`, `Team` basate sui gap dei primi 3 GP 2025 (baseline McLaren). I moduli sono isolati e non importati dal gioco.
+- **Classifica gap**: tabella con gap attesi per ogni squadra (MCL 0.0% → RBRB +6.8%) e spiegazione della distribuzione 40% aero / 35% grip / 25% PU.
+- **Documentazione**: aggiornata sezione “Dataset sandbox” e “Classifica gap” in questo documento.
+
+### In corso
+- **Adattatore per simulazione**: da creare un wrapper che legge i 10 team sandbox, costruisce `CarEntry` compatibili con `LapSimulator` (stato, AeroSetup, PUState, DriverSkills) e itera su Silverstone (`gb-1948_silverstone_HD`). Il wrapper deve mantenere McLaren identica ai dati hard-coded di `scripts/physics_validator.py` per replicare le pole 2025.
+- **Report HTML**: da generare un report in `reports/` che mostri tempi totali, intermedi, gap atteso vs simulato, ordinato dal miglior tempo al peggior (1° → 10°).
+
+### Prossimi passi
+1. Implementare l’adattatore/wrapper basato su `scripts/physics_validator.py`.
+2. Eseguire la simulazione per i 10 team su Silverstone, raccogliere tempi e settori.
+3. Generare il report HTML con confronto gap atteso vs simulato.
+4. Eventuale validazione e, se richiesto, promozione dei dati sandbox nei registri ufficiali.
+
+---
+
 ## Piano di implementazione
 1. **Definizioni modelli**: creare `PowerUnit` e `Auto` in `python_backend/models/` con factory per `PUState`/`CarState` e setup base.
 2. **Refactor Team**: aggiornare `Team` in `models.py` con campi nuovi; rimuovere legacy.
