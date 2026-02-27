@@ -98,6 +98,11 @@ Questi gap sono applicati a componenti aero/grip/PU (distribuiti rispettivamente
 3. Generare il report HTML con confronto gap atteso vs simulato.
 4. Eventuale validazione e, se richiesto, promozione dei dati sandbox nei registri ufficiali.
 
+## LapSimulator e dati scalati
+- Il wrapper `scripts/run_sim_teams.py` deve alimentare LapSimulator con le istanze `Auto` e `PowerUnit` scalate per il 2025, non applicare dei delta manuali sulla vettura di riferimento. McLaren resta la reference perché i suoi valori (aero, sospensioni, PU) sono quelli hardcodati nella simulazione, ma gli altri team devono ricevere direttamente i valori ridotti dalla sandbox (`cars_2025.py`, `power_units_2025.py`, `teams_2025.py`).
+- LapSimulator gestisce realmente le prestazioni solo tramite i coefficienti `delta_aero`, `delta_grip` e `delta_power`, quindi è fondamentale che essi rappresentino la differenza tra la reference e i setup scalati (anche negativi se un team deve migliorare la reference). Tuttavia, il modo più pulito è lasciare i `delta_*` a zero e costruire il `CarEntry` con i dati definitivi della vettura: la fisica calcola automaticamente drag, downforce, grip e potenza sulla base di quegli input.
+- Quando questi dati saranno promossi nei registri ufficiali (`python_backend/data/teams`, `data/cars.py`), il loader dovrà comportarsi allo stesso modo: ogni `Team` ha una `Auto` e una `PowerUnit` che riflettono la performance attesa, invece di tre campi di penalità sparsi.
+
 ---
 
 ## Piano di implementazione
