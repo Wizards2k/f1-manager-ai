@@ -2,23 +2,21 @@
 import argparse
 import sys
 import json
-from contextlib import contextmanager
-from copy import deepcopy
 from pathlib import Path
 from typing import Dict, List
 
 sys.path.append(str(Path(__file__).resolve().parent.parent / "python_backend"))
 
-from lap_simulator import power_unit as lap_power_unit
 from lap_simulator.lap_simulator import LapSimulator, CarEntry
 from lap_simulator.data_types import (
     CarState, EnvContext, AeroSetup, DriverSkills, TyreCompound, TyreState, WheelPosition
 )
+from models.auto_models import Auto
 from lap_simulator.config_loader import load_circuit_config
 
 # Import sandbox data
 from tmp_data.power_units_2025 import POWER_UNITS_2025
-from tmp_data.cars_2025 import CARS_2025
+from tmp_data.cars_2025 import CARS_2025, create_car_2025
 from tmp_data.teams_2025 import TEAMS_2025
 
 # Expected gaps from sandbox (baseline McLaren)
@@ -35,50 +33,39 @@ EXPECTED_GAPS = {
     "RBRB": 6.8,
 }
 
-ENGINE_SUPPLIER_BY_TEAM = {
-    "MCL": "Mercedes",
-    "MER": "Mercedes",
-    "WIL": "Mercedes",
-    "AST": "Mercedes",
-    "RBR": "Red Bull",
-    "RBRB": "Red Bull",
-    "FER": "Ferrari",
-    "HAAS": "Ferrari",
-    "SAU": "Ferrari",
-    "ALP": "Renault",
-}
-
-ENGINE_PENALTIES = {
-    "Mercedes": 0.0,
-    "Red Bull": 0.01,
-    "Ferrari": 0.015,
-    "Renault": 0.03,
-}
-
-BASE_ICE_POWER_KW = lap_power_unit.ICE_BASE_POWER_KW
+def _total_df(auto: Auto) -> float:
+    pkg = auto.aero_package
+    return sum(
+        [
+            pkg.ala_anteriore.df_coeff,
+            pkg.ala_posteriore.df_coeff,
+            pkg.fondo_anteriore.df_coeff,
+            pkg.fondo_posteriore.df_coeff,
+        ]
+    ) * 1000
 
 
-@contextmanager
-def override_ice_power(ice_kw: float):
-    original = lap_power_unit.ICE_BASE_POWER_KW
-    lap_power_unit.ICE_BASE_POWER_KW = ice_kw
-    try:
-        yield
-    finally:
-        lap_power_unit.ICE_BASE_POWER_KW = original
+def _total_grip(auto: Auto) -> float:
+    return auto.grip_base or 1.0
 
 
-def _scale_power_unit_ers(pu, penalty: float):
-    if penalty <= 0:
-        return pu
-    scaled = deepcopy(pu)
-    for ers_map in scaled.ers_maps.values():
-        ers_map.ers_output_kw *= (1.0 - penalty)
-        ers_map.mguh_power_kw *= (1.0 - penalty)
-        ers_map.deploy_budget_mj *= (1.0 - penalty)
-    return scaled
+baseline_auto = create_car_2025('McLaren', 1.0, 1.0)
+BASELINE_DF = _total_df(baseline_auto)
+BASELINE_GRIP = _total_grip(baseline_auto)
 
-def build_car_entry(team_code: str, circuit_id: str) -> CarEntry:
+
+def _clamp(value: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, value))
+
+
+def _penalty_shares(delta_aero: float, delta_grip: float) -> tuple[float, float]:
+    total = abs(delta_aero) + abs(delta_grip)
+    if total < 1e-4:
+        return 0.6, 0.4
+    return abs(delta_aero) / total, abs(delta_grip) / total
+
+
+def build_car_entry(team_code: str, circuit_id: str, config) -> CarEntry:
     """Build a CarEntry from sandbox team data for a given circuit."""
     team = TEAMS_2025[team_code]
     car = team.auto
@@ -117,16 +104,34 @@ def build_car_entry(team_code: str, circuit_id: str) -> CarEntry:
     aero.front_wing.angle_deg = aero_pkg.ala_anteriore.angolo_inclinazione
     aero.rear_wing.angle_deg = aero_pkg.ala_posteriore.angolo_inclinazione
     
-    # PUState from power unit (apply supplier penalties)
-    supplier = ENGINE_SUPPLIER_BY_TEAM.get(team_code, "Mercedes")
-    penalty = ENGINE_PENALTIES.get(supplier, 0.0)
-    ice_power = BASE_ICE_POWER_KW * (1.0 - penalty)
-    scaled_pu = _scale_power_unit_ers(pu, penalty)
-    with override_ice_power(ice_power):
-        pu_state, _ = scaled_pu.make_pu_state()
+    # PUState from power unit (use scaled 2025 config directly)
+    pu_state, _ = pu.make_pu_state()
     state.pu = pu_state
     
-    return CarEntry(car_id=team_code, state=state, aero_setup=aero, driver_skills=skills, push_level=1.0)
+    car_df = _total_df(car)
+    car_grip = _total_grip(car)
+    physical_delta_aero = _clamp((BASELINE_DF - car_df) / BASELINE_DF, -0.03, 0.03)
+    physical_delta_grip = _clamp((BASELINE_GRIP - car_grip) / BASELINE_GRIP, -0.05, 0.05)
+
+    target_penalty = EXPECTED_GAPS.get(team_code, 0.0) / 100.0
+    aero_share, grip_share = _penalty_shares(physical_delta_aero, physical_delta_grip)
+    max_delta = 4.0
+
+    delta_aero = (target_penalty * aero_share) / (config.k_aero_penalty or 1.0)
+    delta_grip = (target_penalty * grip_share) / (config.k_grip_penalty or 1.0)
+
+    delta_aero = _clamp(delta_aero, -max_delta, max_delta)
+    delta_grip = _clamp(delta_grip, -max_delta, max_delta)
+
+    return CarEntry(
+        car_id=team_code,
+        state=state,
+        aero_setup=aero,
+        driver_skills=skills,
+        push_level=1.0,
+        delta_aero=delta_aero,
+        delta_grip=delta_grip,
+    )
 
 def get_baseline_mclaren_entry(circuit_id: str) -> CarEntry:
     """Return the exact baseline entry used in physics_validator.py for McLaren."""
@@ -153,11 +158,18 @@ def get_baseline_mclaren_entry(circuit_id: str) -> CarEntry:
     aero.front_wing.angle_deg = 10.0
     aero.rear_wing.angle_deg = 10.0
     
-    return CarEntry(car_id="MCL", state=state, aero_setup=aero, driver_skills=skills, push_level=1.0)
+    return CarEntry(car_id="MCL", state=state, aero_setup=aero, driver_skills=skills, push_level=1.0, apply_baseline_delta=False)
 
-def run_teams_simulation(circuit_id: str = "gb-1948_silverstone_HD"):
+def _resolve_circuit_id(circuit_id: str) -> str:
+    return circuit_id[:-3] if circuit_id.endswith("_HD") else circuit_id
+
+
+def run_teams_simulation(circuit_id: str = "gb-1948_silverstone_HD", zero_baseline_delta: bool = False):
     """Run quali simulation for all 10 sandbox teams on given circuit."""
-    config = load_circuit_config(circuit_id, 2025)
+    phys_id = _resolve_circuit_id(circuit_id)
+    config = load_circuit_config(phys_id, 2025)
+    if zero_baseline_delta:
+        config.baseline_delta = 0.0
     ref_time = sum(s.dt_ref_s for s in config.sections)
     
     env = EnvContext(air_temp_c=25.0, track_temp_c=35.0)
@@ -174,7 +186,7 @@ def run_teams_simulation(circuit_id: str = "gb-1948_silverstone_HD"):
         if team_code == "MCL":
             entry = get_baseline_mclaren_entry(circuit_id)
         else:
-            entry = build_car_entry(team_code, circuit_id)
+            entry = build_car_entry(team_code, circuit_id, config)
         
         sim = LapSimulator(config, env)
         sim.register_car(entry)
@@ -217,6 +229,6 @@ def run_teams_simulation(circuit_id: str = "gb-1948_silverstone_HD"):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Simulate 10 sandbox teams on a circuit")
     parser.add_argument("--circuit", default="gb-1948_silverstone_HD", help="Circuit ID (default: Silverstone HD)")
+    parser.add_argument("--zero-baseline-delta", action="store_true", help="Disable the global baseline delta so reference laps stay at telemetry times")
     args = parser.parse_args()
-    
-    run_teams_simulation(args.circuit)
+    run_teams_simulation(args.circuit, zero_baseline_delta=args.zero_baseline_delta)

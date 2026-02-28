@@ -89,19 +89,24 @@ Questi gap sono applicati a componenti aero/grip/PU (distribuiti rispettivamente
 - **Documentazione**: aggiornata sezione “Dataset sandbox” e “Classifica gap” in questo documento.
 
 ### In corso
-- **Adattatore per simulazione**: da creare un wrapper che legge i 10 team sandbox, costruisce `CarEntry` compatibili con `LapSimulator` (stato, AeroSetup, PUState, DriverSkills) e itera su Silverstone (`gb-1948_silverstone_HD`). Il wrapper deve mantenere McLaren identica ai dati hard-coded di `scripts/physics_validator.py` per replicare le pole 2025.
-- **Report HTML**: da generare un report in `reports/` che mostri tempi totali, intermedi, gap atteso vs simulato, ordinato dal miglior tempo al peggior (1° → 10°).
+- **Adattatore per simulazione**: `scripts/run_sim_teams.py` ora costruisce `CarEntry` applicando penalità `delta_aero`/`delta_grip` calcolate dal gap target e dai coefficienti `k_*` del circuito (con `--zero-baseline-delta` si mantiene McLaren al tempo telemetrico). Il wrapper gira per ogni circuito, registra i tempi simulati ed esporta JSON/HTML in `reports/`.
+- **Report HTML**: i report comparativi sono stati rigenerati per Silverstone, Monza, Monaco, Baku, Suzuka, Spa e Barcellona, ciascuno con gap atteso vs simulato analizzato.
 
 ### Prossimi passi
-1. Implementare l’adattatore/wrapper basato su `scripts/physics_validator.py`.
-2. Eseguire la simulazione per i 10 team su Silverstone, raccogliere tempi e settori.
-3. Generare il report HTML con confronto gap atteso vs simulato.
-4. Eventuale validazione e, se richiesto, promozione dei dati sandbox nei registri ufficiali.
+1. Consolidare i report multi-circuito (e.g., Silverstone/Monza/Monaco/Baku/Suzuka/Spa/Barcelona) in un documento di confronto o dashboard per evidenziare eventuali deviazioni.
+2. Integrare la pipeline con il watchdog CLI e il workflow `calibration.yml` affinché ogni push rigeneri i report e segnali gap > 1%.
+3. Valutare come promuovere i dataset sandbox verso i registri ufficiali mantenendo il mapping `auto`/`power_unit` per i team reali.
+4. Ogni nuova pista deve continuare a usare `run_sim_teams.py --zero-baseline-delta` per garantire che McLaren resti sul riferimento e che gli altri team riflettano i gap target.
 
 ## LapSimulator e dati scalati
 - Il wrapper `scripts/run_sim_teams.py` deve alimentare LapSimulator con le istanze `Auto` e `PowerUnit` scalate per il 2025, non applicare dei delta manuali sulla vettura di riferimento. McLaren resta la reference perché i suoi valori (aero, sospensioni, PU) sono quelli hardcodati nella simulazione, ma gli altri team devono ricevere direttamente i valori ridotti dalla sandbox (`cars_2025.py`, `power_units_2025.py`, `teams_2025.py`).
 - LapSimulator gestisce realmente le prestazioni solo tramite i coefficienti `delta_aero`, `delta_grip` e `delta_power`, quindi è fondamentale che essi rappresentino la differenza tra la reference e i setup scalati (anche negativi se un team deve migliorare la reference). Tuttavia, il modo più pulito è lasciare i `delta_*` a zero e costruire il `CarEntry` con i dati definitivi della vettura: la fisica calcola automaticamente drag, downforce, grip e potenza sulla base di quegli input.
 - Quando questi dati saranno promossi nei registri ufficiali (`python_backend/data/teams`, `data/cars.py`), il loader dovrà comportarsi allo stesso modo: ogni `Team` ha una `Auto` e una `PowerUnit` che riflettono la performance attesa, invece di tre campi di penalità sparsi.
+
+### Penalità dinamiche del simulatore
+- Oltre alle tre `delta_*`, il cuore di `update_section` applica penalità dinamiche legate ad usura gomma (`update_tyres`), handling (penalità da `aero_forces.handling_penalty`, camber/kerb/bumpiness) e derivazione termica della PU (`generate_output` derating, bucket ERS). Questo significa che, dopo aver passato setup 2025 completi, possiamo ancora bilanciare fine tuning tramite compound, sospensioni e mappe PU senza inventare nuovi `delta`. 
+- Lo stesso motore integra aerodinamica reale direttamente da `AeroSetup` e `AeroForces`, quindi drag e downforce influenzano già la velocità di uscita dei settori.
+- Conserviamo la configurazione reference originale del simulatore per confronti e benchmarking, ma i test di equilibrio usano i dati scalati + questi valori dinamici anziché manipolare manualmente i delta.
 
 ---
 
