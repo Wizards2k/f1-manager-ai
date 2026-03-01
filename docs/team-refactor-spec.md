@@ -88,15 +88,14 @@ Questi gap sono applicati a componenti aero/grip/PU (distribuiti rispettivamente
 - **Classifica gap**: tabella con gap attesi per ogni squadra (MCL 0.0% → RBRB +6.8%) e spiegazione della distribuzione 40% aero / 35% grip / 25% PU.
 - **Documentazione**: aggiornata sezione “Dataset sandbox” e “Classifica gap” in questo documento.
 
-### In corso
-- **Adattatore per simulazione**: `scripts/run_sim_teams.py` ora costruisce `CarEntry` applicando penalità `delta_aero`/`delta_grip` calcolate dal gap target e dai coefficienti `k_*` del circuito (con `--zero-baseline-delta` si mantiene McLaren al tempo telemetrico). Il wrapper gira per ogni circuito, registra i tempi simulati ed esporta JSON/HTML in `reports/`.
-- **Report HTML**: i report comparativi sono stati rigenerati per Silverstone, Monza, Monaco, Baku, Suzuka, Spa e Barcellona, ciascuno con gap atteso vs simulato analizzato.
+- **Adattatore per simulazione**: `scripts/run_sim_teams.py` ora costruisce `CarEntry` a partire dai pacchetti aero/grip/PU 2025 ridotti; `delta_aero`/`delta_grip` sono solo di contorno e la simulazione riflette direttamente i nuovi setup. Il wrapper gira per ogni circuito, registra i tempi simulati ed esporta JSON/HTML in `reports/`.
+- **Report HTML**: i report comparativi sono stati rigenerati per Silverstone, Monza, Monaco, Baku, Suzuka, Spa e Barcellona con i valori aggiornati e l’ultima simulazione su Silverstone (con `--zero-baseline-delta`) certifica che i gap attesi sono ancora rispettati.
 
 ### Prossimi passi
 1. Consolidare i report multi-circuito (e.g., Silverstone/Monza/Monaco/Baku/Suzuka/Spa/Barcelona) in un documento di confronto o dashboard per evidenziare eventuali deviazioni.
 2. Integrare la pipeline con il watchdog CLI e il workflow `calibration.yml` affinché ogni push rigeneri i report e segnali gap > 1%.
 3. Valutare come promuovere i dataset sandbox verso i registri ufficiali mantenendo il mapping `auto`/`power_unit` per i team reali.
-4. Ogni nuova pista deve continuare a usare `run_sim_teams.py --zero-baseline-delta` per garantire che McLaren resti sul riferimento e che gli altri team riflettano i gap target.
+4. Verificare che la descrizione della distribuzione aero (60/40 su ali e floor, gerarchie DF/drag, beam wing unificato) sia riportata anche nei documenti di design e, in futuro, nella UI che mostrerà il component score.
 
 ## LapSimulator e dati scalati
 - Il wrapper `scripts/run_sim_teams.py` deve alimentare LapSimulator con le istanze `Auto` e `PowerUnit` scalate per il 2025, non applicare dei delta manuali sulla vettura di riferimento. McLaren resta la reference perché i suoi valori (aero, sospensioni, PU) sono quelli hardcodati nella simulazione, ma gli altri team devono ricevere direttamente i valori ridotti dalla sandbox (`cars_2025.py`, `power_units_2025.py`, `teams_2025.py`).

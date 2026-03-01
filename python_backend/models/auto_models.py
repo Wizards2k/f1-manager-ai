@@ -15,6 +15,8 @@ class AeroSurface:
     peso_kg: float
     posizione: str  # "anteriore" | "posteriore"
     angolo_inclinazione: Optional[float] = None  # 1-100 per ali / b-wing
+    component_score_df: float = 0.0
+    component_score_drag: float = 0.0
 
 
 @dataclass
@@ -27,6 +29,7 @@ class AeroPackage:
     fondo_anteriore: Optional[AeroSurface] = None
     fondo_posteriore: Optional[AeroSurface] = None
     cofano_motore: Optional[AeroSurface] = None
+    beam_wing: Optional[AeroSurface] = None
     b_wing: Optional[AeroSurface] = None
     notes: Optional[str] = None
 
