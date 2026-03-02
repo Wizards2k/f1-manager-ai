@@ -47,6 +47,9 @@ def update_section(
     push_level: float = 1.0,
     airflow_penalty: float = 0.0,
     traffic_v_max_kph: float = 0.0,
+    delta_aero: float = 0.0,
+    delta_grip: float = 0.0,
+    apply_baseline_delta: bool = True,
 ) -> SectionResult:
     """
     Compute the physics for one car traversing one section.
@@ -463,6 +466,20 @@ def update_section(
                 v = v_exit_cap
     
         
+    # ------------------------------------------------------------------
+    # Apply dt_ref penalty model (baseline + aero/grip deltas)
+    # ------------------------------------------------------------------
+    ref_dt = section.dt_ref_s if (hasattr(section, 'dt_ref_s') and section.dt_ref_s > 0.0) else dt_s
+    delta_penalty = clamp(
+        config.k_aero_penalty * delta_aero + config.k_grip_penalty * delta_grip,
+        -0.05,
+        0.30,
+    )
+    baseline = config.baseline_delta if apply_baseline_delta else 0.0
+    total_penalty = baseline + delta_penalty
+    dt_s = max(dt_s + ref_dt * total_penalty, 0.01)
+    v_effective = (section.length_m / dt_s) * 3.6
+
     car_state.v_current_ms = v
 
     # ===================================================================    # ===================================================================

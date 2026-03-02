@@ -30,8 +30,20 @@ player_team_id = None
 player_driver_numbers = set()
 DEFAULT_PLAYER_TEAM_SIGLA = "FER"
 
+
+def _team_primary_pilots(team):
+    pilots = []
+    if getattr(team, "pilota1", None):
+        pilots.append(team.pilota1)
+    if getattr(team, "pilota2", None):
+        pilots.append(team.pilota2)
+    if not pilots and hasattr(team, "piloti_titolari"):
+        pilots.extend(team.piloti_titolari)
+    return pilots
+
+
 for team in TEAMS:
-    for pilot in team.piloti_titolari:
+    for pilot in _team_primary_pilots(team):
         car = RaceCar(pilot=pilot, team=team)
         car.distance_traveled = car_index * 150
         car.session_start_time = session_start_time

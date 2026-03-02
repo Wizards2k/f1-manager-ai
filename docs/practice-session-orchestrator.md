@@ -106,7 +106,14 @@ Questo garantisce che:
 - `SetupEngineService.apply_setup(car_id, setup_payload)` chiamato prima di ogni run (player/AI) per applicare slider → fisica.
 - `update_section()` chiamato sezione per sezione nel tick loop (vedi `race-engine-integration-spec.md §2`).
 - Eventi su EventBus (futuro): `practice_run_started`, `practice_run_finished`, `practice_run_aborted`, `flag_changed`, `weather_changed`.
-### 5.2 Diagramma di sequenza (aggiornato)
+
+### 5.2 Adapter roster → LapSimulator
+- `utils.adapter.racecar_to_car_entry` converte il `RaceCar` del gioco (alimentato dal nuovo modello `Team` con `auto`, `power_unit`, `pilota*`) in un `CarEntry` completo di `CarState`, `AeroSetup` e `PUState`.
+- I dati pneumatici, freni, fuel e mappature ERS/ICE vengono derivati rispettando gli asset configurati sul team (es. `power_unit.make_pu_state()`).
+- La `SessionBridge` usa sempre questo adapter prima di invocare `AIDriverEngine.configure_current_run(base_entry=...)` in modo che i run AI partano con la configurazione ufficiale 2025; l'AI applica solo overlay (fuel, compound, push level, engine map) sul template roster.
+- I player usano lo stesso percorso quando vengono inviati in pista (`player_send_out`), garantendo coerenza tra UI, PSO e LapSimulator.
+
+### 5.3 Diagramma di sequenza (aggiornato)
 ```
 SessionBridge.init_session()
   → genera TeamSessionPlan per ogni squadra (randomizzato)
@@ -152,5 +159,6 @@ SessionBridge.tick(sim_dt)
 | Export API (§4.2) | ⬜ | |
 | SetupEngine integration (§5.1) | ⬜ | |
 | EventBus (§5.1) | ⬜ | |
+| Adapter roster → LapSimulator (§5.2) | ✅ | `racecar_to_car_entry` in SessionBridge dispatch |
 | Blue flag per-car | ✅ | `CarSessionState.blue_flag`, `set_blue_flag()`, barra blu in timing UI — vedi anche `docs/blue-flag-handling.md` |
 | Eventi UI (§6) | ⬜ | |

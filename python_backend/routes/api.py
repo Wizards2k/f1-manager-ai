@@ -159,6 +159,26 @@ def register_routes(app):
             })
         return jsonify(cars_data)
 
+    def _team_drivers(team):
+        pilots = []
+        if getattr(team, "pilota1", None):
+            pilots.append(team.pilota1)
+        if getattr(team, "pilota2", None):
+            pilots.append(team.pilota2)
+        if not pilots and hasattr(team, "piloti_titolari"):
+            pilots.extend(team.piloti_titolari)
+        if getattr(team, "pilota_riserva", None):
+            pilots.append(team.pilota_riserva)
+        return [
+            {
+                'number': pilot.numero_di_gara,
+                'name': pilot.nome_completo,
+                'abbrev': pilot.abbreviazione,
+                'role': 'reserve' if pilot is getattr(team, 'pilota_riserva', None) else 'primary',
+            }
+            for pilot in pilots
+        ]
+
     @app.route('/api/teams')
     def list_teams():
         payload = []
@@ -168,14 +188,9 @@ def register_routes(app):
                 'team_name': team.nome_scuderia,
                 'team_code': team.sigla_scuderia,
                 'team_color': team.colore_team,
-                'drivers': [
-                    {
-                        'number': pilot.numero_di_gara,
-                        'name': pilot.nome_completo,
-                        'abbrev': pilot.abbreviazione,
-                    }
-                    for pilot in team.piloti_titolari
-                ]
+                'auto_id': getattr(team.auto, 'auto_id', None),
+                'power_unit': getattr(team.power_unit, 'nome', None),
+                'drivers': _team_drivers(team),
             })
         return jsonify(payload)
 
@@ -185,19 +200,12 @@ def register_routes(app):
         if not info:
             return jsonify({'message': 'No player team configured'}), 404
         # Include resolved driver names for convenience
-        driver_details = []
         for team in TEAMS:
             if getattr(team, "team_id", None) == info['team_id']:
-                driver_details = [
-                    {
-                        'number': pilot.numero_di_gara,
-                        'name': pilot.nome_completo,
-                        'abbrev': pilot.abbreviazione,
-                    }
-                    for pilot in team.piloti_titolari
-                ]
+                info['drivers'] = _team_drivers(team)
+                info['auto_id'] = getattr(team.auto, 'auto_id', None)
+                info['power_unit'] = getattr(team.power_unit, 'nome', None)
                 break
-        info['drivers'] = driver_details
         return jsonify(info)
 
     @app.route('/api/toggle_pause', methods=['POST'])

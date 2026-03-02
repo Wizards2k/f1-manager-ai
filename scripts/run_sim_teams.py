@@ -14,10 +14,9 @@ from lap_simulator.data_types import (
 from models.auto_models import Auto
 from lap_simulator.config_loader import load_circuit_config
 
-# Import sandbox data
-from tmp_data.power_units_2025 import POWER_UNITS_2025
-from tmp_data.cars_2025 import CARS_2025, create_car_2025
-from tmp_data.teams_2025 import TEAMS_2025
+from data.teams import TEAMS
+
+TEAM_BY_CODE = {team.sigla_scuderia: team for team in TEAMS}
 
 # Expected gaps from sandbox (baseline McLaren)
 EXPECTED_GAPS = {
@@ -30,7 +29,7 @@ EXPECTED_GAPS = {
     "HAAS": 4.1,
     "WIL": 4.8,
     "SAU": 5.5,
-    "RBRB": 6.8,
+    "RB": 6.8,
 }
 
 def _total_df(auto: Auto) -> float:
@@ -49,7 +48,7 @@ def _total_grip(auto: Auto) -> float:
     return auto.grip_base or 1.0
 
 
-baseline_auto = create_car_2025('McLaren', 1.0, 1.0)
+baseline_auto = TEAM_BY_CODE["MCL"].auto
 BASELINE_DF = _total_df(baseline_auto)
 BASELINE_GRIP = _total_grip(baseline_auto)
 
@@ -66,8 +65,8 @@ def _penalty_shares(delta_aero: float, delta_grip: float) -> tuple[float, float]
 
 
 def build_car_entry(team_code: str, circuit_id: str, config) -> CarEntry:
-    """Build a CarEntry from sandbox team data for a given circuit."""
-    team = TEAMS_2025[team_code]
+    """Build a CarEntry from official team registry for a given circuit."""
+    team = TEAM_BY_CODE[team_code]
     car = team.auto
     pu = team.power_unit
     pilot = team.pilota1  # Use primary driver for quali
@@ -194,7 +193,7 @@ def run_teams_simulation(circuit_id: str = "gb-1948_silverstone_HD", zero_baseli
         
         # Store results
         results[team_code] = {
-            "team_name": TEAMS_2025[team_code].nome_scuderia,
+            "team_name": TEAM_BY_CODE[team_code].nome_scuderia,
             "lap_time_s": result.lap_time_s,
             "section_times": [sr.dt_s for sr in result.section_results],
             "expected_gap_pct": EXPECTED_GAPS[team_code],

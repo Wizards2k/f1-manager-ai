@@ -47,6 +47,8 @@ from .data_types import (
     EngineMapName,
     ERSModeName,
     TyreCompound,
+    TyreState,
+    WheelPosition,
     clamp,
 )
 from .lap_simulator import CarEntry, LapResult
@@ -194,28 +196,91 @@ def _select_compound(program: RunProgram, session_type: SessionType) -> TyreComp
 # Run configuration (prepare CarEntry for LapSimulator)
 # ---------------------------------------------------------------------------
 
+def _apply_setup_overrides(target: AeroSetup, source: Optional[AeroSetup]) -> None:
+    """Copy slider-style values from source into target without losing base aero data."""
+
+    if not target or not source:
+        return
+
+    def _copy_component(dst, src):
+        if not dst or not src:
+            return
+        for attr in ("angle_deg", "angle_ref_deg", "drag_sensitivity", "cooling_contribution"):
+            if hasattr(src, attr):
+                setattr(dst, attr, getattr(src, attr))
+
+    _copy_component(target.front_wing, source.front_wing)
+    _copy_component(target.rear_wing, source.rear_wing)
+    _copy_component(target.beam_wing, source.beam_wing)
+    _copy_component(target.front_floor, source.front_floor)
+    _copy_component(target.rear_floor, source.rear_floor)
+    _copy_component(target.sidepods, source.sidepods)
+    _copy_component(target.engine_cover, source.engine_cover)
+    _copy_component(target.b_wing, source.b_wing)
+
+    if target.suspension_front and source.suspension_front:
+        target.suspension_front.rigidity = source.suspension_front.rigidity
+        target.suspension_front.efficiency = source.suspension_front.efficiency
+    if target.suspension_rear and source.suspension_rear:
+        target.suspension_rear.rigidity = source.suspension_rear.rigidity
+        target.suspension_rear.efficiency = source.suspension_rear.efficiency
+
+    target.antiroll_front_rigidity = source.antiroll_front_rigidity
+    target.antiroll_rear_rigidity = source.antiroll_rear_rigidity
+    target.ride_height_front_mm = source.ride_height_front_mm
+    target.ride_height_rear_mm = source.ride_height_rear_mm
+    target.ride_height_optimal_front_mm = source.ride_height_optimal_front_mm
+    target.ride_height_optimal_rear_mm = source.ride_height_optimal_rear_mm
+
+
 def configure_run(
     run_plan: RunPlan,
     car_id: str,
     aero_setup: AeroSetup,
     driver_skills: DriverSkills,
+    base_entry: Optional[CarEntry] = None,
 ) -> CarEntry:
     """
     Configure a CarEntry ready for LapSimulator.run_laps() based on the run plan.
 
     Sets fuel load, push level, and engine map from the plan.
     """
-    state = CarState(car_id=car_id)
-    state.pu.fuel_kg = run_plan.fuel_kg
-    state.pu.active_map = run_plan.engine_map
+    if base_entry is None:
+        state = CarState(car_id=car_id)
+        entry = CarEntry(
+            car_id=car_id,
+            state=state,
+            aero_setup=aero_setup,
+            driver_skills=driver_skills,
+            push_level=run_plan.push_level,
+        )
+    else:
+        entry = base_entry
+        entry.car_id = car_id
+        entry.state.car_id = car_id
+        entry.driver_skills = driver_skills
 
-    return CarEntry(
-        car_id=car_id,
-        state=state,
-        aero_setup=aero_setup,
-        driver_skills=driver_skills,
-        push_level=run_plan.push_level,
-    )
+        _apply_setup_overrides(entry.aero_setup, aero_setup)
+
+    state = entry.state
+    state.pu.fuel_kg = run_plan.fuel_kg
+    if run_plan.engine_map is not None:
+        state.pu.active_map = run_plan.engine_map
+    if run_plan.ers_mode is not None:
+        state.ers_mode = run_plan.ers_mode.value
+
+    compound = run_plan.compound or TyreCompound.C3
+    state.tyres = {
+        wp: TyreState(wheel_pos=wp, compound=compound) for wp in WheelPosition
+    }
+    for tyre in state.tyres.values():
+        tyre.surface_temp_c = 100.0
+        tyre.core_temp_c = 95.0
+        tyre.wear_pct = 0.0
+        tyre.lap_age = 0
+
+    entry.push_level = run_plan.push_level
+    return entry
 
 
 # ---------------------------------------------------------------------------
@@ -622,7 +687,7 @@ class AIDriverEngine:
             return None
         return self.session_plan.runs[self.current_run_idx]
 
-    def configure_current_run(self) -> Optional[CarEntry]:
+    def configure_current_run(self, base_entry: Optional[CarEntry] = None) -> Optional[CarEntry]:
         """Configure a CarEntry for the current run plan."""
         run_plan = self.next_run()
         if run_plan is None:
@@ -630,7 +695,7 @@ class AIDriverEngine:
 
         car_id = f"{self.team_config.team_id}_{self.driver_config.driver_id}"
         entry = configure_run(
-            run_plan, car_id, self.aero_setup, self.driver_skills
+            run_plan, car_id, self.aero_setup, self.driver_skills, base_entry=base_entry
         )
 
         # Emit start event

@@ -17,6 +17,8 @@ from lap_simulator.data_types import (
     CarState as SimCarState,
     DriverSkills,
     TyreCompound,
+    TyreState,
+    WheelPosition,
 )
 from lap_simulator.lap_simulator import CarEntry, LapResult
 from services.setup_engine_service import SetupEngineService
@@ -132,6 +134,83 @@ def _compute_brake_duct_opening(car, circuit_id: Optional[str] = None) -> float:
 # RaceCar → CarEntry
 # ---------------------------------------------------------------------------
 
+def _build_aero_setup(auto, base: Optional[AeroSetup] = None) -> AeroSetup:
+    setup = base or AeroSetup()
+    if not auto:
+        return setup
+
+    pkg = getattr(auto, "aero_package", None)
+
+    def _apply(surface_obj, aero_surface):
+        if not aero_surface or surface_obj is None:
+            return
+        surface_obj.base_downforce = getattr(aero_surface, "df_coeff", surface_obj.base_downforce)
+        surface_obj.base_drag = getattr(aero_surface, "drag_coeff", surface_obj.base_drag)
+        angle = getattr(aero_surface, "angolo_inclinazione", None)
+        if angle is not None:
+            surface_obj.angle_deg = angle
+
+    if pkg:
+        _apply(setup.front_wing, getattr(pkg, "ala_anteriore", None))
+        _apply(setup.rear_wing, getattr(pkg, "ala_posteriore", None))
+        _apply(setup.front_floor, getattr(pkg, "fondo_anteriore", None))
+        _apply(setup.rear_floor, getattr(pkg, "fondo_posteriore", None))
+        _apply(setup.sidepods, getattr(pkg, "sidepods", None))
+        _apply(setup.engine_cover, getattr(pkg, "cofano_motore", None))
+        _apply(setup.beam_wing, getattr(pkg, "beam_wing", None))
+        _apply(setup.b_wing, getattr(pkg, "b_wing", None))
+
+    suspension = getattr(auto, "suspension", None)
+    if suspension:
+        setup.suspension_front.rigidity = suspension.stiffness_front / 200.0
+        setup.suspension_rear.rigidity = suspension.stiffness_rear / 200.0
+        setup.suspension_front.efficiency = suspension.antiroll_front / 200.0
+        setup.suspension_rear.efficiency = suspension.antiroll_rear / 200.0
+        setup.antiroll_front_rigidity = suspension.antiroll_front / 200.0
+        setup.antiroll_rear_rigidity = suspension.antiroll_rear / 200.0
+
+    ride_height = getattr(auto, "ride_height", None)
+    if ride_height:
+        setup.ride_height_front_mm = ride_height.front_mm
+        setup.ride_height_rear_mm = ride_height.rear_mm
+        setup.ride_height_optimal_front_mm = ride_height.front_mm
+        setup.ride_height_optimal_rear_mm = ride_height.rear_mm
+
+    return setup
+
+
+def _build_sim_state(car_id: str, car) -> SimCarState:
+    state = SimCarState(car_id=car_id)
+    state.brakes.duct_opening = _compute_brake_duct_opening(car)
+
+    # Tyres
+    game_compound = getattr(car, "current_tire", None)
+    sim_compound = game_compound_to_sim(game_compound) if game_compound else TyreCompound.C3
+    state.tyres = {
+        wp: TyreState(wheel_pos=wp, compound=sim_compound) for wp in WheelPosition
+    }
+    temps = getattr(car, "tire_temps", {}) or {}
+    wear = getattr(car, "tire_wear", None)
+    for wp, tyre in state.tyres.items():
+        key = wp.name.lower()
+        if key in temps:
+            tyre.surface_temp_c = temps[key]
+        if wear is not None:
+            tyre.wear_pct = max(0.0, min(1.0, wear)) * 100.0
+
+    # Power Unit
+    power_unit = getattr(getattr(car, "team", None), "power_unit", None)
+    if power_unit:
+        pu_state, engine_map = power_unit.make_pu_state()
+        fuel_pct = getattr(car, "fuel_percent", 100)
+        fuel_capacity = getattr(power_unit, "fuel_tank_capacity_kg", 110.0)
+        pu_state.fuel_kg = fuel_capacity * (fuel_pct / 100.0)
+        state.pu = pu_state
+        state.ers_mode = engine_map.name.value if hasattr(engine_map, "name") else state.ers_mode
+
+    return state
+
+
 def racecar_to_car_entry(
     car,
     aero_setup: Optional[AeroSetup] = None,
@@ -146,19 +225,17 @@ def racecar_to_car_entry(
     """
     car_id = str(car.driver_number)
     skills = pilot_to_driver_skills(car.pilot)
-    setup = aero_setup or AeroSetup()
+    auto = getattr(car.team, "auto", None)
+    setup = aero_setup or _build_aero_setup(auto)
+    if setup is aero_setup and auto:
+        # Ensure base aero values exist even if external setup provided
+        setup = _build_aero_setup(auto, base=setup)
 
     # Map push level: game pace_level 1-10 → sim push_level 0.90-1.10
     pace = getattr(car, "pace_level", 5)
     push_level = 0.90 + (pace - 1) * (0.20 / 9)  # 1→0.90, 5→0.989, 10→1.10
 
-    state = SimCarState(car_id=car_id)
-    state.brakes.duct_opening = _compute_brake_duct_opening(car)
-
-    # Set fuel from game fuel_percent
-    fuel_pct = getattr(car, "fuel_percent", 100)
-    fuel_max_kg = 110.0  # F1 max fuel
-    state.pu.fuel_kg = fuel_max_kg * (fuel_pct / 100.0)
+    state = _build_sim_state(car_id, car)
 
     return CarEntry(
         car_id=car_id,

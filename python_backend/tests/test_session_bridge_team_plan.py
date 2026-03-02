@@ -25,10 +25,21 @@ from utils.session_bridge import SessionBridge
 CIRCUIT_ID = "jp-1962_suzuka"
 
 
+def _team_pilots(team):
+    pilots = []
+    if getattr(team, "pilota1", None):
+        pilots.append(team.pilota1)
+    if getattr(team, "pilota2", None):
+        pilots.append(team.pilota2)
+    if not pilots and hasattr(team, "piloti_titolari"):
+        pilots.extend(team.piloti_titolari)
+    return pilots
+
+
 def _build_race_cars(max_teams: int = 4) -> list:
     cars = []
     for team in TEAMS[:max_teams]:
-        for pilot in team.piloti_titolari:
+        for pilot in _team_pilots(team):
             cars.append(RaceCar(pilot=pilot, team=team))
     return cars
 

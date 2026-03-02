@@ -1,0 +1,44 @@
+name: Calibration Watchdog
+
+on:
+  push:
+    branches: [ feature/fase-e, feature/fase-e-automation, main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps (root)
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Install deps (python_backend)
+        run: |
+          if [ -f python_backend/requirements.txt ]; then pip install -r python_backend/requirements.txt; fi
+
+      - name: Run watchdog (sim vs telemetry)
+        run: |
+          PYTHONPATH=python_backend \
+          python tools/watchdog.py \
+            --manifest config/calibration/manifest.json \
+            --max-delta-pct 1.0 \
+            --max-delta-s 0.5 \
+            --output reports/watchdog_report.json
+
+      - name: Upload watchdog report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: watchdog-report
+          path: reports/watchdog_report.json

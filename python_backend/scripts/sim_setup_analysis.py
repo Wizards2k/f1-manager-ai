@@ -440,10 +440,20 @@ tr:hover {{ background: #1f1f3a; }}
 def main():
     random.seed(42)
 
+    def iter_team_pilots(team):
+        pilots = []
+        if getattr(team, "pilota1", None):
+            pilots.append(team.pilota1)
+        if getattr(team, "pilota2", None):
+            pilots.append(team.pilota2)
+        if not pilots and hasattr(team, "piloti_titolari"):
+            pilots.extend(team.piloti_titolari)
+        return pilots
+
     results: List[CarResult] = []
     for team in TEAMS:
         team_name = team.nome_scuderia
-        for pilot in team.piloti_titolari:
+        for pilot in iter_team_pilots(team):
             car = RaceCar(pilot=pilot, team=team)
             r = simulate_car(car, team_name, seed=42)
             results.append(r)

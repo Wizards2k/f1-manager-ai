@@ -305,9 +305,19 @@ h2{{color:#ccc;margin:28px 0 12px;border-bottom:1px solid #333;padding-bottom:6p
 def main():
     random.seed(42)
 
+    def iter_team_pilots(team):
+        pilots = []
+        if getattr(team, "pilota1", None):
+            pilots.append(team.pilota1)
+        if getattr(team, "pilota2", None):
+            pilots.append(team.pilota2)
+        if not pilots and hasattr(team, "piloti_titolari"):
+            pilots.extend(team.piloti_titolari)
+        return pilots
+
     results: List[AISetupState] = []
     for team in TEAMS:
-        for pilot in team.piloti_titolari:
+        for pilot in iter_team_pilots(team):
             state = simulate_car(team, pilot, seed=42)
             results.append(state)
 
