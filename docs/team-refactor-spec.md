@@ -90,12 +90,13 @@ Questi gap sono applicati a componenti aero/grip/PU (distribuiti rispettivamente
 
 - **Adattatore per simulazione**: `scripts/run_sim_teams.py` ora costruisce `CarEntry` a partire dai pacchetti aero/grip/PU 2025 ridotti; `delta_aero`/`delta_grip` sono solo di contorno e la simulazione riflette direttamente i nuovi setup. Il wrapper gira per ogni circuito, registra i tempi simulati ed esporta JSON/HTML in `reports/`.
 - **Report HTML**: i report comparativi sono stati rigenerati per Silverstone, Monza, Monaco, Baku, Suzuka, Spa e Barcellona con i valori aggiornati e l’ultima simulazione su Silverstone (con `--zero-baseline-delta`) certifica che i gap attesi sono ancora rispettati.
+- **Registri ufficiali**: creati `python_backend/data/power_units.py` e `python_backend/data/cars.py` e collegati a `python_backend/data/teams/__init__.py`, che ora istanzia ogni `Team` con `auto` e `power_unit` ufficiali oltre a `pilota1/pilota2`. La migrazione dal sandbox è avvenuta mantenendo l’isolamento e assegnando `team_id` automaticamente.
 
 ### Prossimi passi
-1. Consolidare i report multi-circuito (e.g., Silverstone/Monza/Monaco/Baku/Suzuka/Spa/Barcelona) in un documento di confronto o dashboard per evidenziare eventuali deviazioni.
-2. Integrare la pipeline con il watchdog CLI e il workflow `calibration.yml` affinché ogni push rigeneri i report e segnali gap > 1%.
-3. Valutare come promuovere i dataset sandbox verso i registri ufficiali mantenendo il mapping `auto`/`power_unit` per i team reali.
-4. Verificare che la descrizione della distribuzione aero (60/40 su ali e floor, gerarchie DF/drag, beam wing unificato) sia riportata anche nei documenti di design e, in futuro, nella UI che mostrerà il component score.
+1. Aggiornare i consumer (setup engine, LapSimulator, UI garage/API) affinché leggano `team.auto`, `team.power_unit`, `team.pilota1/2/riserva` invece dei campi legacy (`forza_auto`, stringhe PU, liste `piloti_titolari`).
+2. Consolidare i report multi-circuito (Silverstone/Monza/Monaco/Baku/Suzuka/Spa/Barcelona) in un documento o dashboard per evidenziare eventuali deviazioni.
+3. Integrare la pipeline con il watchdog CLI e il workflow `calibration.yml` affinché ogni push rigeneri i report e segnali gap > 1%.
+4. Verificare che la descrizione della distribuzione aero (60/40 su ali e floor, gerarchie DF/drag, beam wing unificato) sia riportata anche nei documenti di design e nella UI che mostrerà il component score.
 
 ## LapSimulator e dati scalati
 - Il wrapper `scripts/run_sim_teams.py` deve alimentare LapSimulator con le istanze `Auto` e `PowerUnit` scalate per il 2025, non applicare dei delta manuali sulla vettura di riferimento. McLaren resta la reference perché i suoi valori (aero, sospensioni, PU) sono quelli hardcodati nella simulazione, ma gli altri team devono ricevere direttamente i valori ridotti dalla sandbox (`cars_2025.py`, `power_units_2025.py`, `teams_2025.py`).
@@ -106,6 +107,33 @@ Questi gap sono applicati a componenti aero/grip/PU (distribuiti rispettivamente
 - Oltre alle tre `delta_*`, il cuore di `update_section` applica penalità dinamiche legate ad usura gomma (`update_tyres`), handling (penalità da `aero_forces.handling_penalty`, camber/kerb/bumpiness) e derivazione termica della PU (`generate_output` derating, bucket ERS). Questo significa che, dopo aver passato setup 2025 completi, possiamo ancora bilanciare fine tuning tramite compound, sospensioni e mappe PU senza inventare nuovi `delta`. 
 - Lo stesso motore integra aerodinamica reale direttamente da `AeroSetup` e `AeroForces`, quindi drag e downforce influenzano già la velocità di uscita dei settori.
 - Conserviamo la configurazione reference originale del simulatore per confronti e benchmarking, ma i test di equilibrio usano i dati scalati + questi valori dinamici anziché manipolare manualmente i delta.
+
+## Sviluppo motore fisico
+
+### Visione di gameplay
+- Partire dai coefficienti di downforce/drag dell’auto per determinare direttamente velocità in curva e in rettilineo.
+- Assetti sbilanciati devono penalizzare sensibilmente il tempo sul giro: una McLaren con setup errato deve perdere decimi in ogni curva anche se la base vettura è la migliore.
+- Circuiti diversi devono richiedere scelte di carico diverse (Monza → ala quasi zero, Monaco → massimo carico), premiando chi adatta il setup e penalizzando chi usa un assetto “bilanciato ma sbagliato” per il tracciato.
+
+### Stato attuale
+- `compute_forces` (@python_backend/lap_simulator/aero_package.py) somma DF/drag e calcola un `handling_penalty`, ma l’effetto è limitato a piccole variazioni di grip meccanico.
+- Non esistono finestre circuito-specifiche: tutti i tracciati usano gli stessi coefficienti (`baseline_delta`, `k_aero_penalty`, ecc.) caricati da `config_loader`.
+- I delta (`delta_aero`, `delta_grip`) sono applicati a fine sezione e non derivano da un modello fisico di “più DF = più drag”.
+- La pipeline assetto (slider → valori fisici) non impone vincoli sulle piste: un setup 60/70 funziona allo stesso modo su Monza e Monaco se i delta restano nei range.
+
+### Gap da colmare
+1. **Penalità assetto deboli**: l’handling penalty riduce poco il grip e non limita la velocità in curva/uscita.
+2. **Nessuna finestra per circuito**: manca un target DF/drag per pista; non c’è boost/penalty extra per low‑drag vs high‑drag.
+3. **Assenza di saturazione**: gli angoli di ala non saturano la generazione del carico né impongono compromessi concreti su drag/top speed.
+4. **Validazione limitata**: non esistono test automatici “setup ottimale vs setup sbagliato” che garantiscano differenze di almeno 0.6‑0.8s al giro.
+
+### Roadmap proposta
+1. **Layer circuito-specifico**: definire per ogni pista una tabella `target_aero` (range DF, rapporto front/rear, drag minimo) e applicare penalty moltiplicativi quando il setup cade fuori finestra.
+2. **Penalità dinamiche forti**: estendere `handling_penalty` per agire direttamente su `df_front`/`df_rear` e introdurre un `drag_penalty` che riduca `v_max_kph` nei rettilinei quando l’ala è troppo carica.
+3. **Assetto → fisica**: aggiornare `setup_engine_service` per mappare i slider sulle finestre circuito e implementare curve di saturazione/efficienza (più angolo → plateau DF ma drag esplode).
+4. **Test & watchdog**: creare scenari di benchmark (setup ottimale vs errato su Monza/Monaco) e integrare il check nel watchdog, così ogni regressione viene segnalata oltre una soglia.
+
+Questa sezione guida l’evoluzione del LapSimulator verso il “motore fisico” desiderato, mantenendo la base attuale ma introducendo layer di bilanciamento più aggressivi e circuit‑aware.
 
 ---
 
