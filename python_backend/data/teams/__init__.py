@@ -1,120 +1,109 @@
-"""Roster ufficiale delle scuderie con forza auto e piloti titolari."""
+"""Roster ufficiale delle scuderie 2025 con auto e power unit promotati dal sandbox."""
+
+from typing import Dict, List
 
 from models import Team, Nazionalita
 from data.pilots import PILOTS
+from data.power_units import get_power_unit
+from data.cars import get_car
 
-TEAMS = [
-    Team(
-        nome_scuderia="Oracle Red Bull Racing",
-        sigla_scuderia="RBR",
-        nazionalita=Nazionalita.AUSTRIA,
-        colore_team="#0600EF",
-        forza_auto=91,
-        power_unit="Honda RBPT",
-        piloti_titolari=[PILOTS["VERSTAPPEN"], PILOTS["TSUNODA"]],
-        simulator_quality=90,
-        pitstop_skill=92,
-    ),
-    Team(
-        nome_scuderia="Scuderia Ferrari",
-        sigla_scuderia="FER",
-        nazionalita=Nazionalita.ITALIA,
-        colore_team="#DC0000",
-        forza_auto=87,
-        power_unit="Ferrari 066/10",
-        piloti_titolari=[PILOTS["LECLERC"], PILOTS["HAMILTON"]],
-        simulator_quality=88,
-        pitstop_skill=90,
-    ),
-    Team(
-        nome_scuderia="Mercedes-AMG PETRONAS",
-        sigla_scuderia="MER",
-        nazionalita=Nazionalita.GERMANIA,
-        colore_team="#00A19C",
-        forza_auto=85,
-        power_unit="Mercedes-AMG F1 M14",
-        piloti_titolari=[PILOTS["RUSSELL"], PILOTS["ANTONELLI"]],
-        simulator_quality=86,
-        pitstop_skill=88,
-    ),
-    Team(
-        nome_scuderia="McLaren F1 Team",
-        sigla_scuderia="MCL",
-        nazionalita=Nazionalita.REGNO_UNITO,
-        colore_team="#FF8700",
-        forza_auto=95,
-        power_unit="Mercedes-AMG",
-        piloti_titolari=[PILOTS["NORRIS"], PILOTS["PIASTRI"]],
-        simulator_quality=84,
-        pitstop_skill=85,
-    ),
-    Team(
-        nome_scuderia="Aston Martin Aramco",
-        sigla_scuderia="AMR",
-        nazionalita=Nazionalita.REGNO_UNITO,
-        colore_team="#006F62",
-        forza_auto=82,
-        power_unit="Mercedes-AMG",
-        piloti_titolari=[PILOTS["ALONSO"], PILOTS["STROLL"]],
-        simulator_quality=78,
-        pitstop_skill=80,
-    ),
-    Team(
-        nome_scuderia="BWT Alpine F1 Team",
-        sigla_scuderia="ALP",
-        nazionalita=Nazionalita.FRANCIA,
-        colore_team="#0090FF",
-        forza_auto=79,
-        power_unit="Renault E-Tech",
-        piloti_titolari=[PILOTS["GASLY"], PILOTS["COLAPINTO"]],
-        simulator_quality=72,
-        pitstop_skill=75,
-    ),
-    Team(
-        nome_scuderia="Williams Racing",
-        sigla_scuderia="WIL",
-        nazionalita=Nazionalita.REGNO_UNITO,
-        colore_team="#00A0DE",
-        forza_auto=76,
-        power_unit="Mercedes-AMG",
-        piloti_titolari=[PILOTS["ALBON"], PILOTS["SAINZ"]],
-        simulator_quality=70,
-        pitstop_skill=74,
-    ),
-    Team(
-        nome_scuderia="Visa Cash App RB",
-        sigla_scuderia="RB",
-        nazionalita=Nazionalita.ITALIA,
-        colore_team="#1E2C5C",
-        forza_auto=77,
-        power_unit="Honda RBPT",
-        piloti_titolari=[PILOTS["LAWSON"], PILOTS["HADJAR"]],
-        simulator_quality=68,
-        pitstop_skill=72,
-    ),
-    Team(
-        nome_scuderia="Stake F1 Team Kick Sauber",
-        sigla_scuderia="SAU",
-        nazionalita=Nazionalita.SVIZZERA,
-        colore_team="#00FF87",
-        forza_auto=73,
-        power_unit="Ferrari 066/10",
-        piloti_titolari=[PILOTS["HULKENBERG"], PILOTS["BORTOLETO"]],
-        simulator_quality=64,
-        pitstop_skill=70,
-    ),
-    Team(
-        nome_scuderia="MoneyGram Haas F1 Team",
-        sigla_scuderia="HAA",
-        nazionalita=Nazionalita.USA,
-        colore_team="#B6BABD",
-        forza_auto=71,
-        power_unit="Ferrari 066/10",
-        piloti_titolari=[PILOTS["OCON"], PILOTS["BEARMAN"]],
-        simulator_quality=60,
-        pitstop_skill=68,
-    ),
-]
+
+TEAM_METADATA: Dict[str, Dict[str, str]] = {
+    "RBR": {
+        "nome": "Oracle Red Bull Racing",
+        "colore": "#0600EF",
+        "sponsor": "Oracle",
+        "naz": Nazionalita.AUSTRIA,
+    },
+    "FER": {
+        "nome": "Scuderia Ferrari",
+        "colore": "#DC0000",
+        "sponsor": "Mission Winnow",
+        "naz": Nazionalita.ITALIA,
+    },
+    "MER": {
+        "nome": "Mercedes-AMG PETRONAS",
+        "colore": "#00A19C",
+        "sponsor": "Petronas",
+        "naz": Nazionalita.GERMANIA,
+    },
+    "MCL": {
+        "nome": "McLaren F1 Team",
+        "colore": "#FF8700",
+        "sponsor": "Gulf",
+        "naz": Nazionalita.REGNO_UNITO,
+    },
+    "AST": {
+        "nome": "Aston Martin Aramco",
+        "colore": "#006F62",
+        "sponsor": "Aramco",
+        "naz": Nazionalita.REGNO_UNITO,
+    },
+    "ALP": {
+        "nome": "BWT Alpine F1 Team",
+        "colore": "#0090FF",
+        "sponsor": "BWT",
+        "naz": Nazionalita.FRANCIA,
+    },
+    "WIL": {
+        "nome": "Williams Racing",
+        "colore": "#00A0DE",
+        "sponsor": "Qatar Airways",
+        "naz": Nazionalita.REGNO_UNITO,
+    },
+    "RB": {
+        "nome": "Visa Cash App RB",
+        "colore": "#1E2C5C",
+        "sponsor": "Visa",
+        "naz": Nazionalita.ITALIA,
+    },
+    "SAU": {
+        "nome": "Stake F1 Team Kick Sauber",
+        "colore": "#00FF87",
+        "sponsor": "Stake",
+        "naz": Nazionalita.SVIZZERA,
+    },
+    "HAAS": {
+        "nome": "MoneyGram Haas F1 Team",
+        "colore": "#B6BABD",
+        "sponsor": "MoneyGram",
+        "naz": Nazionalita.USA,
+    },
+}
+
+TEAM_DRIVERS: Dict[str, List[str]] = {
+    "RBR": ["VERSTAPPEN", "TSUNODA"],
+    "FER": ["LECLERC", "HAMILTON"],
+    "MER": ["RUSSELL", "ANTONELLI"],
+    "MCL": ["NORRIS", "PIASTRI"],
+    "AST": ["ALONSO", "STROLL"],
+    "ALP": ["GASLY", "COLAPINTO"],
+    "WIL": ["ALBON", "SAINZ"],
+    "RB": ["LAWSON", "HADJAR"],
+    "SAU": ["HULKENBERG", "BORTOLETO"],
+    "HAAS": ["OCON", "BEARMAN"],
+}
+
+
+def _build_team(team_code: str) -> Team:
+    meta = TEAM_METADATA[team_code]
+    driver_codes = TEAM_DRIVERS[team_code]
+
+    return Team(
+        nome_scuderia=meta["nome"],
+        sigla_scuderia=team_code,
+        nazionalita=meta["naz"],
+        colore_team=meta["colore"],
+        power_unit=get_power_unit(team_code),
+        auto=get_car(team_code),
+        pilota1=PILOTS[driver_codes[0]],
+        pilota2=PILOTS[driver_codes[1]],
+        sponsor_principale=meta["sponsor"],
+        simulator_quality=85,
+    )
+
+
+TEAMS = [_build_team(code) for code in TEAM_METADATA.keys()]
 
 for idx, team in enumerate(TEAMS, start=1):
     setattr(team, "team_id", idx)
