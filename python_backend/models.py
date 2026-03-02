@@ -318,35 +318,48 @@ class Team:
         sigla_scuderia: str,
         nazionalita: Nazionalita,
         colore_team: str,
-        forza_auto: int,
-        power_unit: str = "",
+        power_unit: "PowerUnit",
+        auto: "Auto",
+        pilota1: Pilota,
+        pilota2: Pilota,
         sponsor_principale: str = "",
-        piloti_titolari: Optional[List[Pilota]] = None,
-        simulator_quality: int = 70,
-        pitstop_skill: int = 70,
+        simulator_quality: int = 75,
+        pilota_riserva: Optional[Pilota] = None,
     ):
+        from models.auto_models import Auto  # lazy import per evitare cicli
+        from models.power_unit_models import PowerUnit
+
+        if not isinstance(power_unit, PowerUnit):  # pragma: no cover - guard
+            raise TypeError("power_unit deve essere un'istanza di PowerUnit")
+        if not isinstance(auto, Auto):  # pragma: no cover - guard
+            raise TypeError("auto deve essere un'istanza di Auto")
+
         self.nome_scuderia = nome_scuderia
         self.sigla_scuderia = sigla_scuderia
         self.nazionalita = nazionalita
         self.colore_team = colore_team
         self.power_unit = power_unit
+        self.auto = auto
         self.sponsor_principale = sponsor_principale
-        self.piloti_titolari = piloti_titolari or []
-
-        self.forza_auto = MathUtils.clamp(forza_auto, 0, 100)
-        self.affidabilita = 75
-        self.aerodinamica = 70
-        self.meccanica = 70
         self.simulator_quality = MathUtils.clamp(simulator_quality, 1, 100)
-        self.pitstop_skill = MathUtils.clamp(pitstop_skill, 1, 100)
-        self.efficienza_pit = self.pitstop_skill
+
+        self.pilota1 = pilota1
+        self.pilota2 = pilota2
+        self.pilota_riserva = pilota_riserva
+
+    @property
+    def piloti_titolari(self) -> List[Pilota]:
+        return [self.pilota1, self.pilota2]
 
     def aggiungi_pilota(self, pilota: Pilota):
-        self.piloti_titolari.append(pilota)
+        if not self.pilota_riserva:
+            self.pilota_riserva = pilota
+        else:
+            raise ValueError("La scuderia ha già un pilota di riserva assegnato")
 
     @property
     def bonus_prestazione(self) -> float:
-        return self.forza_auto * 0.1
+        return getattr(self.auto, "grip_base", 1.0) * 10.0
 
 
 class RaceCar:
