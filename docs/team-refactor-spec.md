@@ -3,10 +3,10 @@
 ## Obiettivo
 Separare le responsabilità tra entità di dominio (Team, Auto, PowerUnit, Pilota, Pit Crew) eliminando campi ibridi e introducendo classi dedicate per motore e telaio. Il Team diventa un contenitore di risorse (piloti, auto, PU) senza parametri tecnici duplicati.
 
-## Stato attuale (feb 2026)
-- `Team` (@python_backend/models/models.py) include campi ibridi (forza_auto, affidabilita, aerodinamica, meccanica, pitstop_skill) e `power_unit` come stringa.
-- Dataset `TEAMS` (@python_backend/data/teams/__init__.py) istanzia 10 scuderie 2025 e assegna `team_id` incrementale.
-- Logica motore già presente in `lap_simulator/power_unit.py` + `PUState`/`EngineMapParams` in `data_types.py`, ma non esiste una classe dati “PowerUnit” a livello roster.
+## Stato attuale (mar 2026)
+- `Team` (@python_backend/models.py) è stato rifattorizzato: ora richiede `auto: Auto`, `power_unit: PowerUnit`, `pilota1/2` nominati e opzionalmente `pilota_riserva`; i campi legacy (`forza_auto`, `affidabilita`, `meccanica`, `pitstop_skill`) sono stati rimossi.
+- Il dataset `TEAMS` (@python_backend/data/teams/__init__.py) usa i registri ufficiali `data.power_units` e `data.cars` per costruire ogni scuderia e continua ad assegnare `team_id` incrementale.
+- La logica motore di `lap_simulator/power_unit.py` e i runtime state (`PUState`, `EngineMapParams`) restano invariati: lo step di integrazione completo con i nuovi oggetti `PowerUnit` è in corso.
 
 ## Target modello dati
 
@@ -81,7 +81,7 @@ I gap riportati nella sandbox sono stati ordinati rispetto a McLaren (baseline 0
 
 Questi gap sono applicati a componenti aero/grip/PU (distribuiti rispettivamente 40/35/25%) per generare i valori delle 10 auto tecniche nel modulo `cars_2025.py` (tutte le configurazioni sono già definite ma rimangono scollegate dal gioco principale). In particolare la sandbox contiene un `AeroPackage`, sospensioni, ride height e valori di grip per ciascuna delle 10 squadre, che generano output coerenti con i gap sopra riportati.
 
-## Stato lavori (26 feb 2026)
+## Stato lavori (2 mar 2026)
 
 ### Fatto
 - **Dataset sandbox**: creati `python_backend/tmp_data/power_units_2025.py`, `cars_2025.py`, `teams_2025.py` con istanze `PowerUnit`, `Auto`, `Team` basate sui gap dei primi 3 GP 2025 (baseline McLaren). I moduli sono isolati e non importati dal gioco.
@@ -91,12 +91,13 @@ Questi gap sono applicati a componenti aero/grip/PU (distribuiti rispettivamente
 - **Adattatore per simulazione**: `scripts/run_sim_teams.py` ora costruisce `CarEntry` a partire dai pacchetti aero/grip/PU 2025 ridotti; `delta_aero`/`delta_grip` sono solo di contorno e la simulazione riflette direttamente i nuovi setup. Il wrapper gira per ogni circuito, registra i tempi simulati ed esporta JSON/HTML in `reports/`.
 - **Report HTML**: i report comparativi sono stati rigenerati per Silverstone, Monza, Monaco, Baku, Suzuka, Spa e Barcellona con i valori aggiornati e l’ultima simulazione su Silverstone (con `--zero-baseline-delta`) certifica che i gap attesi sono ancora rispettati.
 - **Registri ufficiali**: creati `python_backend/data/power_units.py` e `python_backend/data/cars.py` e collegati a `python_backend/data/teams/__init__.py`, che ora istanzia ogni `Team` con `auto` e `power_unit` ufficiali oltre a `pilota1/pilota2`. La migrazione dal sandbox è avvenuta mantenendo l’isolamento e assegnando `team_id` automaticamente.
+- **Refactor Team**: `python_backend/models.py` espone ora `power_unit`, `auto`, `pilota1/2/riserva` come attributi nativi, applica clamp solo a `simulator_quality` e rende `bonus_prestazione` dipendente dagli attributi tecnici dell’`Auto`. Il loader ufficiale usa esclusivamente questo costruttore.
 
 ### Prossimi passi
-1. Aggiornare i consumer (setup engine, LapSimulator, UI garage/API) affinché leggano `team.auto`, `team.power_unit`, `team.pilota1/2/riserva` invece dei campi legacy (`forza_auto`, stringhe PU, liste `piloti_titolari`).
-2. Consolidare i report multi-circuito (Silverstone/Monza/Monaco/Baku/Suzuka/Spa/Barcelona) in un documento o dashboard per evidenziare eventuali deviazioni.
-3. Integrare la pipeline con il watchdog CLI e il workflow `calibration.yml` affinché ogni push rigeneri i report e segnali gap > 1%.
-4. Verificare che la descrizione della distribuzione aero (60/40 su ali e floor, gerarchie DF/drag, beam wing unificato) sia riportata anche nei documenti di design e nella UI che mostrerà il component score.
+1. Aggiornare tutti i consumer del gioco (`RaceCar`, `utils.performance`, `routes/api.py`, `utils/game_logic[_v1]`, script di analisi) per leggere `team.auto`, `team.power_unit`, `team.pilota1/2/riserva` ed eliminare l’uso di `forza_auto`, liste `piloti_titolari` e stringhe PU.
+2. Collegare i nuovi oggetti `Auto`/`PowerUnit` al LapSimulator principale (creazione `CarState`/`PUState`, mappe ICE/ERS di default) e aggiornare i test per coprire il nuovo pipeline.
+3. Consolidare i report multi-circuito (Silverstone/Monza/Monaco/Baku/Suzuka/Spa/Barcellona) in un documento o dashboard condiviso e integrare il workflow `calibration.yml`/watchdog per rigenerare gli output e segnalare gap > 1% automaticamente.
+4. Verificare che la documentazione e la UI riportino la distribuzione aero (60/40 su ali e floor, gerarchie DF/drag, beam wing unificato) utilizzando i dati provenienti dai registri ufficiali.
 
 ## LapSimulator e dati scalati
 - Il wrapper `scripts/run_sim_teams.py` deve alimentare LapSimulator con le istanze `Auto` e `PowerUnit` scalate per il 2025, non applicare dei delta manuali sulla vettura di riferimento. McLaren resta la reference perché i suoi valori (aero, sospensioni, PU) sono quelli hardcodati nella simulazione, ma gli altri team devono ricevere direttamente i valori ridotti dalla sandbox (`cars_2025.py`, `power_units_2025.py`, `teams_2025.py`).
