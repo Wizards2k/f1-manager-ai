@@ -38,3 +38,9 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# FastF1 cache
+*.ff1pkl
+fastf1_http_cache.sqlite
+**/.fastf1_cache/
+**/tmp_fastf1_cache/
