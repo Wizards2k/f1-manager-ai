@@ -24,9 +24,16 @@ from data.teams import TEAMS
 
 _BASE_TEAM = next((team for team in TEAMS if team.sigla_scuderia == "MCL"), TEAMS[0])
 
-def get_baseline_entry(circuit_id: str) -> CarEntry:
+
+def get_baseline_entry(circuit_id: str, pu_mode: str = "registry") -> CarEntry:
     state = CarState(car_id="BASE")
-    state.pu = _BASE_TEAM.power_unit.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALY)
+    if pu_mode == "registry":
+        state.pu = _BASE_TEAM.power_unit.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALY)
+    else:
+        # Legacy behavior: use the default PUState, only set fuel and map
+        state.pu.fuel_kg = 2.5
+        state.pu.active_map = EngineMapName.STANDARD
+        state.pu.ers_energy_mj = 4.0
     soft_compound = TyreCompound.C4 if circuit_id == "it-1922_monza" else TyreCompound.C5
     state.tyres = {wp: TyreState(wheel_pos=wp, compound=soft_compound) for wp in WheelPosition}
     for tyre in state.tyres.values():
@@ -50,13 +57,13 @@ def get_baseline_entry(circuit_id: str) -> CarEntry:
     
     return CarEntry(car_id="BASE", state=state, aero_setup=aero, driver_skills=skills, push_level=1.0)
 
-def run_single(circuit_id: str, detailed: bool = True, sector_idx: Optional[int] = None):
+def run_single(circuit_id: str, detailed: bool = True, sector_idx: Optional[int] = None, pu_mode: str = "registry"):
     config = load_circuit_config(circuit_id, 2025)
     ref_time = sum(s.dt_ref_s for s in config.sections)
     
     env = EnvContext(air_temp_c=25.0, track_temp_c=35.0)
     sim = LapSimulator(config, env)
-    sim.register_car(get_baseline_entry(circuit_id))
+    sim.register_car(get_baseline_entry(circuit_id, pu_mode=pu_mode))
     
     result = sim.run_lap()["BASE"]
     
@@ -139,7 +146,7 @@ def run_single(circuit_id: str, detailed: bool = True, sector_idx: Optional[int]
             delta = result.lap_time_s - ref_time
             print(f"{circuit_id:<25} | SIM: {result.lap_time_s:7.3f}s | REF: {ref_time:7.3f}s | DELTA: {delta:+7.3f}s")
 
-def run_batch():
+def run_batch(pu_mode: str):
     manifest_path = Path("python_backend/data/circuits/2025/manifest.json")
     with open(manifest_path) as f:
         manifest = json.load(f)
@@ -149,7 +156,7 @@ def run_batch():
     print(f"{'='*70}")
     for cid in sorted(manifest.keys()):
         try:
-            run_single(cid, detailed=False)
+            run_single(cid, detailed=False, pu_mode=pu_mode)
         except Exception as e:
             print(f"{cid:<25} | ERROR: {e}")
     print(f"{'='*70}\n")
@@ -159,11 +166,17 @@ if __name__ == "__main__":
     parser.add_argument("--circuit", help="Circuit ID to run detailed analysis on (e.g. mc-1929_monaco)")
     parser.add_argument("--sector", type=int, help="Run detailed output for a single sector index")
     parser.add_argument("--batch", action="store_true", help="Run all circuits in single-line summary mode")
+    parser.add_argument(
+        "--pu-state",
+        choices=["registry", "legacy"],
+        default="registry",
+        help="Use official registry PUState (default) or legacy inline PU setup",
+    )
     args = parser.parse_args()
     
     if args.batch:
-        run_batch()
+        run_batch(args.pu_state)
     elif args.circuit:
-        run_single(args.circuit, detailed=True, sector_idx=args.sector)
+        run_single(args.circuit, detailed=True, sector_idx=args.sector, pu_mode=args.pu_state)
     else:
         parser.print_help()

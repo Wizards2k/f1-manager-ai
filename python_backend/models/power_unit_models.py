@@ -23,6 +23,7 @@ class ERSMap:
     bucket_primary_pct: float  # 1–120 (%)
     bucket_secondary_pct: float  # 1–120 (%)
     bucket_exit_pct: float  # 1–120 (%)
+    defense_reserve_mj: float = 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -89,10 +90,40 @@ class PowerUnit:
     base_burn_kg_per_s: float = 0.035
     regen_profile: Optional[dict] = None
 
-    def create_state(self, fuel_kg: Optional[float] = None, map_name: EngineMapName = EngineMapName.STANDARD) -> PUState:
-        """Factory per generare un nuovo PUState runtime senza modificare la fisica esistente."""
+    def _resolve_ers_map(self, map_name: EngineMapName) -> Optional[ERSMap]:
+        if self.ers_maps:
+            return self.ers_maps.get(map_name) or next(iter(self.ers_maps.values()))
+        return None
+
+    def create_state(
+        self,
+        fuel_kg: Optional[float] = None,
+        map_name: EngineMapName = EngineMapName.STANDARD,
+    ) -> PUState:
+        """Factory per generare un nuovo PUState coerente con i dati roster."""
+
         state = PUState()
         state.active_map = map_name
         state.fuel_kg = fuel_kg if fuel_kg is not None else self.fuel_capacity_kg
-        # Nota: le mappe ICE/ERS e gli altri parametri verranno collegate nel passaggio di integrazione.
+        state.ers_energy_mj = getattr(self.battery, "capacity_mj", state.ers_energy_mj)
+        state.fuel_burn_rate_kg_per_s = self.base_burn_kg_per_s
+
+        ers_map = self._resolve_ers_map(map_name)
+        if ers_map:
+            deploy_budget = ers_map.deploy_budget_mj
+            state.deploy_budget_total_mj = deploy_budget
+            state.bucket_primary_total_mj = deploy_budget * (ers_map.bucket_primary_pct / 100.0)
+            state.bucket_secondary_total_mj = deploy_budget * (ers_map.bucket_secondary_pct / 100.0)
+            state.bucket_exit_total_mj = deploy_budget * (ers_map.bucket_exit_pct / 100.0)
+            state.defense_reserve_available_mj = ers_map.defense_reserve_mj
+
         return state
+
+    def make_pu_state(
+        self,
+        fuel_kg: Optional[float] = None,
+        map_name: EngineMapName = EngineMapName.STANDARD,
+    ):
+        """Compat helper per i vecchi consumer – ritorna (PUState, None)."""
+        state = self.create_state(fuel_kg=fuel_kg, map_name=map_name)
+        return state, None
