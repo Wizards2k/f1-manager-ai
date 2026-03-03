@@ -10,11 +10,11 @@ from dataclasses import replace
 from typing import Dict, Optional
 
 from lap_simulator.data_types import EngineMapName, EngineMapParams, PUReliabilityParams
-from models.power_unit_models import (
+from models.power_unit import (
     Battery,
-    ERSMap,
+    ErsMap,
     ICE,
-    ICEMap,
+    IceMap,
     MGUK,
     MGUH,
     PowerUnit,
@@ -176,9 +176,12 @@ def _build_ice(pu_id: str, supplier: str, ice_factor: float) -> ICE:
     return ICE(
         ice_id=f"{pu_id}_ice",
         nome=f"{spec['nome']} ICE",
-        potenza_tot_cv=spec["ice_cv"] * ice_factor,
-        reliability=spec["reliability"],
-        capacita_termica_kj_per_c=14.0,
+        potenza_pct=spec["ice_cv"] * ice_factor / 1000.0,  # Convert CV to fraction
+        temp_warning_c=spec["reliability"].ice_temp_warning_c,
+        temp_critical_c=spec["reliability"].ice_temp_critical_c,
+        wear_coeff=spec["reliability"].ice_wear_coeff,
+        overrev_factor=spec["reliability"].ice_overrev_factor,
+        shock_factor=spec["reliability"].ice_shock_factor,
     )
 
 
@@ -188,8 +191,10 @@ def _build_mguk(pu_id: str, supplier: str, ers_factor: float) -> MGUK:
         mgu_k_id=f"{pu_id}_mguk",
         nome=f"{spec['nome']} MGU-K",
         max_kw=spec["mguk_kw"] * ers_factor,
-        efficiency=0.97,
-        capacita_termica_kj_per_c=6.0,
+        efficienza=0.97,
+        temp_warning_c=spec["reliability"].ers_temp_warning_c,
+        temp_critical_c=spec["reliability"].ers_temp_critical_c,
+        wear_coeff=spec["reliability"].ers_wear_coeff,
     )
 
 
@@ -200,8 +205,10 @@ def _build_mguh(pu_id: str, supplier: str, ers_factor: float) -> MGUH:
         nome=f"{spec['nome']} MGU-H",
         base_kw=spec["mguh_kw"] * ers_factor,
         direct_ratio_default=0.34,
-        efficiency=0.95,
-        capacita_termica_kj_per_c=5.0,
+        efficienza=0.95,
+        temp_warning_c=spec["reliability"].ers_temp_warning_c,
+        temp_critical_c=spec["reliability"].ers_temp_critical_c,
+        wear_coeff=spec["reliability"].ers_wear_coeff,
     )
 
 
@@ -213,28 +220,32 @@ def _build_battery(pu_id: str, supplier: str) -> Battery:
         capacity_mj=spec["battery_capacity"],
         max_charge_kw=spec["max_charge_kw"],
         max_discharge_kw=spec["max_discharge_kw"],
-        capacita_termica_kj_per_c=8.0,
+        temp_warning_c=60.0,
+        temp_critical_c=80.0,
+        wear_coeff=0.0010,
     )
 
 
-def _build_ice_maps(pu_id: str, ice_factor: float) -> Dict[EngineMapName, ICEMap]:
-    maps: Dict[EngineMapName, ICEMap] = {}
+def _build_ice_maps(pu_id: str, ice_factor: float) -> Dict[EngineMapName, IceMap]:
+    maps: Dict[EngineMapName, IceMap] = {}
     for map_name, base_pct in _ICE_MAP_TEMPLATE.items():
-        maps[map_name] = ICEMap(
+        maps[map_name] = IceMap(
             ice_map_id=f"{pu_id}_{map_name.value.lower()}_ice",
             nome=f"{map_name.value.title()} ICE",
+            engine_map_name=map_name,
             power_pct=base_pct * ice_factor,
         )
     return maps
 
 
-def _build_ers_maps(pu_id: str, ers_factor: float) -> Dict[EngineMapName, ERSMap]:
-    maps: Dict[EngineMapName, ERSMap] = {}
+def _build_ers_maps(pu_id: str, ers_factor: float) -> Dict[EngineMapName, ErsMap]:
+    maps: Dict[EngineMapName, ErsMap] = {}
     for map_name, cfg in _ERS_MAP_TEMPLATE.items():
         deploy_budget = cfg["deploy_mj"] * ers_factor
-        maps[map_name] = ERSMap(
+        maps[map_name] = ErsMap(
             ers_map_id=f"{pu_id}_{map_name.value.lower()}_ers",
             nome=f"{map_name.value.title()} ERS",
+            engine_map_name=map_name,
             deploy_budget_mj=deploy_budget,
             bucket_primary_pct=cfg["bucket_primary"],
             bucket_secondary_pct=cfg["bucket_secondary"],
@@ -279,9 +290,10 @@ for team_code, cfg in _TEAM_POWER_FACTORS.items():
         ice_maps=_build_ice_maps(pu_id, ice_factor),
         ers_maps=_build_ers_maps(pu_id, ers_factor),
         reliability=_build_reliability(spec["reliability"], ice_factor),
-        fuel_capacity_kg=110.0,
-        base_burn_kg_per_s=spec["base_burn"],
-        regen_profile=_REGEN_PROFILE,
+        fuel_tank_capacity_kg=110.0,
+        deploy_limit_mj_per_lap=4.0,
+        recovery_limit_mj_per_lap=2.0,
+        regen_profile="standard",
     )
 
 
