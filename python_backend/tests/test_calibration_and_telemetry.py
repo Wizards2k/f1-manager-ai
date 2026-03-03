@@ -43,10 +43,21 @@ def _load_json(path: Path) -> dict:
         return json.load(fh)
 
 
+def _team_pilots(team):
+    pilots = []
+    if getattr(team, "pilota1", None):
+        pilots.append(team.pilota1)
+    if getattr(team, "pilota2", None):
+        pilots.append(team.pilota2)
+    if not pilots and hasattr(team, "piloti_titolari"):
+        pilots.extend(team.piloti_titolari)
+    return pilots
+
+
 def _build_player_cars(count: int = 2):
     cars = []
     for team in TEAMS:
-        for pilot in team.piloti_titolari:
+        for pilot in _team_pilots(team):
             car = RaceCar(pilot=pilot, team=team)
             car.is_player_controlled = True
             car.player_config["fuel_percent"] = 70

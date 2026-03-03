@@ -1,18 +1,19 @@
 ---
 title: Telemetry Sections v2 – Regeneration Spec
-version: 1.0
-last_updated: 2026-02-13
+version: 1.1
+last_updated: 2026-02-22
 status: completed
-branch: feature/telemetry-sections-v2
-scope: "Rigenerare le sezioni circuito dai punti telemetrici raw per ottenere copertura 100%, confini fisici corretti e dati derivati affidabili"
+branch: feature/fase-e (merge da feature/pure-physics-engine)
+scope: "Rigenerare le sezioni/HD per tutti i circuiti 2025 con copertura 100%, confini fisici corretti, macro aggregati dai waypoints, telemetry_mu e report di validazione"
 parent_spec: docs/lapsimulator-implementation-spec.md
 blocking: "LapSimulator calibration (§6.11)"
 
 ## 0. Stato
 
-- 24/24 circuiti rigenerati con dataset v2 (copertura 100%, dt_ref_s, braking_energy, DRS, radius, heat/cool reali).
-- LapSimulator aggiorna `SectionContext`/`config_loader` per leggere i nuovi campi con fallback.
-- `update_section()` usa il modello `dt_ref` per tutte le sezioni e i test `python_backend/lap_simulator/tests/test_e2e_practice.py` passano con la telemetria v2.
+- 24/24 circuiti 2025 rigenerati in formato HD (`*_HD.json`) con waypoint bounds allineati ai macro-settori e aggregati macro calcolati dai waypoints (v_entry/v_exit/v_min/v_max/length).
+- Aggiunto `telemetry_mu`/`target_g_lat` nei macro-settori e ingest in `config_loader`/`SectionContext`; `update_section()` usa `telemetry_mu` e non ricalcola i confini.
+- Validazione batch (physics_validator) su tutti i circuiti: delte giro ~ +0.05–0.11%, Monaco +0.004s. Report HTML in `docs/physics_batch_2025.html`.
+- `update_section` gestisce frenata di transizione tra settori (cap v_entry) e usa v_exit cap modulato senza sovrascrivere i confini waypoint.
 
 ## 1. Problema
 
@@ -77,16 +78,9 @@ Output: sections[] con copertura 100%
    Il peak è il punto di velocità di punta del rettifilo
 
 4. DEFINE SECTION BOUNDARIES
-   Per ogni coppia (peak_i, apex_i, peak_i+1):
-   - Sezione "Braking": da brake_start a apex (dove brake > threshold)
-   - Sezione "Corner": da apex a throttle_recovery (dove throttle > 80%)
-   - Sezione "Acceleration": da throttle_recovery a peak successivo
-   
-   Oppure (più semplice, approccio scelto):
-   - Sezione tipo "Straight": da peak/recovery a inizio frenata successiva
-   - Sezione tipo "Corner": da inizio frenata a fine accelerazione post-curva
-   
-   Questo produce sezioni che includono frenata+curva+accelerazione come unità logica.
+   - Boundaries derivati dai waypoint con copertura 100% (aggiunti waypoint ai confini start/end macro se mancanti).
+   - Sezione tipo "Corner": frenata+apex+accelerazione come unità logica; "Straight": tra fine accelerazione e inizio frenata successiva.
+   - Macrosezioni HD: `start_m/end_m/length_m` ottenuti direttamente dal primo/ultimo waypoint del macro-settore.
 
 5. CLASSIFY SECTIONS
    Per ogni sezione:
@@ -111,6 +105,7 @@ Output: sections[] con copertura 100%
    - drs_active = qualsiasi punto con drs ∈ {10, 12, 14}
    - radius_m = calcolato da coordinate x,y (fitting cerchio sui punti curva)
    - corner_number = numerazione progressiva delle curve
+   - **telemetry_mu** = media di `target_g_lat` dei waypoints del macro-settore (usata dal motore fisico)
 ```
 
 ### 3.3 Parametri di soglia
@@ -186,13 +181,13 @@ Per i punti nella zona curva (tra inizio frenata e fine accelerazione):
 
 ### 4.2 Vincoli di validazione
 
-Per ogni circuito rigenerato:
-1. `Σ(length_m)` = `circuit_length` (copertura 100%, tolleranza < 1m)
-2. `Σ(dt_ref_s)` = `reference_lap.lap_time` (tolleranza < 0.1s)
-3. Nessun gap tra sezioni: `section[i].end_m == section[i+1].start_m`
-4. `v_entry` di sezione i+1 ≈ `v_exit` di sezione i (continuità, tolleranza < 5 kph)
-5. Per curve: `v_min < v_entry` e `v_min < v_exit`
-6. Per rettilinei: `v_min/v_max > 0.80`
+Per ogni circuito rigenerato (HD + macro):
+1. `Σ(length_m)` = `circuit_length` (tolleranza < 1m) sia per waypoints sia per macro (primo/ultimo waypoint).
+2. `Σ(dt_ref_s)` = `reference_lap.lap_time` (tolleranza < 0.1s).
+3. Nessun gap: `section[i].end_m == section[i+1].start_m`; macro allineati ai waypoint.
+4. `v_entry` di sezione i+1 ≈ `v_exit` di sezione i (tolleranza < 5 kph); frenata di transizione gestita nel motore.
+5. Curve: `v_min < v_entry` e `v_min < v_exit`; rettilinei: `v_min/v_max > 0.80`.
+6. `telemetry_mu` presente nei macro-settori; il motore usa `telemetry_mu` o `v_min/radius` come fallback.
 
 ## 5. Impatto sui file esistenti
 

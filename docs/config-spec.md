@@ -11,7 +11,7 @@ Catalogo dei file JSON di configurazione e del loro utilizzo nei moduli (LapSimu
 ## 2. Convenzioni
 - **Seeds globali**: valori di base non calibrati, per compound/sistemi/componenti. Prefisso `_global_default`.
 - **Derived per circuito**: profili pre-fusi per circuito in `config/circuits/derived/<circuit_id>/` (generati offline).
-- **Raw**: telemetria e profili Pirelli originali in `python_backend/data/circuits/`.
+- **Raw**: telemetria e profili Pirelli originali in `python_backend/data/circuits/` (2025 in `python_backend/data/circuits/2025/`, legacy spostati in `python_backend/data/circuits_legacy/`).
 - **Setup bounds**: mapping slider → range fisico per circuito in `config/setup/setup_mapping_v2.json`.
 - I nomi dei circuiti usano `circuit_id` (es. `it-1922_monza`).
 
@@ -55,9 +55,12 @@ Catalogo dei file JSON di configurazione e del loro utilizzo nei moduli (LapSimu
 - Usati da: LapSimulator / orchestratori come fonte diretta per il circuito.
 
 ## 6. Raw circuit data
-- Path: `python_backend/data/circuits/`
-  - `*_Telemetry.json`: telemetria per circuito (geometry, reference_lap, points). Oggi usata solo come metadata; potrà affinare i modulatori in futuro.
-  - `Raw_2024/`: backup/mapping FastF1.
+- Path: `python_backend/data/circuits/2025/`
+  - `*_HD.json`: waypoints HD con `v_ref_kph`, `target_g_lat`, macro-settori derivati dai waypoints (start/end/length, v_entry/v_exit/v_min/v_max, telemetry_mu).
+  - `*_Telemetry.json`: telemetria sezione v2 (geometry/sections, reference_lap, points) usata come baseline temporale e per derived futuri.
+  - `manifest.json`: elenco circuiti 2025 (driver/session/lap_time) per batch tools.
+- Legacy: `python_backend/data/circuits_legacy/*.json` contiene le telemetrie pre-2025 spostate dalla cartella principale.
+- Backup: `Raw_2024/` (mapping FastF1 originale) rimosso in favore della rigenerazione 2025.
 - Usati da: pipeline di fitting/calibrazione; potenziale refinement dei modulatori.
 
 ## 7. Altre config

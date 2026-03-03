@@ -1212,7 +1212,20 @@ class SessionBridge:
                 if not self.pso.car_can_run(car_id):
                     continue
 
-                car_entry = engine.configure_current_run()
+                race_car = self.race_cars_map.get(car_id)
+                if race_car is None:
+                    logger.warning("AI dispatch: missing RaceCar for %s", car_id)
+                    continue
+
+                try:
+                    base_entry = racecar_to_car_entry(race_car)
+                    base_entry.car_id = car_id
+                    base_entry.state.car_id = car_id
+                except Exception as exc:
+                    logger.warning("AI dispatch: failed to build base entry for %s: %s", car_id, exc)
+                    continue
+
+                car_entry = engine.configure_current_run(base_entry=base_entry)
                 if car_entry is None:
                     sr.dispatched = True
                     continue

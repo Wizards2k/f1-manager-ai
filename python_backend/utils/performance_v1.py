@@ -38,7 +38,11 @@ def compute_pilot_bonus_seconds(pilot) -> float:
 
 
 def compute_car_bonus_seconds(team) -> float:
-    return team.bonus_prestazione
+    auto = getattr(team, "auto", None)
+    grip_base = getattr(auto, "grip_base", None)
+    if grip_base is None:
+        return 0.0
+    return grip_base * 10.0
 
 
 def compute_tire_delta_seconds(car: RaceCar) -> float:

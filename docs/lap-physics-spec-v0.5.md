@@ -8,8 +8,9 @@ scope: "Definizione del modello fisico per il contributo Auto (aerodinamica, Pow
 Stabilire le regole del motore fisico per calcolare il tempo sul giro utilizzando componenti realistici dell’auto (solo sezione aerodinamica al momento). Il documento descrive come mappare i valori 1–100 delle parti dell’auto in downforce (DF) e drag, e come questi incidono sui segmenti del tracciato senza impostazioni manuali per curva.
 
 ## 2. Dati disponibili
-- **Telemetria 2025** (`*_2025_Q.json`): velocità e distanza lungo il giro, usate per calcolare velocità di riferimento per ogni sezione.
-- **Mapping circuito** (`*_mapping.json`): lista `sections[]` con tipo (`Straight`, `SlowCorner`, `FastCorner`, ecc.), start/end metri e attributi legacy.
+- **Telemetria 2025** (`*_Telemetry.json`): velocità e distanza lungo il giro, usate per calcolare velocità di riferimento per ogni sezione.
+- **HD 2025** (`*_HD.json`): waypoints ad alta densità con `v_ref_kph`, `target_g_lat`, macro-settori derivati dai waypoints (start/end/length, v_entry/v_exit/v_min/v_max, `telemetry_mu`). Consumati da `config_loader`/`SectionContext` e da `update_section` per integrare i micro-settori senza riallineare i confini.
+- **Mapping circuito legacy** (`*_mapping.json`): lista `sections[]` legacy (`Straight`, `SlowCorner`, `FastCorner`, ecc.), start/end metri e attributi storici.
 - **RaceCar attuale**: possiede hook per gomme, pilota, setup; verrà estesa con il nuovo profilo aerodinamico.
 
 ## 3. Componenti Auto (valori 1–100)

@@ -338,35 +338,26 @@ class Team:
         sigla_scuderia: str,
         nazionalita: Nazionalita,
         colore_team: str,
-        forza_auto: int,
-        power_unit: str = "",
+        power_unit=None,
+        auto=None,
+        pilota1: Optional[Pilota] = None,
+        pilota2: Optional[Pilota] = None,
+        pilota_riserva: Optional[Pilota] = None,
         sponsor_principale: str = "",
-        piloti_titolari: Optional[List[Pilota]] = None,
         simulator_quality: int = 70,
-        pitstop_skill: int = 70,
     ):
         self.nome_scuderia = nome_scuderia
         self.sigla_scuderia = sigla_scuderia
         self.nazionalita = nazionalita
         self.colore_team = colore_team
         self.power_unit = power_unit
+        self.auto = auto
+        self.pilota1 = pilota1
+        self.pilota2 = pilota2
+        self.pilota_riserva = pilota_riserva
         self.sponsor_principale = sponsor_principale
-        self.piloti_titolari = piloti_titolari or []
 
-        self.forza_auto = MathUtils.clamp(forza_auto, 0, 100)
-        self.affidabilita = 75
-        self.aerodinamica = 70
-        self.meccanica = 70
         self.simulator_quality = MathUtils.clamp(simulator_quality, 1, 100)
-        self.pitstop_skill = MathUtils.clamp(pitstop_skill, 1, 100)
-        self.efficienza_pit = self.pitstop_skill
-
-    def aggiungi_pilota(self, pilota: Pilota):
-        self.piloti_titolari.append(pilota)
-
-    @property
-    def bonus_prestazione(self) -> float:
-        return self.forza_auto * 0.1
 
 
 DEFAULT_SETUP_CONFIG = {

@@ -1,3 +1,5 @@
+Drag/handling penalty: indicatori per aero balance/cooling e penalty di handling (usati anche nel delta setup).
+Damage model (coeff shock/malus): sospensioni, floor/beam, gearbox, steering (derating/grip drop).
 {
   "_meta": {
     "version": "0.1",

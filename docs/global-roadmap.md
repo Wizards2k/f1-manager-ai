@@ -118,9 +118,10 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
      3. ✅ **Tyre Model V2** – integrare i parametri derivati (temp window, gaussian, graining/blistering) nel simulatore e mostrare trend degrado/termico.
      4. ✅ **Aero Package dettagliato** – applicare DF/drag/handling penalty avanzati nel runtime e surface UI con indicatori aero balance/cooling.
      5. **Automazione & QA** – pipeline `calibration.yml`, watchdog FastF1 vs sim, manifest + dashboard Plotly e checklist QA dedicate.
-3. **CI `calibration.yml`**: pipeline badge componenti → lap regression → race smoke test.
-4. **Data coherence watchdog**: sistema di controllo/coerenza contro i dati originali (FastF1 / telemetry JSON) con report automatici e alert su drift.
-5. **Manifest & dashboard**: repository asset calibrati + dashboard Plotly per confronto sim vs telemetria reale.
+3. ⏳ **CI `calibration.yml`**: pipeline badge componenti → lap regression → race smoke test (da implementare in `.github/workflows/calibration.yml`).
+4. ⏳ **Data coherence watchdog**: CLI automatica che confronta sim vs FastF1/telemetry con report drift; esecuzione in CI.
+5. ⏳ **Manifest & dashboard**: `config/calibration/manifest.json` con checksum/data per pista + dashboard Plotly (sim vs telemetria) con report HTML.
+6. ⏳ **Checklist PR**: aggiornare `.github/pull_request_template.md` per includere i check di regressione fisica (monotonicità setup/ERS, watchdog).
 
 ## 7. Implementazione – Fase F (Gameplay, Backend & QA Harness — `docs/physics-roadmap.md`, `docs/BattleResolver.md`, `docs/setup-ui-plan.md`)
 1. **RaceSimulator backend integration**: scheduler sezioni, orchestrazione multi-car, storage `section_progress`, sincronizzazione multiplayer fantasma.

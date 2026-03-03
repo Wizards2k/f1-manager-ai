@@ -48,6 +48,9 @@ class CarEntry:
     aero_setup: AeroSetup
     driver_skills: DriverSkills
     push_level: float = 1.0              # player / AI commanded push
+    delta_aero: float = 0.0
+    delta_grip: float = 0.0
+    apply_baseline_delta: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -202,6 +205,8 @@ class LapSimulator:
                 push_level=entry.push_level,
                 airflow_penalty=airflow,
                 traffic_v_max_kph=traffic,
+                delta_aero=entry.delta_aero,
+                delta_grip=entry.delta_grip,
             )
 
             section_results.append(result)
@@ -321,6 +326,9 @@ class LapSimulator:
                     push_level=entry.push_level,
                     airflow_penalty=airflow,
                     traffic_v_max_kph=traffic,
+                    delta_aero=entry.delta_aero,
+                    delta_grip=entry.delta_grip,
+                    apply_baseline_delta=entry.apply_baseline_delta,
                 )
                 section_results[car_id] = result
                 car_section_results[car_id].append(result)

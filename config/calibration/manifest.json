@@ -1,0 +1,28 @@
+{
+  "circuits": [
+    { "id": "ae-2009_yas_marina", "year": 2025 },
+    { "id": "at-1969_spielberg", "year": 2025 },
+    { "id": "au-1953_melbourne", "year": 2025 },
+    { "id": "az-2016_baku", "year": 2025 },
+    { "id": "be-1925_spa_francorchamps", "year": 2025 },
+    { "id": "bh-2002_sakhir", "year": 2025 },
+    { "id": "br-1940_sao_paulo", "year": 2025 },
+    { "id": "ca-1978_montreal", "year": 2025 },
+    { "id": "cn-2004_shanghai", "year": 2025 },
+    { "id": "es-1991_barcelona", "year": 2025 },
+    { "id": "gb-1948_silverstone", "year": 2025 },
+    { "id": "hu-1986_budapest", "year": 2025 },
+    { "id": "it-1922_monza", "year": 2025 },
+    { "id": "it-1953_imola", "year": 2025 },
+    { "id": "jp-1962_suzuka", "year": 2025 },
+    { "id": "mc-1929_monaco", "year": 2025 },
+    { "id": "mx-1962_mexico_city", "year": 2025 },
+    { "id": "nl-1948_zandvoort", "year": 2025 },
+    { "id": "qa-2004_lusail", "year": 2025 },
+    { "id": "sa-2021_jeddah", "year": 2025 },
+    { "id": "sg-2008_singapore", "year": 2025 },
+    { "id": "us-2012_austin", "year": 2025 },
+    { "id": "us-2022_miami", "year": 2025 },
+    { "id": "us-2023_las_vegas", "year": 2025 }
+  ]
+}
