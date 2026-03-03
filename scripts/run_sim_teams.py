@@ -9,7 +9,14 @@ sys.path.append(str(Path(__file__).resolve().parent.parent / "python_backend"))
 
 from lap_simulator.lap_simulator import LapSimulator, CarEntry
 from lap_simulator.data_types import (
-    CarState, EnvContext, AeroSetup, DriverSkills, TyreCompound, TyreState, WheelPosition
+    CarState,
+    EnvContext,
+    AeroSetup,
+    DriverSkills,
+    EngineMapName,
+    TyreCompound,
+    TyreState,
+    WheelPosition,
 )
 from models.auto_models import Auto
 from lap_simulator.config_loader import load_circuit_config
@@ -73,7 +80,7 @@ def build_car_entry(team_code: str, circuit_id: str, config) -> CarEntry:
     
     # CarState
     state = CarState(car_id=team_code)
-    state.pu.fuel_kg = 2.5  # Quali fuel
+    state.pu = pu.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALY)
     soft_compound = TyreCompound.C5 if circuit_id != "it-1922_monza" else TyreCompound.C4
     state.tyres = {wp: TyreState(wheel_pos=wp, compound=soft_compound) for wp in WheelPosition}
     for tyre in state.tyres.values():
@@ -103,10 +110,6 @@ def build_car_entry(team_code: str, circuit_id: str, config) -> CarEntry:
     aero.front_wing.angle_deg = aero_pkg.ala_anteriore.angolo_inclinazione
     aero.rear_wing.angle_deg = aero_pkg.ala_posteriore.angolo_inclinazione
     
-    # PUState from power unit (use scaled 2025 config directly)
-    pu_state, _ = pu.make_pu_state()
-    state.pu = pu_state
-    
     car_df = _total_df(car)
     car_grip = _total_grip(car)
     physical_delta_aero = _clamp((BASELINE_DF - car_df) / BASELINE_DF, -0.03, 0.03)
@@ -135,7 +138,7 @@ def build_car_entry(team_code: str, circuit_id: str, config) -> CarEntry:
 def get_baseline_mclaren_entry(circuit_id: str) -> CarEntry:
     """Return the exact baseline entry used in physics_validator.py for McLaren."""
     state = CarState(car_id="MCL")
-    state.pu.fuel_kg = 2.5
+    state.pu = TEAM_BY_CODE["MCL"].power_unit.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALY)
     soft_compound = TyreCompound.C5 if circuit_id != "it-1922_monza" else TyreCompound.C4
     state.tyres = {wp: TyreState(wheel_pos=wp, compound=soft_compound) for wp in WheelPosition}
     for tyre in state.tyres.values():
@@ -157,6 +160,8 @@ def get_baseline_mclaren_entry(circuit_id: str) -> CarEntry:
     aero.front_wing.angle_deg = 10.0
     aero.rear_wing.angle_deg = 10.0
     
+    state.pu = TEAM_BY_CODE["MCL"].power_unit.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALY)
+
     return CarEntry(car_id="MCL", state=state, aero_setup=aero, driver_skills=skills, push_level=1.0, apply_baseline_delta=False)
 
 def _resolve_circuit_id(circuit_id: str) -> str:

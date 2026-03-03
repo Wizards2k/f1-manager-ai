@@ -9,13 +9,24 @@ sys.path.append(str(Path(__file__).resolve().parent.parent / "python_backend"))
 
 from lap_simulator.lap_simulator import LapSimulator, CarEntry
 from lap_simulator.data_types import (
-    CarState, EnvContext, AeroSetup, DriverSkills, TyreCompound, TyreState, WheelPosition
+    CarState,
+    EnvContext,
+    AeroSetup,
+    DriverSkills,
+    EngineMapName,
+    TyreCompound,
+    TyreState,
+    WheelPosition,
 )
 from lap_simulator.config_loader import load_circuit_config
+from data.teams import TEAMS
+
+
+_BASE_TEAM = next((team for team in TEAMS if team.sigla_scuderia == "MCL"), TEAMS[0])
 
 def get_baseline_entry(circuit_id: str) -> CarEntry:
     state = CarState(car_id="BASE")
-    state.pu.fuel_kg = 2.5
+    state.pu = _BASE_TEAM.power_unit.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALY)
     soft_compound = TyreCompound.C4 if circuit_id == "it-1922_monza" else TyreCompound.C5
     state.tyres = {wp: TyreState(wheel_pos=wp, compound=soft_compound) for wp in WheelPosition}
     for tyre in state.tyres.values():

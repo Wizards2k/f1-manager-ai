@@ -20,10 +20,19 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from python_backend.lap_simulator.lap_simulator import LapSimulator, CarEntry
 from python_backend.lap_simulator.data_types import (
-    CarState, EnvContext, AeroSetup, AeroComponent, SuspensionState, DriverSkills,
-    TyreCompound, TyreState, WheelPosition, EngineMapName
+    CarState,
+    EnvContext,
+    AeroSetup,
+    AeroComponent,
+    SuspensionState,
+    DriverSkills,
+    TyreCompound,
+    TyreState,
+    WheelPosition,
+    EngineMapName,
 )
 from python_backend.lap_simulator.config_loader import load_circuit_config
+from python_backend.data.teams import TEAMS
 
 CIRCUITS = {
     "it-1922_monza":       ("Monza",       78.792, 348.0, TyreCompound.C5, "FW=15/RW=10.9"),
@@ -91,13 +100,14 @@ COMPOUND_OPT_TEMP = {
     TyreCompound.C6: (88.0, 78.0),
 }
 
+_BASE_TEAM = next((team for team in TEAMS if team.sigla_scuderia == "MCL"), TEAMS[0])
+
+
 def make_state(compound: TyreCompound, v_entry_kph: float = 300.0) -> CarState:
     """Condizioni giro di qualifica: gomme quasi nuove, temp ottimale, giro lanciato."""
     state = CarState(car_id="REF")
-    state.pu.fuel_kg       = 2.5
-    state.pu.ers_energy_mj = 4.0
-    state.pu.active_map    = EngineMapName.QUALY
-    state.ers_mode         = "Deploy"
+    state.pu = _BASE_TEAM.power_unit.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALY)
+    state.ers_mode = "Deploy"
     state.v_current_ms     = v_entry_kph / 3.6
     surf_t, core_t = COMPOUND_OPT_TEMP.get(compound, (92.0, 82.0))
     for wp in WheelPosition:

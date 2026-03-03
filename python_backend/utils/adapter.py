@@ -16,6 +16,7 @@ from lap_simulator.data_types import (
     AeroSetup,
     CarState as SimCarState,
     DriverSkills,
+    EngineMapName,
     TyreCompound,
     TyreState,
     WheelPosition,
@@ -179,6 +180,18 @@ def _build_aero_setup(auto, base: Optional[AeroSetup] = None) -> AeroSetup:
     return setup
 
 
+def _resolve_engine_map(car) -> EngineMapName:
+    # Game stores ICE mode as string (Save/Standard/Push) → map to EngineMapName
+    mapping = {
+        "save": EngineMapName.ECONOMY,
+        "standard": EngineMapName.STANDARD,
+        "push": EngineMapName.RICH,
+        "qualy": EngineMapName.QUALY,
+    }
+    ice_mode = getattr(car, "ice_mode", "standard")
+    return mapping.get(str(ice_mode).lower(), EngineMapName.STANDARD)
+
+
 def _build_sim_state(car_id: str, car) -> SimCarState:
     state = SimCarState(car_id=car_id)
     state.brakes.duct_opening = _compute_brake_duct_opening(car)
@@ -199,14 +212,15 @@ def _build_sim_state(car_id: str, car) -> SimCarState:
             tyre.wear_pct = max(0.0, min(1.0, wear)) * 100.0
 
     # Power Unit
-    power_unit = getattr(getattr(car, "team", None), "power_unit", None)
+    team = getattr(car, "team", None)
+    power_unit = getattr(team, "power_unit", None)
+    map_name = _resolve_engine_map(car)
     if power_unit:
-        pu_state, engine_map = power_unit.make_pu_state()
-        fuel_pct = getattr(car, "fuel_percent", 100)
-        fuel_capacity = getattr(power_unit, "fuel_tank_capacity_kg", 110.0)
-        pu_state.fuel_kg = fuel_capacity * (fuel_pct / 100.0)
+        fuel_pct = max(1, min(100, getattr(car, "fuel_percent", 100)))
+        fuel_load = power_unit.fuel_capacity_kg * (fuel_pct / 100.0)
+        pu_state = power_unit.create_state(fuel_kg=fuel_load, map_name=map_name)
         state.pu = pu_state
-        state.ers_mode = engine_map.name.value if hasattr(engine_map, "name") else state.ers_mode
+    state.ers_mode = getattr(car, "ers_mode", state.ers_mode)
 
     return state
 
