@@ -44,3 +44,5 @@ build/
 fastf1_http_cache.sqlite
 **/.fastf1_cache/
 **/tmp_fastf1_cache/
+**/tmp_fastf1_out/
+**/data/fastf1_cache/
