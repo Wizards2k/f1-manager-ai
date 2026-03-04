@@ -257,9 +257,6 @@ def racecar_to_car_entry(
     import logging
     logger = logging.getLogger(__name__)
     
-    is_ai = not getattr(car, 'is_player_controlled', False)
-    logger.info("DEBUG adapter: car_id=%s is_ai=%s", car_id, is_ai)
-
     try:
         from utils.team_performance import compute_team_penalties
         from lap_simulator.config_loader import load_circuit_config
@@ -306,24 +303,11 @@ def racecar_to_car_entry(
         if not team_code:
             team_code = driver_team_map.get(int(car_id))
 
-        logger.info(
-            "DEBUG adapter: car_id=%s team_name=%s team_code=%s is_ai=%s",
-            car_id,
-            team_name,
-            team_code,
-            is_ai,
-        )
 
         if team_code:
             delta_aero, delta_grip = compute_team_penalties(team_code, circuit_config)
-            logger.info(
-                "DEBUG adapter: computed penalties car_id=%s delta_aero=%.4f delta_grip=%.4f",
-                car_id,
-                delta_aero,
-                delta_grip,
-            )
         else:
-            logger.warning("DEBUG adapter: unable to resolve team_code for %s", car_id)
+            logger.warning("Unable to resolve team_code for car %s", car_id)
     except Exception as exc:
         logger.error("Failed to compute team penalties for %s: %s", car_id, exc, exc_info=True)
 
