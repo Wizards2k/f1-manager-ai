@@ -482,41 +482,62 @@ def update_section(
 
     # Tyre penalty (compound + wear + temperature)
     tyre_delta_s = 0.0
-    if config.tyre_compound_grip and config.tyre_reference_compound:
-        # Get current tyre compound from front left tyre
-        current_compound = str(car_state.tyres[WheelPosition.LF].compound)
+    
+    # Define curve kinds
+    CURVE_KINDS = {
+        SectionKind.VERY_SLOW_CORNER, 
+        SectionKind.SLOW_CORNER, 
+        SectionKind.MEDIUM_CORNER, 
+        SectionKind.FAST_CORNER, 
+        SectionKind.ULTRA_FAST_CORNER
+    }
+
+    if config.tyre_compound_deltas and config.tyre_reference_compound:
+        # Get current tyre compound string (e.g. "C3")
+        # Ensure we handle both Enum and string types robustly
+        raw_compound = car_state.tyres[WheelPosition.LF].compound
+        current_compound = raw_compound.value if hasattr(raw_compound, "value") else str(raw_compound)
         
-        # 1. Compound penalty (grip difference vs reference)
-        ref_grip = config.tyre_compound_grip.get(config.tyre_reference_compound, 1.0)
-        current_grip = config.tyre_compound_grip.get(current_compound, 1.0)
-        grip_delta = ref_grip - current_grip
-        
-        # Convert grip delta to time penalty (approx: 0.1 grip = 1.0s)
-        compound_penalty = max(0.0, grip_delta * 10.0)
-        
-        # 2. Wear penalty (based on tyre wear percentage)
-        wear_rate = config.tyre_wear_rates.get(current_compound, 0.12)
-        degradation_mult = config.tyre_degradation_multipliers.get(current_compound, 1.0)
-        
-        # Get tyre wear from state (average across all tyres)
-        total_wear = sum(tyre.wear_pct for tyre in car_state.tyres.values()) / 4.0
-        wear_penalty = wear_rate * total_wear * degradation_mult * 0.01  # Scale down
-        
-        # 3. Temperature penalty (simplified - check if in optimal window)
-        temp_penalty = 0.0
-        tyre_temp_windows = config.tyre_temp_windows.get(current_compound, {})
-        if tyre_temp_windows:
-            # Use surface temperature from front left tyre
-            surface_temp = car_state.tyres[WheelPosition.LF].surface_temp_c
-            optimal_range = tyre_temp_windows.get("surface", [80, 100, 120])
+        # APPLY PENALTIES ONLY ON CURVES
+        if section.kind in CURVE_KINDS:
+            # 1. Compound penalty
+            # Distribute per-lap delta across total number of curve sections
+            n_curves = max(1, config.n_curve_sections)
+            compound_penalty = config.tyre_compound_deltas.get(current_compound, 0.0)
+            compound_delta_section = compound_penalty / n_curves
             
-            if surface_temp < optimal_range[0]:
-                temp_penalty = (optimal_range[0] - surface_temp) * 0.001  # Cold penalty
-            elif surface_temp > optimal_range[2]:
-                temp_penalty = (surface_temp - optimal_range[2]) * 0.002  # Hot penalty
-        
-        # Total tyre penalty for this section
-        tyre_delta_s = (compound_penalty + wear_penalty + temp_penalty) * section_fraction
+            # 2. Wear penalty
+            wear_coeff = config.tyre_wear_coeffs.get(current_compound, 0.12)
+            total_wear = sum(tyre.wear_pct for tyre in car_state.tyres.values()) / 4.0
+            
+            # Scale to meaningful time penalties (approx 0.05s - 0.15s per 10% wear)
+            wear_multiplier = 0.05
+            
+            if total_wear <= 50.0:
+                wear_penalty = wear_coeff * wear_multiplier * (total_wear / 10.0)
+            else:
+                base_penalty = wear_coeff * wear_multiplier * 5.0  # Penalty at 50%
+                excess_wear = total_wear - 50.0
+                wear_penalty = base_penalty + wear_coeff * wear_multiplier * (excess_wear / 10.0) * 4.0
+            
+            # 3. Temperature penalty
+            temp_penalty = 0.0
+            tyre_temp_windows = config.tyre_temp_windows.get(current_compound, {})
+            if tyre_temp_windows:
+                surface_temp = car_state.tyres[WheelPosition.LF].surface_temp_c
+                optimal_range = tyre_temp_windows.get("surface", [80, 100, 120])
+                
+                if surface_temp < optimal_range[0]:
+                    temp_penalty = (optimal_range[0] - surface_temp) * 0.0005
+                elif surface_temp > optimal_range[2]:
+                    temp_penalty = (surface_temp - optimal_range[2]) * 0.001
+            
+            # Total tyre penalty for this curve section
+            tyre_delta_s = compound_delta_section + wear_penalty + temp_penalty
+        else:
+            # Straight section: no tyre penalty applied (physical model assumption)
+            tyre_delta_s = 0.0
+
 
     delta_penalty = clamp(
         config.k_aero_penalty * delta_aero + config.k_grip_penalty * delta_grip,

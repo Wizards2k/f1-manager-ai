@@ -1,0 +1,27 @@
+{
+  "fuel_reference_kg": 10.0,
+  "fuel_penalty_coeff": 3.5e-05,
+  "tyre_reference_compound": "C3",
+  "tyre_compound_deltas": {
+    "C3": 0.0,
+    "C2": 0.55,
+    "C1": 1.2000000000000002,
+    "C4": -0.5,
+    "C5": -1.1,
+    "C6": -1.55
+  },
+  "tyre_wear_coeffs": {
+    "C1": 0.05,
+    "C2": 0.08,
+    "C3": 0.12,
+    "C4": 0.18,
+    "C5": 0.25,
+    "C6": 0.35
+  },
+  "n_curve_sections": 7,
+  "_meta": {
+    "source": "telemetry.fuel_mass.fuel_lap_delta_ms",
+    "fuel_lap_delta_ms": 0.035,
+    "tyre_reference_compound": "C3"
+  }
+}

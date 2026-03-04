@@ -90,7 +90,9 @@ def extract_setup_bounds(setup_entry: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def build_penalty_profile(telemetry: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    fuel_mass = (telemetry or {}).get("fuel_mass", {})
+    if not telemetry:
+        telemetry = {}
+    fuel_mass = telemetry.get("fuel_mass", {})
     fuel_lap_delta_ms = fuel_mass.get("fuel_lap_delta_ms", 35.0)
     try:
         coeff = float(fuel_lap_delta_ms) / 1000.0
@@ -102,9 +104,90 @@ def build_penalty_profile(telemetry: Optional[Dict[str, Any]]) -> Dict[str, Any]
         "fuel_penalty_coeff": round(coeff, 6),
     }
 
+    # Extract Pirelli data from telemetry tyres section
+    telemetry_tyres = telemetry.get("tyres", {})
+    
+    # --- COUNT CURVE SECTIONS ---
+    # According to the user's request, penalties should only be applied to curve sections.
+    # We count them to distribute the per-lap compound delta properly.
+    geometry = telemetry.get("geometry", {})
+    sections = geometry.get("sections", [])
+    curve_kinds = {
+        "VerySlowCorner", "SlowCorner", "MediumCorner", 
+        "FastCorner", "UltraFastCorner"
+    }
+    n_curve_sections = sum(1 for s in sections if s.get("kind") in curve_kinds)
+    if n_curve_sections == 0:
+        n_curve_sections = 10  # Fallback
+    
+    pirelli_meta = telemetry_tyres.get("pirelli_metadata", {})
+    compounds_info = pirelli_meta.get("compounds_info", {})
+    standard_deltas = compounds_info.get("standard_deltas", {})
+    global_wear_base = compounds_info.get("global_wear_base", {})
+    pirelli_package = telemetry_tyres.get("pirelli_package", {})
+    nomination = pirelli_package.get("nomination", {})
+    reference_soft = nomination.get("soft", "C5")
+    
+    # No debug output needed
+
+    # Compute compound deltas relative to reference soft compound
+    # standard_deltas contains DIRECT deltas between adjacent compounds
+    compound_order = ["C1", "C2", "C3", "C4", "C5", "C6"]
+    
+    # Build direct delta map from standard_deltas
+    direct_deltas = {}
+    for i in range(len(compound_order) - 1):
+        key = f"{compound_order[i]}_{compound_order[i+1]}"
+        direct_deltas[key] = float(standard_deltas.get(key, 0.0))
+    
+    # Calculate deltas relative to reference soft compound
+    tyre_compound_deltas: Dict[str, float] = {}
+    
+    # Reference compound (C3 for Suzuka) has 0 delta
+    tyre_compound_deltas[reference_soft] = 0.0
+    
+    # Calculate deltas for compounds before reference (C1, C2)
+    # These compounds are SLOWER, so their delta should be POSITIVE (adds time)
+    if reference_soft in ["C2", "C3", "C4", "C5", "C6"]:
+        # C2 delta = C2_C3 (positive = slower, adds time)
+        if "C2_C3" in direct_deltas:
+            tyre_compound_deltas["C2"] = direct_deltas["C2_C3"]
+        
+        # C1 delta = C1_C2 + C2_C3 (cumulative slower)
+        if "C1_C2" in direct_deltas and "C2_C3" in direct_deltas:
+            tyre_compound_deltas["C1"] = direct_deltas["C1_C2"] + direct_deltas["C2_C3"]
+    
+    # Calculate deltas for compounds after reference (C4, C5, C6)
+    # These compounds are FASTER, so their delta should be NEGATIVE (saves time)
+    if reference_soft in ["C1", "C2", "C3"]:
+        # C4 delta = -C3_C4 (negative = faster, saves time)
+        if "C3_C4" in direct_deltas:
+            tyre_compound_deltas["C4"] = -direct_deltas["C3_C4"]
+        
+        # C5 delta = -(C3_C4 + C4_C5) (cumulative faster)
+        if "C3_C4" in direct_deltas and "C4_C5" in direct_deltas:
+            tyre_compound_deltas["C5"] = -(direct_deltas["C3_C4"] + direct_deltas["C4_C5"])
+        
+        # C6 delta = -(C3_C4 + C4_C5 + C5_C6) (cumulative faster)
+        if "C3_C4" in direct_deltas and "C4_C5" in direct_deltas and "C5_C6" in direct_deltas:
+            tyre_compound_deltas["C6"] = -(direct_deltas["C3_C4"] + direct_deltas["C4_C5"] + direct_deltas["C5_C6"])
+    
+    # Ensure all compounds have a value
+    for compound in compound_order:
+        if compound not in tyre_compound_deltas:
+            tyre_compound_deltas[compound] = 0.0
+
+    tyre_wear_coeffs = {compound: float(global_wear_base.get(compound, 0.12)) for compound in compound_order}
+
+    profile["tyre_reference_compound"] = reference_soft
+    profile["tyre_compound_deltas"] = tyre_compound_deltas
+    profile["tyre_wear_coeffs"] = tyre_wear_coeffs
+    profile["n_curve_sections"] = n_curve_sections
+
     meta = profile.setdefault("_meta", {})
     meta["source"] = "telemetry.fuel_mass.fuel_lap_delta_ms"
     meta["fuel_lap_delta_ms"] = fuel_lap_delta_ms
+    meta["tyre_reference_compound"] = reference_soft
     return profile
 
 
@@ -248,6 +331,22 @@ def add_common_meta(payload: Dict[str, Any], circuit_id: str, setup_key: str, te
         meta["telemetry_source"] = f"python_backend/data/circuits/{circuit_id}_Telemetry.json"
 
 
+def load_telemetry(circuit_id: str, prefer_hd: bool = True) -> Optional[Dict[str, Any]]:
+    """Load telemetry data."""
+    root = ROOT
+    telemetry_hd_path = root / "python_backend" / "data" / "circuits" / "2025" / f"{circuit_id}_HD.json"
+    telemetry_path = root / "python_backend" / "data" / "circuits" / "2025" / f"{circuit_id}_Telemetry.json"
+    
+    if prefer_hd and telemetry_hd_path.exists():
+        return load_json(telemetry_hd_path)
+    elif telemetry_path.exists():
+        return load_json(telemetry_path)
+    elif telemetry_hd_path.exists():
+        return load_json(telemetry_hd_path)
+    else:
+        return None
+
+
 def load_calibration(component: str, circuit_id: str) -> Optional[Dict[str, Any]]:
     base = CALIBRATION_PATHS.get(component)
     if not base:
@@ -263,7 +362,7 @@ def merge_circuit_profile(circuit_id: str, args: argparse.Namespace) -> None:
     setup_bounds = load_json(SETUP_BOUNDS) if SETUP_BOUNDS.exists() else {}
 
     setup_key, setup_entry = find_setup_entry(setup_bounds, circuit_id)
-    telemetry = load_telemetry(circuit_id)
+    telemetry = load_telemetry(circuit_id, prefer_hd=False)  # Use standard telemetry for tyre data
     pirelli_context = extract_pirelli_context(setup_entry)
     cluster_metrics = extract_cluster_metrics(setup_entry)
 
@@ -288,6 +387,14 @@ def merge_circuit_profile(circuit_id: str, args: argparse.Namespace) -> None:
         pu_maps = build_pu_maps(global_defaults.get("pu_maps", {}), setup_entry)
     pu_reliability = deepcopy(global_defaults.get("pu_reliability", {}))
     damage = build_damage(global_defaults.get("damage", {}), setup_entry, pirelli_context)
+    
+    # Build tyres
+    if tyre_cal:
+        tyres = tyre_cal
+    else:
+        tyres = build_tyres(global_defaults.get("tyres", {}), pirelli_context)
+    
+    # Build penalty profile (extracts Pirelli data directly from telemetry)
     penalty_profile = build_penalty_profile(telemetry)
 
     for payload in (tyres, brakes, pu_maps, pu_reliability, damage):
