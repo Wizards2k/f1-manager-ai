@@ -610,6 +610,9 @@ class SessionBridge:
                         env=self.env,
                         config=self.circuit_config,
                         push_level=entry.push_level,
+                        delta_aero=getattr(entry, 'delta_aero', 0.0),
+                        delta_grip=getattr(entry, 'delta_grip', 0.0),
+                        apply_baseline_delta=getattr(entry, 'apply_baseline_delta', True),
                     )
                     # DEBUG: Log delta values
                     if car_id in ["81", "31", "23", "5", "18"]:  # Log first few cars only

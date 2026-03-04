@@ -9,6 +9,8 @@ from lap_simulator.data_types import CircuitConfig
 from models.auto_models import Auto
 
 
+# Build mapping from team code to team object
+from data.teams import TEAM_METADATA, TEAMS
 TEAM_BY_CODE = {team.sigla_scuderia: team for team in TEAMS}
 
 # Expected quali gaps vs McLaren baseline (percentage)
@@ -64,29 +66,46 @@ def compute_team_penalties(
     target_gap_pct: float | None = None,
 ) -> Tuple[float, float]:
     """Return (delta_aero, delta_grip) penalties for a given team."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info("DEBUG compute_penalties: team_code=%s circuit_config=%s", team_code, circuit_config is not None)
 
     team = TEAM_BY_CODE.get(team_code.upper()) if team_code else None
+    logger.info("DEBUG compute_penalties: found_team=%s", team is not None)
+    
     if team is None or team.auto is None:
+        logger.warning("DEBUG compute_penalties: no team or auto for %s", team_code)
         return 0.0, 0.0
 
     car = team.auto
     car_df = _total_df(car)
     car_grip = _total_grip(car)
+    logger.info("DEBUG compute_penalties: car_df=%.3f car_grip=%.3f baseline_df=%.3f baseline_grip=%.3f", 
+                car_df, car_grip, BASELINE_DF, BASELINE_GRIP)
 
     physical_delta_aero = _clamp((BASELINE_DF - car_df) / BASELINE_DF, -0.03, 0.03)
     physical_delta_grip = _clamp((BASELINE_GRIP - car_grip) / BASELINE_GRIP, -0.05, 0.05)
+    logger.info("DEBUG compute_penalties: physical_delta_aero=%.4f physical_delta_grip=%.4f", 
+                physical_delta_aero, physical_delta_grip)
 
     target_penalty = (target_gap_pct if target_gap_pct is not None else EXPECTED_TEAM_GAPS.get(team_code.upper(), 0.0)) / 100.0
+    logger.info("DEBUG compute_penalties: target_penalty=%.4f", target_penalty)
+    
     if target_penalty == 0.0:
+        logger.info("DEBUG compute_penalties: target_penalty=0, returning zeros")
         return 0.0, 0.0
 
     aero_share, grip_share = _penalty_shares(physical_delta_aero, physical_delta_grip)
+    logger.info("DEBUG compute_penalties: aero_share=%.2f grip_share=%.2f", aero_share, grip_share)
 
     k_aero = circuit_config.k_aero_penalty if circuit_config else 0.03
     k_grip = circuit_config.k_grip_penalty if circuit_config else 0.02
+    logger.info("DEBUG compute_penalties: k_aero=%.3f k_grip=%.3f", k_aero, k_grip)
 
     max_delta = 4.0
     delta_aero = _clamp((target_penalty * aero_share) / (k_aero or 1.0), -max_delta, max_delta)
     delta_grip = _clamp((target_penalty * grip_share) / (k_grip or 1.0), -max_delta, max_delta)
+    logger.info("DEBUG compute_penalties: final delta_aero=%.4f delta_grip=%.4f", delta_aero, delta_grip)
 
     return delta_aero, delta_grip
