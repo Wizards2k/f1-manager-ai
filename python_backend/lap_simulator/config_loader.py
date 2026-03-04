@@ -370,6 +370,35 @@ def load_circuit_config(
     fuel_reference_kg = penalty_data.get("fuel_reference_kg", 10.0)
     fuel_penalty_coeff = penalty_data.get("fuel_penalty_coeff", 0.0)
 
+    # --- Tyre Parameters ---
+    tyre_path = derived_dir / "tyre_params.json" if derived_dir.exists() else None
+    tyre_data = _load_json(tyre_path) if tyre_path and tyre_path.exists() else {}
+    
+    # Extract tyre penalty data
+    compounds = tyre_data.get("compounds", {})
+    tyre_compound_grip = {}
+    tyre_wear_rates = {}
+    tyre_degradation_multipliers = {}
+    tyre_temp_windows = {}
+    
+    for compound, params in compounds.items():
+        tyre_compound_grip[compound] = params.get("base_grip", 1.0)
+        tyre_wear_rates[compound] = params.get("wear_rate_base_pct_per_km", 0.12)
+        tyre_degradation_multipliers[compound] = params.get("degradation_rate_multiplier", 1.0)
+        tyre_temp_windows[compound] = {
+            "surface": params.get("temp_window_surface_c", [80, 100, 120]),
+            "core": params.get("temp_window_core_c", [70, 90, 110])
+        }
+    
+    # Determine reference compound (highest grip)
+    max_grip = 0.0
+    tyre_reference_compound = "C5"
+    for compound, params in compounds.items():
+        grip = params.get("base_grip", 1.0)
+        if grip > max_grip:
+            max_grip = grip
+            tyre_reference_compound = compound
+
     # --- Damage ---
     dmg_path = derived_dir / "damage_coeffs.json" if derived_dir.exists() else global_damage
     dmg_data = _load_json(dmg_path) if dmg_path.exists() else _load_json(global_damage)
@@ -397,4 +426,9 @@ def load_circuit_config(
         reference_lap_time_s=sum_dt_ref, # Force 2025 telemetry sum
         fuel_reference_kg=fuel_reference_kg,
         fuel_penalty_coeff=fuel_penalty_coeff,
+        tyre_reference_compound=tyre_reference_compound,
+        tyre_compound_grip=tyre_compound_grip,
+        tyre_wear_rates=tyre_wear_rates,
+        tyre_degradation_multipliers=tyre_degradation_multipliers,
+        tyre_temp_windows=tyre_temp_windows,
     )

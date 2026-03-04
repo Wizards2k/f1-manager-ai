@@ -869,6 +869,10 @@ class SessionBridge:
         race_car.fuel_penalty_s = result.fuel_penalty_s
         if hasattr(race_car, "player_config"):
             race_car.player_config["fuel_penalty_s"] = round(result.fuel_penalty_s, 4)
+        # Tyre penalty telemetry
+        race_car.tyre_penalty_s = result.tyre_penalty_s
+        if hasattr(race_car, "player_config"):
+            race_car.player_config["tyre_penalty_s"] = round(result.tyre_penalty_s, 4)
 
         # Power unit / ERS telemetry block
         race_car.pu_stats = self._build_pu_stats(entry)

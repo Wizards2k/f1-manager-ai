@@ -551,6 +551,7 @@ class SectionResult:
     effective_grip_rear: float = 1.0
     handling_penalty: float = 0.0
     fuel_penalty_s: float = 0.0          # fuel-weight contribution (per section)
+    tyre_penalty_s: float = 0.0          # tyre compound/wear/temperature contribution (per section)
 
 
 # ---------------------------------------------------------------------------
@@ -598,6 +599,12 @@ class CircuitConfig:
     fuel_max_kg: float = 110.0           # reference max fuel load
     fuel_reference_kg: float = 10.0      # baseline fuel for penalty model
     fuel_penalty_coeff: float = 0.0      # seconds per kg per lap
+    # tyre penalty parameters
+    tyre_reference_compound: str = "C5" # baseline compound (qualifying soft)
+    tyre_compound_grip: Dict[str, float] = field(default_factory=dict)  # base_grip per compound
+    tyre_wear_rates: Dict[str, float] = field(default_factory=dict)     # wear_rate_base_pct_per_km
+    tyre_degradation_multipliers: Dict[str, float] = field(default_factory=dict)
+    tyre_temp_windows: Dict[str, Dict[str, List[float]]] = field(default_factory=dict)
     reference_lap_time_s: float = 0.0    # from telemetry (sum of dt_ref_s)
 
 

@@ -26,6 +26,7 @@ from .data_types import (
     SectionEvent,
     SectionKind,
     SectionResult,
+    WheelPosition,
     clamp,
 )
 from .driver_model import compute_inputs, update_mental_state
@@ -479,6 +480,44 @@ def update_section(
         section_fraction = section.length_m / config.circuit_length_m
         fuel_delta_s = config.fuel_penalty_coeff * extra_fuel * section_fraction
 
+    # Tyre penalty (compound + wear + temperature)
+    tyre_delta_s = 0.0
+    if config.tyre_compound_grip and config.tyre_reference_compound:
+        # Get current tyre compound from front left tyre
+        current_compound = str(car_state.tyres[WheelPosition.LF].compound)
+        
+        # 1. Compound penalty (grip difference vs reference)
+        ref_grip = config.tyre_compound_grip.get(config.tyre_reference_compound, 1.0)
+        current_grip = config.tyre_compound_grip.get(current_compound, 1.0)
+        grip_delta = ref_grip - current_grip
+        
+        # Convert grip delta to time penalty (approx: 0.1 grip = 1.0s)
+        compound_penalty = max(0.0, grip_delta * 10.0)
+        
+        # 2. Wear penalty (based on tyre wear percentage)
+        wear_rate = config.tyre_wear_rates.get(current_compound, 0.12)
+        degradation_mult = config.tyre_degradation_multipliers.get(current_compound, 1.0)
+        
+        # Get tyre wear from state (average across all tyres)
+        total_wear = sum(tyre.wear_pct for tyre in car_state.tyres.values()) / 4.0
+        wear_penalty = wear_rate * total_wear * degradation_mult * 0.01  # Scale down
+        
+        # 3. Temperature penalty (simplified - check if in optimal window)
+        temp_penalty = 0.0
+        tyre_temp_windows = config.tyre_temp_windows.get(current_compound, {})
+        if tyre_temp_windows:
+            # Use surface temperature from front left tyre
+            surface_temp = car_state.tyres[WheelPosition.LF].surface_temp_c
+            optimal_range = tyre_temp_windows.get("surface", [80, 100, 120])
+            
+            if surface_temp < optimal_range[0]:
+                temp_penalty = (optimal_range[0] - surface_temp) * 0.001  # Cold penalty
+            elif surface_temp > optimal_range[2]:
+                temp_penalty = (surface_temp - optimal_range[2]) * 0.002  # Hot penalty
+        
+        # Total tyre penalty for this section
+        tyre_delta_s = (compound_penalty + wear_penalty + temp_penalty) * section_fraction
+
     delta_penalty = clamp(
         config.k_aero_penalty * delta_aero + config.k_grip_penalty * delta_grip,
         -0.05,
@@ -486,7 +525,7 @@ def update_section(
     )
     baseline = config.baseline_delta if apply_baseline_delta else 0.0
     total_penalty = baseline + delta_penalty
-    dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s, 0.01)
+    dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s, 0.01)
     v_effective = (section.length_m / dt_s) * 3.6
 
     car_state.v_current_ms = v
@@ -580,4 +619,5 @@ def update_section(
         effective_grip_rear=eff_grip_rear,
         handling_penalty=aero_forces.handling_penalty,
         fuel_penalty_s=fuel_delta_s,
+        tyre_penalty_s=tyre_delta_s,
     )
