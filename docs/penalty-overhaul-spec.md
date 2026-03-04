@@ -77,3 +77,24 @@ dataclass PerformancePenalties:
 - Specifica approvata (questo documento).
 - Implementazione graduale con flag e test.
 - Aggiornamento doc correlati (`degradation-and-consumption`, `TyreModel`, `EngineData2025`, `brake-integration`, `setup-ui-plan`).
+
+## 10. Documenti di riferimento
+- `docs/degradation-and-consumption.md`
+- `docs/TyreModel.md`
+- `docs/tyre-allocation.md`
+- `docs/PIlotiSkill.json`
+- `docs/team-refactor-spec.md`
+- `docs/Engine-MGU-H.md`
+- `docs/EngineData2025.md`
+- `docs/ERS-Deployment-Strategy.md`
+- `docs/setup-engine-spec-v0.1.md`
+- `docs/brake-integration.md`
+- `docs/brake-integration-gemini.md`
+- `docs/brake-calibration-guide.md`
+- `docs/ai-Setup-Search.md`
+- `docs/ai-chip-progress-debug.md`
+- `docs/ai-driver-engine-spec.md`
+- `docs/setup-search-plan.md`
+- `docs/setup-ui-plan.md`
+- `python_backend/data/circuits/2025/*_Telemetry.json`
+- `config/` (brake params, duct recommendation, circuit profiles)
