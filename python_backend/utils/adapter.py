@@ -251,7 +251,7 @@ def racecar_to_car_entry(
 
     state = _build_sim_state(car_id, car)
 
-    # Calculate team penalties for AI cars
+    # Calculate team penalties (AI + player use same logic)
     delta_aero = 0.0
     delta_grip = 0.0
     import logging
@@ -259,62 +259,73 @@ def racecar_to_car_entry(
     
     is_ai = not getattr(car, 'is_player_controlled', False)
     logger.info("DEBUG adapter: car_id=%s is_ai=%s", car_id, is_ai)
-    
-    if is_ai:
+
+    try:
+        from utils.team_performance import compute_team_penalties
+        from lap_simulator.config_loader import load_circuit_config
+
+        # Get circuit config
+        circuit_config = None
         try:
-            from utils.team_performance import compute_team_penalties
-            from lap_simulator.config_loader import load_circuit_config
-            
-            # Get circuit config
-            circuit_config = None
-            try:
-                # Try to get current circuit from config
-                import config
-                current_circuit = getattr(config, 'current_circuit', None)
-                if current_circuit:
-                    circuit_config = load_circuit_config(current_circuit)
-                else:
-                    logger.warning("No current_circuit found in config")
-            except Exception as e:
-                logger.warning("Failed to load circuit config: %s", e)
-            
-            # Get team code from driver number (fallback when team is not available)
-            team_code = None
-            team_name = getattr(car.team, 'nome', 'Unknown') if car.team else 'Unknown'
-            
-            # Try to get team from driver number mapping
-            driver_team_map = {
-                1: 'RBR',   # Max Verstappen
-                22: 'RBR',  # Yuki Tsunoda  
-                63: 'MER',  # George Russell
-                12: 'MER',  # Andrea Kimi Antonelli
-                4: 'MCL',   # Lando Norris
-                81: 'MCL',  # Oscar Piastri
-                14: 'AST',  # Fernando Alonso
-                18: 'AST',  # Lance Stroll
-                10: 'ALP',  # Pierre Gasly
-                43: 'ALP',  # Franco Colapinto
-                23: 'WIL',  # Alexander Albon
-                55: 'WIL',  # Carlos Sainz
-                30: 'RB',   # Liam Lawson
-                6: 'RB',    # Isack Hadjar
-                27: 'SAU',  # Nico Hülkenberg
-                5: 'SAU',   # Gabriel Bortoleto
-                31: 'HAAS', # Esteban Ocon
-                87: 'HAAS', # Oliver Bearman
-            }
-            
-            team_code = driver_team_map.get(int(car_id))
-            logger.info("DEBUG adapter: car_id=%s team_name=%s mapped_team_code=%s", car_id, team_name, team_code)
-            
-            if team_code:
-                logger.info("DEBUG adapter: computing penalties for team_code=%s", team_code)
-                delta_aero, delta_grip = compute_team_penalties(team_code, circuit_config)
-                logger.info("DEBUG adapter: computed delta_aero=%.4f delta_grip=%.4f", delta_aero, delta_grip)
+            import config
+            current_circuit = getattr(config, 'current_circuit', None)
+            if current_circuit:
+                circuit_config = load_circuit_config(current_circuit)
             else:
-                logger.warning("DEBUG adapter: no team_code found for %s", team_name)
-        except Exception as exc:
-            logger.error("Failed to compute team penalties for %s: %s", car_id, exc, exc_info=True)
+                logger.warning("No current_circuit found in config")
+        except Exception as e:
+            logger.warning("Failed to load circuit config: %s", e)
+
+        # Determine team code
+        team_code = None
+        team_name = getattr(car.team, 'nome_scuderia', 'Unknown') if car.team else 'Unknown'
+        sigla = getattr(car.team, 'sigla_scuderia', None) if car.team else None
+        if sigla:
+            team_code = sigla.upper()
+
+        driver_team_map = {
+            1: 'RBR',   # Max Verstappen
+            22: 'RBR',  # Yuki Tsunoda  
+            63: 'MER',  # George Russell
+            12: 'MER',  # Andrea Kimi Antonelli
+            4: 'MCL',   # Lando Norris
+            81: 'MCL',  # Oscar Piastri
+            14: 'AST',  # Fernando Alonso
+            18: 'AST',  # Lance Stroll
+            10: 'ALP',  # Pierre Gasly
+            43: 'ALP',  # Franco Colapinto
+            23: 'WIL',  # Alexander Albon
+            55: 'WIL',  # Carlos Sainz
+            30: 'RB',   # Liam Lawson
+            6: 'RB',    # Isack Hadjar
+            27: 'SAU',  # Nico Hülkenberg
+            5: 'SAU',   # Gabriel Bortoleto
+            31: 'HAAS', # Esteban Ocon
+            87: 'HAAS', # Oliver Bearman
+        }
+        if not team_code:
+            team_code = driver_team_map.get(int(car_id))
+
+        logger.info(
+            "DEBUG adapter: car_id=%s team_name=%s team_code=%s is_ai=%s",
+            car_id,
+            team_name,
+            team_code,
+            is_ai,
+        )
+
+        if team_code:
+            delta_aero, delta_grip = compute_team_penalties(team_code, circuit_config)
+            logger.info(
+                "DEBUG adapter: computed penalties car_id=%s delta_aero=%.4f delta_grip=%.4f",
+                car_id,
+                delta_aero,
+                delta_grip,
+            )
+        else:
+            logger.warning("DEBUG adapter: unable to resolve team_code for %s", car_id)
+    except Exception as exc:
+        logger.error("Failed to compute team penalties for %s: %s", car_id, exc, exc_info=True)
 
     return CarEntry(
         car_id=car_id,
