@@ -611,6 +611,14 @@ class SessionBridge:
                         config=self.circuit_config,
                         push_level=entry.push_level,
                     )
+                    # DEBUG: Log delta values
+                    if car_id in ["81", "31", "23", "5", "18"]:  # Log first few cars only
+                        logger.info(
+                            "DEBUG %s section %d: dt=%.3fs v_exit=%.1f delta_aero=%.4f delta_grip=%.4f push=%.2f",
+                            car_id, ts.current_section_idx, result.dt_s, result.v_exit_kph,
+                            getattr(entry, 'delta_aero', 0.0), getattr(entry, 'delta_grip', 0.0),
+                            getattr(entry, 'push_level', 1.0)
+                        )
                 except Exception as e:
                     logger.error("update_section error for %s: %s", car_id, e)
                     result = SectionResult(dt_s=dt_ref, v_exit_kph=speed_kph)
@@ -694,6 +702,14 @@ class SessionBridge:
         lap_time = sum(r.dt_s for r in ts.lap_section_results)
         ts.laps_done_in_run += 1
         ts.lap_number += 1
+
+        # DEBUG: Log lap completion with deltas
+        if car_id in ["81", "31", "23", "5", "18"]:
+            logger.info(
+                "DEBUG LAP %s: lap_time=%.3f sections=%d phase=%s delta_aero=%.4f delta_grip=%.4f",
+                car_id, lap_time, len(ts.lap_section_results), str(ts.lap_phase),
+                getattr(ts.car_entry, 'delta_aero', 0.0), getattr(ts.car_entry, 'delta_grip', 0.0)
+            )
 
         # Append lap time
         race_car.lap_times.append(lap_time)

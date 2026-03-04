@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from .data_types import (
@@ -24,6 +26,9 @@ from .data_types import (
 from .update_section import update_section
 
 logger = logging.getLogger(__name__)
+
+_LAP_LOG_FILE = Path("logs/lap_times_debug.log")
+_LAP_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 # Lazy import to avoid circular dependency
 _BattleResolver = None
@@ -269,7 +274,29 @@ class LapSimulator:
         results: Dict[str, LapResult] = {}
         for car_id, entry in self.cars.items():
             results[car_id] = self._run_lap_single(entry)
+        self._log_lap_times(results)
         return results
+
+    def _log_lap_times(self, results: Dict[str, LapResult]) -> None:
+        timestamp = datetime.utcnow().isoformat()
+        lines: List[str] = [f"{timestamp} | Lap Results:"]
+        for car_id, lr in results.items():
+            entry = self.cars.get(car_id)
+            delta_aero = entry.delta_aero if entry else 0.0
+            delta_grip = entry.delta_grip if entry else 0.0
+            push_level = entry.push_level if entry else 1.0
+            apply_baseline = entry.apply_baseline_delta if entry else True
+            sectors = ",".join(f"{s:.3f}" for s in lr.sector_times_s)
+            lines.append(
+                f"{lr.car_id} | Lap {lr.lap_number} | {lr.lap_time_s:.3f}s | sectors[{sectors}] | "
+                f"delta_aero={delta_aero:.4f} delta_grip={delta_grip:.4f} push={push_level:.2f} baseline={apply_baseline} | "
+                f"fuel={lr.fuel_kg:.1f}kg ers={lr.ers_energy_mj:.2f}MJ"
+            )
+        try:
+            with _LAP_LOG_FILE.open("a", encoding="utf-8") as fp:
+                fp.write("\n".join(lines) + "\n")
+        except OSError as exc:
+            logger.warning("Failed to write lap debug log: %s", exc)
 
     def _run_lap_multi(self) -> Dict[str, LapResult]:
         """

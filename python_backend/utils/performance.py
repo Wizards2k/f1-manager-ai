@@ -2,12 +2,18 @@
 from __future__ import annotations
 
 import random
-
+import logging
+from datetime import datetime
+from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import config
 from models import CarState, RaceCar
 from utils.position import circuit_length
+
+logger = logging.getLogger(__name__)
+_PERF_LOG_FILE = Path(__file__).parent.parent / "logs" / "performance_debug.log"
+_PERF_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 # Base constants
 DEFAULT_BASE_LAP_TIME = 80.0  # seconds, fallback when no circuit profile
@@ -79,6 +85,20 @@ def compute_projected_lap_time(car: RaceCar) -> Tuple[float, Dict[str, float]]:
         "raw_lap": lap_time,
         "final_lap": clamped,
     }
+    
+    try:
+        timestamp = datetime.utcnow().isoformat()
+        team_name = getattr(car.team, 'nome', 'Unknown') if car.team else 'Unknown'
+        driver_name = getattr(car, 'driver_name', 'Unknown')
+        with _PERF_LOG_FILE.open("a", encoding="utf-8") as fp:
+            fp.write(
+                f"{timestamp} | {driver_name} ({team_name}) | "
+                f"lap_time={clamped:.3f}s | base={base_lap:.3f} car_bonus={car_bonus:.3f} "
+                f"pilot_bonus={pilot_bonus:.3f} tire_delta={tire_delta:.3f}\n"
+            )
+    except OSError as exc:
+        logger.warning("Failed to write performance debug log: %s", exc)
+    
     return clamped, debug
 
 

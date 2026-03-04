@@ -251,12 +251,59 @@ def racecar_to_car_entry(
 
     state = _build_sim_state(car_id, car)
 
+    # Calculate team penalties for AI cars
+    delta_aero = 0.0
+    delta_grip = 0.0
+    if not getattr(car, 'is_player_controlled', False):
+        try:
+            from utils.team_performance import compute_team_penalties
+            from lap_simulator.config_loader import load_circuit_config
+            
+            # Get circuit config
+            circuit_config = None
+            try:
+                circuit_config = load_circuit_config()
+            except Exception:
+                pass
+            
+            # Get team code from team name
+            team_code = getattr(car.team, 'team_code', None)
+            if not team_code and hasattr(car.team, 'nome'):
+                # Map team name to code (simplified)
+                team_name = car.team.nome.lower()
+                team_map = {
+                    'red bull': 'RBR',
+                    'mercedes': 'MER', 
+                    'ferrari': 'FER',
+                    'mclaren': 'MCL',
+                    'aston martin': 'AMR',
+                    'alpine': 'ALP',
+                    'williams': 'WIL',
+                    'alfa romeo': 'ARR',
+                    'haas': 'HAA',
+                    'rb': 'RB'
+                }
+                for name, code in team_map.items():
+                    if name in team_name:
+                        team_code = code
+                        break
+            
+            if team_code:
+                delta_aero, delta_grip = compute_team_penalties(team_code, circuit_config)
+        except Exception as exc:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning("Failed to compute team penalties for %s: %s", car_id, exc)
+
     return CarEntry(
         car_id=car_id,
         state=state,
         aero_setup=setup,
         driver_skills=skills,
         push_level=push_level,
+        delta_aero=delta_aero,
+        delta_grip=delta_grip,
+        apply_baseline_delta=True,
     )
 
 
