@@ -865,6 +865,10 @@ class SessionBridge:
         race_car.fuel_percent = max(1.0, (entry.state.pu.fuel_kg / fuel_max_kg) * 100.0)
         if hasattr(race_car, "player_config"):
             race_car.player_config["fuel_percent"] = int(round(race_car.fuel_percent))
+        # Fuel penalty telemetry
+        race_car.fuel_penalty_s = result.fuel_penalty_s
+        if hasattr(race_car, "player_config"):
+            race_car.player_config["fuel_penalty_s"] = round(result.fuel_penalty_s, 4)
 
         # Power unit / ERS telemetry block
         race_car.pu_stats = self._build_pu_stats(entry)

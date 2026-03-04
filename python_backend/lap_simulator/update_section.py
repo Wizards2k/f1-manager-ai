@@ -470,6 +470,15 @@ def update_section(
     # Apply dt_ref penalty model (baseline + aero/grip deltas)
     # ------------------------------------------------------------------
     ref_dt = section.dt_ref_s if (hasattr(section, 'dt_ref_s') and section.dt_ref_s > 0.0) else dt_s
+    # Fuel penalty (per lap) scaled by current fuel mass
+    # Convert per-lap penalty to per-section penalty
+    fuel_delta_s = 0.0
+    if config.fuel_penalty_coeff > 0.0:
+        extra_fuel = max(0.0, car_state.pu.fuel_kg - config.fuel_reference_kg)
+        # Scale penalty by section length relative to total lap
+        section_fraction = section.length_m / config.circuit_length_m
+        fuel_delta_s = config.fuel_penalty_coeff * extra_fuel * section_fraction
+
     delta_penalty = clamp(
         config.k_aero_penalty * delta_aero + config.k_grip_penalty * delta_grip,
         -0.05,
@@ -477,7 +486,7 @@ def update_section(
     )
     baseline = config.baseline_delta if apply_baseline_delta else 0.0
     total_penalty = baseline + delta_penalty
-    dt_s = max(dt_s + ref_dt * total_penalty, 0.01)
+    dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s, 0.01)
     v_effective = (section.length_m / dt_s) * 3.6
 
     car_state.v_current_ms = v
@@ -570,4 +579,5 @@ def update_section(
         effective_grip_front=eff_grip_front,
         effective_grip_rear=eff_grip_rear,
         handling_penalty=aero_forces.handling_penalty,
+        fuel_penalty_s=fuel_delta_s,
     )

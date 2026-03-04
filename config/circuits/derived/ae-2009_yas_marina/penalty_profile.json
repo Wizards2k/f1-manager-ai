@@ -1,0 +1,8 @@
+{
+  "fuel_reference_kg": 10.0,
+  "fuel_penalty_coeff": 0.035,
+  "_meta": {
+    "source": "telemetry.fuel_mass.fuel_lap_delta_ms",
+    "fuel_lap_delta_ms": 35.0
+  }
+}

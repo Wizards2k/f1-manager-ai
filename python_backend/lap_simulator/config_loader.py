@@ -207,6 +207,7 @@ _MAP_NAME = {
 def _parse_pu_maps(data: Dict[str, Any]) -> Dict[EngineMapName, EngineMapParams]:
     maps_raw = data.get("maps", {})
     result: Dict[EngineMapName, EngineMapParams] = {}
+
     for key, vals in maps_raw.items():
         mn = _MAP_NAME.get(key)
         if mn is None:
@@ -363,6 +364,12 @@ def load_circuit_config(
     pu_rel_data = _load_json(global_pu_rel)
     pu_reliability = _parse_pu_reliability(pu_rel_data)
 
+    # --- Penalty Profile ---
+    penalty_path = derived_dir / "penalty_profile.json"
+    penalty_data = _load_json(penalty_path) if penalty_path.exists() else {}
+    fuel_reference_kg = penalty_data.get("fuel_reference_kg", 10.0)
+    fuel_penalty_coeff = penalty_data.get("fuel_penalty_coeff", 0.0)
+
     # --- Damage ---
     dmg_path = derived_dir / "damage_coeffs.json" if derived_dir.exists() else global_damage
     dmg_data = _load_json(dmg_path) if dmg_path.exists() else _load_json(global_damage)
@@ -387,5 +394,7 @@ def load_circuit_config(
         ers_budget=ers_budget,
         regen_profile=regen_profile,
         soc_warnings=soc_warnings,
-        reference_lap_time_s=sum_dt_ref # Force 2025 telemetry sum,
+        reference_lap_time_s=sum_dt_ref, # Force 2025 telemetry sum
+        fuel_reference_kg=fuel_reference_kg,
+        fuel_penalty_coeff=fuel_penalty_coeff,
     )

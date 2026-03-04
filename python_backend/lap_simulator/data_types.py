@@ -550,6 +550,7 @@ class SectionResult:
     effective_grip_front: float = 1.0
     effective_grip_rear: float = 1.0
     handling_penalty: float = 0.0
+    fuel_penalty_s: float = 0.0          # fuel-weight contribution (per section)
 
 
 # ---------------------------------------------------------------------------
@@ -595,6 +596,8 @@ class CircuitConfig:
     k_fuel_penalty: float = 0.015         # max fuel weight contribution
     k_driver_penalty: float = 0.03       # max driver skill contribution
     fuel_max_kg: float = 110.0           # reference max fuel load
+    fuel_reference_kg: float = 10.0      # baseline fuel for penalty model
+    fuel_penalty_coeff: float = 0.0      # seconds per kg per lap
     reference_lap_time_s: float = 0.0    # from telemetry (sum of dt_ref_s)
 
 

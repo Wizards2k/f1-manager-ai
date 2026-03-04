@@ -89,6 +89,25 @@ def extract_setup_bounds(setup_entry: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def build_penalty_profile(telemetry: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    fuel_mass = (telemetry or {}).get("fuel_mass", {})
+    fuel_lap_delta_ms = fuel_mass.get("fuel_lap_delta_ms", 35.0)
+    try:
+        coeff = float(fuel_lap_delta_ms) / 1000.0
+    except (TypeError, ValueError):
+        coeff = 0.035
+
+    profile: Dict[str, Any] = {
+        "fuel_reference_kg": 10.0,
+        "fuel_penalty_coeff": round(coeff, 6),
+    }
+
+    meta = profile.setdefault("_meta", {})
+    meta["source"] = "telemetry.fuel_mass.fuel_lap_delta_ms"
+    meta["fuel_lap_delta_ms"] = fuel_lap_delta_ms
+    return profile
+
+
 def build_tyres(global_tyres: Dict[str, Any], pirelli_context: Dict[str, Any]) -> Dict[str, Any]:
     derived = deepcopy(global_tyres)
     track_features = pirelli_context.get("track_features", {})
@@ -269,6 +288,7 @@ def merge_circuit_profile(circuit_id: str, args: argparse.Namespace) -> None:
         pu_maps = build_pu_maps(global_defaults.get("pu_maps", {}), setup_entry)
     pu_reliability = deepcopy(global_defaults.get("pu_reliability", {}))
     damage = build_damage(global_defaults.get("damage", {}), setup_entry, pirelli_context)
+    penalty_profile = build_penalty_profile(telemetry)
 
     for payload in (tyres, brakes, pu_maps, pu_reliability, damage):
         add_common_meta(payload, circuit_id, setup_key, telemetry)
@@ -279,6 +299,7 @@ def merge_circuit_profile(circuit_id: str, args: argparse.Namespace) -> None:
         "pu_maps.json": pu_maps,
         "pu_reliability.json": pu_reliability,
         "damage_coeffs.json": damage,
+        "penalty_profile.json": penalty_profile,
     }
 
     for filename, content in outputs.items():
