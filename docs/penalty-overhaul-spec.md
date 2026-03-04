@@ -67,18 +67,45 @@ dataclass PerformancePenalties:
 2. **Integration test** `test_penalty_stack` che esegue lap sweep (fuel ladder, compound switch, push slider) verificando monotonicità.
 3. **Scenario test circuito**: caricare profili (es. Melbourne vs Baku) e confrontare penalty attese.
 
-## 8. Roadmap Incrementale
+## 8. Stato Implementazione (Mar 2026)
+### ✅ **Wave 1 - COMPLETATA**
+- **Fuel**: Implementato e testato
+  - `fuel_reference_kg = 10.0`, `fuel_penalty_coeff` da telemetria
+  - Calcolo per sezione: `coeff * extra_fuel * (section_length / circuit_length)`
+  - Test Yas Marina: 100kg = +3.5s/lap (realistico)
+  - Telemetry in SessionBridge: `fuel_penalty_s` per sezione
+  - Interfaccia % ↔ kg funzionante
+
+### 🔄 **Wave 1 - In Progress**
+- **Gomme**: Da implementare (TyreModel integration)
+- **Push**: Da implementare (push level scaling)
+- **Mappe ICE/ERS**: Da implementare (engine map penalties)
+
+### 📋 **Wave 2-4 - Pending**
+- **Wave 2**: freni + assetto
+- **Wave 3**: skill pilota + circuit extras + telemetria UI
+- **Wave 4**: refinements (bonus eventuali, toggle legacy)
+
+### 📁 **File Modificati**
+- `python_backend/lap_simulator/data_types.py` - Aggiunti campi fuel penalty
+- `python_backend/lap_simulator/config_loader.py` - Caricamento penalty profile
+- `python_backend/lap_simulator/update_section.py` - Calcolo penalità fuel
+- `python_backend/utils/session_bridge.py` - Telemetry fuel penalty
+- `scripts/build_circuit_profiles.py` - Generazione penalty profile JSON
+- `config/circuits/derived/*/penalty_profile.json` - Profili penalità per circuito
+
+## 9. Roadmap Incrementale Originale
 1. **Wave 1**: fuel + gomme + push + mappe ICE/ERS (dati già strutturati).
 2. **Wave 2**: freni + assetto (richiede affinamento doc setup/brake).
 3. **Wave 3**: skill pilota + circuit extras + telemetria UI.
 4. **Wave 4**: refinements (bonus eventuali, toggle legacy).
 
-## 9. Deliverable
+## 10. Deliverable
 - Specifica approvata (questo documento).
 - Implementazione graduale con flag e test.
 - Aggiornamento doc correlati (`degradation-and-consumption`, `TyreModel`, `EngineData2025`, `brake-integration`, `setup-ui-plan`).
 
-## 10. Documenti di riferimento
+## 11. Documenti di riferimento
 - `docs/degradation-and-consumption.md`
 - `docs/TyreModel.md`
 - `docs/tyre-allocation.md`

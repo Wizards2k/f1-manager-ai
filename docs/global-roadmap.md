@@ -120,10 +120,10 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
      5. **Automazione & QA** – pipeline `calibration.yml`, watchdog FastF1 vs sim, manifest + dashboard Plotly e checklist QA dedicate.
 3. ✅ **CI `calibration.yml`**: pipeline watchdog implementata con badge componenti → lap regression → race smoke test (`.github/workflows/calibration.yml`).
 4. ✅ **Data coherence watchdog**: CLI `tools/watchdog.py` completa che confronta sim vs FastF1/telemetry con report drift; esecuzione in CI.
-5. ⚠️ **Manifest & dashboard**: `config/calibration/manifest.json` completo con 24 circuiti; dashboard Plotly (sim vs telemetria) e report HTML da implementare.
+5. ✅ **Manifest & dashboard**: `config/calibration/manifest.json` completo con 24 circuiti; dashboard Plotly (sim vs telemetria) e report HTML implementati.
 
 6. Penalty System Overhaul – `docs/penalty-overhaul-spec.md`
-1. ⏳ **Baseline circuito/vettura**: ingestione dati telemetria + config per valori zero-penalty
+1. ✅ **Fuel penalty**: implementato con telemetry integration, test Yas Marina 100kg = +3.5s/lap
 2. ⏳ **Struttura PerformancePenalties**: fuel, tyres, push, driver_skill, ice_map, ers_map, brakes, setup, circuit_extra
 3. ⏳ **Team performance gaps**: mapping driver→team, calcolo delta_aero/delta_grip per AI e giocatore
 4. ⏳ **Runtime integration**: delta values passati da CarEntry a update_section() con applicazione fisica
