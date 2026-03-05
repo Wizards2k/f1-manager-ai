@@ -8,7 +8,7 @@ Reference: docs/lap-physics-spec-v0.5.md §3.3 (Passi 1-8)
 """
 from __future__ import annotations
 
-from typing import List
+from typing import Dict, List, Optional
 
 from .aero_package import compute_forces
 from .brake_system import update_brakes
@@ -64,6 +64,8 @@ def update_section(
     circuit_id: str = "default",
     driver_id: str = "default",
     lap_number: int = 1,
+    setup_sliders: Optional[Dict[str, int]] = None,
+    ideal_setup_sliders: Optional[Dict[str, int]] = None,
 ) -> SectionResult:
     """
     Compute the physics for one car traversing one section.
@@ -671,12 +673,22 @@ def update_section(
     )
 
     # ===================================================================
-    # Setup Penalty/Bonus (if config available)
+    # Setup Penalty/Bonus (if config and setup data available)
     # ===================================================================
     setup_penalty_result = SetupPenaltyResult()
-    if config.setup_penalty_config:
-        # Placeholder: setup penalty calculation would go here
-        # For now, initialize with zeros (full integration requires player setup data)
+    if config.setup_penalty_config and setup_sliders and ideal_setup_sliders:
+        # Calculate setup penalties/bonuses based on current vs ideal setup
+        # For now, initialize with zeros (full calculation requires waypoint-level integration)
+        # TODO: Implement full setup penalty calculation with waypoint-level DF/drag deltas
+        setup_penalty_result = SetupPenaltyResult(
+            df_curve_penalty_s=0.0,
+            df_curve_bonus_s=0.0,
+            drag_penalty_s=0.0,
+            drag_bonus_s=0.0,
+            setup_penalty_s=0.0,
+        )
+    elif config.setup_penalty_config:
+        # Config available but no setup data provided
         setup_penalty_result = SetupPenaltyResult(
             df_curve_penalty_s=0.0,
             df_curve_bonus_s=0.0,

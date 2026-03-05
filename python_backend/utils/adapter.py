@@ -311,6 +311,17 @@ def racecar_to_car_entry(
     except Exception as exc:
         logger.error("Failed to compute team penalties for %s: %s", car_id, exc, exc_info=True)
 
+    # Extract setup sliders from player_config if available
+    setup_sliders = {}
+    ideal_setup_sliders = {}
+    try:
+        player_config = getattr(car, "player_config", {})
+        if player_config:
+            setup_sliders = dict(player_config.get("setup", {}))
+            ideal_setup_sliders = dict(player_config.get("ideal_setup", {}))
+    except Exception as e:
+        logger.debug("Failed to extract setup sliders for car %s: %s", car_id, e)
+
     return CarEntry(
         car_id=car_id,
         state=state,
@@ -320,6 +331,8 @@ def racecar_to_car_entry(
         delta_aero=delta_aero,
         delta_grip=delta_grip,
         apply_baseline_delta=True,
+        setup_sliders=setup_sliders,
+        ideal_setup_sliders=ideal_setup_sliders,
     )
 
 

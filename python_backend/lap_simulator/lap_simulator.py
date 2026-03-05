@@ -12,7 +12,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 from .data_types import (
     AeroSetup,
@@ -56,6 +56,8 @@ class CarEntry:
     delta_aero: float = 0.0
     delta_grip: float = 0.0
     apply_baseline_delta: bool = True
+    setup_sliders: Dict[str, int] = field(default_factory=dict)  # current setup (0-100 per slider)
+    ideal_setup_sliders: Dict[str, int] = field(default_factory=dict)  # ideal setup for circuit
 
 
 # ---------------------------------------------------------------------------
@@ -212,6 +214,8 @@ class LapSimulator:
                 traffic_v_max_kph=traffic,
                 delta_aero=entry.delta_aero,
                 delta_grip=entry.delta_grip,
+                setup_sliders=entry.setup_sliders if entry.setup_sliders else None,
+                ideal_setup_sliders=entry.ideal_setup_sliders if entry.ideal_setup_sliders else None,
             )
 
             section_results.append(result)
