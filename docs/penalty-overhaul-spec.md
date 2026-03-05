@@ -90,9 +90,24 @@ dataclass PerformancePenalties:
   - **REGOLA SPECIALE**: Push 1 = penalty massima senza riduzione skill (1.600s)
   - Test Suzuka: push 10 = 87.153s, push 1 = 88.753s (+1.600s)
   - Esempi: Norris push=5 = 87.686s (Quali), push=1 = 88.753s (massima penalty)
+- **Engine Penalty System**: Implementato e testato ✅
+  - **CV-based penalties**: Mercedes reference (1008 CV), higher CV = penalty (not bonus)
+  - **Circuit-specific coefficients**: Base 0.01 (20 CV = 0.2s), scaled by power_bias
+    - High-speed (Monza): 0.012 (20 CV = 0.24s)
+    - Medium-speed (Baku): 0.01 (20 CV = 0.2s)  
+    - Low-speed (Monaco): 0.008 (20 CV = 0.16s)
+  - **Engine map penalties**: QUALY=0.0s, RICH=0.12s, STANDARD=0.25s, ECONOMY=0.40s, WET=0.18s, RECHARGE=0.50s
+  - **Straight-only application**: Applied only on STRAIGHT, MEDIUM_STRAIGHT, ULTRA_FAST_CORNER
+  - **Integration**: Full integration with update_section() physics loop
+  - **Test results**: 
+    - McLaren Mercedes (1008 CV) + QUALY = 0.000s penalty (reference)
+    - RBR Honda (1015 CV) + QUALY = +0.770s on Baku (11 straights)
+    - RBR Honda (1015 CV) + STANDARD = +3.520s on Baku
+  - **Files**: `engine_penalty.py`, updated `data_types.py`, `config_loader.py`, `update_section.py`
+  - **Tests**: 7 unit tests + integration test, all passing
 
-### 🔄 **Wave 1 - In Progress**
-- **Mappe ICE/ERS**: Da implementare (engine map penalties)
+### 🔄 **Wave 1 - COMPLETATA**
+- **Mappe ICE/ERS**: Implementato come parte dell'Engine Penalty System
 
 ### 📋 **Wave 2-4 - Pending**
 - **Wave 2**: freni + assetto
@@ -100,22 +115,29 @@ dataclass PerformancePenalties:
 - **Wave 4**: refinements (bonus eventuali, toggle legacy)
 
 ### 📁 **File Modificati**
-- `python_backend/lap_simulator/data_types.py` - Aggiunti campi fuel penalty, push_penalty params e push_level
-- `python_backend/lap_simulator/config_loader.py` - Caricamento penalty profile e fallback nomination
-- `python_backend/lap_simulator/update_section.py` - Calcolo penalità fuel, gomme e push (con skill modulation)
+- `python_backend/lap_simulator/data_types.py` - Aggiunti campi fuel penalty, push_penalty params, push_level, engine_penalty_s e team_code
+- `python_backend/lap_simulator/config_loader.py` - Caricamento penalty profile, fallback nomination e engine penalty config
+- `python_backend/lap_simulator/update_section.py` - Calcolo penalità fuel, gomme, push e engine (con skill modulation)
 - `python_backend/lap_simulator/push_penalty.py` - Nuovo modulo per calcolo penalità push
+- `python_backend/lap_simulator/engine_penalty.py` - Nuovo modulo per calcolo penalità motore CV/mappe
 - `python_backend/utils/session_bridge.py` - Telemetry fuel penalty
-- `scripts/build_circuit_profiles.py` - Generazione penalty profile con pirelli_nomination
-- `config/circuits/derived/*/penalty_profile.json` - Profili penalità per circuito
-- `scripts/run_sim_teams.py`, `scripts/physics_validator.py` - Test con compound C3/C5 e push level 10
+- `scripts/build_circuit_profiles.py` - Generazione penalty profile, pirelli_nomination e engine penalty parameters
+- `config/circuits/derived/*/penalty_profile.json` - Profili penalità per circuito con engine penalty config
+- `scripts/run_sim_teams.py`, `scripts/physics_validator.py` - Test con compound C3/C5, push level 10 e engine penalties
 - `tests/test_driver_push_penalty.py` - Suite test per sistema push penalty
+- `tests/test_engine_penalty.py` - Suite test per sistema engine penalty (7 test)
 - `test_push_validation.py` - Script validazione per scenari realistici
+- `test_engine_penalty_integration.py` - Script test integrazione engine penalty
+- `test_mclaren_engine_penalty.py` - Script test McLaren reference
+- `test_rbr_engine_penalty.py` - Script test RBR engine penalties
 
-## 9. Roadmap Incrementale Originale
-1. **Wave 1**: fuel + gomme + push + mappe ICE/ERS (dati già strutturati).
+## 9. Roadmap Incrementale Aggiornata
+1. **Wave 1**: ✅ **COMPLETATA** - fuel + gomme + push + engine penalties (CV + mappe ICE/ERS)
 2. **Wave 2**: freni + assetto (richiede affinamento doc setup/brake).
 3. **Wave 3**: skill pilota + circuit extras + telemetria UI.
 4. **Wave 4**: refinements (bonus eventuali, toggle legacy).
+
+**Status Wave 1**: 100% completato con Engine Penalty System integrato e testato
 
 ## 10. Deliverable
 - Specifica approvata (questo documento).
