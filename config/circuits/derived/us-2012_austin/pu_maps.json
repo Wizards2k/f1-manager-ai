@@ -20,8 +20,8 @@
       "circuit_length_m": 5456.999999999999
     },
     "setup_profile_key": "united_states",
-    "built_at": "2026-02-20T20:37:40Z",
-    "circuit_name": "Circuit of the Americas",
+    "built_at": "2026-03-05T12:41:46Z",
+    "circuit_name": "United States Grand Prix",
     "telemetry_source": "python_backend/data/circuits/us-2012_austin_Telemetry.json"
   },
   "maps": {

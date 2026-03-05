@@ -20,8 +20,8 @@
       "circuit_length_m": 5837.0
     },
     "setup_profile_key": "austrian",
-    "built_at": "2026-02-20T20:37:39Z",
-    "circuit_name": "Silverstone Circuit",
+    "built_at": "2026-03-05T12:41:40Z",
+    "circuit_name": "Austrian Grand Prix",
     "telemetry_source": "python_backend/data/circuits/gb-1948_silverstone_Telemetry.json"
   },
   "maps": {

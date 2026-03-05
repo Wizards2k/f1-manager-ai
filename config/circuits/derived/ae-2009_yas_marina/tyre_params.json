@@ -13,7 +13,9 @@
       "brake_density": 2.1664761904761907
     },
     "setup_profile_key": "abu_dhabi",
-    "built_at": "2026-03-04T18:23:35Z"
+    "built_at": "2026-03-05T12:41:48Z",
+    "circuit_name": "Abu Dhabi Grand Prix",
+    "telemetry_source": "python_backend/data/circuits/ae-2009_yas_marina_Telemetry.json"
   },
   "compounds": {
     "C1": {

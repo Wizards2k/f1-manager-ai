@@ -369,7 +369,11 @@ def load_circuit_config(
     penalty_data = _load_json(penalty_path) if penalty_path.exists() else {}
     fuel_reference_kg = penalty_data.get("fuel_reference_kg", 10.0)
     fuel_penalty_coeff = penalty_data.get("fuel_penalty_coeff", 0.0)
-    tyre_reference_compound = penalty_data.get("tyre_reference_compound", "C5")
+    # Prefer tyre_reference_compound from penalty profile, fallback to telemetry nomination, then default C5
+    tyre_reference_compound = (
+        penalty_data.get("tyre_reference_compound") or
+        telem.get("pirelli_package", {}).get("nomination", {}).get("soft", "C5")
+    )
     tyre_compound_deltas = penalty_data.get("tyre_compound_deltas", {})
     tyre_wear_coeffs = penalty_data.get("tyre_wear_coeffs", {})
     n_curve_sections = penalty_data.get("n_curve_sections", 10)

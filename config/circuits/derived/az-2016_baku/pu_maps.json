@@ -20,8 +20,8 @@
       "circuit_length_m": 5937.900000000001
     },
     "setup_profile_key": "azerbaijan",
-    "built_at": "2026-02-20T20:37:39Z",
-    "circuit_name": "Baku City Circuit",
+    "built_at": "2026-03-05T12:41:46Z",
+    "circuit_name": "Azerbaijan Grand Prix",
     "telemetry_source": "python_backend/data/circuits/az-2016_baku_Telemetry.json"
   },
   "maps": {

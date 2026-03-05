@@ -10,8 +10,8 @@
     },
     "circuit_id": "us-2022_miami",
     "setup_profile_key": "miami",
-    "built_at": "2026-02-20T20:37:40Z",
-    "circuit_name": "Miami International Autodrome",
+    "built_at": "2026-03-05T12:41:42Z",
+    "circuit_name": "Miami Grand Prix",
     "telemetry_source": "python_backend/data/circuits/us-2022_miami_Telemetry.json"
   },
   "systems": {

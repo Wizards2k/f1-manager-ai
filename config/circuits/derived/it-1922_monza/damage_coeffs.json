@@ -11,8 +11,8 @@
     },
     "circuit_id": "it-1922_monza",
     "setup_profile_key": "italian",
-    "built_at": "2026-02-20T20:37:40Z",
-    "circuit_name": "Autodromo Nazionale di Monza",
+    "built_at": "2026-03-05T12:41:40Z",
+    "circuit_name": "Italian Grand Prix",
     "telemetry_source": "python_backend/data/circuits/it-1922_monza_Telemetry.json"
   },
   "components": {

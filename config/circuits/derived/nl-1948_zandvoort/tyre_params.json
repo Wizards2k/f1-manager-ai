@@ -13,8 +13,8 @@
       "brake_density": 2.4885315677465125
     },
     "setup_profile_key": "dutch",
-    "built_at": "2026-02-20T20:37:40Z",
-    "circuit_name": "Circuit Zandvoort",
+    "built_at": "2026-03-05T12:41:45Z",
+    "circuit_name": "Dutch Grand Prix",
     "telemetry_source": "python_backend/data/circuits/nl-1948_zandvoort_Telemetry.json"
   },
   "compounds": {

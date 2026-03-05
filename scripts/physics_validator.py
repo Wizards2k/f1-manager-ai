@@ -34,7 +34,7 @@ def get_baseline_entry(circuit_id: str, pu_mode: str = "registry") -> CarEntry:
         state.pu.fuel_kg = 2.5
         state.pu.active_map = EngineMapName.STANDARD
         state.pu.ers_energy_mj = 4.0
-    soft_compound = TyreCompound.C4 if circuit_id == "it-1922_monza" else TyreCompound.C5
+    soft_compound = TyreCompound.C3 if circuit_id == "it-1922_monza" else TyreCompound.C3
     state.tyres = {wp: TyreState(wheel_pos=wp, compound=soft_compound) for wp in WheelPosition}
     for tyre in state.tyres.values():
         tyre.surface_temp_c = 100.0

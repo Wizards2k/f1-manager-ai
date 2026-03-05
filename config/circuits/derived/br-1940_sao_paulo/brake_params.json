@@ -10,8 +10,8 @@
     },
     "circuit_id": "br-1940_sao_paulo",
     "setup_profile_key": "sao_paulo",
-    "built_at": "2026-02-20T20:37:39Z",
-    "circuit_name": "Interlagos",
+    "built_at": "2026-03-05T12:41:47Z",
+    "circuit_name": "S\u00e3o Paulo Grand Prix",
     "telemetry_source": "python_backend/data/circuits/br-1940_sao_paulo_Telemetry.json"
   },
   "systems": {

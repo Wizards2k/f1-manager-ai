@@ -1,0 +1,32 @@
+{
+  "fuel_reference_kg": 10.0,
+  "fuel_penalty_coeff": 3.5e-05,
+  "tyre_reference_compound": "C4",
+  "tyre_compound_deltas": {
+    "C4": 0.0,
+    "C2": 0.55,
+    "C1": 1.2000000000000002,
+    "C3": 0.0,
+    "C5": 0.0,
+    "C6": 0.0
+  },
+  "tyre_wear_coeffs": {
+    "C1": 0.05,
+    "C2": 0.08,
+    "C3": 0.12,
+    "C4": 0.18,
+    "C5": 0.25,
+    "C6": 0.35
+  },
+  "n_curve_sections": 6,
+  "pirelli_nomination": {
+    "hard": "C2",
+    "medium": "C3",
+    "soft": "C4"
+  },
+  "_meta": {
+    "source": "telemetry.fuel_mass.fuel_lap_delta_ms",
+    "fuel_lap_delta_ms": 0.035,
+    "tyre_reference_compound": "C4"
+  }
+}

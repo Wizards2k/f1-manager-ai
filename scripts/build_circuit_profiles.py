@@ -183,6 +183,12 @@ def build_penalty_profile(telemetry: Optional[Dict[str, Any]]) -> Dict[str, Any]
     profile["tyre_compound_deltas"] = tyre_compound_deltas
     profile["tyre_wear_coeffs"] = tyre_wear_coeffs
     profile["n_curve_sections"] = n_curve_sections
+    # Store all nominated compounds for the GP
+    profile["pirelli_nomination"] = {
+        "hard": nomination.get("hard"),
+        "medium": nomination.get("medium"),
+        "soft": nomination.get("soft")
+    }
 
     meta = profile.setdefault("_meta", {})
     meta["source"] = "telemetry.fuel_mass.fuel_lap_delta_ms"

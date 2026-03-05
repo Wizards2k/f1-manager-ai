@@ -5,8 +5,8 @@
     "notes": "Global default PU reliability (non calibrated). Circuit/weather/setup modifiers adjust cooling; da ritarare su dati FastF1.",
     "circuit_id": "mx-1962_mexico_city",
     "setup_profile_key": "mexico",
-    "built_at": "2026-02-20T20:37:40Z",
-    "circuit_name": "Aut\u00f3dromo Hermanos Rodr\u00edguez",
+    "built_at": "2026-03-05T12:41:47Z",
+    "circuit_name": "Mexico City Grand Prix",
     "telemetry_source": "python_backend/data/circuits/mx-1962_mexico_city_Telemetry.json"
   },
   "ice": {

@@ -10,8 +10,8 @@
     },
     "circuit_id": "sg-2008_singapore",
     "setup_profile_key": "singapore",
-    "built_at": "2026-02-20T20:37:40Z",
-    "circuit_name": "Marina Bay Street Circuit",
+    "built_at": "2026-03-05T12:41:46Z",
+    "circuit_name": "Singapore Grand Prix",
     "telemetry_source": "python_backend/data/circuits/sg-2008_singapore_Telemetry.json"
   },
   "systems": {

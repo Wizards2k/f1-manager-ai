@@ -20,8 +20,8 @@
       "circuit_length_m": 5364.000000000001
     },
     "setup_profile_key": "bahrain",
-    "built_at": "2026-02-20T20:37:39Z",
-    "circuit_name": "Bahrain International Circuit",
+    "built_at": "2026-03-05T12:41:40Z",
+    "circuit_name": "Bahrain Grand Prix",
     "telemetry_source": "python_backend/data/circuits/bh-2002_sakhir_Telemetry.json"
   },
   "maps": {

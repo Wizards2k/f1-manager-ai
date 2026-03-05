@@ -5,7 +5,9 @@
     "notes": "Global default PU reliability (non calibrated). Circuit/weather/setup modifiers adjust cooling; da ritarare su dati FastF1.",
     "circuit_id": "ae-2009_yas_marina",
     "setup_profile_key": "abu_dhabi",
-    "built_at": "2026-03-04T18:23:35Z"
+    "built_at": "2026-03-05T12:41:48Z",
+    "circuit_name": "Abu Dhabi Grand Prix",
+    "telemetry_source": "python_backend/data/circuits/ae-2009_yas_marina_Telemetry.json"
   },
   "ice": {
     "wear_coeff": 0.0008,

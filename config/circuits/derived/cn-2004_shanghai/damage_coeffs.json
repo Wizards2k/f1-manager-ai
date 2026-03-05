@@ -11,8 +11,8 @@
     },
     "circuit_id": "cn-2004_shanghai",
     "setup_profile_key": "chinese",
-    "built_at": "2026-02-20T20:37:39Z",
-    "circuit_name": "Shanghai International Circuit",
+    "built_at": "2026-03-05T12:41:42Z",
+    "circuit_name": "Chinese Grand Prix",
     "telemetry_source": "python_backend/data/circuits/cn-2004_shanghai_Telemetry.json"
   },
   "components": {

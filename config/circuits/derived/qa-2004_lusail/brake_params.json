@@ -10,8 +10,8 @@
     },
     "circuit_id": "qa-2004_lusail",
     "setup_profile_key": "qatar",
-    "built_at": "2026-02-20T20:37:40Z",
-    "circuit_name": "Lusail International Circuit",
+    "built_at": "2026-03-05T12:41:48Z",
+    "circuit_name": "Qatar Grand Prix",
     "telemetry_source": "python_backend/data/circuits/qa-2004_lusail_Telemetry.json"
   },
   "systems": {

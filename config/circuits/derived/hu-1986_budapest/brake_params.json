@@ -10,8 +10,8 @@
     },
     "circuit_id": "hu-1986_budapest",
     "setup_profile_key": "hungarian",
-    "built_at": "2026-02-20T20:37:40Z",
-    "circuit_name": "Hungaroring",
+    "built_at": "2026-03-05T12:41:45Z",
+    "circuit_name": "Hungarian Grand Prix",
     "telemetry_source": "python_backend/data/circuits/hu-1986_budapest_Telemetry.json"
   },
   "systems": {

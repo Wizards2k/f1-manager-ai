@@ -5,7 +5,7 @@
     "notes": "Global default PU reliability (non calibrated). Circuit/weather/setup modifiers adjust cooling; da ritarare su dati FastF1.",
     "circuit_id": "jp-1962_suzuka",
     "setup_profile_key": "japanese",
-    "built_at": "2026-03-04T23:20:00Z",
+    "built_at": "2026-03-05T12:41:42Z",
     "circuit_name": "Japanese Grand Prix",
     "telemetry_source": "python_backend/data/circuits/jp-1962_suzuka_Telemetry.json"
   },

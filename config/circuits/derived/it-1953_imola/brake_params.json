@@ -10,8 +10,8 @@
     },
     "circuit_id": "it-1953_imola",
     "setup_profile_key": "emilia_romagna",
-    "built_at": "2026-02-20T20:37:40Z",
-    "circuit_name": "Autodromo Enzo e Dino Ferrari",
+    "built_at": "2026-03-05T12:41:43Z",
+    "circuit_name": "Emilia Romagna Grand Prix",
     "telemetry_source": "python_backend/data/circuits/it-1953_imola_Telemetry.json"
   },
   "systems": {

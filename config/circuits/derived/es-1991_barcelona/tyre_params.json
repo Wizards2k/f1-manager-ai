@@ -13,8 +13,8 @@
       "brake_density": 2.698203074258498
     },
     "setup_profile_key": "spanish",
-    "built_at": "2026-02-20T20:37:39Z",
-    "circuit_name": "Circuit de Barcelona-Catalunya",
+    "built_at": "2026-03-05T12:41:43Z",
+    "circuit_name": "Spanish Grand Prix",
     "telemetry_source": "python_backend/data/circuits/es-1991_barcelona_Telemetry.json"
   },
   "compounds": {
