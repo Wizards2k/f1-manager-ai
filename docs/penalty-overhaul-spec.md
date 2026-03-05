@@ -75,9 +75,14 @@ dataclass PerformancePenalties:
   - Test Yas Marina: 100kg = +3.5s/lap (realistico)
   - Telemetry in SessionBridge: `fuel_penalty_s` per sezione
   - Interfaccia % ↔ kg funzionante
+- **Gomme**: Implementato (TyreModel integration)
+  - `tyre_reference_compound` da penalty profile o fallback a telemetria nomination
+  - `tyre_compound_deltas` e `tyre_wear_coeffs` per tutti i compound
+  - Calcolo penalty solo su curve (n_curve_sections)
+  - `pirelli_nomination` in penalty profile con hard/medium/soft per ogni GP
+  - Test Silverstone: C3 vs C5 delta -1.1s, allineamento con baseline zero
 
 ### 🔄 **Wave 1 - In Progress**
-- **Gomme**: Da implementare (TyreModel integration)
 - **Push**: Da implementare (push level scaling)
 - **Mappe ICE/ERS**: Da implementare (engine map penalties)
 
@@ -88,11 +93,12 @@ dataclass PerformancePenalties:
 
 ### 📁 **File Modificati**
 - `python_backend/lap_simulator/data_types.py` - Aggiunti campi fuel penalty
-- `python_backend/lap_simulator/config_loader.py` - Caricamento penalty profile
-- `python_backend/lap_simulator/update_section.py` - Calcolo penalità fuel
+- `python_backend/lap_simulator/config_loader.py` - Caricamento penalty profile e fallback nomination
+- `python_backend/lap_simulator/update_section.py` - Calcolo penalità fuel e gomme
 - `python_backend/utils/session_bridge.py` - Telemetry fuel penalty
-- `scripts/build_circuit_profiles.py` - Generazione penalty profile JSON
+- `scripts/build_circuit_profiles.py` - Generazione penalty profile con pirelli_nomination
 - `config/circuits/derived/*/penalty_profile.json` - Profili penalità per circuito
+- `scripts/run_sim_teams.py`, `scripts/physics_validator.py` - Test con compound C3/C5
 
 ## 9. Roadmap Incrementale Originale
 1. **Wave 1**: fuel + gomme + push + mappe ICE/ERS (dati già strutturati).
