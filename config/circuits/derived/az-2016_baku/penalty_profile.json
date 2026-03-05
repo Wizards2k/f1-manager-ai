@@ -19,6 +19,20 @@
     "C6": 0.35
   },
   "n_curve_sections": 10,
+  "engine_reference_cv": 1008.0,
+  "engine_penalty_coeff": 0.01,
+  "engine_map_penalties": {
+    "QUALY": 0.0,
+    "RICH": 0.12,
+    "STANDARD": 0.25,
+    "ECONOMY": 0.4,
+    "WET": 0.18,
+    "RECHARGE": 0.5
+  },
+  "straight_sections": 11,
+  "total_straight_length_m": 4646.699999999999,
+  "max_engine_bonus_ms": -1.5,
+  "max_engine_penalty_ms": 1.0,
   "pirelli_nomination": {
     "hard": "C4",
     "medium": "C5",

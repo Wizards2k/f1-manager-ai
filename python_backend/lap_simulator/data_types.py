@@ -489,6 +489,7 @@ class DamageState:
 class CarState:
     """Complete mutable state for a single car in the simulation."""
     car_id: str = "car_0"
+    team_code: str = ""  # FIA team code for engine CV lookup
     # sub-states
     tyres: Dict[WheelPosition, TyreState] = field(default_factory=dict)
     brakes: BrakeState = field(default_factory=BrakeState)
@@ -553,6 +554,7 @@ class SectionResult:
     handling_penalty: float = 0.0
     fuel_penalty_s: float = 0.0          # fuel-weight contribution (per section)
     tyre_penalty_s: float = 0.0          # tyre compound/wear/temperature contribution (per section)
+    engine_penalty_s: float = 0.0         # engine CV/map contribution (per section)
 
 
 # ---------------------------------------------------------------------------
@@ -611,6 +613,14 @@ class CircuitConfig:
     push_penalty_centers: List[float] = field(default_factory=lambda: [1.60, 1.45, 1.30, 1.15, 1.00, 0.85, 0.70, 0.55, 0.40])
     push_penalty_base_width: float = 0.08  # Base half-width for L1
     push_penalty_width_decay: float = 0.008  # Width reduction per level
+    # engine penalty parameters
+    engine_reference_cv: float = 1008.0      # Mercedes reference CV
+    engine_penalty_coeff: float = 0.00001   # 20 CV = 0.2s baseline
+    engine_map_penalties: Dict[str, float] = field(default_factory=dict)  # penalties per engine map
+    straight_sections: int = 4              # number of straight sections
+    total_straight_length_m: float = 3200.0  # total straight length for scaling
+    max_engine_bonus_ms: float = -1.5       # maximum bonus (negative penalty)
+    max_engine_penalty_ms: float = 1.0       # maximum penalty
 
 
 # ---------------------------------------------------------------------------

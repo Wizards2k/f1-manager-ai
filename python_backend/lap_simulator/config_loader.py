@@ -377,6 +377,15 @@ def load_circuit_config(
     tyre_compound_deltas = penalty_data.get("tyre_compound_deltas", {})
     tyre_wear_coeffs = penalty_data.get("tyre_wear_coeffs", {})
     n_curve_sections = penalty_data.get("n_curve_sections", 10)
+    
+    # --- Engine Penalty Configuration ---
+    engine_reference_cv = penalty_data.get("engine_reference_cv", 1008.0)
+    engine_penalty_coeff = penalty_data.get("engine_penalty_coeff", 0.00001)
+    engine_map_penalties = penalty_data.get("engine_map_penalties", {})
+    straight_sections = penalty_data.get("straight_sections", 4)
+    total_straight_length_m = penalty_data.get("total_straight_length_m", 3200.0)
+    max_engine_bonus_ms = penalty_data.get("max_engine_bonus_ms", -1.5)
+    max_engine_penalty_ms = penalty_data.get("max_engine_penalty_ms", 1.0)
 
     # --- Tyre Temperature Windows (from derived tyre params) ---
     tyre_param_raw_path = derived_dir / "tyre_params.json" if derived_dir.exists() else None
@@ -421,4 +430,11 @@ def load_circuit_config(
         tyre_wear_coeffs=tyre_wear_coeffs,
         n_curve_sections=n_curve_sections,
         tyre_temp_windows=tyre_temp_windows,
+        engine_reference_cv=engine_reference_cv,
+        engine_penalty_coeff=engine_penalty_coeff,
+        engine_map_penalties=engine_map_penalties,
+        straight_sections=straight_sections,
+        total_straight_length_m=total_straight_length_m,
+        max_engine_bonus_ms=max_engine_bonus_ms,
+        max_engine_penalty_ms=max_engine_penalty_ms,
     )

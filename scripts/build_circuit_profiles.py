@@ -183,6 +183,57 @@ def build_penalty_profile(telemetry: Optional[Dict[str, Any]]) -> Dict[str, Any]
     profile["tyre_compound_deltas"] = tyre_compound_deltas
     profile["tyre_wear_coeffs"] = tyre_wear_coeffs
     profile["n_curve_sections"] = n_curve_sections
+    
+    # --- ENGINE PENALTY CONFIGURATION ---
+    # Count straight sections for engine penalty application
+    straight_kinds = {"Straight", "MediumStraight", "UltraFastCorner"}
+    straight_sections = sum(1 for s in sections if s.get("kind") in straight_kinds)
+    if straight_sections == 0:
+        straight_sections = 4  # Fallback
+    
+    # Calculate total straight length
+    total_straight_length = sum(
+        s.get("end_m", 0) - s.get("start_m", 0) 
+        for s in sections 
+        if s.get("kind") in straight_kinds
+    )
+    if total_straight_length == 0:
+        total_straight_length = 3200.0  # Fallback
+    
+    # Determine circuit-specific engine penalty coefficient
+    # High-speed circuits: higher coefficient (more engine impact)
+    # Low-speed circuits: lower coefficient (less engine impact)
+    power_bias = telemetry.get("stats", {}).get("power_bias", 0.5)
+    
+    # Base coefficient: 20 CV = 0.2s on medium-speed circuits
+    base_coeff = 0.01
+    
+    # Scale based on power bias (0.3-0.7 range)
+    if power_bias > 0.6:  # High-speed circuit (Monza, Spa)
+        circuit_coeff = base_coeff * 1.2  # 0.012
+    elif power_bias < 0.4:  # Low-speed circuit (Monaco, Singapore)
+        circuit_coeff = base_coeff * 0.8  # 0.008
+    else:  # Medium-speed circuit (Baku, Silverstone)
+        circuit_coeff = base_coeff  # 0.01
+    
+    # Engine map penalties (QUALY = 0 reference)
+    engine_map_penalties = {
+        "QUALY": 0.0,      # Reference zero penalty
+        "RICH": 0.12,      # +0.12s/lap
+        "STANDARD": 0.25,  # +0.25s/lap
+        "ECONOMY": 0.40,   # +0.40s/lap
+        "WET": 0.18,       # +0.18s/lap
+        "RECHARGE": 0.50   # +0.50s/lap
+    }
+    
+    profile["engine_reference_cv"] = 1008.0  # Mercedes reference
+    profile["engine_penalty_coeff"] = circuit_coeff
+    profile["engine_map_penalties"] = engine_map_penalties
+    profile["straight_sections"] = straight_sections
+    profile["total_straight_length_m"] = total_straight_length
+    profile["max_engine_bonus_ms"] = -1.5
+    profile["max_engine_penalty_ms"] = 1.0
+    
     # Store all nominated compounds for the GP
     profile["pirelli_nomination"] = {
         "hard": nomination.get("hard"),

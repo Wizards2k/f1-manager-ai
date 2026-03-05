@@ -30,6 +30,7 @@ from .data_types import (
     clamp,
 )
 from .driver_model import compute_inputs, update_mental_state
+from .engine_penalty import compute_engine_penalty, get_engine_cv_for_team
 from .power_unit import generate_output
 from .push_penalty import compute_push_penalty_per_section
 from .tyre_model import update_tyres
@@ -571,12 +572,24 @@ def update_section(
     )
     baseline = config.baseline_delta if apply_baseline_delta else 0.0
     total_penalty = baseline + delta_penalty
-    dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s + push_delta_s, 0.01)
+    
+    # Engine penalty (CV + map) - Step 6 integration
+    engine_delta_s = 0.0
+    if hasattr(car_state, 'team_code') and car_state.team_code:
+        team_cv = get_engine_cv_for_team(car_state.team_code)
+        engine_delta_s = compute_engine_penalty(
+            team_cv=team_cv,
+            engine_map=car_state.pu.active_map,
+            section=section,
+            config=config
+        )
+    
+    dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s + push_delta_s + engine_delta_s, 0.01)
     v_effective = (section.length_m / dt_s) * 3.6
 
     car_state.v_current_ms = v
 
-    # ===================================================================    # ===================================================================
+    # ===================================================================
     # STEP 7 – Internal state update (Passo 7)
     # ===================================================================
     # Fuel already updated in PU step
@@ -666,4 +679,5 @@ def update_section(
         handling_penalty=aero_forces.handling_penalty,
         fuel_penalty_s=fuel_delta_s,
         tyre_penalty_s=tyre_delta_s,
+        engine_penalty_s=engine_delta_s,
     )
