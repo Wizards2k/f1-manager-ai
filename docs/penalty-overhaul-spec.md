@@ -110,34 +110,38 @@ dataclass PerformancePenalties:
 - **Mappe ICE/ERS**: Implementato come parte dell'Engine Penalty System
 
 ### 📋 **Wave 2-4 - Pending**
-- **Wave 2**: freni + assetto
-- **Wave 3**: circuit extras + telemetria UI (skill pilota già integrate nel push system)
+- **Wave 2**: ✅ **COMPLETATA** - freni
+- **Wave 3**: assetto setup + circuit extras + telemetria UI (skill pilota già integrate nel push system)
 - **Wave 4**: refinements (bonus eventuali, toggle legacy)
 
 ### 📁 **File Modificati**
-- `python_backend/lap_simulator/data_types.py` - Aggiunti campi fuel penalty, push_penalty params, push_level, engine_penalty_s e team_code
-- `python_backend/lap_simulator/config_loader.py` - Caricamento penalty profile, fallback nomination e engine penalty config
-- `python_backend/lap_simulator/update_section.py` - Calcolo penalità fuel, gomme, push e engine (con skill modulation)
+- `python_backend/lap_simulator/data_types.py` - Aggiunti campi fuel penalty, push_penalty params, push_level, engine_penalty_s, team_code e brake_penalty_s
+- `python_backend/lap_simulator/config_loader.py` - Caricamento penalty profile, fallback nomination, engine penalty config e calcolo braking energy da HD telemetry
+- `python_backend/lap_simulator/update_section.py` - Calcolo penalità fuel, gomme, push, engine e brake (con skill modulation)
 - `python_backend/lap_simulator/push_penalty.py` - Nuovo modulo per calcolo penalità push
 - `python_backend/lap_simulator/engine_penalty.py` - Nuovo modulo per calcolo penalità motore CV/mappe
+- `python_backend/lap_simulator/brake_penalty.py` - Nuovo modulo per calcolo penalità freni duct/fade
 - `python_backend/utils/session_bridge.py` - Telemetry fuel penalty
 - `scripts/build_circuit_profiles.py` - Generazione penalty profile, pirelli_nomination e engine penalty parameters
 - `config/circuits/derived/*/penalty_profile.json` - Profili penalità per circuito con engine penalty config
-- `scripts/run_sim_teams.py`, `scripts/physics_validator.py` - Test con compound C3/C5, push level 10 e engine penalties
+- `scripts/run_sim_teams.py`, `scripts/physics_validator.py` - Test con compound C3/C5, push level 10, engine e brake penalties
 - `tests/test_driver_push_penalty.py` - Suite test per sistema push penalty
 - `tests/test_engine_penalty.py` - Suite test per sistema engine penalty (7 test)
+- `tests/test_brake_penalty.py` - Suite test per sistema brake penalty (12 test)
 - `test_push_validation.py` - Script validazione per scenari realistici
 - `test_engine_penalty_integration.py` - Script test integrazione engine penalty
 - `test_mclaren_engine_penalty.py` - Script test McLaren reference
 - `test_rbr_engine_penalty.py` - Script test RBR engine penalties
+- `test_brake_penalty_integration.py` - Script test integrazione brake penalty
+- `test_realistic_brake_penalty.py` - Script test scenari realistici brake penalty (CV + mappe ICE/ERS)
 
 ## 9. Roadmap Incrementale Aggiornata
 1. **Wave 1**: ✅ **COMPLETATA** - fuel + gomme + push (con skill pilota integrate) + engine penalties (CV + mappe ICE/ERS)
-2. **Wave 2**: freni + assetto (richiede affinamento doc setup/brake).
-3. **Wave 3**: circuit extras + telemetria UI (skill pilota già integrate nel push system).
+2. **Wave 2**: ✅ **COMPLETATA** - brake penalties (duct + fade)
+3. **Wave 3**: assetto setup + circuit extras + telemetria UI (skill pilota già integrate nel push system)
 4. **Wave 4**: refinements (bonus eventuali, toggle legacy).
 
-**Status Wave 1**: 100% completato con Engine Penalty System integrato e testato
+**Status Wave 1-2**: 100% completato con Engine e Brake Penalty Systems integrati e testati
 
 ## 10. Deliverable
 - Specifica approvata (questo documento).
