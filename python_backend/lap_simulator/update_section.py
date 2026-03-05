@@ -31,6 +31,7 @@ from .data_types import (
 )
 from .driver_model import compute_inputs, update_mental_state
 from .power_unit import generate_output
+from .push_penalty import compute_push_penalty_per_section
 from .tyre_model import update_tyres
 
 
@@ -45,12 +46,16 @@ def update_section(
     section: SectionContext,
     env: EnvContext,
     config: CircuitConfig,
-    push_level: float = 1.0,
+    push_level: int = 10,
     airflow_penalty: float = 0.0,
     traffic_v_max_kph: float = 0.0,
     delta_aero: float = 0.0,
     delta_grip: float = 0.0,
     apply_baseline_delta: bool = True,
+    is_qualifying: bool = False,
+    circuit_id: str = "default",
+    driver_id: str = "default",
+    lap_number: int = 1,
 ) -> SectionResult:
     """
     Compute the physics for one car traversing one section.
@@ -63,9 +68,13 @@ def update_section(
     section : SectionContext    – current circuit section
     env : EnvContext            – environmental conditions
     config : CircuitConfig      – circuit + tuning parameters
-    push_level : float          – player push command (0.8-1.1)
+    push_level : int            – player push command (1..10, 10 = zero penalty)
     airflow_penalty : float     – dirty air (0-1)
     traffic_v_max_kph : float   – speed constraint from car ahead (0 = none)
+    is_qualifying : bool        – True for qualifying, False for race
+    circuit_id : str            – Circuit identifier for penalty RNG
+    driver_id : str             – Driver identifier for penalty RNG
+    lap_number : int            – Lap number for penalty RNG
     """
     all_events: List[SectionEvent] = []
 
@@ -538,6 +547,22 @@ def update_section(
             # Straight section: no tyre penalty applied (physical model assumption)
             tyre_delta_s = 0.0
 
+    # Push penalty (driver push level with skill modulation)
+    push_delta_s = 0.0
+    if push_level < 10:
+        push_delta_s = compute_push_penalty_per_section(
+            push_level=int(push_level),
+            driver_qualifica=driver_skills.raw_pace,
+            driver_gara=driver_skills.race_craft,
+            driver_costanza=driver_skills.consistency,
+            is_qualifying=is_qualifying,
+            circuit_id=circuit_id,
+            driver_id=driver_id,
+            lap_number=lap_number,
+            section_length_m=section.length_m,
+            circuit_length_m=config.circuit_length_m,
+            config=config
+        )
 
     delta_penalty = clamp(
         config.k_aero_penalty * delta_aero + config.k_grip_penalty * delta_grip,
@@ -546,7 +571,7 @@ def update_section(
     )
     baseline = config.baseline_delta if apply_baseline_delta else 0.0
     total_penalty = baseline + delta_penalty
-    dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s, 0.01)
+    dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s + push_delta_s, 0.01)
     v_effective = (section.length_m / dt_s) * 3.6
 
     car_state.v_current_ms = v

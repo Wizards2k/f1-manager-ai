@@ -92,8 +92,15 @@ def build_car_entry(team_code: str, circuit_id: str, config) -> CarEntry:
     # DriverSkills from pilot
     skills = DriverSkills(
         raw_pace=pilot.velocita,
+        race_craft=pilot.gara,
         consistency=pilot.costanza,
-        overtaking_skill=pilot.sorpasso
+        aggression=pilot.aggressivita,
+        tyre_management=pilot.consumo_gomme,
+        overtaking_skill=pilot.velocita,
+        defending_skill=pilot.gestione_carburante,
+        wet_skill=pilot.ricerca_assetto,
+        smoothness=pilot.stile_sottosterzo,
+        setup_finding=pilot.perfezionismo
     )
     
     # AeroSetup from car
@@ -146,7 +153,18 @@ def get_baseline_mclaren_entry(circuit_id: str) -> CarEntry:
         tyre.core_temp_c = 100.0
     
     state.ers_mode = "Deploy"
-    skills = DriverSkills(raw_pace=100, consistency=95, overtaking_skill=90)
+    skills = DriverSkills(
+        raw_pace=100,
+        race_craft=95,
+        consistency=95,
+        aggression=80,
+        tyre_management=85,
+        overtaking_skill=90,
+        defending_skill=85,
+        wet_skill=80,
+        smoothness=85,
+        setup_finding=80
+    )
     
     aero = AeroSetup()
     aero.front_wing.base_downforce = 12.0

@@ -421,6 +421,7 @@ class DriverMentalState:
 class DriverIntent:
     """Output of DriverModel.compute_inputs() — commands for the section."""
     pace_factor: float = 1.0             # 0.8 (conserve) → 1.1 (push)
+    push_level: int = 10                 # 1..10 (10 = zero penalty reference)
     aggression_curve_bonus: float = 0.0
     target_line: str = "optimal"         # optimal / defensive / aggressive
     brake_bias_adjust: float = 0.0       # delta from setup
@@ -606,6 +607,10 @@ class CircuitConfig:
     n_curve_sections: int = 10  # Used to distribute per-lap tyre deltas onto corners
     tyre_temp_windows: Dict[str, Dict[str, List[float]]] = field(default_factory=dict)
     reference_lap_time_s: float = 0.0    # from telemetry (sum of dt_ref_s)
+    # push penalty parameters
+    push_penalty_centers: List[float] = field(default_factory=lambda: [1.60, 1.45, 1.30, 1.15, 1.00, 0.85, 0.70, 0.55, 0.40])
+    push_penalty_base_width: float = 0.08  # Base half-width for L1
+    push_penalty_width_decay: float = 0.008  # Width reduction per level
 
 
 # ---------------------------------------------------------------------------
