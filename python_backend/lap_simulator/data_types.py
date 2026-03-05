@@ -555,6 +555,7 @@ class SectionResult:
     fuel_penalty_s: float = 0.0          # fuel-weight contribution (per section)
     tyre_penalty_s: float = 0.0          # tyre compound/wear/temperature contribution (per section)
     engine_penalty_s: float = 0.0         # engine CV/map contribution (per section)
+    brake_penalty_s: float = 0.0          # brake duct/fade contribution (per section)
 
 
 # ---------------------------------------------------------------------------

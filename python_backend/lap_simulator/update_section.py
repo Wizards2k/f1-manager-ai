@@ -31,6 +31,7 @@ from .data_types import (
 )
 from .driver_model import compute_inputs, update_mental_state
 from .engine_penalty import compute_engine_penalty, get_engine_cv_for_team
+from .brake_penalty import compute_brake_penalty
 from .power_unit import generate_output
 from .push_penalty import compute_push_penalty_per_section
 from .tyre_model import update_tyres
@@ -584,7 +585,15 @@ def update_section(
             config=config
         )
     
-    dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s + push_delta_s + engine_delta_s, 0.01)
+    # Brake penalty (duct + fade) - Step 5b extension
+    brake_delta_s = 0.0
+    brake_delta_s = compute_brake_penalty(
+        car_state=car_state,
+        section=section,
+        config=config
+    )
+    
+    dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s + push_delta_s + engine_delta_s + brake_delta_s, 0.01)
     v_effective = (section.length_m / dt_s) * 3.6
 
     car_state.v_current_ms = v
@@ -680,4 +689,5 @@ def update_section(
         fuel_penalty_s=fuel_delta_s,
         tyre_penalty_s=tyre_delta_s,
         engine_penalty_s=engine_delta_s,
+        brake_penalty_s=brake_delta_s,
     )

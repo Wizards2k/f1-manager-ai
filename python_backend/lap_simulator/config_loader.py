@@ -66,17 +66,29 @@ _KIND_MAP = {
 
 
 def _parse_section(raw: Dict[str, Any]) -> SectionContext:
-    kind = _KIND_MAP.get(raw.get("kind", "Straight"), SectionKind.STRAIGHT)
-    start = raw.get("start_m", 0)
-    end = raw.get("end_m", 0)
-    length = max(end - start, 1.0)
-
-    heat_f, cool_f = SECTION_HEAT_COOL.get(kind, (1.0, 1.0))
-
-    radius = raw.get("radius_m")
+    """Parse a section from telemetry JSON."""
+    kind_raw = raw.get("kind", raw.get("section_kind", "Straight"))
+    kind = _KIND_MAP.get(kind_raw, SectionKind.STRAIGHT)
+    
+    length = raw.get("length_m", 0.0)
+    radius = raw.get("radius_m", None)
+    if radius is None:
+        # Fallback: estimate from corner type
+        if "Corner" in kind_raw:
+            radius = 100.0  # generic corner radius
+        else:
+            radius = 999999.0  # effectively straight
+    
     curvature_factor = 0.0
-    if radius and radius > 0:
-        curvature_factor = 1.0 / radius * 100  # normalised
+    if radius < 999999:
+        curvature_factor = 1.0 / (1.0 + radius / 100.0)
+    
+    # Heat/cool factors
+    heat_f = raw.get("heat_factor", 1.0)
+    cool_f = raw.get("cool_factor", 1.0)
+    if "Corner" in kind_raw:
+        heat_f *= 1.2
+        cool_f *= 0.8
 
     v_entry = raw.get("v_entry_kph", raw.get("v_entry", 0.0))
     telemetry_mu = raw.get("telemetry_mu", raw.get("target_g_lat", 0.0))
@@ -85,6 +97,24 @@ def _parse_section(raw: Dict[str, Any]) -> SectionContext:
     v_max = raw.get("v_max_kph", raw.get("v_max", 0.0))
     avg_speed = raw.get("avg_speed_kph", raw.get("avg_speed", 200))
     braking_energy = raw.get("braking_energy_mj", raw.get("braking_energy", 0.0))
+    
+    # Calculate braking energy if not available (for HD files)
+    if braking_energy == 0.0 and v_entry > 0 and v_exit > 0 and v_entry > v_exit:
+        # Simple kinetic energy calculation: 0.5 * m * v^2 difference
+        # Using relative energy (normalized) since we don't have mass
+        v_entry_ms = v_entry / 3.6
+        v_exit_ms = v_exit / 3.6
+        energy_diff = (v_entry_ms**2 - v_exit_ms**2) / 1000  # Simplified MJ calculation
+        
+        # Scale by section length and corner severity
+        if "Corner" in kind_raw:
+            energy_diff *= 0.8  # Corners have some braking but also turning
+        else:
+            energy_diff *= 0.3  # Straight sections have less braking energy
+            
+        # Apply some realistic scaling
+        braking_energy = max(energy_diff, 0.0)
+    
     bumpiness = raw.get("bumpiness_factor", raw.get("bumpiness", 0.0)) or 0.0
     kerb = raw.get("kerb_severity", raw.get("kerb", 0.0)) or 0.0
     dt_ref = raw.get("dt_ref_s", 0.0)
