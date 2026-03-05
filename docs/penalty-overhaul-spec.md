@@ -81,11 +81,11 @@ dataclass PerformancePenalties:
   - Calcolo penalty solo su curve (n_curve_sections)
   - `pirelli_nomination` in penalty profile con hard/medium/soft per ogni GP
   - Test Silverstone: C3 vs C5 delta -1.1s, allineamento con baseline zero
-- **Push**: Implementato (driver push penalty con skill modulation)
+- **Push**: Implementato (driver push penalty con skill modulation) ✅
   - Scala 1-10 con 10 = riferimento zero penalty
   - Range casuali con min 0.150s distanza tra livelli
   - Massimo 1.600s per push = 1, distribuito per settore
-  - Modulazione skill pilota (qualifica/gara) con pesi diversi per Quali vs Race
+  - **Skill pilota integrate**: Modulazione skill pilota (qualifica/gara) con pesi diversi per Quali vs Race
   - Forbice basata su regolarità pilota (costanza)
   - **REGOLA SPECIALE**: Push 1 = penalty massima senza riduzione skill (1.600s)
   - Test Suzuka: push 10 = 87.153s, push 1 = 88.753s (+1.600s)
@@ -111,7 +111,7 @@ dataclass PerformancePenalties:
 
 ### 📋 **Wave 2-4 - Pending**
 - **Wave 2**: freni + assetto
-- **Wave 3**: skill pilota + circuit extras + telemetria UI
+- **Wave 3**: circuit extras + telemetria UI (skill pilota già integrate nel push system)
 - **Wave 4**: refinements (bonus eventuali, toggle legacy)
 
 ### 📁 **File Modificati**
@@ -132,9 +132,9 @@ dataclass PerformancePenalties:
 - `test_rbr_engine_penalty.py` - Script test RBR engine penalties
 
 ## 9. Roadmap Incrementale Aggiornata
-1. **Wave 1**: ✅ **COMPLETATA** - fuel + gomme + push + engine penalties (CV + mappe ICE/ERS)
+1. **Wave 1**: ✅ **COMPLETATA** - fuel + gomme + push (con skill pilota integrate) + engine penalties (CV + mappe ICE/ERS)
 2. **Wave 2**: freni + assetto (richiede affinamento doc setup/brake).
-3. **Wave 3**: skill pilota + circuit extras + telemetria UI.
+3. **Wave 3**: circuit extras + telemetria UI (skill pilota già integrate nel push system).
 4. **Wave 4**: refinements (bonus eventuali, toggle legacy).
 
 **Status Wave 1**: 100% completato con Engine Penalty System integrato e testato
