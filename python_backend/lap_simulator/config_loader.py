@@ -30,6 +30,7 @@ from .data_types import (
     TyreCompound,
     TyreCompoundParams,
 )
+from .setup_penalty import load_setup_penalty_config
 
 logger = logging.getLogger(__name__)
 
@@ -433,6 +434,9 @@ def load_circuit_config(
     dmg_data = _load_json(dmg_path) if dmg_path.exists() else _load_json(global_damage)
     damage_coeffs = _parse_damage_coeffs(dmg_data)
 
+    # --- Setup Penalty Configuration ---
+    setup_penalty_config = load_setup_penalty_config(penalty_data)
+
     ref_lap_time = telem.get("reference_lap", {}).get("lap_time", 0.0)
     sum_dt_ref = sum(s.dt_ref_s for s in sections)
 
@@ -467,4 +471,5 @@ def load_circuit_config(
         total_straight_length_m=total_straight_length_m,
         max_engine_bonus_ms=max_engine_bonus_ms,
         max_engine_penalty_ms=max_engine_penalty_ms,
+        setup_penalty_config=setup_penalty_config,
     )

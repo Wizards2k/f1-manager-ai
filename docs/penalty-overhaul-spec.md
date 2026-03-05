@@ -168,3 +168,14 @@ dataclass PerformancePenalties:
 - `docs/setup-ui-plan.md`
 - `python_backend/data/circuits/2025/*_Telemetry.json`
 - `config/` (brake params, duct recommendation, circuit profiles)
+
+## 12. Setup Penalty Bonus/Malus (nuovo)
+Per la Wave 3 (assetto) introduciamo un sistema dedicato che mappa i delta setup rispetto all'assetto ideale circuito+team in penalità/bonus applicati solo alle curve e ai rettilinei principali. Riferimento completo: `docs/setup-penalty-bonus-malus.md`.
+
+Punti chiave:
+- **Sorgenti dati**: `penalty_profile.json` per i coefficienti circuito (`setup_penalty` block), `setup_mapping_v2.json` + `setup_ranges/<circuit>.json` per target slider, `team_offsets.json` per DNA team/pilota.
+- **Scope**: penalità DF applicate solo ai microsettori di curva (`SectionKind ∈ CORNER_KINDS`), malus maggiori sulle curve ultra/veloci; drag penalty/bonus solo su rettilinei equivalenti.
+- **Bonus limitati**: quando l'auto supera il target DF/drag restando nella finestra, applichiamo un bonus negativo capped (−0.10 s high-DF, −0.05 s low-drag, ecc.).
+- **Telemetry/UI**: `PerformancePenalties.setup` espone breakdown `{df_curve_penalty, df_curve_bonus, drag_penalty, drag_bonus}` con cap per circuito.
+
+L'implementazione seguirà le linee guida del documento dedicato prima di modificare `LapSimulator`.

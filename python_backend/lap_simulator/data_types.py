@@ -556,6 +556,11 @@ class SectionResult:
     tyre_penalty_s: float = 0.0          # tyre compound/wear/temperature contribution (per section)
     engine_penalty_s: float = 0.0         # engine CV/map contribution (per section)
     brake_penalty_s: float = 0.0          # brake duct/fade contribution (per section)
+    setup_penalty_s: float = 0.0          # setup DF/drag penalty contribution (per section)
+    df_curve_penalty_s: float = 0.0       # DF curve penalty breakdown
+    df_curve_bonus_s: float = 0.0         # DF curve bonus breakdown
+    drag_penalty_s: float = 0.0           # drag penalty breakdown
+    drag_bonus_s: float = 0.0             # drag bonus breakdown
 
 
 # ---------------------------------------------------------------------------
@@ -622,6 +627,7 @@ class CircuitConfig:
     total_straight_length_m: float = 3200.0  # total straight length for scaling
     max_engine_bonus_ms: float = -1.5       # maximum bonus (negative penalty)
     max_engine_penalty_ms: float = 1.0       # maximum penalty
+    setup_penalty_config: Optional[Any] = None  # SetupPenaltyConfig (lazy import to avoid circular deps)
 
 
 # ---------------------------------------------------------------------------

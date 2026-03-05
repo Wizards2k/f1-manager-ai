@@ -35,6 +35,12 @@ from .brake_penalty import compute_brake_penalty
 from .power_unit import generate_output
 from .push_penalty import compute_push_penalty_per_section
 from .tyre_model import update_tyres
+from .setup_penalty import (
+    SetupPenaltyResult,
+    compute_curve_penalty,
+    compute_drag_penalty,
+    clamp_setup_penalties,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -665,6 +671,21 @@ def update_section(
     )
 
     # ===================================================================
+    # Setup Penalty/Bonus (if config available)
+    # ===================================================================
+    setup_penalty_result = SetupPenaltyResult()
+    if config.setup_penalty_config:
+        # Placeholder: setup penalty calculation would go here
+        # For now, initialize with zeros (full integration requires player setup data)
+        setup_penalty_result = SetupPenaltyResult(
+            df_curve_penalty_s=0.0,
+            df_curve_bonus_s=0.0,
+            drag_penalty_s=0.0,
+            drag_bonus_s=0.0,
+            setup_penalty_s=0.0,
+        )
+
+    # ===================================================================
     # STEP 8 – Return (Passo 8)
     # ===================================================================
     late_brake = any(e.event_type == "late_brake_success" for e in all_events)
@@ -690,4 +711,9 @@ def update_section(
         tyre_penalty_s=tyre_delta_s,
         engine_penalty_s=engine_delta_s,
         brake_penalty_s=brake_delta_s,
+        setup_penalty_s=setup_penalty_result.setup_penalty_s,
+        df_curve_penalty_s=setup_penalty_result.df_curve_penalty_s,
+        df_curve_bonus_s=setup_penalty_result.df_curve_bonus_s,
+        drag_penalty_s=setup_penalty_result.drag_penalty_s,
+        drag_bonus_s=setup_penalty_result.drag_bonus_s,
     )
