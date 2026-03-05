@@ -125,10 +125,11 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 6. Penalty System Overhaul – `docs/penalty-overhaul-spec.md`
 1. ✅ **Fuel penalty**: implementato con telemetry integration, test Yas Marina 100kg = +3.5s/lap
 2. ✅ **Tyre penalty**: implementato con nomination Pirelli, compound deltas e wear coeffs, curve-only distribution
-3. ⏳ **Struttura PerformancePenalties**: fuel, tyres, push, driver_skill, ice_map, ers_map, brakes, setup, circuit_extra
-4. ⏳ **Team performance gaps**: mapping driver→team, calcolo delta_aero/delta_grip per AI e giocatore
-5. ⏳ **Runtime integration**: delta values passati da CarEntry a update_section() con applicazione fisica
-6. ⏳ **Validazione**: AI con tempi realistici e logging dettagliato
+3. ✅ **Push penalty**: implementato con scala 1-10, range casuali e max 1.600s, test Suzuka
+4. ⏳ **Struttura PerformancePenalties**: fuel, tyres, push, driver_skill, ice_map, ers_map, brakes, setup, circuit_extra
+5. ⏳ **Team performance gaps**: mapping driver→team, calcolo delta_aero/delta_grip per AI e giocatore
+6. ⏳ **Runtime integration**: delta values passati da CarEntry a update_section() con applicazione fisica
+7. ⏳ **Validazione**: AI con tempi realistici e logging dettagliato
 
 ## 7. Implementazione – Fase F (Gameplay, Backend & QA Harness — `docs/physics-roadmap.md`, `docs/BattleResolver.md`, `docs/setup-ui-plan.md`)
 1. **RaceSimulator backend integration**: scheduler sezioni, orchestrazione multi-car, storage `section_progress`, sincronizzazione multiplayer fantasma.

@@ -81,9 +81,13 @@ dataclass PerformancePenalties:
   - Calcolo penalty solo su curve (n_curve_sections)
   - `pirelli_nomination` in penalty profile con hard/medium/soft per ogni GP
   - Test Silverstone: C3 vs C5 delta -1.1s, allineamento con baseline zero
+- **Push**: Implementato (push level scaling)
+  - Scala 1-10 con 10 = riferimento zero penalty
+  - Range casuali con min 0.150s distanza tra livelli
+  - Massimo 1.600s per push = 1, distribuito per settore
+  - Test Suzuka: push 10 = 87.158s, push 1 = 88.739s (+1.581s)
 
 ### 🔄 **Wave 1 - In Progress**
-- **Push**: Da implementare (push level scaling)
 - **Mappe ICE/ERS**: Da implementare (engine map penalties)
 
 ### 📋 **Wave 2-4 - Pending**
@@ -92,13 +96,13 @@ dataclass PerformancePenalties:
 - **Wave 4**: refinements (bonus eventuali, toggle legacy)
 
 ### 📁 **File Modificati**
-- `python_backend/lap_simulator/data_types.py` - Aggiunti campi fuel penalty
+- `python_backend/lap_simulator/data_types.py` - Aggiunti campi fuel penalty, push_penalty_ranges e push_penalty_s
 - `python_backend/lap_simulator/config_loader.py` - Caricamento penalty profile e fallback nomination
-- `python_backend/lap_simulator/update_section.py` - Calcolo penalità fuel e gomme
+- `python_backend/lap_simulator/update_section.py` - Calcolo penalità fuel, gomme e push
 - `python_backend/utils/session_bridge.py` - Telemetry fuel penalty
 - `scripts/build_circuit_profiles.py` - Generazione penalty profile con pirelli_nomination
 - `config/circuits/derived/*/penalty_profile.json` - Profili penalità per circuito
-- `scripts/run_sim_teams.py`, `scripts/physics_validator.py` - Test con compound C3/C5
+- `scripts/run_sim_teams.py`, `scripts/physics_validator.py` - Test con compound C3/C5 e push level 10
 
 ## 9. Roadmap Incrementale Originale
 1. **Wave 1**: fuel + gomme + push + mappe ICE/ERS (dati già strutturati).
