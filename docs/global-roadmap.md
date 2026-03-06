@@ -134,6 +134,7 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
    - **Trade-off**: Aumenti ali = + curve bonus + drag malus, abbassi ali = - curve bonus + drag bonus
    - **Spec completa**: `docs/setup-penalty-bonus-malus.md`
    - **Test Suzuka**: Ideale 88.256s, DF Bonus 88.274s (+0.018s malus > bonus)
+   - **Circuit-specific aero values**: Basati su power_bias reale da telemetry per tutti i 24 circuiti
 7. ✅ **Struttura PerformancePenalties**: fuel, tyres, push, driver_skill, ice_map, ers_map, brakes, setup, circuit_extra
 8. ✅ **Team performance gaps**: mapping driver→team, calcolo delta_aero/delta_grip per AI e giocatore
 9. ✅ **Runtime integration**: delta values passati da CarEntry a update_section() con applicazione fisica

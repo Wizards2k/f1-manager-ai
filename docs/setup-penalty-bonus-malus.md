@@ -114,6 +114,23 @@ Setup sliders → map_slider_to_physics() → compare vs ideal_setup_team
 - Realistic magnitudes: 0.018s trade-off, +1.5s to +1.9s penalties
 - Circuit-specific strategies: high-DF circuits favor curve bonuses, low-drag favor drag bonuses
 
+## 9.1. Circuit-Specific Aero Reference Values
+
+The system now uses **real telemetry data** to calculate circuit-specific DF and drag reference values based on `power_bias`:
+
+| Power Bias | Circuit Type | DF Ref | Drag Ref | Logic |
+|------------|--------------|--------|----------|-------|
+| **< 0.63** | Technical circuits | 78-85 | 32-35 | Accept more drag for downforce |
+| **> 0.65** | Power circuits | 65-70 | 25-28 | Prioritize speed over downforce |
+| **0.63-0.65** | Balanced circuits | 74 | 30 | Compromise approach |
+
+**Real Examples**:
+- **Budapest** (power_bias=0.620): DF=78.5, Drag=32.3 (technical = accept drag)
+- **Monza** (power_bias=0.660): DF=69.5, Drag=27.7 (power = want less drag)
+- **Imola** (power_bias≈0.55): DF=85.0, Drag=35.0 (very technical = max DF/drag)
+
+Values are calculated dynamically from telemetry data for all 24 circuits.
+
 ## 10. Files Modified
 - `python_backend/lap_simulator/setup_penalty_v2.py` (NEW)
 - `python_backend/lap_simulator/update_section.py` (integration)
@@ -122,6 +139,8 @@ Setup sliders → map_slider_to_physics() → compare vs ideal_setup_team
 - `python_backend/utils/adapter.py` (racecar_to_car_entry)
 - `scripts/test_setup_penalties.py` (comprehensive test suite)
 - `config/setup/team_offsets.json` (JSON format fix)
+- `scripts/generate_aero_references.py` (NEW - circuit-specific aero values)
+- `config/circuits/derived/*/penalty_profile.json` (aero_reference values for all 24 circuits)
 
 ## 11. References to Update
 - `docs/penalty-overhaul-spec.md` → add subsection describing the setup factor (malus + bonus) referencing this spec.

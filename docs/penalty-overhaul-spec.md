@@ -118,6 +118,7 @@ dataclass PerformancePenalties:
   - **Trade-off**: Aumenti ali = + curve bonus + drag malus, abbassi ali = - curve bonus + drag bonus
   - **Spec completa**: `docs/setup-penalty-bonus-malus.md`
   - **Test Suzuka**: Ideale 88.256s, DF Bonus 88.274s (+0.018s malus > bonus)
+  - **Circuit-specific aero values**: Basati su power_bias reale da telemetry (es. Budapest DF=78.5/Drag=32.3, Monza DF=69.5/Drag=27.7)
 - **Wave 4**: refinements (bonus eventuali, toggle legacy)
 
 ### 📁 **File Modificati**
