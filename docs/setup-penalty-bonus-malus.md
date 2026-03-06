@@ -59,12 +59,16 @@ Setup sliders → map_slider_to_physics() → compare vs ideal_setup_team
 ## 6. Drag Penalty/Bonus (straights)
 - Evaluate only on straight/medium-straight microsections.
 - Compute equivalent straight length: `straight_weight = dist_step / 500m`.
-- Penalty for slider above target (extra drag): `+0.004 s * delta_pos * straight_weight`.
-- Bonus for slider below target (drag-efficient): `-0.003 s * delta_neg * straight_weight`.
+- **If OUTSIDE window**: Penalty for ANY deviation (symmetric): `+0.004 s * |delta| * straight_weight`.
+- **If INSIDE window**: 
+  - Bonus for slider below target (drag-efficient): `-0.004 s * delta_neg * straight_weight`.
+  - Malus for slider above target (extra drag): `+0.004 s * delta_pos * straight_weight`.
 - Lap caps:
   - Monza: `drag_penalty_cap +0.9 s`, `drag_bonus_cap -0.08 s`
   - Spa, Baku: `+0.8 s / -0.06 s`
   - Others: `+0.6 s / -0.04 s`
+
+> **Trade-off Logic**: Creates realistic setup strategies where increasing wings gives curve bonuses but drag malus, and vice versa.
 
 ## 7. Aggregation & Storage
 - For every section the LapSimulator stores:
@@ -83,17 +87,46 @@ Setup sliders → map_slider_to_physics() → compare vs ideal_setup_team
      "curve_coeffs": {"fast": 0.030, "medium": 0.020, "slow": 0.010},
      "bonus_coeffs": {"fast": -0.007, "medium": -0.005, "slow": -0.003},
      "drag_coeff": 0.004,
-     "drag_bonus_coeff": -0.003,
+     "drag_bonus_coeff": -0.004,
      "drag_caps": {"monza": {"penalty": 0.9, "bonus": -0.08}, ...}
    }
    ```
-2. Add helper `compute_setup_bonus()` to the new module `setup_penalty.py` and integrate inside `update_section()`.
-3. Tests: create fixtures for Monza/Monaco verifying penalties and bonuses respond to slider delta and honour caps.
+2. **New module**: `setup_penalty_v2.py` with complete implementation:
+   - `load_setup_ranges()` and `load_team_offsets()`
+   - `build_ideal_setup()` with team/driver offsets
+   - `compute_df_curve_penalty()` and `compute_drag_penalty()`
+   - `clamp_penalties()` per circuit-specific caps
+3. **Integration**: Modified `update_section()` to call penalty functions with `within_window` parameter
+4. **Tests**: `scripts/test_setup_penalties.py` with Suzuka results showing realistic trade-offs
 
-## 9. References to Update
+## 9. Implementation Results (Suzuka 2025)
+| Setup | Time | Gap | Status |
+|-------|------|-----|--------|
+| Ideal (within window) | 88.256s | 0.000s | ✅ Baseline |
+| Max DF (outside) | 89.818s | +1.562s | 🔴 Penalty |
+| Min DF (outside) | 90.134s | +1.878s | 🔴 Penalty |
+| Monaco (outside) | 88.817s | +0.561s | 🔴 Penalty |
+| Monza (outside) | 88.873s | +0.617s | 🔴 Penalty |
+| DF Bonus (within, DF>target) | 88.274s | +0.018s | ⚠️ Malus > Bonus |
+
+**Key Insights**:
+- Trade-off working: DF Bonus +0.018s (drag malus > curve bonus on Suzuka)
+- Realistic magnitudes: 0.018s trade-off, +1.5s to +1.9s penalties
+- Circuit-specific strategies: high-DF circuits favor curve bonuses, low-drag favor drag bonuses
+
+## 10. Files Modified
+- `python_backend/lap_simulator/setup_penalty_v2.py` (NEW)
+- `python_backend/lap_simulator/update_section.py` (integration)
+- `python_backend/lap_simulator/data_types.py` (SectionResult fields)
+- `python_backend/lap_simulator/lap_simulator.py` (CarEntry setup_sliders)
+- `python_backend/utils/adapter.py` (racecar_to_car_entry)
+- `scripts/test_setup_penalties.py` (comprehensive test suite)
+- `config/setup/team_offsets.json` (JSON format fix)
+
+## 11. References to Update
 - `docs/penalty-overhaul-spec.md` → add subsection describing the setup factor (malus + bonus) referencing this spec.
 - `docs/setup-engine-spec-v0.1.md` → mention that map_slider_to_physics now feeds the bonus/malus system and telemetry outputs negative penalties when hardware exceeds targets.
 
-## 10. Open Questions / Next Steps
+## 12. Open Questions / Next Steps
 - Whether drag bonuses should also influence engine penalty (dirty air effect) or remain independent.
 - Future integration with aero upgrade tree (auto-adjust ideal windows when new packages unlock).

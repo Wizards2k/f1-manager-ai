@@ -126,10 +126,18 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 1. ✅ **Fuel penalty**: implementato con telemetry integration, test Yas Marina 100kg = +3.5s/lap
 2. ✅ **Tyre penalty**: implementato con nomination Pirelli, compound deltas e wear coeffs, curve-only distribution
 3. ✅ **Push penalty**: implementato con scala 1-10, range casuali e max 1.600s, test Suzuka
-4. ⏳ **Struttura PerformancePenalties**: fuel, tyres, push, driver_skill, ice_map, ers_map, brakes, setup, circuit_extra
-5. ⏳ **Team performance gaps**: mapping driver→team, calcolo delta_aero/delta_grip per AI e giocatore
-6. ⏳ **Runtime integration**: delta values passati da CarEntry a update_section() con applicazione fisica
-7. ⏳ **Validazione**: AI con tempi realistici e logging dettagliato
+4. ✅ **Engine penalty**: implementato con CV-based penalties, circuit-specific coefficients, engine map penalties
+5. ✅ **Brake penalty**: implementato con duct/fade penalties, straight-only application
+6. ✅ **Setup Penalty/Bonus System**: implementato completo con trade-off realistico
+   - **Curve Bonus (DF)**: Bonus quando DF > target e setup dentro finestra
+   - **Drag Bonus/Malus**: Bonus quando drag < target, malus quando drag > target
+   - **Trade-off**: Aumenti ali = + curve bonus + drag malus, abbassi ali = - curve bonus + drag bonus
+   - **Spec completa**: `docs/setup-penalty-bonus-malus.md`
+   - **Test Suzuka**: Ideale 88.256s, DF Bonus 88.274s (+0.018s malus > bonus)
+7. ✅ **Struttura PerformancePenalties**: fuel, tyres, push, driver_skill, ice_map, ers_map, brakes, setup, circuit_extra
+8. ✅ **Team performance gaps**: mapping driver→team, calcolo delta_aero/delta_grip per AI e giocatore
+9. ✅ **Runtime integration**: delta values passati da CarEntry a update_section() con applicazione fisica
+10. ✅ **Validazione**: AI con tempi realistici e logging dettagliato
 
 ## 7. Implementazione – Fase F (Gameplay, Backend & QA Harness — `docs/physics-roadmap.md`, `docs/BattleResolver.md`, `docs/setup-ui-plan.md`)
 1. **RaceSimulator backend integration**: scheduler sezioni, orchestrazione multi-car, storage `section_progress`, sincronizzazione multiplayer fantasma.

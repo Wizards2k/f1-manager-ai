@@ -111,7 +111,13 @@ dataclass PerformancePenalties:
 
 ### 📋 **Wave 2-4 - Pending**
 - **Wave 2**: ✅ **COMPLETATA** - freni
-- **Wave 3**: assetto setup + circuit extras + telemetria UI (skill pilota già integrate nel push system)
+- **Wave 3**: ✅ **COMPLETATA** - assetto setup + circuit extras + telemetria UI (skill pilota già integrate nel push system)
+  - **Setup Penalty/Bonus System**: Implementato completo con trade-off realistico
+  - **Curve Bonus (DF)**: Bonus quando DF > target e setup dentro finestra
+  - **Drag Bonus/Malus**: Bonus quando drag < target, malus quando drag > target
+  - **Trade-off**: Aumenti ali = + curve bonus + drag malus, abbassi ali = - curve bonus + drag bonus
+  - **Spec completa**: `docs/setup-penalty-bonus-malus.md`
+  - **Test Suzuka**: Ideale 88.256s, DF Bonus 88.274s (+0.018s malus > bonus)
 - **Wave 4**: refinements (bonus eventuali, toggle legacy)
 
 ### 📁 **File Modificati**
@@ -121,6 +127,7 @@ dataclass PerformancePenalties:
 - `python_backend/lap_simulator/push_penalty.py` - Nuovo modulo per calcolo penalità push
 - `python_backend/lap_simulator/engine_penalty.py` - Nuovo modulo per calcolo penalità motore CV/mappe
 - `python_backend/lap_simulator/brake_penalty.py` - Nuovo modulo per calcolo penalità freni duct/fade
+- `python_backend/lap_simulator/setup_penalty_v2.py` - Nuovo modulo per calcolo penalità/bonus setup con trade-off
 - `python_backend/utils/session_bridge.py` - Telemetry fuel penalty
 - `scripts/build_circuit_profiles.py` - Generazione penalty profile, pirelli_nomination e engine penalty parameters
 - `config/circuits/derived/*/penalty_profile.json` - Profili penalità per circuito con engine penalty config
@@ -128,6 +135,8 @@ dataclass PerformancePenalties:
 - `tests/test_driver_push_penalty.py` - Suite test per sistema push penalty
 - `tests/test_engine_penalty.py` - Suite test per sistema engine penalty (7 test)
 - `tests/test_brake_penalty.py` - Suite test per sistema brake penalty (12 test)
+- `tests/test_setup_penalty.py` - Suite test per sistema setup penalty/bonus (16 test)
+- `scripts/test_setup_penalties.py` - Script test completo con trade-off realistici
 - `test_push_validation.py` - Script validazione per scenari realistici
 - `test_engine_penalty_integration.py` - Script test integrazione engine penalty
 - `test_mclaren_engine_penalty.py` - Script test McLaren reference
