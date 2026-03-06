@@ -204,18 +204,24 @@ def compute_df_curve_penalty(
     curve_speed_category: str,
     section_weight: float,
     circuit_category: str,
+    within_window: bool = False,
 ) -> Tuple[float, float]:
     """
-    Compute DF curve penalty.
+    Compute DF curve penalty or bonus.
     
-    IMPORTANT: This function is called ONLY when setup is OUTSIDE valid window.
-    Therefore, ANY deviation from ideal (positive or negative) is a PENALTY.
+    Spec §4-5:
+    - If OUTSIDE window: Penalty for ANY deviation (symmetric)
+    - If INSIDE window: Bonus only if DF > target (delta_pos)
     
-    Spec §4:
-    - Penalty: 0.030/0.020/0.010 s * |delta| * section_weight (fast/medium/slow)
+    Args:
+        df_delta: DF delta (current - ideal)
+        curve_speed_category: fast/medium/slow
+        section_weight: normalized section weight
+        circuit_category: high_df/balanced/low_drag
+        within_window: True if setup is within valid window
     
     Returns:
-        (penalty_s, bonus_s) – penalty is always positive, bonus is 0 when outside window
+        (penalty_s, bonus_s) – both positive values
     """
     if df_delta == 0:
         return 0.0, 0.0
@@ -226,15 +232,29 @@ def compute_df_curve_penalty(
         "medium": 0.020,
         "slow": 0.010,
     }
+    bonus_coeffs = {
+        "fast": -0.007,
+        "medium": -0.005,
+        "slow": -0.003,
+    }
     
     coeff = penalty_coeffs.get(curve_speed_category, penalty_coeffs["medium"])
+    bonus_coeff = bonus_coeffs.get(curve_speed_category, bonus_coeffs["medium"])
     
-    # Apply penalty for ANY deviation from ideal (symmetric penalty)
-    # Since this function is only called when setup is OUTSIDE window,
-    # we penalize the absolute delta
-    penalty = coeff * abs(df_delta) * section_weight
-    
-    return penalty, 0.0
+    if within_window:
+        # Setup INSIDE window: Bonus only if DF > target (delta_pos)
+        # Spec §5: "Triggered when the physical DF exceeds the target (slider delta positive)"
+        if df_delta > 0:
+            # More DF than ideal = bonus (negative penalty)
+            bonus = bonus_coeff * df_delta * section_weight
+            return 0.0, bonus
+        else:
+            # Less DF than ideal = nothing (not penalized, just not ideal)
+            return 0.0, 0.0
+    else:
+        # Setup OUTSIDE window: Penalty for ANY deviation (symmetric)
+        penalty = coeff * abs(df_delta) * section_weight
+        return penalty, 0.0
 
 
 def compute_drag_penalty(

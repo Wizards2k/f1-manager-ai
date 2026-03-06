@@ -660,18 +660,19 @@ def update_section(
         elif section.kind in [SectionKind.VERY_SLOW_CORNER, SectionKind.SLOW_CORNER]:
             curve_speed_category = "slow"
         
-        # Apply DF penalty/bonus ONLY on curve sections (Spec §4)
-        # IMPORTANT: Penalties apply ONLY when setup is OUTSIDE valid window
+        # Apply DF penalty/bonus ONLY on curve sections (Spec §4-5)
+        # - If OUTSIDE window: Penalty for ANY deviation
+        # - If INSIDE window: Bonus only if DF > target
         df_penalty = 0.0
         df_bonus = 0.0
-        if section.kind in CORNER_KINDS and not within_window:
-            # Setup is OUTSIDE valid window = apply penalty
+        if section.kind in CORNER_KINDS:
             section_weight = 0.1  # Normalized weight per section
             df_penalty, df_bonus = compute_df_curve_penalty(
                 df_delta=df_total_delta,
                 curve_speed_category=curve_speed_category,
                 section_weight=section_weight,
                 circuit_category=config.setup_penalty_config.circuit_category,
+                within_window=within_window,
             )
         
         # Apply drag penalty/bonus ONLY on straight sections (Spec §6)

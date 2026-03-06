@@ -146,6 +146,14 @@ def main():
     print(f"   ⚡ Tempo: {monza_time:.3f}s (gap: {gap:+.3f}s)")
     print()
     
+    # Test 6: Setup con DF > target (dentro finestra) - dovrebbe avere BONUS
+    print("6️⃣ Setup con DF > target (dentro finestra):")
+    bonus_setup = {'front_wing': 65, 'rear_wing': 65, 'beam_wing': 60}  # Dentro range, ma DF > target
+    bonus_time = run_simulation_with_setup("DF Bonus Setup", bonus_setup)
+    gap = bonus_time - reference_time
+    print(f"   ⚡ Tempo: {bonus_time:.3f}s (gap: {gap:+.3f}s)")
+    print()
+    
     print("=" * 60)
     print("📊 Riepilogo Test Parametri Setup:")
     print(f"   • Tempo riferimento: {reference_time:.3f}s")
