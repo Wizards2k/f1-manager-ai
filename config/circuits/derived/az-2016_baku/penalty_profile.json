@@ -44,7 +44,7 @@
     "tyre_reference_compound": "C6"
   },
   "aero_reference": {
-    "df_ref": 70.0,
-    "drag_ref": 33.0
+    "df_ref": 82.5,
+    "drag_ref": 34.7
   }
 }

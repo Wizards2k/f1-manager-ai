@@ -14,42 +14,50 @@ from typing import Dict, Any
 
 def get_aero_reference_for_circuit(circuit_id: str) -> Dict[str, float]:
     """
-    Get circuit-specific aero reference values based on circuit characteristics.
+    Get circuit-specific aero reference values based on real circuit data.
+    
+    Logic based on power_bias from circuit telemetry:
+    - Low power bias (< 0.63) = technical circuits = accept more drag for DF
+    - High power bias (> 0.65) = power circuits = want less drag
+    - Medium power bias = balanced
     """
-    # High DF circuits - need more downforce, less drag concern
-    high_df_circuits = {
-        "mc-1929_monaco": {"df_ref": 85.0, "drag_ref": 28.0},
-        "hu-1986_budapest": {"df_ref": 82.0, "drag_ref": 29.0},
-        "sg-2008_singapore": {"df_ref": 83.0, "drag_ref": 28.5},
-    }
+    project_root = Path(__file__).resolve().parent.parent
+    circuit_file = project_root / "config" / "circuits" / "derived" / circuit_id / f"{circuit_id}.json"
     
-    # Low drag circuits - need less downforce, more drag concern
-    low_drag_circuits = {
-        "it-1922_monza": {"df_ref": 65.0, "drag_ref": 35.0},
-        "sa-2021_jeddah": {"df_ref": 68.0, "drag_ref": 34.0},
-        "az-2016_baku": {"df_ref": 70.0, "drag_ref": 33.0},
-    }
-    
-    # Medium speed circuits - balanced
-    medium_circuits = {
-        "gb-1948_silverstone": {"df_ref": 75.0, "drag_ref": 31.0},
-        "be-1925_spa_francorchamps": {"df_ref": 78.0, "drag_ref": 30.5},
-        "ca-1978_montreal": {"df_ref": 74.0, "drag_ref": 31.5},
-        "jp-1962_suzuka": {"df_ref": 75.0, "drag_ref": 32.0},
-    }
-    
-    # Default values for other circuits
+    # Default values
     default_values = {"df_ref": 72.0, "drag_ref": 31.0}
     
-    # Check circuit-specific values
-    if circuit_id in high_df_circuits:
-        return high_df_circuits[circuit_id]
-    elif circuit_id in low_drag_circuits:
-        return low_drag_circuits[circuit_id]
-    elif circuit_id in medium_circuits:
-        return medium_circuits[circuit_id]
-    else:
+    if not circuit_file.exists():
+        print(f"⚠️  Circuit file not found: {circuit_file}, using defaults")
         return default_values
+    
+    # Load circuit data
+    with open(circuit_file, 'r', encoding='utf-8') as f:
+        circuit_data = json.load(f)
+    
+    # Extract power_bias from stats
+    power_bias = circuit_data.get("_meta", {}).get("stats", {}).get("power_bias", 0.64)
+    drs_ratio = circuit_data.get("_meta", {}).get("stats", {}).get("drs_ratio", 0.35)
+    
+    # Logic based on power_bias (real data)
+    if power_bias < 0.63:
+        # Low power bias = technical circuits = accept more drag for DF
+        df_ref = 78.0 + (0.63 - power_bias) * 50  # 78-85 DF
+        drag_ref = 32.0 + (0.63 - power_bias) * 30  # 32-35 drag
+    elif power_bias > 0.65:
+        # High power bias = power circuits = want less drag
+        df_ref = 70.0 - (power_bias - 0.65) * 50  # 65-70 DF
+        drag_ref = 28.0 - (power_bias - 0.65) * 30  # 25-28 drag
+    else:
+        # Medium power bias = balanced
+        df_ref = 74.0
+        drag_ref = 30.0
+    
+    # Clamp values to reasonable ranges
+    df_ref = max(65.0, min(85.0, df_ref))
+    drag_ref = max(25.0, min(35.0, drag_ref))
+    
+    return {"df_ref": round(df_ref, 1), "drag_ref": round(drag_ref, 1)}
 
 def update_penalty_profile(circuit_id: str) -> bool:
     """
@@ -100,11 +108,14 @@ def main():
             updated_count += 1
     
     print(f"\n📊 Summary: Updated {updated_count}/{len(circuit_dirs)} penalty profiles")
-    print("\n🎯 Circuit Categories:")
-    print("  High DF: Monaco (85/28), Budapest (82/29), Singapore (83/28.5)")
-    print("  Low Drag: Monza (65/35), Jeddah (68/34), Baku (70/33)")
-    print("  Balanced: Silverstone (75/31), Spa (78/30.5), Montreal (74/31.5), Suzuka (75/32)")
-    print("  Default: All others (72/31)")
+    print("\n🎯 Logic based on real power_bias data:")
+    print("  Low power bias (< 0.63) = Technical circuits = High DF (78-85), High drag (32-35)")
+    print("  High power bias (> 0.65) = Power circuits = Low DF (65-70), Low drag (25-28)")
+    print("  Medium power bias = Balanced circuits = DF 74, Drag 30")
+    print("\n📈 Examples:")
+    print("  Budapest (power_bias=0.620) → High DF, High drag (accept drag for DF)")
+    print("  Monza (power_bias=0.660) → Low DF, Low drag (prioritize speed over DF)")
+    print("  Values calculated dynamically from real telemetry data!")
 
 if __name__ == "__main__":
     main()

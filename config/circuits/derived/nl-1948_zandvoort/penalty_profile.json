@@ -30,7 +30,7 @@
     "tyre_reference_compound": "C4"
   },
   "aero_reference": {
-    "df_ref": 72.0,
-    "drag_ref": 31.0
+    "df_ref": 65.0,
+    "drag_ref": 25.0
   }
 }
