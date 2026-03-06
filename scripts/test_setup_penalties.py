@@ -78,6 +78,8 @@ def create_mclaren_car_entry(setup_override=None):
 def run_simulation_with_setup(setup_name, setup_override):
     """Esegue una simulazione con un setup specifico."""
     config = load_circuit_config("jp-1962_suzuka")
+    # Set baseline to zero for realistic lap times
+    config.baseline_delta = 0.0
     env = EnvContext(air_temp_c=25.0, track_temp_c=35.0)
     
     entry = create_mclaren_car_entry(setup_override)
