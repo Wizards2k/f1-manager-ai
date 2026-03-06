@@ -445,6 +445,11 @@ def load_circuit_config(
     ref_lap_time = telem.get("reference_lap", {}).get("lap_time", 0.0)
     sum_dt_ref = sum(s.dt_ref_s for s in sections)
 
+    pirelli_nomination = (
+        penalty_data.get("pirelli_nomination") or
+        telem.get("pirelli_package", {}).get("nomination", {})
+    )
+
     return CircuitConfig(
         circuit_id=circuit_id,
         circuit_name=meta.get("circuit_name", circuit_id),
@@ -471,6 +476,7 @@ def load_circuit_config(
         tyre_wear_coeffs=tyre_wear_coeffs,
         n_curve_sections=n_curve_sections,
         tyre_temp_windows=tyre_temp_windows,
+        pirelli_nomination=pirelli_nomination,
         engine_reference_cv=engine_reference_cv,
         engine_penalty_coeff=engine_penalty_coeff,
         engine_map_penalties=engine_map_penalties,

@@ -58,7 +58,9 @@ from utils.adapter import (
     pilot_to_driver_skills,
     racecar_to_car_entry,
     set_racecar_phase,
+    sim_compound_to_game,
 )
+from models.models import TireCompound as GameTireCompound
 from debug_log import log_debug_event
 
 logger = logging.getLogger(__name__)
@@ -325,9 +327,11 @@ class SessionBridge:
         self.pso: Optional[PracticeSessionOrchestrator] = None
         self.ai_engines: Dict[str, AIDriverEngine] = {}
         self.race_cars_map: Dict[str, Any] = {}
-        self._track_states: Dict[str, CarTrackState] = {}
+        self.ai_setup_plan_lookup: Dict[str, Dict[str, Any]] = {}
         self._accumulated_time_s: float = 0.0
-        self._team_plans: Dict[str, TeamSessionPlan] = {}
+        self._last_tick_real_time: float = time.time()
+        self._sector_end_m: List[float] = []
+        self.battle_events: List[BattleEvent] = []
         self._ai_teams_cars: Dict[str, List[str]] = {}  # team_name → [car_ids]
         self.battle_resolver = BattleResolver()
         self.battle_events: List[BattleEvent] = []       # events from last tick
@@ -457,7 +461,7 @@ class SessionBridge:
                 logger.warning("Failed to seed PU stats for %s: %s", car_id, exc)
 
         # Precompute section cumulative distances for fast lookup
-        self._section_end_m: List[float] = []
+        self._section_end_m = []
         cum = 0.0
         for s in self.sections:
             cum += s.length_m
@@ -491,6 +495,16 @@ class SessionBridge:
             len(self.ai_engines), len(self.sections),
         )
         return True
+
+    def _resolve_game_compound_label(self, sim_compound) -> str:
+        """Return soft/medium/hard based on circuit nomination, fallback to default mapping."""
+        sim_value = sim_compound.value if hasattr(sim_compound, "value") else str(sim_compound)
+        nomination = getattr(self.circuit_config, "pirelli_nomination", None)
+        if nomination:
+            for role, compound in nomination.items():
+                if compound == sim_value:
+                    return role.lower()
+        return sim_compound_to_game(sim_compound)
 
     # ------------------------------------------------------------------
     # Tick — the main loop (spec §2.1)
@@ -1265,6 +1279,14 @@ class SessionBridge:
                     sr.dispatched = True
                     continue
                 run_plan = engine.session_plan.runs[run_idx]
+
+                # Sync RaceCar/current_tire so frontend badges mirror actual compound
+                try:
+                    label = self._resolve_game_compound_label(run_plan.compound)
+                    game_compound = GameTireCompound(label)
+                    race_car.set_tire_compound(game_compound)
+                except Exception as exc:
+                    logger.warning("AI dispatch: failed to sync tyre compound for %s: %s", car_id, exc)
 
                 record = self.pso.request_run(
                     car_id=car_id, program=run_plan.program,

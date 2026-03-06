@@ -90,14 +90,24 @@ def start_session_for_circuit():
             import config as cfg
             circuit_id = getattr(cfg, 'current_circuit', None)
             if circuit_id:
+                import logging
+                logging.getLogger(__name__).info("V2 engine: Initializing SessionBridge for circuit %s", circuit_id)
                 from utils.session_bridge import SessionBridge
                 session_bridge = SessionBridge()
+                logging.getLogger(__name__).info("V2 engine: SessionBridge created, initializing session...")
                 ok = session_bridge.init_session(circuit_id, race_cars, session_type="FP1")
+                logging.getLogger(__name__).info("V2 engine: SessionBridge init returned %s", ok)
                 if not ok:
+                    logging.getLogger(__name__).warning("V2 engine: SessionBridge init failed")
                     session_bridge = None
+            else:
+                import logging
+                logging.getLogger(__name__).warning("V2 engine: No circuit_id found")
         except Exception as e:
             import logging
-            logging.getLogger(__name__).warning("V2 engine init failed: %s", e)
+            import traceback
+            logging.getLogger(__name__).error("V2 engine init failed: %s", e)
+            logging.getLogger(__name__).error("V2 engine traceback: %s", traceback.format_exc())
             session_bridge = None
 
     return start_time

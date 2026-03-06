@@ -10,7 +10,9 @@ import logging
 from typing import Dict, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from models import RaceCar, TireCompound as GameTireCompound
+    from models.models import RaceCar
+
+logger = logging.getLogger(__name__)
 
 from lap_simulator.data_types import (
     AeroSetup,
@@ -44,6 +46,12 @@ _GAME_TO_SIM_COMPOUND = {
     "hard": TyreCompound.C2,
     "intermediate": TyreCompound.INTERMEDIATE,
     "wet": TyreCompound.WET,
+    # Also support uppercase values from enum .value
+    "SOFT": TyreCompound.C4,
+    "MEDIUM": TyreCompound.C3,
+    "HARD": TyreCompound.C2,
+    "INTERMEDIATE": TyreCompound.INTERMEDIATE,
+    "WET": TyreCompound.WET,
 }
 
 _SIM_TO_GAME_COMPOUND = {
@@ -61,7 +69,11 @@ _SIM_TO_GAME_COMPOUND = {
 def game_compound_to_sim(game_compound) -> TyreCompound:
     """Convert game TireCompound to simulator TyreCompound."""
     val = game_compound.value if hasattr(game_compound, "value") else str(game_compound)
-    return _GAME_TO_SIM_COMPOUND.get(val.lower(), TyreCompound.C3)
+    result = _GAME_TO_SIM_COMPOUND.get(val, TyreCompound.C3)
+    if result == TyreCompound.C3 and val not in ["medium", "Medium", "MEDIUM"]:
+        import logging
+        logging.getLogger(__name__).warning(f"Unknown compound {val}, defaulting to C3")
+    return result
 
 
 def sim_compound_to_game(sim_compound: TyreCompound) -> str:
@@ -245,17 +257,26 @@ def racecar_to_car_entry(
         # Ensure base aero values exist even if external setup provided
         setup = _build_aero_setup(auto, base=setup)
 
-    # Map push level: game pace_level 1-10 → sim push_level 0.90-1.10
-    pace = getattr(car, "pace_level", 5)
-    push_level = 0.90 + (pace - 1) * (0.20 / 9)  # 1→0.90, 5→0.989, 10→1.10
+    # Map push level from driver skills instead of fixed pace_level
+    # Higher skill drivers should have higher push levels
+    pilot = car.pilot
+    if hasattr(pilot, 'velocita') and hasattr(pilot, 'qualifica'):
+        # Calculate push level from driver skills (85-98 range → 7-10 push level)
+        avg_skill = (pilot.velocita + pilot.qualifica) / 2
+        # Map: 85→7, 90→8, 95→9, 98→10
+        push_level = max(1, min(10, int(7 + (avg_skill - 85) / 5)))
+        logger.info(f"Adapter: {car.team.sigla_scuderia} pilot {pilot.nome} skills={pilot.velocita}/{pilot.qualifica} → push_level={push_level}")
+    else:
+        # Fallback to car's pace_level
+        pace = getattr(car, "pace_level", 5)
+        push_level = max(1, min(10, int(pace)))
+        logger.info(f"Adapter: {car.team.sigla_scuderia} using fallback pace_level={pace} → push_level={push_level}")
 
     state = _build_sim_state(car_id, car)
 
     # Calculate team penalties (AI + player use same logic)
     delta_aero = 0.0
     delta_grip = 0.0
-    import logging
-    logger = logging.getLogger(__name__)
     
     try:
         from utils.team_performance import compute_team_penalties
@@ -330,7 +351,7 @@ def racecar_to_car_entry(
         push_level=push_level,
         delta_aero=delta_aero,
         delta_grip=delta_grip,
-        apply_baseline_delta=True,
+        apply_baseline_delta=False,  # No artificial baseline penalty for AI testing
         setup_sliders=setup_sliders,
         ideal_setup_sliders=ideal_setup_sliders,
     )

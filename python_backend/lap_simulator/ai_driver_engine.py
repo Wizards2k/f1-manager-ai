@@ -162,8 +162,8 @@ def _create_run_plan(
     laps_lo, laps_hi = defaults["laps_range"]
     laps = random.randint(laps_lo, laps_hi)
 
-    # Compound selection based on session and program
-    compound = _select_compound(program, session_type)
+    # Use compound from defaults (more realistic than hardcoded selection)
+    compound = defaults.get("compound", TyreCompound.C3)
 
     return RunPlan(
         program=program,

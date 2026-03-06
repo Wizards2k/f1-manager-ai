@@ -614,6 +614,7 @@ class CircuitConfig:
     tyre_wear_coeffs: Dict[str, float] = field(default_factory=dict)
     n_curve_sections: int = 10  # Used to distribute per-lap tyre deltas onto corners
     tyre_temp_windows: Dict[str, Dict[str, List[float]]] = field(default_factory=dict)
+    pirelli_nomination: Dict[str, str] = field(default_factory=dict)
     reference_lap_time_s: float = 0.0    # from telemetry (sum of dt_ref_s)
     # push penalty parameters
     push_penalty_centers: List[float] = field(default_factory=lambda: [1.60, 1.45, 1.30, 1.15, 1.00, 0.85, 0.70, 0.55, 0.40])
