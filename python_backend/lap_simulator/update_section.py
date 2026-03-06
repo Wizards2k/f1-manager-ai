@@ -626,6 +626,73 @@ def update_section(
         events_severity=events_severity,
     )
 
+    # ===================================================================
+    # Setup Penalty/Bonus (if config and setup data available)
+    # ===================================================================
+    setup_penalty_result = SetupPenaltyResult()
+    if config.setup_penalty_config and setup_sliders and ideal_setup_sliders:
+        # Calculate setup penalties/bonuses based on current vs ideal setup
+        # Map slider names to DF/drag impact
+        df_sliders = ['front_wing', 'rear_wing', 'beam_wing']
+        drag_sliders = ['front_wing', 'rear_wing', 'beam_wing']  # Wings affect both DF and drag
+        
+        # Calculate DF delta (sum of wing slider deltas)
+        df_delta = 0
+        for slider_name in df_sliders:
+            current = setup_sliders.get(slider_name, 50)
+            ideal = ideal_setup_sliders.get(slider_name, 50)
+            df_delta += (current - ideal)
+        
+        # Calculate drag delta (similar to DF)
+        drag_delta = 0
+        for slider_name in drag_sliders:
+            current = setup_sliders.get(slider_name, 50)
+            ideal = ideal_setup_sliders.get(slider_name, 50)
+            drag_delta += (current - ideal)
+        
+        # Determine curve speed category based on section kind
+        curve_speed_category = "medium"
+        if section.kind in [SectionKind.FAST_CORNER, SectionKind.ULTRA_FAST_CORNER]:
+            curve_speed_category = "fast"
+        elif section.kind in [SectionKind.VERY_SLOW_CORNER, SectionKind.SLOW_CORNER]:
+            curve_speed_category = "slow"
+        
+        # Calculate penalties for this section
+        df_penalty, df_bonus = compute_curve_penalty(
+            df_delta_slider=df_delta,
+            curve_speed_category=curve_speed_category,
+            section_weight=0.1,  # Normalized weight per section
+            config=config.setup_penalty_config,
+        )
+        
+        drag_penalty, drag_bonus = compute_drag_penalty(
+            drag_delta_slider=drag_delta,
+            straight_weight=0.1,  # Normalized weight per section
+            config=config.setup_penalty_config,
+        )
+        
+        # Clamp penalties per circuit
+        setup_penalty_result = clamp_setup_penalties(
+            df_curve_penalty=df_penalty,
+            df_curve_bonus=df_bonus,
+            drag_penalty=drag_penalty,
+            drag_bonus=drag_bonus,
+            config=config.setup_penalty_config,
+            circuit_id=circuit_id,
+        )
+    elif config.setup_penalty_config:
+        # Config available but no setup data provided
+        setup_penalty_result = SetupPenaltyResult(
+            df_curve_penalty_s=0.0,
+            df_curve_bonus_s=0.0,
+            drag_penalty_s=0.0,
+            drag_bonus_s=0.0,
+            setup_penalty_s=0.0,
+        )
+    
+    # Add setup penalty to total section time BEFORE updating lap_time_acc_s
+    dt_s += setup_penalty_result.setup_penalty_s
+
     # Lap tracking
     car_state.lap_time_acc_s += dt_s
     car_state.section_progress = 1.0  # completed this section
@@ -671,31 +738,6 @@ def update_section(
         ow_base + ow_drs + ow_driver + ow_grip + ow_brake + ow_aggression,
         0.0, 1.0,
     )
-
-    # ===================================================================
-    # Setup Penalty/Bonus (if config and setup data available)
-    # ===================================================================
-    setup_penalty_result = SetupPenaltyResult()
-    if config.setup_penalty_config and setup_sliders and ideal_setup_sliders:
-        # Calculate setup penalties/bonuses based on current vs ideal setup
-        # For now, initialize with zeros (full calculation requires waypoint-level integration)
-        # TODO: Implement full setup penalty calculation with waypoint-level DF/drag deltas
-        setup_penalty_result = SetupPenaltyResult(
-            df_curve_penalty_s=0.0,
-            df_curve_bonus_s=0.0,
-            drag_penalty_s=0.0,
-            drag_bonus_s=0.0,
-            setup_penalty_s=0.0,
-        )
-    elif config.setup_penalty_config:
-        # Config available but no setup data provided
-        setup_penalty_result = SetupPenaltyResult(
-            df_curve_penalty_s=0.0,
-            df_curve_bonus_s=0.0,
-            drag_penalty_s=0.0,
-            drag_bonus_s=0.0,
-            setup_penalty_s=0.0,
-        )
 
     # ===================================================================
     # STEP 8 – Return (Passo 8)
