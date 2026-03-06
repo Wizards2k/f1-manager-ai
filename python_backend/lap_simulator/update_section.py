@@ -35,11 +35,16 @@ from .brake_penalty import compute_brake_penalty
 from .power_unit import generate_output
 from .push_penalty import compute_push_penalty_per_section
 from .tyre_model import update_tyres
-from .setup_penalty import (
-    SetupPenaltyResult,
-    compute_curve_penalty,
+from .setup_penalty import SetupPenaltyResult
+from .setup_penalty_v2 import (
+    build_ideal_setup,
+    compute_slider_delta,
+    compute_df_delta_from_sliders,
+    compute_drag_delta_from_sliders,
+    is_setup_within_window,
+    compute_df_curve_penalty,
     compute_drag_penalty,
-    clamp_setup_penalties,
+    clamp_penalties,
 )
 
 
@@ -627,28 +632,26 @@ def update_section(
     )
 
     # ===================================================================
-    # Setup Penalty/Bonus (if config and setup data available)
+    # Setup Penalty/Bonus (Spec: docs/setup-penalty-bonus-malus.md)
     # ===================================================================
     setup_penalty_result = SetupPenaltyResult()
-    if config.setup_penalty_config and setup_sliders and ideal_setup_sliders:
-        # Calculate setup penalties/bonuses based on current vs ideal setup
-        # Map slider names to DF/drag impact
-        df_sliders = ['front_wing', 'rear_wing', 'beam_wing']
-        drag_sliders = ['front_wing', 'rear_wing', 'beam_wing']  # Wings affect both DF and drag
+    
+    if config.setup_penalty_config and setup_sliders:
+        # Build ideal setup from circuit targets + team/driver offsets
+        # Note: ideal_setup_sliders from CarEntry may be None, so we rebuild it here
+        ideal_setup = build_ideal_setup(circuit_id)
+        ideal_sliders = ideal_setup.ideal_sliders
         
-        # Calculate DF delta (sum of wing slider deltas)
-        df_delta = 0
-        for slider_name in df_sliders:
-            current = setup_sliders.get(slider_name, 50)
-            ideal = ideal_setup_sliders.get(slider_name, 50)
-            df_delta += (current - ideal)
+        # Compute slider deltas
+        slider_deltas = compute_slider_delta(setup_sliders, ideal_sliders)
         
-        # Calculate drag delta (similar to DF)
-        drag_delta = 0
-        for slider_name in drag_sliders:
-            current = setup_sliders.get(slider_name, 50)
-            ideal = ideal_setup_sliders.get(slider_name, 50)
-            drag_delta += (current - ideal)
+        # Compute DF and drag deltas from sliders
+        df_front_delta, df_rear_delta = compute_df_delta_from_sliders(slider_deltas)
+        df_total_delta = df_front_delta + df_rear_delta
+        drag_delta = compute_drag_delta_from_sliders(slider_deltas)
+        
+        # Check if setup is within valid window (for bonus eligibility)
+        within_window = is_setup_within_window(setup_sliders, circuit_id)
         
         # Determine curve speed category based on section kind
         curve_speed_category = "medium"
@@ -657,51 +660,51 @@ def update_section(
         elif section.kind in [SectionKind.VERY_SLOW_CORNER, SectionKind.SLOW_CORNER]:
             curve_speed_category = "slow"
         
-        # Calculate penalties for this section
-        # Key insight: 
-        # - Positive delta (more DF than ideal) = penalty on ALL circuits
-        # - Negative delta (less DF than ideal) = penalty on high-DF circuits, bonus on low-drag circuits
-        # For balanced circuits, both directions should have penalties (symmetric)
+        # Apply DF penalty/bonus ONLY on curve sections (Spec §4)
+        # IMPORTANT: Penalties apply ONLY when setup is OUTSIDE valid window
+        df_penalty = 0.0
+        df_bonus = 0.0
+        if section.kind in CORNER_KINDS and not within_window:
+            # Setup is OUTSIDE valid window = apply penalty
+            section_weight = 0.1  # Normalized weight per section
+            df_penalty, df_bonus = compute_df_curve_penalty(
+                df_delta=df_total_delta,
+                curve_speed_category=curve_speed_category,
+                section_weight=section_weight,
+                circuit_category=config.setup_penalty_config.circuit_category,
+            )
         
-        # Apply asymmetric penalty based on circuit category
-        if config.setup_penalty_config.circuit_category == "high_df":
-            # High DF circuits (Monaco, Budapest): penalize LESS downforce
-            # More DF = penalty, Less DF = bonus
-            df_delta_for_penalty = df_delta  # Keep as-is
-        elif config.setup_penalty_config.circuit_category == "low_drag":
-            # Low drag circuits (Monza, Jeddah): penalize MORE downforce
-            # More DF = penalty, Less DF = bonus
-            df_delta_for_penalty = df_delta  # Keep as-is
-        else:
-            # Balanced circuits (Suzuka): penalize BOTH directions equally
-            # More DF = penalty, Less DF = penalty (not bonus)
-            # Convert negative deltas to positive for penalty calculation
-            df_delta_for_penalty = abs(df_delta)
+        # Apply drag penalty/bonus ONLY on straight sections (Spec §6)
+        # IMPORTANT: Penalties apply ONLY when setup is OUTSIDE valid window
+        drag_penalty = 0.0
+        drag_bonus = 0.0
+        if section.kind in [SectionKind.STRAIGHT, SectionKind.MEDIUM_STRAIGHT] and not within_window:
+            # Setup is OUTSIDE valid window = apply penalty
+            straight_weight = 0.1  # Normalized weight per section
+            drag_penalty, drag_bonus = compute_drag_penalty(
+                drag_delta=drag_delta,
+                straight_weight=straight_weight,
+            )
         
-        df_penalty, df_bonus = compute_curve_penalty(
-            df_delta_slider=df_delta_for_penalty,
-            curve_speed_category=curve_speed_category,
-            section_weight=0.1,  # Normalized weight per section
-            config=config.setup_penalty_config,
-        )
-        
-        drag_penalty, drag_bonus = compute_drag_penalty(
-            drag_delta_slider=drag_delta,
-            straight_weight=0.1,  # Normalized weight per section
-            config=config.setup_penalty_config,
-        )
-        
-        # Clamp penalties per circuit
-        setup_penalty_result = clamp_setup_penalties(
-            df_curve_penalty=df_penalty,
-            df_curve_bonus=df_bonus,
+        # Clamp penalties per circuit (Spec §7)
+        df_penalty_clamped, df_bonus_clamped, drag_penalty_clamped, drag_bonus_clamped, total_penalty = clamp_penalties(
+            df_penalty=df_penalty,
+            df_bonus=df_bonus,
             drag_penalty=drag_penalty,
             drag_bonus=drag_bonus,
-            config=config.setup_penalty_config,
+            circuit_category=config.setup_penalty_config.circuit_category,
             circuit_id=circuit_id,
         )
-    elif config.setup_penalty_config:
-        # Config available but no setup data provided
+        
+        setup_penalty_result = SetupPenaltyResult(
+            df_curve_penalty_s=df_penalty_clamped,
+            df_curve_bonus_s=df_bonus_clamped,
+            drag_penalty_s=drag_penalty_clamped,
+            drag_bonus_s=drag_bonus_clamped,
+            setup_penalty_s=total_penalty,
+        )
+    else:
+        # No setup penalty config or setup data
         setup_penalty_result = SetupPenaltyResult(
             df_curve_penalty_s=0.0,
             df_curve_bonus_s=0.0,

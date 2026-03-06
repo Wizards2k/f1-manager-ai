@@ -16,20 +16,18 @@ from lap_simulator.lap_simulator import LapSimulator, CarEntry
 from lap_simulator.data_types import EnvContext, CarState, AeroSetup, DriverSkills
 from utils.adapter import racecar_to_car_entry
 
-# Default setup (ideale per Suzuka)
-DEFAULT_SETUP = {
-    'front_wing': 50,
-    'rear_wing': 50,
-    'beam_wing': 50,
-    'ride_height_front': 50,
-    'ride_height_rear': 50,
-    'suspension_front': 50,
-    'suspension_rear': 50,
-    'antiroll_front': 50,
-    'antiroll_rear': 50,
-    'brake_balance': 50,
-    'brake_duct': 50,
-}
+# Load ideal setup from setup_ranges for Suzuka
+from lap_simulator.setup_penalty_v2 import build_ideal_setup
+
+IDEAL_SETUP_OBJ = build_ideal_setup("jp-1962_suzuka")
+DEFAULT_SETUP = IDEAL_SETUP_OBJ.ideal_sliders
+
+# Ensure all sliders are present (add missing ones with default 50)
+for slider_name in ['front_wing', 'rear_wing', 'beam_wing', 'ride_height_front', 'ride_height_rear', 
+                     'suspension_front', 'suspension_rear', 'antiroll_front', 'antiroll_rear', 
+                     'brake_balance', 'brake_duct']:
+    if slider_name not in DEFAULT_SETUP:
+        DEFAULT_SETUP[slider_name] = 50
 
 def create_mclaren_car_entry(setup_override=None):
     """Crea una CarEntry McLaren con setup personalizzato."""
