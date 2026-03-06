@@ -260,30 +260,47 @@ def compute_df_curve_penalty(
 def compute_drag_penalty(
     drag_delta: int,
     straight_weight: float,
+    within_window: bool = False,
 ) -> Tuple[float, float]:
     """
-    Compute drag penalty.
+    Compute drag penalty or bonus/malus.
     
-    IMPORTANT: This function is called ONLY when setup is OUTSIDE valid window.
-    Therefore, ANY deviation from ideal (positive or negative) is a PENALTY.
+    Spec §6 + Extension:
+    - If OUTSIDE window: Penalty for ANY deviation (symmetric)
+    - If INSIDE window: Bonus if drag < target, Malus if drag > target
     
-    Spec §6:
-    - Penalty: 0.004 s * |delta| * straight_weight
+    Args:
+        drag_delta: Drag delta (current - ideal)
+        straight_weight: normalized straight weight
+        within_window: True if setup is within valid window
     
     Returns:
-        (penalty_s, bonus_s) – penalty is always positive, bonus is 0 when outside window
+        (penalty_s, bonus_s) – both positive values
     """
     if drag_delta == 0:
         return 0.0, 0.0
     
+    # Coefficients from spec
     penalty_coeff = 0.004
+    bonus_coeff = -0.004  # Symmetric to penalty
     
-    # Apply penalty for ANY deviation from ideal (symmetric penalty)
-    # Since this function is only called when setup is OUTSIDE window,
-    # we penalize the absolute delta
-    penalty = penalty_coeff * abs(drag_delta) * straight_weight
-    
-    return penalty, 0.0
+    if within_window:
+        # Setup INSIDE window: Bonus if drag < target, Malus if drag > target
+        if drag_delta < 0:
+            # Less drag than ideal = bonus (negative penalty)
+            bonus = bonus_coeff * abs(drag_delta) * straight_weight
+            return 0.0, bonus
+        elif drag_delta > 0:
+            # More drag than ideal = malus (positive penalty)
+            penalty = penalty_coeff * drag_delta * straight_weight
+            return penalty, 0.0
+        else:
+            # Drag = ideal = nothing
+            return 0.0, 0.0
+    else:
+        # Setup OUTSIDE window: Penalty for ANY deviation (symmetric)
+        penalty = penalty_coeff * abs(drag_delta) * straight_weight
+        return penalty, 0.0
 
 
 def clamp_penalties(

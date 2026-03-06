@@ -675,16 +675,17 @@ def update_section(
                 within_window=within_window,
             )
         
-        # Apply drag penalty/bonus ONLY on straight sections (Spec §6)
-        # IMPORTANT: Penalties apply ONLY when setup is OUTSIDE valid window
+        # Apply drag penalty/bonus ONLY on straight sections (Spec §6 + Extension)
+        # - If OUTSIDE window: Penalty for ANY deviation
+        # - If INSIDE window: Bonus if drag < target, Malus if drag > target
         drag_penalty = 0.0
         drag_bonus = 0.0
-        if section.kind in [SectionKind.STRAIGHT, SectionKind.MEDIUM_STRAIGHT] and not within_window:
-            # Setup is OUTSIDE valid window = apply penalty
+        if section.kind in [SectionKind.STRAIGHT, SectionKind.MEDIUM_STRAIGHT]:
             straight_weight = 0.1  # Normalized weight per section
             drag_penalty, drag_bonus = compute_drag_penalty(
                 drag_delta=drag_delta,
                 straight_weight=straight_weight,
+                within_window=within_window,
             )
         
         # Clamp penalties per circuit (Spec §7)
