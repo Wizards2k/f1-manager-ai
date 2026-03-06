@@ -658,8 +658,28 @@ def update_section(
             curve_speed_category = "slow"
         
         # Calculate penalties for this section
+        # Key insight: 
+        # - Positive delta (more DF than ideal) = penalty on ALL circuits
+        # - Negative delta (less DF than ideal) = penalty on high-DF circuits, bonus on low-drag circuits
+        # For balanced circuits, both directions should have penalties (symmetric)
+        
+        # Apply asymmetric penalty based on circuit category
+        if config.setup_penalty_config.circuit_category == "high_df":
+            # High DF circuits (Monaco, Budapest): penalize LESS downforce
+            # More DF = penalty, Less DF = bonus
+            df_delta_for_penalty = df_delta  # Keep as-is
+        elif config.setup_penalty_config.circuit_category == "low_drag":
+            # Low drag circuits (Monza, Jeddah): penalize MORE downforce
+            # More DF = penalty, Less DF = bonus
+            df_delta_for_penalty = df_delta  # Keep as-is
+        else:
+            # Balanced circuits (Suzuka): penalize BOTH directions equally
+            # More DF = penalty, Less DF = penalty (not bonus)
+            # Convert negative deltas to positive for penalty calculation
+            df_delta_for_penalty = abs(df_delta)
+        
         df_penalty, df_bonus = compute_curve_penalty(
-            df_delta_slider=df_delta,
+            df_delta_slider=df_delta_for_penalty,
             curve_speed_category=curve_speed_category,
             section_weight=0.1,  # Normalized weight per section
             config=config.setup_penalty_config,
