@@ -206,14 +206,16 @@ def compute_df_curve_penalty(
     circuit_category: str,
 ) -> Tuple[float, float]:
     """
-    Compute DF curve penalty and bonus.
+    Compute DF curve penalty.
     
-    Spec §4-5:
+    IMPORTANT: This function is called ONLY when setup is OUTSIDE valid window.
+    Therefore, ANY deviation from ideal (positive or negative) is a PENALTY.
+    
+    Spec §4:
     - Penalty: 0.030/0.020/0.010 s * |delta| * section_weight (fast/medium/slow)
-    - Bonus: -0.007/-0.005/-0.003 s * delta_pos * section_weight (if within window)
     
     Returns:
-        (penalty_s, bonus_s) – both positive values
+        (penalty_s, bonus_s) – penalty is always positive, bonus is 0 when outside window
     """
     if df_delta == 0:
         return 0.0, 0.0
@@ -224,23 +226,15 @@ def compute_df_curve_penalty(
         "medium": 0.020,
         "slow": 0.010,
     }
-    bonus_coeffs = {
-        "fast": -0.007,
-        "medium": -0.005,
-        "slow": -0.003,
-    }
     
     coeff = penalty_coeffs.get(curve_speed_category, penalty_coeffs["medium"])
-    bonus_coeff = bonus_coeffs.get(curve_speed_category, bonus_coeffs["medium"])
     
-    if df_delta > 0:
-        # More DF than ideal = penalty
-        penalty = coeff * df_delta * section_weight
-        return penalty, 0.0
-    else:
-        # Less DF than ideal = bonus (negative penalty)
-        bonus = bonus_coeff * abs(df_delta) * section_weight
-        return 0.0, bonus
+    # Apply penalty for ANY deviation from ideal (symmetric penalty)
+    # Since this function is only called when setup is OUTSIDE window,
+    # we penalize the absolute delta
+    penalty = coeff * abs(df_delta) * section_weight
+    
+    return penalty, 0.0
 
 
 def compute_drag_penalty(
@@ -248,29 +242,28 @@ def compute_drag_penalty(
     straight_weight: float,
 ) -> Tuple[float, float]:
     """
-    Compute drag penalty and bonus.
+    Compute drag penalty.
+    
+    IMPORTANT: This function is called ONLY when setup is OUTSIDE valid window.
+    Therefore, ANY deviation from ideal (positive or negative) is a PENALTY.
     
     Spec §6:
-    - Penalty: 0.004 s * delta_pos * straight_weight
-    - Bonus: -0.003 s * delta_neg * straight_weight
+    - Penalty: 0.004 s * |delta| * straight_weight
     
     Returns:
-        (penalty_s, bonus_s)
+        (penalty_s, bonus_s) – penalty is always positive, bonus is 0 when outside window
     """
     if drag_delta == 0:
         return 0.0, 0.0
     
     penalty_coeff = 0.004
-    bonus_coeff = -0.003
     
-    if drag_delta > 0:
-        # More drag than ideal = penalty
-        penalty = penalty_coeff * drag_delta * straight_weight
-        return penalty, 0.0
-    else:
-        # Less drag than ideal = bonus
-        bonus = bonus_coeff * abs(drag_delta) * straight_weight
-        return 0.0, bonus
+    # Apply penalty for ANY deviation from ideal (symmetric penalty)
+    # Since this function is only called when setup is OUTSIDE window,
+    # we penalize the absolute delta
+    penalty = penalty_coeff * abs(drag_delta) * straight_weight
+    
+    return penalty, 0.0
 
 
 def clamp_penalties(
