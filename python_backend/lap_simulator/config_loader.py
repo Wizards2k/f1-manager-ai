@@ -437,6 +437,11 @@ def load_circuit_config(
     # --- Setup Penalty Configuration ---
     setup_penalty_config = load_setup_penalty_config(penalty_data)
 
+    # --- Aero Reference Values ---
+    aero_ref = penalty_data.get("aero_reference", {})
+    df_ref = aero_ref.get("df_ref", 70.0)  # Default to global value
+    drag_ref = aero_ref.get("drag_ref", 30.0)  # Default to global value
+
     ref_lap_time = telem.get("reference_lap", {}).get("lap_time", 0.0)
     sum_dt_ref = sum(s.dt_ref_s for s in sections)
 
@@ -456,6 +461,8 @@ def load_circuit_config(
         ers_budget=ers_budget,
         regen_profile=regen_profile,
         soc_warnings=soc_warnings,
+        df_ref=df_ref,
+        drag_ref=drag_ref,
         reference_lap_time_s=sum_dt_ref, # Force 2025 telemetry sum
         fuel_reference_kg=fuel_reference_kg,
         fuel_penalty_coeff=fuel_penalty_coeff,

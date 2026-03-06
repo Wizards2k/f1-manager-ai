@@ -28,5 +28,9 @@
     "source": "telemetry.fuel_mass.fuel_lap_delta_ms",
     "fuel_lap_delta_ms": 0.035,
     "tyre_reference_compound": "C5"
+  },
+  "aero_reference": {
+    "df_ref": 82.0,
+    "drag_ref": 29.0
   }
 }

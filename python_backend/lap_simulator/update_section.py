@@ -639,7 +639,11 @@ def update_section(
     if config.setup_penalty_config and setup_sliders:
         # Build ideal setup from circuit targets + team/driver offsets
         # Note: ideal_setup_sliders from CarEntry may be None, so we rebuild it here
-        ideal_setup = build_ideal_setup(circuit_id)
+        ideal_setup = build_ideal_setup(
+            circuit_id=circuit_id,
+            df_ref=config.df_ref,
+            drag_ref=config.drag_ref,
+        )
         ideal_sliders = ideal_setup.ideal_sliders
         
         # Compute slider deltas

@@ -24,6 +24,10 @@
     "medium": "C2",
     "soft": "C3"
   },
+  "aero_reference": {
+    "df_ref": 75.0,
+    "drag_ref": 32.0
+  },
   "_meta": {
     "source": "telemetry.fuel_mass.fuel_lap_delta_ms",
     "fuel_lap_delta_ms": 0.035,

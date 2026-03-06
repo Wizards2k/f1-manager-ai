@@ -27,6 +27,8 @@ class IdealSetup:
     team_offsets: Dict[str, int]     # From team_offsets
     driver_offsets: Dict[str, int]   # From team_offsets
     ideal_sliders: Dict[str, int]    # Final ideal (targets + offsets, clamped)
+    df_ref: float = 70.0             # Circuit-specific downforce reference
+    drag_ref: float = 30.0           # Circuit-specific drag reference
 
 
 def load_setup_ranges(circuit_id: str) -> Dict[str, Any]:
@@ -64,6 +66,8 @@ def build_ideal_setup(
     circuit_id: str,
     team_name: Optional[str] = None,
     driver_name: Optional[str] = None,
+    df_ref: Optional[float] = None,
+    drag_ref: Optional[float] = None,
 ) -> IdealSetup:
     """
     Build ideal setup for a circuit, optionally with team/driver offsets.
@@ -72,6 +76,8 @@ def build_ideal_setup(
         circuit_id: Circuit identifier (e.g., "jp-1962_suzuka")
         team_name: Team name (e.g., "McLaren F1 Team")
         driver_name: Driver name (e.g., "Lando Norris")
+        df_ref: Circuit-specific downforce reference (fallback to 70.0)
+        drag_ref: Circuit-specific drag reference (fallback to 30.0)
     
     Returns:
         IdealSetup with circuit targets, offsets, and final ideal sliders
@@ -116,6 +122,8 @@ def build_ideal_setup(
         team_offsets=team_offsets,
         driver_offsets=driver_offsets,
         ideal_sliders=ideal_sliders,
+        df_ref=df_ref or 70.0,
+        drag_ref=drag_ref or 30.0,
     )
 
 
