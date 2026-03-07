@@ -138,6 +138,12 @@ export class PlayerGarageV3 {
         this.bindEvents();
     }
 
+    formatMapLabel(name) {
+        if (!name) return '--';
+        const base = String(name).replace(/_/g, ' ').toLowerCase();
+        return base.split(' ').map(word => word ? word[0].toUpperCase() + word.slice(1) : '').join(' ').trim();
+    }
+
     bindEvents() {
         if (!this.cardsContainer) return;
         this.cardsContainer.addEventListener('click', (event) => this.handleCardClick(event));
@@ -177,7 +183,7 @@ export class PlayerGarageV3 {
         }
     }
 
-    buildLapUsageChipRow({ mapName, deployLimit, harvestLimit, deployPerLap, harvestPerLap, mguhDirectBudget, current, previous, hasPrevTrace, hasPrevWarnings, hasPrevLap }) {
+    buildLapUsageChipRow({ mapName, iceMode, ersMode, deployLimit, harvestLimit, deployPerLap, harvestPerLap, mguhDirectBudget, current, previous, hasPrevTrace, hasPrevWarnings, hasPrevLap }) {
         const chips = [];
         if (current) {
             chips.push(this.buildLapUsageChip({
@@ -193,6 +199,8 @@ export class PlayerGarageV3 {
                 harvestLimit,
                 mapName,
                 mguhDirectBudget,
+                iceMode,
+                ersMode,
             }));
         }
         const showPrev = previous && (
@@ -216,6 +224,8 @@ export class PlayerGarageV3 {
                 harvestLimit,
                 mapName,
                 mguhDirectBudget,
+                iceMode,
+                ersMode,
             }));
         }
         if (!chips.length) return '';
@@ -648,7 +658,7 @@ export class PlayerGarageV3 {
         `;
     }
 
-    buildLapUsageChip({ label, lapIndex, deploy, harvest, deployBudget, harvestBudget, deployLimit, harvestLimit, mapName, mguhDirect, mguhDirectBudget, mguhHarvest }) {
+    buildLapUsageChip({ label, lapIndex, deploy, harvest, deployBudget, harvestBudget, deployLimit, harvestLimit, mapName, mguhDirect, mguhHarvest, iceMode, ersMode }) {
         if (deploy == null && harvest == null) return '';
         const lapLabel = this.formatLapLabel(lapIndex);
         const deployText = deploy != null ? `${deploy.toFixed(2)} MJ` : '—';
@@ -711,7 +721,7 @@ export class PlayerGarageV3 {
                     </div>
                 </div>
                 <div class="pu-chip-footer">
-                    <span>Map ${mapName}</span>
+                    <span>ICE ${this.formatMapLabel(iceMode || mapName)} · ERS ${this.formatMapLabel(ersMode)}</span>
                     <span>Deploy limit ${deployLimit.toFixed(1)} · Harvest ${harvestLimit.toFixed(1)} MJ</span>
                 </div>
             </div>
@@ -1727,8 +1737,13 @@ export class PlayerGarageV3 {
         const hasPrevWarnings = Array.isArray(warningsPrev) && warningsPrev.length > 0;
         const hasPrevLap = previousLapIndex !== null || (completedLapCount !== null && completedLapCount > 0);
 
+        const iceModeDisplay = car.player_config?.ice_mode || car.ice_mode || puStats.ice_map || 'RACE';
+        const ersModeDisplay = car.player_config?.ers_mode || car.ers_mode || puStats.ers_mode || mapName;
+
         const lapChipRow = this.buildLapUsageChipRow({
             mapName,
+            iceMode: iceModeDisplay,
+            ersMode: ersModeDisplay,
             deployLimit,
             harvestLimit,
             deployPerLap,
@@ -1818,11 +1833,6 @@ export class PlayerGarageV3 {
         // Render ERS Panel
         const ersPanel = this.buildErsMapPanel(car, puStats, isBox);
         
-        // Calculate tab styles
-        const setupBtnStyle = '';
-        const statsBtnStyle = '';
-        const ersBtnStyle = '';
-        
         this.overlayContainer.innerHTML = `
             <div class="pu-modal-v3">
                 <div class="pu-modal-header-v3">
@@ -1847,6 +1857,9 @@ export class PlayerGarageV3 {
                 </div>
             </div>
         `;
+        this.overlayContainer.dataset.driver = car.driver_number;
+        this.overlayContainer.classList.add('is-visible', 'pu-modal-active');
+        this.overlayContainer.classList.remove('is-hiding');
         this.setPauseForPU(true);
     }
 
