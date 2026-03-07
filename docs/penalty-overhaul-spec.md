@@ -144,14 +144,37 @@ dataclass PerformancePenalties:
 - `test_rbr_engine_penalty.py` - Script test RBR engine penalties
 - `test_brake_penalty_integration.py` - Script test integrazione brake penalty
 - `test_realistic_brake_penalty.py` - Script test scenari realistici brake penalty (CV + mappe ICE/ERS)
+- `tests/test_penalty_toggles.py` - Test suite per toggle legacy system
+- `tests/test_penalty_cache.py` - Test suite comparativi per performance cache
 
 ## 9. Roadmap Incrementale Aggiornata
 1. **Wave 1**: ✅ **COMPLETATA** - fuel + gomme + push (con skill pilota integrate) + engine penalties (CV + mappe ICE/ERS)
 2. **Wave 2**: ✅ **COMPLETATA** - brake penalties (duct + fade)
-3. **Wave 3**: assetto setup + circuit extras + telemetria UI (skill pilota già integrate nel push system)
-4. **Wave 4**: refinements (bonus eventuali, toggle legacy).
+3. **Wave 3**: ✅ **COMPLETATA** - setup penalties (DF/Drag trade-off) + telemetria UI (skill pilota già integrate nel push system)
+4. **Wave 4**: ✅ **COMPLETATA** - Toggle Legacy System + Performance Cache + Game Interface
 
-**Status Wave 1-2**: 100% completato con Engine e Brake Penalty Systems integrati e testati
+**Status Wave 1-4**: 100% completato con tutti i sistemi penalty integrati, testati e production-ready
+
+### Wave 4 - Refinements (COMPLETATA):
+- ✅ **Toggle Legacy System**: Master flag + 8 flag individuali per controllo granulare
+- ✅ **Performance Cache**: Sistema cache pre-computata (disabilitato default per stabilità)
+- ✅ **Game Interface**: Menu principale F1-style con navigazione alle aree di gioco
+- ✅ **Test Suite**: Test comparativi cache + test toggle system
+- ✅ **Documentation**: Aggiornata specifica e roadmap
+
+### Flag System Disponibili:
+```python
+USE_NEW_PENALTY_SYSTEM = True      # Master toggle
+ENABLE_FUEL_PENALTIES = True       # Fuel weight penalties
+ENABLE_TYRE_PENALTIES = True       # Compound/wear/temperature penalties
+ENABLE_DRIVER_SKILL_PENALTIES = True  # Push level + skills modulation
+ENABLE_ENGINE_PENALTIES = True     # CV + ICE map penalties
+ENABLE_ENGINE_MAP_PENALTIES = True # ICE map penalties only
+ENABLE_ERS_PENALTIES = True        # ERS mode penalties
+ENABLE_BRAKE_PENALTIES = True      # Duct + fade penalties
+ENABLE_SETUP_PENALTIES = True     # DF/Drag setup penalties
+ENABLE_PENALTY_CACHE = False      # Performance cache (disabled)
+```
 
 ## 10. Deliverable
 - Specifica approvata (questo documento).

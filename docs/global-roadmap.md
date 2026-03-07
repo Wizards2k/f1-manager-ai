@@ -1,7 +1,7 @@
 ---
 title: Roadmap Globale – Physics 2.0 Release
-version: 0.1
-last_updated: 2026-02-19
+version: 0.2
+last_updated: 2026-03-07
 scope: "Coordinare tutte le iniziative necessarie per rilasciare F1 Manager AI con fisica 2.0, multi-car e setup engine rinnovato"
 ---
 
@@ -141,24 +141,49 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 10. ✅ **Validazione**: AI con tempi realistici e logging dettagliato
 
 ## 7. Implementazione – Fase F (Gameplay, Backend & QA Harness — `docs/physics-roadmap.md`, `docs/BattleResolver.md`, `docs/setup-ui-plan.md`)
-1. **RaceSimulator backend integration**: scheduler sezioni, orchestrazione multi-car, storage `section_progress`, sincronizzazione multiplayer fantasma.
-2. **Strategia/Engineer AI**: usare output LapSimulator per suggerire setup/strategie e gestire traffico.
-3. **QA harness scenari**: test automatici (20 auto, DRS train, wet stint) con seed deterministico e utilizzo dei nuovi log.
 
-### 7.1 UI/UX & Player Experience (`docs/setup-ui-plan.md`, `docs/setup-engine-spec-v0.1.md`)
+> **Stato**: ✅ **COMPLETATA** - Penalty System Overhaul + Game Interface (2026-03-07)
+
+### 7.1 ✅ Penalty System Overhaul (Wave 1-4 Complete)
+1. **Wave 1**: ✅ Fuel + Tyre + Push + Engine penalties (CV + ICE/ERS maps)
+2. **Wave 2**: ✅ Brake penalties (duct + fade) 
+3. **Wave 3**: ✅ Setup penalties (DF/Drag trade-off)
+4. **Wave 4**: ✅ Toggle Legacy System + Performance Cache + Game Interface
+
+**Deliverables Completati:**
+- Toggle system con master flag + 8 flag individuali
+- Performance cache system (disabilitato default per stabilità)
+- Game interface F1-style con 6 aree di navigazione
+- Test suite completa (toggle + cache comparativi)
+- Tutti i sistemi penalty integrati e production-ready
+
+### 7.2 ✅ Game Interface Implementation
+1. **Main Menu**: Homepage F1-style con navigazione alle aree di gioco
+2. **Navigation System**: 6 aree (Auto, Motore, Piloti, Staff, Calendario, Quick Race)
+3. **Backend Integration**: Routing completo con Quick Race → circuit selection
+4. **Responsive Design**: Desktop, tablet, mobile compatibility
+5. **User Experience**: Keyboard navigation, hover effects, status bar
+
+### 7.3 RaceSimulator backend integration (DA IMPLEMENTARE)
+1. Scheduler sezioni, orchestrazione multi-car, storage `section_progress`, sincronizzazione multiplayer fantasma.
+2. Strategia/Engineer AI: usare output LapSimulator per suggerire setup/strategie e gestire traffico.
+3. QA harness scenari: test automatici (20 auto, DRS train, wet stint) con seed deterministico e utilizzo dei nuovi log.
+
+### 7.4 UI/UX & Player Experience (`docs/setup-ui-plan.md`, `docs/setup-engine-spec-v0.1.md`)
 1. HUD aggiornato (eventi Side-by-side, Attempt blocked, cooldown timer, engineer radio).
 2. Engineer assistant: roadmap `setup-ui-plan.md` + nuove API Setup Engine.
 3. Replay/lap overview "pallino" con timeline eventi e indicatori (attempts, successi, penalità).
 4. Manuale/tooltip per Setup Engine 2.0 e metrica fisica (aero_balance, drag index, brake cooling).
+5. ✅ **Game Interface**: Menu principale F1-style implementato con navigazione completa
 
-### 7.2 Frontend Race Engine (`docs/physics-roadmap.md`, `docs/setup-ui-plan.md`)
+### 7.5 Frontend Race Engine (`docs/physics-roadmap.md`, `docs/setup-ui-plan.md`)
 1. Refactoring FE race renderer (pallino su rotaia) per supportare 20 auto simultanee con eventi dinamici.
 2. Animazioni overlay per sorpassi: side-by-side, cooldown indicator, penalty flash.
 3. Timeline pratica/qualifica con markers (tentativi, best lap, traffico) e link a replay.
 4. Integrazione con Setup Engine feedback (engineer callouts, recommended adjustments).
 5. Performance budget: target 60 FPS su Electron/web (profiling + virtualization dati telemetria).
 
-### 7.3 Release Engineering (`docs/physics-roadmap.md`, `docs/global-physics-roadmap.md`)
+### 7.6 Release Engineering (`docs/physics-roadmap.md`, `docs/global-physics-roadmap.md`)
 1. Branch strategy: `physics-engine` → `release/physics2` → main.
 2. Build "Engineer Mode" per manual QA (logging esteso, overlay debug).
 3. Backend load tests per 20 auto (practice session) con profili AI diversi.
@@ -182,11 +207,14 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 - `docs/BattleResolver.md` (da aggiornare)
 - `docs/TyreModel.md`
 - `docs/AeroPackage.md`, `docs/config-spec.md`, `docs/degradation-and-consumption.md`
+- `docs/penalty-overhaul-spec.md` ← **UPDATED** (Penalty System completo)
+- `python_backend/templates/game-main-menu.html` ← **NEW** (Game interface)
+- `python_backend/templates/development-hub.html` ← **NEW** (Development hub)
 
 ## 10. Prossimi passi immediati
-1. **PU Hybrid V2.1** – implementare consumo MGU-H direct drive e refactor deployment strategy (priorità sezioni, MGU-H awareness).
-2. **Brake migration** – completare split torque regen/idraulico nel runtime usando i profili derivati.
-3. **Component integration** – verificare e ottimizzare interazione tra tutti i moduli LapSimulator con nuova logica PU.
-4. Validare roadmap con product/gameplay.
-5. Pianificare implementazione Setup Engine 2.0 (ticket/branch dedicato).
-6. Avviare design TyreModel v0.4 e Grip meccanico (spec + tasks).
+1. ✅ **Penalty System Overhaul**: Completato con toggle system e cache (Wave 1-4)
+2. ✅ **Game Interface**: Menu principale F1-style con navigazione completa
+3. **RaceSimulator backend integration**: Scheduler sezioni, orchestrazione multi-car (DA IMPLEMENTARE)
+4. **PU Hybrid V2.1**: Implementare consumo MGU-H direct drive e refactor deployment strategy
+5. **Brake migration**: Completare split torque regen/idraulico nel runtime usando i profili derivati
+6. **Component integration**: Verificare e ottimizzare interazione tra tutti i moduli LapSimulator con nuova logica PU
