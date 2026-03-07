@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Manager AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-v3.css') }}">
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --panel: #1a1a1a;
+            --card: #2a2a2a;
+            --accent: #e10600;
+            --accent-soft: rgba(225, 6, 0, 0.15);
+            --text: #ffffff;
+            --muted: #888888;
+            --grid: rgba(255,255,255,.1);
+            --success: #00d400;
+            --warning: #ff8800;
+            --danger: #ff0000;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Formula 1', 'Arial', sans-serif;
+            background: #000000;
+            color: var(--text);
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Background with F1-style pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(225, 6, 0, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(0, 212, 0, 0.2) 0%, transparent 50%),
+                linear-gradient(135deg, #000000 0%, #1a0000 50%, #000000 100%);
+            z-index: -1;
+        }
+
+        /* Main Menu Container */
+        .main-menu {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Game Title */
+        .game-title {
+            position: absolute;
+            top: 60px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .game-title h1 {
+            font-size: 4rem;
+            font-weight: 900;
+            letter-spacing: 0.1em;
+            margin: 0;
+            background: linear-gradient(45deg, var(--text) 0%, var(--accent) 50%, var(--text) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-transform: uppercase;
+            animation: titleGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes titleGlow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+        }
+
+        .game-title .subtitle {
+            font-size: 1.2rem;
+            color: var(--muted);
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+
+        /* Menu Grid */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 40px;
+            padding: 40px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        /* Menu Items */
+        .menu-item {
+            background: linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(42, 42, 42, 0.9) 100%);
+            border: 2px solid transparent;
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .menu-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent, rgba(225, 6, 0, 0.1), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
+        }
+
+        .menu-item:hover::before {
+            transform: translateX(100%);
+        }
+
+        .menu-item:hover {
+            border-color: var(--accent);
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 20px 40px rgba(225, 6, 0, 0.3);
+        }
+
+        /* Menu Icons */
+        .menu-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+        }
+
+        .menu-item:hover .menu-icon {
+            transform: scale(1.1);
+            filter: drop-shadow(0 6px 12px rgba(225, 6, 0, 0.5));
+        }
+
+        /* Menu Titles */
+        .menu-item h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0 0 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text);
+        }
+
+        .menu-item p {
+            font-size: 1rem;
+            color: var(--muted);
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        /* Special styling for Quick Race */
+        .menu-item.quick-race {
+            background: linear-gradient(135deg, rgba(225, 6, 0, 0.2) 0%, rgba(225, 6, 0, 0.1) 100%);
+            border-color: rgba(225, 6, 0, 0.5);
+        }
+
+        .menu-item.quick-race:hover {
+            border-color: var(--accent);
+            background: linear-gradient(135deg, rgba(225, 6, 0, 0.3) 0%, rgba(225, 6, 0, 0.2) 100%);
+        }
+
+        /* Bottom Status Bar */
+        .status-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid var(--grid);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-info {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--muted);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .controls-hint {
+            color: var(--muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .menu-grid {
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-rows: repeat(3, 1fr);
+                gap: 30px;
+                padding: 30px;
+            }
+            
+            .menu-item {
+                padding: 30px 20px;
+            }
+            
+            .menu-icon {
+                font-size: 3rem;
+            }
+            
+            .game-title h1 {
+                font-size: 3rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .menu-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(6, 1fr);
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .menu-item {
+                padding: 25px 20px;
+            }
+            
+            .game-title h1 {
+                font-size: 2.5rem;
+            }
+            
+            .game-title {
+                top: 30px;
+            }
+            
+            .status-bar {
+                padding: 15px 20px;
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+
+        /* Loading animation */
+        .menu-item.loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .menu-item.loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 30px;
+            height: 30px;
+            border: 3px solid var(--accent);
+            border-top-color: transparent;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-menu">
+        <!-- Game Title -->
+        <div class="game-title">
+            <h1>F1 Manager AI</h1>
+            <div class="subtitle">Team Management System</div>
+        </div>
+
+        <!-- Main Menu Grid -->
+        <div class="menu-grid">
+            <!-- Car Development -->
+            <div class="menu-item" onclick="navigateTo('car')">
+                <div class="menu-icon">🏎️</div>
+                <h2>Auto</h2>
+                <p>Sviluppo telaio e aerodinamica</p>
+            </div>
+
+            <!-- Engine Development -->
+            <div class="menu-item" onclick="navigateTo('engine')">
+                <div class="menu-icon">⚙️</div>
+                <h2>Motore</h2>
+                <p>Potenza unità e affidabilità</p>
+            </div>
+
+            <!-- Driver Management -->
+            <div class="menu-item" onclick="navigateTo('drivers')">
+                <div class="menu-icon">👥</div>
+                <h2>Piloti</h2>
+                <p>Contratti e sviluppo talenti</p>
+            </div>
+
+            <!-- Staff Management -->
+            <div class="menu-item" onclick="navigateTo('staff')">
+                <div class="menu-icon">👔</div>
+                <h2>Staff</h2>
+                <p>Team e dipartimenti tecnici</p>
+            </div>
+
+            <!-- Calendar -->
+            <div class="menu-item" onclick="navigateTo('calendar')">
+                <div class="menu-icon">📅</div>
+                <h2>Calendario</h2>
+                <p>Gare e eventi stagione</p>
+            </div>
+
+            <!-- Quick Race -->
+            <div class="menu-item quick-race" onclick="navigateTo('quick-race')">
+                <div class="menu-icon">🏁</div>
+                <h2>Quick Race</h2>
+                <p>Gara rapida immediata</p>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-info">
+                <div class="status-item">
+                    <span class="status-dot"></span>
+                    <span>System Online</span>
+                </div>
+                <div class="status-item">
+                    <span>Team: Williams Racing</span>
+                </div>
+                <div class="status-item">
+                    <span>Season: 2025</span>
+                </div>
+                <div class="status-item">
+                    <span>Budget: $45.2M</span>
+                </div>
+            </div>
+            <div class="controls-hint">
+                Use Arrow Keys + Enter | ESC for Back
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Navigation function
+        function navigateTo(section) {
+            const menuItem = event.currentTarget;
+            menuItem.classList.add('loading');
+            
+            // Simulate loading
+            setTimeout(() => {
+                window.location.href = `/${section}`;
+            }, 500);
+        }
+
+        // Keyboard navigation
+        let currentIndex = 0;
+        const menuItems = document.querySelectorAll('.menu-item');
+
+        function updateSelection() {
+            menuItems.forEach((item, index) => {
+                if (index === currentIndex) {
+                    item.style.borderColor = 'var(--accent)';
+                    item.style.transform = 'translateY(-5px) scale(1.02)';
+                } else {
+                    item.style.borderColor = 'transparent';
+                    item.style.transform = 'translateY(0) scale(1)';
+                }
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowRight':
+                    currentIndex = (currentIndex + 1) % menuItems.length;
+                    updateSelection();
+                    break;
+                case 'ArrowLeft':
+                    currentIndex = (currentIndex - 1 + menuItems.length) % menuItems.length;
+                    updateSelection();
+                    break;
+                case 'ArrowDown':
+                    currentIndex = (currentIndex + 3) % menuItems.length;
+                    updateSelection();
+                    break;
+                case 'ArrowUp':
+                    currentIndex = (currentIndex - 3 + menuItems.length) % menuItems.length;
+                    updateSelection();
+                    break;
+                case 'Enter':
+                    menuItems[currentIndex].click();
+                    break;
+                case 'Escape':
+                    // Handle back navigation
+                    console.log('Back navigation');
+                    break;
+            }
+        });
+
+        // Initialize selection
+        updateSelection();
+
+        // Add hover sound effect (if needed)
+        menuItems.forEach(item => {
+            item.addEventListener('mouseenter', () => {
+                // Play hover sound if audio system is available
+                console.log('Hover sound');
+            });
+        });
+
+        // Dynamic status updates
+        setInterval(() => {
+            const statusDot = document.querySelector('.status-dot');
+            statusDot.style.background = statusDot.style.background === 'var(--success)' ? 'var(--warning)' : 'var(--success)';
+        }, 3000);
+    </script>
+</body>
+</html>
