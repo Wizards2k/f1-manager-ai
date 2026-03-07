@@ -1804,27 +1804,24 @@ export class PlayerGarageV3 {
                     </tbody>
                 </table>
             </div>
+            <div class="pu-budget-bar-v3">
+                <span class="pu-label-v3">Lap Budget</span>
+                <div class="pu-bar-track-v3">
+                    <div class="pu-bar-fill-v3" style="width:${deployPct}%"></div>
+                </div>
+            </div>
         `;
-        const ersPanel = this.buildErsMapPanel(car, puStats, isBox);
-        const tabBaseStyle = 'flex:1;border:1px solid rgba(255,255,255,0.14);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;background:rgba(255,255,255,0.04);color:#d7def1;cursor:pointer;';
-        const inactiveStyle = `${tabBaseStyle}`;
-        const activeStyle = `${tabBaseStyle}background:#ffd24c;color:#10141b;border-color:#ffd24c;`;
-        const disabledStyle = `${tabBaseStyle}opacity:0.4;cursor:not-allowed;`;
-        
-        let setupBtnStyle = isBox ? activeStyle : disabledStyle;
-        let statsBtnStyle = (!isBox && this.activePuTab === 'stats') ? activeStyle : inactiveStyle;
-        let ersBtnStyle = (!isBox && this.activePuTab === 'ers-map') ? activeStyle : inactiveStyle;
-        
-        if (this.activePuTab === 'setup' && isBox) setupBtnStyle = activeStyle;
-        else if (this.activePuTab === 'stats') statsBtnStyle = activeStyle;
-        else if (this.activePuTab === 'ers-map') ersBtnStyle = activeStyle;
-
-        this.overlayContainer.dataset.driver = car.driver_number;
-        this.overlayContainer.classList.add('is-visible', 'pu-modal-active');
-        this.overlayContainer.classList.remove('is-hiding');
         
         // Render Setup Panel
         const setupHtml = await this.renderSetupPanelHtml(car, isBox);
+        
+        // Render ERS Panel
+        const ersPanel = this.buildErsMapPanel(car, puStats, isBox);
+        
+        // Calculate tab styles
+        const setupBtnStyle = '';
+        const statsBtnStyle = '';
+        const ersBtnStyle = '';
         
         this.overlayContainer.innerHTML = `
             <div class="pu-modal-v3">
@@ -1832,10 +1829,10 @@ export class PlayerGarageV3 {
                     <div class="pu-modal-title-v3">🔧 Gestione Vettura — ${driverName}</div>
                     <button class="pu-modal-close-v3" data-action="close-pu">×</button>
                 </div>
-                <div class="pu-modal-tabs-v3" style="display:flex; gap:8px; margin-bottom:14px;">
-                    <button class="pu-tab-btn" style="${setupBtnStyle}" data-action="switch-pu-tab" data-tab="setup" ${!isBox ? 'disabled' : ''}>Setup Vettura</button>
-                    <button class="pu-tab-btn" style="${statsBtnStyle}" data-action="switch-pu-tab" data-tab="stats">PU / Motore</button>
-                    <button class="pu-tab-btn" style="${ersBtnStyle}" data-action="switch-pu-tab" data-tab="ers-map">Mappa ERS</button>
+                <div class="pu-modal-tabs-v3">
+                    <button class="pu-tab-btn ${this.activePuTab === 'setup' && isBox ? 'active' : ''}" data-action="switch-pu-tab" data-tab="setup" ${!isBox ? 'disabled' : ''}>Setup Vettura</button>
+                    <button class="pu-tab-btn ${this.activePuTab === 'stats' ? 'active' : ''}" data-action="switch-pu-tab" data-tab="stats">PU / Motore</button>
+                    <button class="pu-tab-btn ${this.activePuTab === 'ers-map' ? 'active' : ''}" data-action="switch-pu-tab" data-tab="ers-map">Mappa ERS</button>
                 </div>
                 <div class="pu-modal-body-v3">
                     <section data-panel="setup" style="${this.activePuTab === 'setup' ? '' : 'display:none;'}">
