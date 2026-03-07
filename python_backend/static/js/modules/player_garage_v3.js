@@ -546,7 +546,7 @@ export class PlayerGarageV3 {
             ? Math.round(puStats.soc_target_pct * 100)
             : (typeof puStats.target_soc_end_lap === 'number' ? Math.round(puStats.target_soc_end_lap * 100) : '--');
         const totalPct = Math.round(this.sumErsBucketPct(editorState));
-        const playerErsMode = car?.player_config?.ers_mode || car?.ers_mode || 'Neutral';
+        const playerErsMode = car?.player_config?.ers_mode || car?.ers_mode || 'STANDARD';
         const driverName = car?.driver_name || `Driver #${driverNumber || '—'}`;
         const autoBalanceLabel = autoBalanceEnabled ? 'Auto-balance unlocked buckets' : 'Manual balance';
 

@@ -503,7 +503,7 @@ class CarState:
     damage: DamageState = field(default_factory=DamageState)
     driver_mental: DriverMentalState = field(default_factory=DriverMentalState)
     aero_forces: AeroForces = field(default_factory=AeroForces)
-    ers_mode: str = "Neutral"           # Harvest / Neutral / Deploy / Overtake
+    ers_mode: str = "STANDARD"           # RECHARGE / STANDARD / OVERTAKE / QUALIFY / DEFENCE
     # lap tracking
     current_section_idx: int = 0
     section_progress: float = 0.0        # 0-1 within current section
