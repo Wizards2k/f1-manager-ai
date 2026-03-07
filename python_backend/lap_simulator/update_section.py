@@ -46,6 +46,34 @@ from .setup_penalty_v2 import (
     compute_drag_penalty,
     clamp_penalties,
 )
+from .penalty_cache import get_penalty_cache
+
+# Import penalty system flags
+try:
+    from utils.game_logic import (
+        USE_NEW_PENALTY_SYSTEM,
+        ENABLE_FUEL_PENALTIES,
+        ENABLE_TYRE_PENALTIES,
+        ENABLE_DRIVER_SKILL_PENALTIES,
+        ENABLE_ENGINE_PENALTIES,
+        ENABLE_ENGINE_MAP_PENALTIES,
+        ENABLE_ERS_PENALTIES,
+        ENABLE_BRAKE_PENALTIES,
+        ENABLE_SETUP_PENALTIES,
+        ENABLE_PENALTY_CACHE,
+    )
+except ImportError:
+    # Fallback if flags not available
+    USE_NEW_PENALTY_SYSTEM = True
+    ENABLE_FUEL_PENALTIES = True
+    ENABLE_TYRE_PENALTIES = True
+    ENABLE_DRIVER_SKILL_PENALTIES = True
+    ENABLE_ENGINE_PENALTIES = True
+    ENABLE_ENGINE_MAP_PENALTIES = True
+    ENABLE_ERS_PENALTIES = True
+    ENABLE_BRAKE_PENALTIES = True
+    ENABLE_SETUP_PENALTIES = True
+    ENABLE_PENALTY_CACHE = False
 
 
 # ---------------------------------------------------------------------------
@@ -92,6 +120,9 @@ def update_section(
     lap_number : int            – Lap number for penalty RNG
     """
     all_events: List[SectionEvent] = []
+
+    # Get penalty cache if enabled
+    cache = get_penalty_cache(config) if ENABLE_PENALTY_CACHE else None
 
     # ===================================================================
     # STEP 1 – Input & initial state (Passo 1)
@@ -498,10 +529,16 @@ def update_section(
     # Fuel penalty (per lap) scaled by current fuel mass
     # Convert per-lap penalty to per-section penalty
     fuel_delta_s = 0.0
-    if config.fuel_penalty_coeff > 0.0:
+    if ENABLE_FUEL_PENALTIES and USE_NEW_PENALTY_SYSTEM and config.fuel_penalty_coeff > 0.0:
         extra_fuel = max(0.0, car_state.pu.fuel_kg - config.fuel_reference_kg)
-        # Scale penalty by section length relative to total lap
-        section_fraction = section.length_m / config.circuit_length_m
+        
+        # Use cached section fraction if available
+        if cache:
+            section_cache = cache.sections[section.section_id]
+            section_fraction = section_cache.fuel_section_fraction
+        else:
+            section_fraction = section.length_m / config.circuit_length_m
+            
         fuel_delta_s = config.fuel_penalty_coeff * extra_fuel * section_fraction
 
     # Tyre penalty (compound + wear + temperature)
@@ -516,19 +553,29 @@ def update_section(
         SectionKind.ULTRA_FAST_CORNER
     }
 
-    if config.tyre_compound_deltas and config.tyre_reference_compound:
+    if ENABLE_TYRE_PENALTIES and USE_NEW_PENALTY_SYSTEM and config.tyre_compound_deltas and config.tyre_reference_compound:
         # Get current tyre compound string (e.g. "C3")
         # Ensure we handle both Enum and string types robustly
         raw_compound = car_state.tyres[WheelPosition.LF].compound
         current_compound = raw_compound.value if hasattr(raw_compound, "value") else str(raw_compound)
         
+        # Use cache to determine if this is a curve section
+        is_curve = cache.sections[section.section_id].is_curve if cache else section.kind in CURVE_KINDS
+        
         # APPLY PENALTIES ONLY ON CURVES
-        if section.kind in CURVE_KINDS:
+        if is_curve:
             # 1. Compound penalty
-            # Distribute per-lap delta across total number of curve sections
-            n_curves = max(1, config.n_curve_sections)
+            # Use cached section weight if available
+            if cache:
+                section_cache = cache.sections[section.section_id]
+                n_curves = cache.n_curve_sections
+                section_weight = section_cache.tyre_section_weight
+            else:
+                n_curves = max(1, config.n_curve_sections)
+                section_weight = 1.0 / n_curves
+                
             compound_penalty = config.tyre_compound_deltas.get(current_compound, 0.0)
-            compound_delta_section = compound_penalty / n_curves
+            compound_delta_section = compound_penalty * section_weight
             
             # 2. Wear penalty
             wear_coeff = config.tyre_wear_coeffs.get(current_compound, 0.12)
@@ -564,7 +611,7 @@ def update_section(
 
     # Push penalty (driver push level with skill modulation)
     push_delta_s = 0.0
-    if push_level < 10:
+    if ENABLE_DRIVER_SKILL_PENALTIES and USE_NEW_PENALTY_SYSTEM and push_level < 10:
         push_delta_s = compute_push_penalty_per_section(
             push_level=int(push_level),
             driver_qualifica=driver_skills.raw_pace,
@@ -589,7 +636,7 @@ def update_section(
     
     # Engine penalty (CV + map) - Step 6 integration
     engine_delta_s = 0.0
-    if hasattr(car_state, 'team_code') and car_state.team_code:
+    if ENABLE_ENGINE_PENALTIES and USE_NEW_PENALTY_SYSTEM and hasattr(car_state, 'team_code') and car_state.team_code:
         team_cv = get_engine_cv_for_team(car_state.team_code)
         engine_delta_s = compute_engine_penalty(
             team_cv=team_cv,
@@ -600,11 +647,12 @@ def update_section(
     
     # Brake penalty (duct + fade) - Step 5b extension
     brake_delta_s = 0.0
-    brake_delta_s = compute_brake_penalty(
-        car_state=car_state,
-        section=section,
-        config=config
-    )
+    if ENABLE_BRAKE_PENALTIES and USE_NEW_PENALTY_SYSTEM:
+        brake_delta_s = compute_brake_penalty(
+            car_state=car_state,
+            section=section,
+            config=config
+        )
     
     dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s + push_delta_s + engine_delta_s + brake_delta_s, 0.01)
     v_effective = (section.length_m / dt_s) * 3.6
@@ -636,7 +684,7 @@ def update_section(
     # ===================================================================
     setup_penalty_result = SetupPenaltyResult()
     
-    if config.setup_penalty_config and setup_sliders:
+    if ENABLE_SETUP_PENALTIES and USE_NEW_PENALTY_SYSTEM and config.setup_penalty_config and setup_sliders:
         # Build ideal setup from circuit targets + team/driver offsets
         # Note: ideal_setup_sliders from CarEntry may be None, so we rebuild it here
         ideal_setup = build_ideal_setup(

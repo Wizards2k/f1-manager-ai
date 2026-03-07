@@ -9,6 +9,22 @@ from config import circuit_sectors, SESSION_DURATION
 USE_NEW_ENGINE = True
 session_bridge = None  # SessionBridge instance (lazy init)
 
+# --- Penalty System flags ---
+USE_NEW_PENALTY_SYSTEM = True      # Master toggle per tutto il sistema penalty
+
+# Toggle per singolo sistema
+ENABLE_FUEL_PENALTIES = True       # Calcolo penalty peso carburante
+ENABLE_TYRE_PENALTIES = True       # Penalty compound, usura, temperatura
+ENABLE_DRIVER_SKILL_PENALTIES = True  # Penalty push level + modulazione skill pilota
+ENABLE_ENGINE_PENALTIES = True     # Penalty CV motore + mappe ICE
+ENABLE_ENGINE_MAP_PENALTIES = True # Solo penalty mappe motore (QUALY/STANDARD/etc)
+ENABLE_ERS_PENALTIES = True        # Penalty modalità ERS (RECHARGE/OVERTAKE/etc)
+ENABLE_BRAKE_PENALTIES = True      # Penalty duct + fade freni
+ENABLE_SETUP_PENALTIES = True     # Penalty/bonus assetto (DF/Drag trade-off)
+
+# Performance optimization flags
+ENABLE_PENALTY_CACHE = False      # Use pre-computed penalty cache (default: off)
+
 # Lock per sincronizzare accessi alle variabili globali
 state_lock = threading.Lock()
 
