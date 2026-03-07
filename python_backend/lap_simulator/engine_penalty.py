@@ -19,6 +19,12 @@ from .data_types import (
     clamp,
 )
 
+# Import engine map penalty flag
+try:
+    from utils.game_logic import ENABLE_ENGINE_MAP_PENALTIES
+except ImportError:
+    ENABLE_ENGINE_MAP_PENALTIES = True
+
 
 # Section kinds where engine penalties apply (straights only)
 STRAIGHT_KINDS = {
@@ -67,8 +73,10 @@ def compute_engine_penalty(
     cv_penalty = cv_delta * config.engine_penalty_coeff
     
     # Map penalty (QUALY = 0 reference)
-    map_penalties = config.engine_map_penalties or DEFAULT_ENGINE_MAP_PENALTIES
-    map_penalty = map_penalties.get(engine_map, 0.0)
+    map_penalty = 0.0
+    if ENABLE_ENGINE_MAP_PENALTIES:
+        map_penalties = config.engine_map_penalties or DEFAULT_ENGINE_MAP_PENALTIES
+        map_penalty = map_penalties.get(engine_map, 0.0)
     
     # Total engine penalty
     total_penalty = cv_penalty + map_penalty

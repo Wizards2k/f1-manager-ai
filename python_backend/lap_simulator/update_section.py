@@ -47,6 +47,31 @@ from .setup_penalty_v2 import (
     clamp_penalties,
 )
 
+# Import penalty system flags
+try:
+    from utils.game_logic import (
+        USE_NEW_PENALTY_SYSTEM,
+        ENABLE_FUEL_PENALTIES,
+        ENABLE_TYRE_PENALTIES,
+        ENABLE_DRIVER_SKILL_PENALTIES,
+        ENABLE_ENGINE_PENALTIES,
+        ENABLE_ENGINE_MAP_PENALTIES,
+        ENABLE_ERS_PENALTIES,
+        ENABLE_BRAKE_PENALTIES,
+        ENABLE_SETUP_PENALTIES,
+    )
+except ImportError:
+    # Fallback if flags not available
+    USE_NEW_PENALTY_SYSTEM = True
+    ENABLE_FUEL_PENALTIES = True
+    ENABLE_TYRE_PENALTIES = True
+    ENABLE_DRIVER_SKILL_PENALTIES = True
+    ENABLE_ENGINE_PENALTIES = True
+    ENABLE_ENGINE_MAP_PENALTIES = True
+    ENABLE_ERS_PENALTIES = True
+    ENABLE_BRAKE_PENALTIES = True
+    ENABLE_SETUP_PENALTIES = True
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -498,7 +523,7 @@ def update_section(
     # Fuel penalty (per lap) scaled by current fuel mass
     # Convert per-lap penalty to per-section penalty
     fuel_delta_s = 0.0
-    if config.fuel_penalty_coeff > 0.0:
+    if ENABLE_FUEL_PENALTIES and USE_NEW_PENALTY_SYSTEM and config.fuel_penalty_coeff > 0.0:
         extra_fuel = max(0.0, car_state.pu.fuel_kg - config.fuel_reference_kg)
         # Scale penalty by section length relative to total lap
         section_fraction = section.length_m / config.circuit_length_m
@@ -516,7 +541,7 @@ def update_section(
         SectionKind.ULTRA_FAST_CORNER
     }
 
-    if config.tyre_compound_deltas and config.tyre_reference_compound:
+    if ENABLE_TYRE_PENALTIES and USE_NEW_PENALTY_SYSTEM and config.tyre_compound_deltas and config.tyre_reference_compound:
         # Get current tyre compound string (e.g. "C3")
         # Ensure we handle both Enum and string types robustly
         raw_compound = car_state.tyres[WheelPosition.LF].compound
@@ -564,7 +589,7 @@ def update_section(
 
     # Push penalty (driver push level with skill modulation)
     push_delta_s = 0.0
-    if push_level < 10:
+    if ENABLE_DRIVER_SKILL_PENALTIES and USE_NEW_PENALTY_SYSTEM and push_level < 10:
         push_delta_s = compute_push_penalty_per_section(
             push_level=int(push_level),
             driver_qualifica=driver_skills.raw_pace,
@@ -589,7 +614,7 @@ def update_section(
     
     # Engine penalty (CV + map) - Step 6 integration
     engine_delta_s = 0.0
-    if hasattr(car_state, 'team_code') and car_state.team_code:
+    if ENABLE_ENGINE_PENALTIES and USE_NEW_PENALTY_SYSTEM and hasattr(car_state, 'team_code') and car_state.team_code:
         team_cv = get_engine_cv_for_team(car_state.team_code)
         engine_delta_s = compute_engine_penalty(
             team_cv=team_cv,
@@ -600,11 +625,12 @@ def update_section(
     
     # Brake penalty (duct + fade) - Step 5b extension
     brake_delta_s = 0.0
-    brake_delta_s = compute_brake_penalty(
-        car_state=car_state,
-        section=section,
-        config=config
-    )
+    if ENABLE_BRAKE_PENALTIES and USE_NEW_PENALTY_SYSTEM:
+        brake_delta_s = compute_brake_penalty(
+            car_state=car_state,
+            section=section,
+            config=config
+        )
     
     dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s + push_delta_s + engine_delta_s + brake_delta_s, 0.01)
     v_effective = (section.length_m / dt_s) * 3.6
@@ -636,7 +662,7 @@ def update_section(
     # ===================================================================
     setup_penalty_result = SetupPenaltyResult()
     
-    if config.setup_penalty_config and setup_sliders:
+    if ENABLE_SETUP_PENALTIES and USE_NEW_PENALTY_SYSTEM and config.setup_penalty_config and setup_sliders:
         # Build ideal setup from circuit targets + team/driver offsets
         # Note: ideal_setup_sliders from CarEntry may be None, so we rebuild it here
         ideal_setup = build_ideal_setup(
