@@ -44,6 +44,10 @@ def register_routes(app):
     """Registra tutte le route API"""
     
     @app.route('/')
+    def game_main_menu():
+        return render_template('game-main-menu.html')
+
+    @app.route('/circuits')
     def circuits_selection():
         return render_template('circuits.html')
 
