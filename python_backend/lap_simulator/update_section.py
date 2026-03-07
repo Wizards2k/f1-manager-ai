@@ -46,6 +46,7 @@ from .setup_penalty_v2 import (
     compute_drag_penalty,
     clamp_penalties,
 )
+from .penalty_cache import get_penalty_cache
 
 # Import penalty system flags
 try:
@@ -59,6 +60,7 @@ try:
         ENABLE_ERS_PENALTIES,
         ENABLE_BRAKE_PENALTIES,
         ENABLE_SETUP_PENALTIES,
+        ENABLE_PENALTY_CACHE,
     )
 except ImportError:
     # Fallback if flags not available
@@ -71,6 +73,7 @@ except ImportError:
     ENABLE_ERS_PENALTIES = True
     ENABLE_BRAKE_PENALTIES = True
     ENABLE_SETUP_PENALTIES = True
+    ENABLE_PENALTY_CACHE = False
 
 
 # ---------------------------------------------------------------------------
@@ -117,6 +120,9 @@ def update_section(
     lap_number : int            – Lap number for penalty RNG
     """
     all_events: List[SectionEvent] = []
+
+    # Get penalty cache if enabled
+    cache = get_penalty_cache(config) if ENABLE_PENALTY_CACHE else None
 
     # ===================================================================
     # STEP 1 – Input & initial state (Passo 1)
@@ -525,8 +531,14 @@ def update_section(
     fuel_delta_s = 0.0
     if ENABLE_FUEL_PENALTIES and USE_NEW_PENALTY_SYSTEM and config.fuel_penalty_coeff > 0.0:
         extra_fuel = max(0.0, car_state.pu.fuel_kg - config.fuel_reference_kg)
-        # Scale penalty by section length relative to total lap
-        section_fraction = section.length_m / config.circuit_length_m
+        
+        # Use cached section fraction if available
+        if cache:
+            section_cache = cache.sections[section.section_id]
+            section_fraction = section_cache.fuel_section_fraction
+        else:
+            section_fraction = section.length_m / config.circuit_length_m
+            
         fuel_delta_s = config.fuel_penalty_coeff * extra_fuel * section_fraction
 
     # Tyre penalty (compound + wear + temperature)
@@ -547,13 +559,23 @@ def update_section(
         raw_compound = car_state.tyres[WheelPosition.LF].compound
         current_compound = raw_compound.value if hasattr(raw_compound, "value") else str(raw_compound)
         
+        # Use cache to determine if this is a curve section
+        is_curve = cache.sections[section.section_id].is_curve if cache else section.kind in CURVE_KINDS
+        
         # APPLY PENALTIES ONLY ON CURVES
-        if section.kind in CURVE_KINDS:
+        if is_curve:
             # 1. Compound penalty
-            # Distribute per-lap delta across total number of curve sections
-            n_curves = max(1, config.n_curve_sections)
+            # Use cached section weight if available
+            if cache:
+                section_cache = cache.sections[section.section_id]
+                n_curves = cache.n_curve_sections
+                section_weight = section_cache.tyre_section_weight
+            else:
+                n_curves = max(1, config.n_curve_sections)
+                section_weight = 1.0 / n_curves
+                
             compound_penalty = config.tyre_compound_deltas.get(current_compound, 0.0)
-            compound_delta_section = compound_penalty / n_curves
+            compound_delta_section = compound_penalty * section_weight
             
             # 2. Wear penalty
             wear_coeff = config.tyre_wear_coeffs.get(current_compound, 0.12)

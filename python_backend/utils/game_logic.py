@@ -22,6 +22,9 @@ ENABLE_ERS_PENALTIES = True        # Penalty modalità ERS (RECHARGE/OVERTAKE/et
 ENABLE_BRAKE_PENALTIES = True      # Penalty duct + fade freni
 ENABLE_SETUP_PENALTIES = True     # Penalty/bonus assetto (DF/Drag trade-off)
 
+# Performance optimization flags
+ENABLE_PENALTY_CACHE = False      # Use pre-computed penalty cache (default: off)
+
 # Lock per sincronizzare accessi alle variabili globali
 state_lock = threading.Lock()
 
