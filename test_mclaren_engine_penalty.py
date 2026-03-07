@@ -17,7 +17,7 @@ from python_backend.lap_simulator.config_loader import load_circuit_config
 from python_backend.lap_simulator.engine_penalty import get_engine_cv_for_team
 
 def test_mclaren_engine_penalty():
-    """Test McLaren con motore Mercedes e mappa QUALY su diversi circuiti."""
+    """Test McLaren con motore Mercedes e mappa QUALIFY su diversi circuiti."""
     
     circuits = ["az-2016_baku", "it-1922_monza", "mc-1929_monaco"]
     
@@ -31,7 +31,7 @@ def test_mclaren_engine_penalty():
         
         # Creare McLaren con motore Mercedes
         state = CarState(car_id="MCL", team_code="MCL")
-        state.pu.active_map = EngineMapName.QUALY
+        state.pu.active_map = EngineMapName.QUALIFY
         state.pu.fuel_kg = 2.5
         
         # Gomme soft

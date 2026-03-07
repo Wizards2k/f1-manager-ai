@@ -25,12 +25,12 @@ def test_rbr_engine_penalty():
     config = load_circuit_config("az-2016_baku")
     env = EnvContext(air_temp_c=25.0, track_temp_c=35.0)
     
-    # Test diverse mappe motore
+    # Test nuove mappe motore
     maps_to_test = [
-        (EngineMapName.QUALY, "QUALY (0.0s)"),
-        (EngineMapName.STANDARD, "STANDARD (0.25s)"),
-        (EngineMapName.RICH, "RICH (0.12s)"),
-        (EngineMapName.ECONOMY, "ECONOMY (0.40s)")
+        (EngineMapName.SAFETY_CAR, "SAFETY_CAR (0.55s)"),
+        (EngineMapName.PRACTICE, "PRACTICE (0.35s)"),
+        (EngineMapName.RACE, "RACE (0.18s)"),
+        (EngineMapName.QUALIFY, "QUALIFY (0.00s)")
     ]
     
     for engine_map, map_desc in maps_to_test:
@@ -95,7 +95,12 @@ def test_rbr_engine_penalty():
         # Calcolo atteso
         cv_delta = get_engine_cv_for_team('RBR') - 1008  # +7 CV
         cv_penalty = cv_delta * config.engine_penalty_coeff  # 7 * 0.01 = 0.07s per rettilineo
-        map_penalty = {"QUALY": 0.0, "STANDARD": 0.25, "RICH": 0.12, "ECONOMY": 0.40}[engine_map.value]
+        map_penalty = {
+            EngineMapName.SAFETY_CAR.value: 0.55,
+            EngineMapName.PRACTICE.value: 0.35,
+            EngineMapName.RACE.value: 0.18,
+            EngineMapName.QUALIFY.value: 0.0,
+        }[engine_map.value]
         expected_per_straight = cv_penalty + map_penalty
         expected_total = expected_per_straight * straight_sections
         

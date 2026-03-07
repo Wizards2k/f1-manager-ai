@@ -98,7 +98,7 @@ class PowerUnit:
     def create_state(
         self,
         fuel_kg: Optional[float] = None,
-        map_name: EngineMapName = EngineMapName.STANDARD,
+        map_name: EngineMapName = EngineMapName.RACE,
     ) -> PUState:
         """Factory per generare un nuovo PUState coerente con i dati roster."""
 
@@ -122,7 +122,7 @@ class PowerUnit:
     def make_pu_state(
         self,
         fuel_kg: Optional[float] = None,
-        map_name: EngineMapName = EngineMapName.STANDARD,
+        map_name: EngineMapName = EngineMapName.RACE,
     ):
         """Compat helper per i vecchi consumer – ritorna (PUState, None)."""
         state = self.create_state(fuel_kg=fuel_kg, map_name=map_name)

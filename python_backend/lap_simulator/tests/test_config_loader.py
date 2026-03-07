@@ -87,15 +87,15 @@ class TestPULoading:
     def test_maps_loaded(self, monza_config):
         assert len(monza_config.pu_maps) >= 4
 
-    def test_standard_map(self, monza_config):
-        std = monza_config.pu_maps[EngineMapName.STANDARD]
-        assert std.heat_load_kw > 0
-        assert std.ers_output_kw > 0
+    def test_race_map(self, monza_config):
+        race = monza_config.pu_maps[EngineMapName.RACE]
+        assert race.heat_load_kw > 0
+        assert race.ers_output_kw > 0
 
-    def test_qualy_more_power(self, monza_config):
-        std = monza_config.pu_maps[EngineMapName.STANDARD]
-        qly = monza_config.pu_maps[EngineMapName.QUALY]
-        assert qly.torque_ramp > std.torque_ramp
+    def test_qualify_more_power(self, monza_config):
+        race = monza_config.pu_maps[EngineMapName.RACE]
+        qual = monza_config.pu_maps[EngineMapName.QUALIFY]
+        assert qual.torque_ramp > race.torque_ramp
 
     def test_reliability_params(self, monza_config):
         rel = monza_config.pu_reliability

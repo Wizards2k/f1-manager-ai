@@ -43,7 +43,12 @@ export class PlayerGarageV3 {
             { value: 'medium', label: 'Medium' },
             { value: 'hard', label: 'Hard' }
         ];
-        this.iceOptions = ['Save', 'Standard', 'Push'];
+        this.iceOptions = [
+            { label: 'SAFETY CAR', value: 'SAFETY_CAR' },
+            { label: 'PRACTICE', value: 'PRACTICE' },
+            { label: 'RACE', value: 'RACE' },
+            { label: 'QUALIFY', value: 'QUALIFY' },
+        ];
         this.ersOptions = ['Harvest', 'Neutral', 'Deploy', 'Overtake'];
         this.STATE_DISPLAY = {
             BOX: 'BOX',
@@ -1286,7 +1291,7 @@ export class PlayerGarageV3 {
         const fuelPercent = car.player_config?.fuel_percent ?? car.fuel_percent ?? 100;
         const stintTarget = car.player_config?.stint_target_laps ?? car.stint_target_laps ?? 5;
         const paceLevel = car.player_config?.pace_level ?? car.pace_level ?? 5;
-        const iceMode = car.player_config?.ice_mode ?? car.ice_mode ?? 'Standard';
+        const iceMode = car.player_config?.ice_mode ?? car.ice_mode ?? 'PRACTICE';
         const ersMode = car.player_config?.ers_mode ?? car.ers_mode ?? 'Neutral';
         const maxStint = car.max_stint_laps ?? stintTarget;
         const tireWear = Math.max(0, Math.min(1, car.tire_wear ?? 0));
@@ -1426,7 +1431,7 @@ export class PlayerGarageV3 {
                 <div class="dock-field" style="flex: 1.2;">
                     <label>ICE map</label>
                     <select class="select-compact-v3" data-field="ice_mode">
-                        ${this.iceOptions.map(mode => `<option value="${mode}" ${mode === iceMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                        ${this.iceOptions.map(option => `<option value="${option.value}" ${option.value === iceMode ? 'selected' : ''}>${option.label}</option>`).join('')}
                     </select>
                 </div>
                 <div class="dock-field" style="flex: 1.2;">
@@ -2347,7 +2352,7 @@ export class PlayerGarageV3 {
             const lapMguhDirect = puStats.lap_mguh_direct_mj || 0;
             const lapMguhEs = puStats.mguh_es_used_mj || 0;
             const socClass = socPct < 30 ? 'pu-critical' : socPct < 60 ? 'pu-low' : 'pu-ok';
-            const iceMode = car.player_config?.ice_mode || car.ice_mode || 'Standard';
+            const iceMode = car.player_config?.ice_mode || car.ice_mode || 'PRACTICE';
             const ersMode = car.player_config?.ers_mode || car.ers_mode || 'Neutral';
             
             const motoreTab = cardEl.querySelector('.dock-tab-pane[data-tab="motore"]');

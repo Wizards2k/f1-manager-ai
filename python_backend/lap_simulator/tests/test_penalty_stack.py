@@ -24,7 +24,7 @@ def _build_baseline_entry(car_id: str) -> CarEntry:
     state = CarState(car_id=car_id)
     state.team_code = "MCL"
     state.pu.fuel_kg = 10.0
-    state.pu.active_map = EngineMapName.QUALY
+    state.pu.active_map = EngineMapName.QUALIFY
     for tyre in state.tyres.values():
         tyre.compound = TyreCompound.C5
         tyre.surface_temp_c = 95.0
@@ -106,7 +106,7 @@ def _apply_push_penalty(entry: CarEntry) -> None:
 
 def _apply_engine_penalty(entry: CarEntry) -> None:
     entry.state.team_code = "ALP"
-    entry.state.pu.active_map = EngineMapName.STANDARD
+    entry.state.pu.active_map = EngineMapName.RACE
 
 
 def _apply_brake_penalty(entry: CarEntry) -> None:

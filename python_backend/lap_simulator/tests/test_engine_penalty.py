@@ -70,16 +70,16 @@ class TestEnginePenalty:
         
         penalty = compute_engine_penalty(
             team_cv=1015.0,  # RBR
-            engine_map=EngineMapName.STANDARD,
+            engine_map=EngineMapName.RACE,
             section=straight_section,
             config=config
         )
         
         # Should have CV bonus + map penalty  
-        # CV delta: +7 CV × 0.01 = +0.07s (positive = penalty, not bonus!)
-        # Map penalty: +0.25s
-        # Total: +0.32s
-        actual_expected = 0.32
+        # CV delta: +7 CV × 0.01 = +0.07s (positive = penalty)
+        # Map penalty (RACE): +0.18s
+        # Total: +0.25s
+        actual_expected = 0.25
         assert abs(penalty - actual_expected) < 0.001
         
         # Corner section - should not apply penalty
@@ -93,7 +93,7 @@ class TestEnginePenalty:
         
         penalty_corner = compute_engine_penalty(
             team_cv=1015.0,
-            engine_map=EngineMapName.STANDARD,
+            engine_map=EngineMapName.RACE,
             section=corner_section,
             config=config
         )
@@ -115,32 +115,32 @@ class TestEnginePenalty:
             v_base_kph=250.0
         )
         
-        # QUALY map - zero penalty
+        # QUALIFY map - zero penalty
         penalty_qualy = compute_engine_penalty(
             team_cv=1008.0,  # Mercedes reference
-            engine_map=EngineMapName.QUALY,
+            engine_map=EngineMapName.QUALIFY,
             section=section,
             config=config
         )
         assert penalty_qualy == 0.0
-        
-        # STANDARD map - should have penalty
-        penalty_standard = compute_engine_penalty(
+
+        # RACE map - moderate penalty
+        penalty_race = compute_engine_penalty(
             team_cv=1008.0,
-            engine_map=EngineMapName.STANDARD,
+            engine_map=EngineMapName.RACE,
             section=section,
             config=config
         )
-        assert penalty_standard == 0.25
-        
-        # ECONOMY map - higher penalty
-        penalty_economy = compute_engine_penalty(
+        assert penalty_race == 0.18
+
+        # PRACTICE map - higher penalty
+        penalty_practice = compute_engine_penalty(
             team_cv=1008.0,
-            engine_map=EngineMapName.ECONOMY,
+            engine_map=EngineMapName.PRACTICE,
             section=section,
             config=config
         )
-        assert penalty_economy == 0.40
+        assert penalty_practice == 0.35
     
     def test_circuit_coefficients(self):
         """Test circuit-specific coefficients."""
@@ -156,13 +156,13 @@ class TestEnginePenalty:
         
         penalty_monza = compute_engine_penalty(
             team_cv=1015.0,  # RBR
-            engine_map=EngineMapName.STANDARD,
+            engine_map=EngineMapName.RACE,
             section=section,
             config=monza_config
         )
-        
-        # Should be: CV penalty (+0.084) + map penalty (0.25) = 0.334
-        expected_monza = 0.084 + 0.25
+
+        # Should be: CV penalty (+0.084) + map penalty (0.18) = 0.264
+        expected_monza = 0.084 + 0.18
         assert abs(penalty_monza - expected_monza) < 0.001
         
         # Low-speed circuit (Monaco-like)
@@ -170,13 +170,13 @@ class TestEnginePenalty:
         
         penalty_monaco = compute_engine_penalty(
             team_cv=1015.0,
-            engine_map=EngineMapName.STANDARD,
+            engine_map=EngineMapName.RACE,
             section=section,
             config=monaco_config
         )
-        
-        # Should be: CV penalty (+0.056) + map penalty (0.25) = 0.306
-        expected_monaco = 0.056 + 0.25
+
+        # Should be: CV penalty (+0.056) + map penalty (0.18) = 0.236
+        expected_monaco = 0.056 + 0.18
         assert abs(penalty_monaco - expected_monaco) < 0.001
     
     def test_penalty_limits(self):
@@ -192,7 +192,7 @@ class TestEnginePenalty:
             name="Test Section",
             kind=SectionKind.STRAIGHT,
             length_m=1000.0,
-            v_base_kph=250.0
+            v_base_kph=280.0
         )
         
         # Extreme CV delta (should be clamped)
@@ -200,7 +200,7 @@ class TestEnginePenalty:
         
         penalty_extreme = compute_engine_penalty(
             team_cv=extreme_cv,
-            engine_map=EngineMapName.STANDARD,
+            engine_map=EngineMapName.RACE,
             section=section,
             config=config
         )
@@ -213,7 +213,7 @@ class TestEnginePenalty:
         
         penalty_low = compute_engine_penalty(
             team_cv=low_cv,
-            engine_map=EngineMapName.STANDARD,
+            engine_map=EngineMapName.RACE,
             section=section,
             config=config
         )
@@ -241,35 +241,35 @@ class TestEnginePenaltyIntegration:
             v_base_kph=280.0
         )
         
-        # Scenario 1: RBR with QUALY map (best case)
+        # Scenario 1: RBR with QUALIFY map (best case)
         rbr_qualy_penalty = compute_engine_penalty(
             team_cv=1015.0,
-            engine_map=EngineMapName.QUALY,
+            engine_map=EngineMapName.QUALIFY,
             section=section,
             config=config
         )
         # Should be just CV penalty, no map penalty: +7 CV × 0.01 = +0.07s
         assert rbr_qualy_penalty == 0.07
-        
-        # Scenario 2: Renault with ECONOMY map (worst case)
-        renault_economy_penalty = compute_engine_penalty(
+
+        # Scenario 2: Renault with PRACTICE map (worst case)
+        renault_practice_penalty = compute_engine_penalty(
             team_cv=960.0,  # ALP has 960 CV, not 995
-            engine_map=EngineMapName.ECONOMY,
+            engine_map=EngineMapName.PRACTICE,
             section=section,
             config=config
         )
-        # Should be CV penalty + map penalty: (-48 CV × 0.01) + 0.40 = -0.48 + 0.40 = -0.08s
-        expected = -0.48 + 0.40  # CV penalty + map penalty
-        assert abs(renault_economy_penalty - expected) < 0.001
+        # Should be CV penalty + map penalty: (-48 CV × 0.01) + 0.35 = -0.48 + 0.35 = -0.13s
+        expected = -0.48 + 0.35  # CV penalty + map penalty
+        assert abs(renault_practice_penalty - expected) < 0.001
         
-        # Scenario 3: Mercedes with STANDARD map (baseline)
-        mercedes_standard_penalty = compute_engine_penalty(
+        # Scenario 3: Mercedes with RACE map (baseline)
+        mercedes_race_penalty = compute_engine_penalty(
             team_cv=1008.0,
-            engine_map=EngineMapName.STANDARD,
+            engine_map=EngineMapName.RACE,
             section=section,
             config=config
         )
-        assert mercedes_standard_penalty == 0.25
+        assert mercedes_race_penalty == 0.18
 
 
 if __name__ == "__main__":

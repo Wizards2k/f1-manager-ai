@@ -226,27 +226,70 @@ def _parse_brake_params(
 # ---------------------------------------------------------------------------
 
 _MAP_NAME = {
-    "ECONOMY":  EngineMapName.ECONOMY,
-    "STANDARD": EngineMapName.STANDARD,
-    "RICH":     EngineMapName.RICH,
-    "QUALY":    EngineMapName.QUALY,
-    "WET":      EngineMapName.WET,
-    "RECHARGE": EngineMapName.RECHARGE,
+    "SAFETY_CAR": EngineMapName.SAFETY_CAR,
+    "PRACTICE":   EngineMapName.PRACTICE,
+    "RACE":       EngineMapName.RACE,
+    "QUALIFY":    EngineMapName.QUALIFY,
+}
+
+_LEGACY_MAP_ALIAS = {
+    "RECHARGE": EngineMapName.SAFETY_CAR,
+    "ECONOMY": EngineMapName.PRACTICE,
+    "WET": EngineMapName.PRACTICE,
+    "STANDARD": EngineMapName.RACE,
+    "RICH": EngineMapName.RACE,
+    "QUALY": EngineMapName.QUALIFY,
+    "QUALITY": EngineMapName.QUALIFY,
+}
+
+_LEGACY_PRIORITY = {
+    "RECHARGE": 1,
+    "ECONOMY": 1,
+    "WET": 0,
+    "STANDARD": 1,
+    "RICH": 2,
+    "QUALY": 1,
 }
 
 
 def _parse_pu_maps(data: Dict[str, Any]) -> Dict[EngineMapName, EngineMapParams]:
     maps_raw = data.get("maps", {})
     result: Dict[EngineMapName, EngineMapParams] = {}
+    priority: Dict[EngineMapName, int] = {}
+
+    def _resolve_name(key: str) -> Optional[EngineMapName]:
+        if key in _MAP_NAME:
+            return _MAP_NAME[key]
+        return _LEGACY_MAP_ALIAS.get(key)
+
+    def _priority_for(key: str) -> int:
+        if key in _MAP_NAME:
+            return 10
+        return _LEGACY_PRIORITY.get(key, 0)
 
     for key, vals in maps_raw.items():
-        mn = _MAP_NAME.get(key)
+        mn = _resolve_name(key)
         if mn is None:
             continue
+
+        torque_ramp = vals.get("torque_ramp", 0.6)
+        pct_min = vals.get("power_pct_min", torque_ramp * 0.9)
+        pct_max = vals.get("power_pct_max", torque_ramp * 1.05)
+        base_pct = vals.get("power_pct_base", torque_ramp)
+
+        current_prio = priority.get(mn, -1)
+        new_prio = _priority_for(key)
+        if new_prio < current_prio:
+            continue
+
+        priority[mn] = new_prio
         result[mn] = EngineMapParams(
             name=mn,
+            power_pct_min=pct_min,
+            power_pct_max=pct_max,
+            power_pct_base=base_pct,
             heat_load_kw=vals.get("heat_load_kw", 260),
-            torque_ramp=vals.get("torque_ramp", 0.6),
+            torque_ramp=torque_ramp,
             deployment_style=vals.get("deployment_style", "balanced"),
             cooling_share=vals.get("cooling_share", 0.50),
             ers_output_kw=vals.get("ers_output_kw", 120),

@@ -52,8 +52,8 @@ def base_config():
         battery_deploy_limit_mj=4.0,
     )
     cfg.pu_maps = {
-        EngineMapName.STANDARD: EngineMapParams(
-            name=EngineMapName.STANDARD,
+        EngineMapName.RACE: EngineMapParams(
+            name=EngineMapName.RACE,
             heat_load_kw=260.0,
             torque_ramp=0.6,
             cooling_share=0.5,
@@ -115,7 +115,7 @@ class TestComputeERSBonus:
 
 class TestPowerUnitSectionTracking:
     def test_last_section_fields_populated(self, straight_section, base_config, default_env, default_aero):
-        pu = PUState(active_map=EngineMapName.STANDARD, ers_energy_mj=4.0)
+        pu = PUState(active_map=EngineMapName.RACE, ers_energy_mj=4.0)
         driver = DriverIntent()
         pu, _ = generate_output(
             pu_state=pu,
@@ -132,9 +132,9 @@ class TestPowerUnitSectionTracking:
         total_used = pu.last_section_mguh_direct_mj + pu.last_section_battery_mj
         assert total_used <= pu.last_section_driver_request_mj + 1e-6
 
-    def test_recharge_map_uses_mguh_only(self, straight_section, base_config, default_env, default_aero):
-        base_config.pu_maps[EngineMapName.RECHARGE] = EngineMapParams(
-            name=EngineMapName.RECHARGE,
+    def test_safety_car_map_uses_mguh_only(self, straight_section, base_config, default_env, default_aero):
+        base_config.pu_maps[EngineMapName.SAFETY_CAR] = EngineMapParams(
+            name=EngineMapName.SAFETY_CAR,
             heat_load_kw=200.0,
             torque_ramp=0.4,
             cooling_share=0.55,
@@ -142,7 +142,7 @@ class TestPowerUnitSectionTracking:
             mguh_direct_ratio=0.8,
             mguh_power_kw=50.0,
         )
-        pu = PUState(active_map=EngineMapName.RECHARGE, ers_energy_mj=0.2)
+        pu = PUState(active_map=EngineMapName.SAFETY_CAR, ers_energy_mj=0.2)
         driver = DriverIntent(ers_deploy_request=True)
         pu, _ = generate_output(
             pu_state=pu,

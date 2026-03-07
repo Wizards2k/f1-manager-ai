@@ -28,11 +28,11 @@ _BASE_TEAM = next((team for team in TEAMS if team.sigla_scuderia == "MCL"), TEAM
 def get_baseline_entry(circuit_id: str, pu_mode: str = "registry") -> CarEntry:
     state = CarState(car_id="BASE")
     if pu_mode == "registry":
-        state.pu = _BASE_TEAM.power_unit.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALY)
+        state.pu = _BASE_TEAM.power_unit.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALIFY)
     else:
         # Legacy behavior: use the default PUState, only set fuel and map
         state.pu.fuel_kg = 2.5
-        state.pu.active_map = EngineMapName.STANDARD
+        state.pu.active_map = EngineMapName.RACE
         state.pu.ers_energy_mj = 4.0
     soft_compound = TyreCompound.C3 if circuit_id == "it-1922_monza" else TyreCompound.C3
     state.tyres = {wp: TyreState(wheel_pos=wp, compound=soft_compound) for wp in WheelPosition}

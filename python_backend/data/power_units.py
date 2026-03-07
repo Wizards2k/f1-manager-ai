@@ -138,30 +138,24 @@ _TEAM_POWER_FACTORS = {
 # ---------------------------------------------------------------------------
 
 _ICE_MAP_TEMPLATE = {
-    EngineMapName.ECONOMY: 0.92,
-    EngineMapName.STANDARD: 1.00,
-    EngineMapName.RICH: 1.03,
-    EngineMapName.QUALY: 1.06,
-    EngineMapName.WET: 0.96,
-    EngineMapName.RECHARGE: 0.88,
+    EngineMapName.SAFETY_CAR: {"min": 0.40, "max": 0.40, "base": 0.40},
+    EngineMapName.PRACTICE: {"min": 0.75, "max": 0.85, "base": 0.80},
+    EngineMapName.RACE: {"min": 0.90, "max": 1.00, "base": 0.95},
+    EngineMapName.QUALIFY: {"min": 1.08, "max": 1.12, "base": 1.10},
 }
 
 _ERS_MAP_TEMPLATE = {
-    EngineMapName.ECONOMY: {"deploy_mj": 2.6, "bucket_primary": 38, "bucket_secondary": 34, "bucket_exit": 28},
-    EngineMapName.STANDARD: {"deploy_mj": 3.4, "bucket_primary": 40, "bucket_secondary": 35, "bucket_exit": 25},
-    EngineMapName.RICH: {"deploy_mj": 3.6, "bucket_primary": 43, "bucket_secondary": 37, "bucket_exit": 20},
-    EngineMapName.QUALY: {"deploy_mj": 4.0, "bucket_primary": 50, "bucket_secondary": 32, "bucket_exit": 18},
-    EngineMapName.WET: {"deploy_mj": 2.8, "bucket_primary": 35, "bucket_secondary": 33, "bucket_exit": 32},
-    EngineMapName.RECHARGE: {"deploy_mj": 1.4, "bucket_primary": 28, "bucket_secondary": 32, "bucket_exit": 40},
+    EngineMapName.SAFETY_CAR: {"deploy_mj": 0.6, "harvest_mj": 2.2, "bucket_primary": 34, "bucket_secondary": 36, "bucket_exit": 30},
+    EngineMapName.PRACTICE: {"deploy_mj": 2.6, "harvest_mj": 1.8, "bucket_primary": 40, "bucket_secondary": 35, "bucket_exit": 25},
+    EngineMapName.RACE: {"deploy_mj": 3.4, "harvest_mj": 1.3, "bucket_primary": 45, "bucket_secondary": 35, "bucket_exit": 20},
+    EngineMapName.QUALIFY: {"deploy_mj": 4.0, "harvest_mj": 0.8, "bucket_primary": 55, "bucket_secondary": 30, "bucket_exit": 15},
 }
 
 _DEFENSE_RESERVE_MJ = {
-    EngineMapName.ECONOMY: 0.35,
-    EngineMapName.STANDARD: 0.40,
-    EngineMapName.RICH: 0.45,
-    EngineMapName.QUALY: 0.00,
-    EngineMapName.WET: 0.30,
-    EngineMapName.RECHARGE: 0.50,
+    EngineMapName.SAFETY_CAR: 0.60,
+    EngineMapName.PRACTICE: 0.40,
+    EngineMapName.RACE: 0.45,
+    EngineMapName.QUALIFY: 0.00,
 }
 
 _REGEN_PROFILE = {
@@ -219,11 +213,11 @@ def _build_battery(pu_id: str, supplier: str) -> Battery:
 
 def _build_ice_maps(pu_id: str, ice_factor: float) -> Dict[EngineMapName, ICEMap]:
     maps: Dict[EngineMapName, ICEMap] = {}
-    for map_name, base_pct in _ICE_MAP_TEMPLATE.items():
+    for map_name, cfg in _ICE_MAP_TEMPLATE.items():
         maps[map_name] = ICEMap(
             ice_map_id=f"{pu_id}_{map_name.value.lower()}_ice",
             nome=f"{map_name.value.title()} ICE",
-            power_pct=base_pct * ice_factor,
+            power_pct=cfg["base"] * ice_factor,
         )
     return maps
 
@@ -239,6 +233,7 @@ def _build_ers_maps(pu_id: str, ers_factor: float) -> Dict[EngineMapName, ERSMap
             bucket_primary_pct=cfg["bucket_primary"],
             bucket_secondary_pct=cfg["bucket_secondary"],
             bucket_exit_pct=cfg["bucket_exit"],
+            defense_reserve_mj=_DEFENSE_RESERVE_MJ.get(map_name, 0.0),
         )
     return maps
 

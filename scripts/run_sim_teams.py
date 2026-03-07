@@ -80,7 +80,7 @@ def build_car_entry(team_code: str, circuit_id: str, config) -> CarEntry:
     
     # CarState
     state = CarState(car_id=team_code)
-    state.pu = pu.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALY)
+    state.pu = pu.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALIFY)
     soft_compound = TyreCompound.C3 if circuit_id != "it-1922_monza" else TyreCompound.C3
     state.tyres = {wp: TyreState(wheel_pos=wp, compound=soft_compound) for wp in WheelPosition}
     for tyre in state.tyres.values():
@@ -145,7 +145,7 @@ def build_car_entry(team_code: str, circuit_id: str, config) -> CarEntry:
 def get_baseline_mclaren_entry(circuit_id: str) -> CarEntry:
     """Return the exact baseline entry used in physics_validator.py for McLaren."""
     state = CarState(car_id="MCL")
-    state.pu = TEAM_BY_CODE["MCL"].power_unit.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALY)
+    state.pu = TEAM_BY_CODE["MCL"].power_unit.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALIFY)
     soft_compound = TyreCompound.C3 if circuit_id != "it-1922_monza" else TyreCompound.C3
     state.tyres = {wp: TyreState(wheel_pos=wp, compound=soft_compound) for wp in WheelPosition}
     for tyre in state.tyres.values():
@@ -178,7 +178,7 @@ def get_baseline_mclaren_entry(circuit_id: str) -> CarEntry:
     aero.front_wing.angle_deg = 10.0
     aero.rear_wing.angle_deg = 10.0
     
-    state.pu = TEAM_BY_CODE["MCL"].power_unit.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALY)
+    state.pu = TEAM_BY_CODE["MCL"].power_unit.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALIFY)
 
     return CarEntry(car_id="MCL", state=state, aero_setup=aero, driver_skills=skills, push_level=1.0, apply_baseline_delta=False)
 

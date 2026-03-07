@@ -3,7 +3,7 @@ Engine Penalty System – Step 6 integration for update_section().
 
 Computes ICE+ERS power-based penalties/bonuses based on:
 - Engine CV delta vs Mercedes reference (1008 CV)
-- Engine map penalties (QUALY = 0 reference)
+- Engine map penalties (QUALIFY = 0 reference)
 - Circuit-specific coefficients
 - Applied only on straight sections
 
@@ -27,14 +27,12 @@ STRAIGHT_KINDS = {
     SectionKind.ULTRA_FAST_CORNER,  # High-speed corners benefit from power
 }
 
-# Default engine map penalties (QUALY = 0 reference)
+# Default engine map penalties (QUALIFY = 0 reference)
 DEFAULT_ENGINE_MAP_PENALTIES = {
-    EngineMapName.QUALY: 0.0,      # Reference zero penalty
-    EngineMapName.RICH: 0.12,      # +0.12s/lap
-    EngineMapName.STANDARD: 0.25,  # +0.25s/lap
-    EngineMapName.ECONOMY: 0.40,   # +0.40s/lap
-    EngineMapName.WET: 0.18,       # +0.18s/lap
-    EngineMapName.RECHARGE: 0.50   # +0.50s/lap
+    EngineMapName.QUALIFY: 0.0,      # Reference zero penalty
+    EngineMapName.RACE: 0.18,        # ~+0.18s/lap
+    EngineMapName.PRACTICE: 0.35,    # ~+0.35s/lap
+    EngineMapName.SAFETY_CAR: 0.55,  # heavy derate
 }
 
 
@@ -66,7 +64,7 @@ def compute_engine_penalty(
     # Base engine penalty from CV delta (20 CV = -0.2s)
     cv_penalty = cv_delta * config.engine_penalty_coeff
     
-    # Map penalty (QUALY = 0 reference)
+    # Map penalty (QUALIFY = 0 reference)
     map_penalties = config.engine_map_penalties or DEFAULT_ENGINE_MAP_PENALTIES
     map_penalty = map_penalties.get(engine_map, 0.0)
     

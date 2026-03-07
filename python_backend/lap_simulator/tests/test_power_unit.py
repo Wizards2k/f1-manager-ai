@@ -39,42 +39,66 @@ def default_aero():
 def default_config():
     cfg = CircuitConfig()
     cfg.pu_maps = {
-        EngineMapName.ECONOMY: EngineMapParams(
-            name=EngineMapName.ECONOMY, heat_load_kw=220, torque_ramp=0.4,
-            cooling_share=0.55, ers_output_kw=80,
+        EngineMapName.SAFETY_CAR: EngineMapParams(
+            name=EngineMapName.SAFETY_CAR,
+            heat_load_kw=200,
+            torque_ramp=0.35,
+            cooling_share=0.60,
+            ers_output_kw=60,
+            power_pct_min=0.4,
+            power_pct_base=0.4,
+            power_pct_max=0.45,
         ),
-        EngineMapName.STANDARD: EngineMapParams(
-            name=EngineMapName.STANDARD, heat_load_kw=260, torque_ramp=0.6,
-            cooling_share=0.50, ers_output_kw=120,
+        EngineMapName.PRACTICE: EngineMapParams(
+            name=EngineMapName.PRACTICE,
+            heat_load_kw=240,
+            torque_ramp=0.55,
+            cooling_share=0.53,
+            ers_output_kw=90,
+            power_pct_min=0.75,
+            power_pct_base=0.80,
+            power_pct_max=0.85,
         ),
-        EngineMapName.RICH: EngineMapParams(
-            name=EngineMapName.RICH, heat_load_kw=300, torque_ramp=0.75,
-            cooling_share=0.45, ers_output_kw=150,
+        EngineMapName.RACE: EngineMapParams(
+            name=EngineMapName.RACE,
+            heat_load_kw=270,
+            torque_ramp=0.7,
+            cooling_share=0.48,
+            ers_output_kw=130,
+            power_pct_min=0.90,
+            power_pct_base=0.95,
+            power_pct_max=1.0,
         ),
-        EngineMapName.QUALY: EngineMapParams(
-            name=EngineMapName.QUALY, heat_load_kw=330, torque_ramp=0.9,
-            cooling_share=0.40, ers_output_kw=170,
+        EngineMapName.QUALIFY: EngineMapParams(
+            name=EngineMapName.QUALIFY,
+            heat_load_kw=320,
+            torque_ramp=0.95,
+            cooling_share=0.42,
+            ers_output_kw=175,
+            power_pct_min=1.08,
+            power_pct_base=1.10,
+            power_pct_max=1.12,
         ),
     }
     return cfg
 
 
 class TestPowerOutput:
-    def test_standard_map_produces_power(self, default_section, default_env, default_aero, default_config):
-        pu = PUState(active_map=EngineMapName.STANDARD)
+    def test_race_map_produces_power(self, default_section, default_env, default_aero, default_config):
+        pu = PUState(active_map=EngineMapName.RACE)
         driver = DriverIntent()
         pu, events = generate_output(pu, driver, default_aero, default_section, default_env, default_config, dt_estimate_s=2.0)
         assert pu.ice_power_kw > 0
         assert pu.ers_output_kw > 0
 
-    def test_qualy_more_power_than_economy(self, default_section, default_env, default_aero, default_config):
-        pu_eco = PUState(active_map=EngineMapName.ECONOMY)
-        pu_qly = PUState(active_map=EngineMapName.QUALY)
+    def test_qualify_more_power_than_safety_car(self, default_section, default_env, default_aero, default_config):
+        pu_safe = PUState(active_map=EngineMapName.SAFETY_CAR)
+        pu_quality = PUState(active_map=EngineMapName.QUALIFY)
         driver = DriverIntent()
-        pu_eco, _ = generate_output(pu_eco, driver, default_aero, default_section, default_env, default_config, dt_estimate_s=2.0)
-        pu_qly, _ = generate_output(pu_qly, driver, default_aero, default_section, default_env, default_config, dt_estimate_s=2.0)
-        assert pu_qly.ice_power_kw > pu_eco.ice_power_kw
-        assert pu_qly.ers_output_kw > pu_eco.ers_output_kw
+        pu_safe, _ = generate_output(pu_safe, driver, default_aero, default_section, default_env, default_config, dt_estimate_s=2.0)
+        pu_quality, _ = generate_output(pu_quality, driver, default_aero, default_section, default_env, default_config, dt_estimate_s=2.0)
+        assert pu_quality.ice_power_kw > pu_safe.ice_power_kw
+        assert pu_quality.ers_output_kw > pu_safe.ers_output_kw
 
 
 class TestFuelBurn:

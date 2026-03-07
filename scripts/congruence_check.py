@@ -106,7 +106,7 @@ _BASE_TEAM = next((team for team in TEAMS if team.sigla_scuderia == "MCL"), TEAM
 def make_state(compound: TyreCompound, v_entry_kph: float = 300.0) -> CarState:
     """Condizioni giro di qualifica: gomme quasi nuove, temp ottimale, giro lanciato."""
     state = CarState(car_id="REF")
-    state.pu = _BASE_TEAM.power_unit.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALY)
+    state.pu = _BASE_TEAM.power_unit.create_state(fuel_kg=2.5, map_name=EngineMapName.QUALIFY)
     state.ers_mode = "Deploy"
     state.v_current_ms     = v_entry_kph / 3.6
     surf_t, core_t = COMPOUND_OPT_TEMP.get(compound, (92.0, 82.0))

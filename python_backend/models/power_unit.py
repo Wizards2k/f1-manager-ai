@@ -60,7 +60,7 @@ class Battery:
 class IceMap:
     ice_map_id: int
     nome: str
-    engine_map_name: EngineMapName = EngineMapName.STANDARD
+    engine_map_name: EngineMapName = EngineMapName.RACE
     power_pct: float = 1.0
     heat_load_kw: float = 260.0
     cooling_share: float = 0.5
@@ -71,7 +71,7 @@ class IceMap:
 class ErsMap:
     ers_map_id: int
     nome: str
-    engine_map_name: EngineMapName = EngineMapName.STANDARD
+    engine_map_name: EngineMapName = EngineMapName.RACE
     deploy_budget_mj: float = 4.0
     bucket_primary_pct: float = 0.5
     bucket_secondary_pct: float = 0.35

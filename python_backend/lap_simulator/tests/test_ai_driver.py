@@ -193,7 +193,7 @@ class TestSessionPlanning:
         quali_run = [r for r in plan.runs if r.program == RunProgram.QUALI_SIM][0]
         assert quali_run.fuel_kg == 15.0
         assert quali_run.compound == TyreCompound.C4
-        assert quali_run.engine_map == EngineMapName.QUALY
+        assert quali_run.engine_map == EngineMapName.QUALITY
 
         race_run = [r for r in plan.runs if r.program == RunProgram.RACE_TRIM][0]
         assert race_run.fuel_kg == 95.0
@@ -209,13 +209,13 @@ class TestRunConfiguration:
         plan = RunPlan(
             program=RunProgram.RACE_TRIM,
             fuel_kg=95.0,
-            engine_map=EngineMapName.STANDARD,
+            engine_map=EngineMapName.RACE,
             push_level=0.93,
         )
         entry = configure_run(plan, "car_1", AeroSetup(), DriverSkills())
         assert entry.state.pu.fuel_kg == 95.0
         assert entry.push_level == 0.93
-        assert entry.state.pu.active_map == EngineMapName.STANDARD
+        assert entry.state.pu.active_map == EngineMapName.RACE
 
 
 # ---------------------------------------------------------------------------

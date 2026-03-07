@@ -28,15 +28,15 @@ def test_engine_penalty_integration():
     # Verify engine penalty config is loaded
     assert config.engine_reference_cv == 1008.0
     assert config.engine_penalty_coeff == 0.01
-    assert "QUALY" in config.engine_map_penalties
-    assert config.engine_map_penalties["QUALY"] == 0.0
+    assert "QUALIFY" in config.engine_map_penalties
+    assert config.engine_map_penalties["QUALIFY"] == 0.0
     
     # Create car state for RBR (Honda engine, 1015 CV)
     car_state = CarState(
         car_id="rbr_test",
         team_code="RBR",  # This will be used for engine CV lookup
         pu=PUState(
-            active_map=EngineMapName.STANDARD,
+            active_map=EngineMapName.RACE,
             fuel_kg=20.0,
         )
     )
@@ -91,8 +91,8 @@ def test_engine_penalty_integration():
     # Verify engine penalty was applied
     assert result.engine_penalty_s > 0.0, "Engine penalty should be positive for RBR"
     
-    # Expected: CV penalty (+7 CV × 0.01 = +0.07s) + map penalty (STANDARD = +0.25s)
-    expected_engine_penalty = 0.07 + 0.25
+    # Expected: CV penalty (+7 CV × 0.01 = +0.07s) + map penalty (RACE = +0.18s)
+    expected_engine_penalty = 0.07 + 0.18
     assert abs(result.engine_penalty_s - expected_engine_penalty) < 0.01, \
         f"Expected {expected_engine_penalty}, got {result.engine_penalty_s}"
     
@@ -101,8 +101,8 @@ def test_engine_penalty_integration():
     print(f"  - Engine penalty applied: {result.engine_penalty_s:.3f}s")
     print(f"  - Expected: {expected_engine_penalty:.3f}s")
     
-    # Test with QUALY map (should have no map penalty)
-    car_state.pu.active_map = EngineMapName.QUALY
+    # Test with QUALIFY map (should have no map penalty)
+    car_state.pu.active_map = EngineMapName.QUALIFY
     result_qualy = update_section(
         car_state=car_state,
         aero_setup=aero_setup,
@@ -118,13 +118,13 @@ def test_engine_penalty_integration():
     )
     
     # Should only have CV penalty, no map penalty
-    expected_qualy_penalty = 0.07  # Only CV penalty
-    assert abs(result_qualy.engine_penalty_s - expected_qualy_penalty) < 0.01, \
-        f"Expected {expected_qualy_penalty}, got {result_qualy.engine_penalty_s}"
+    expected_qualify_penalty = 0.07  # Only CV penalty
+    assert abs(result_qualy.engine_penalty_s - expected_qualify_penalty) < 0.01, \
+        f"Expected {expected_qualify_penalty}, got {result_qualy.engine_penalty_s}"
     
-    print(f"✓ QUALY map test passed!")
-    print(f"  - Engine penalty with QUALY map: {result_qualy.engine_penalty_s:.3f}s")
-    print(f"  - Expected: {expected_qualy_penalty:.3f}s")
+    print(f"✓ QUALIFY map test passed!")
+    print(f"  - Engine penalty with QUALIFY map: {result_qualy.engine_penalty_s:.3f}s")
+    print(f"  - Expected: {expected_qualify_penalty:.3f}s")
     
     # Test with corner section (should have no engine penalty)
     corner_section = None

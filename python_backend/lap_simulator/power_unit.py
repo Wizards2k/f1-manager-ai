@@ -1,12 +1,5 @@
-"""
-PowerUnit – Step 4 of update_section().
+"""PowerUnit step – compute ICE/ERS output and state evolution for a section."""
 
-Computes ICE + ERS power output, fuel burn, thermal state,
-derating and wear for the current section.
-
-Reference: docs/lap-physics-spec-v0.5.md §3.3 Passo 4
-           docs/degradation-and-consumption.md §5.4
-"""
 from __future__ import annotations
 
 from .data_types import (
@@ -28,16 +21,23 @@ from typing import Dict
 from typing import List, Tuple
 
 
+PACE_FACTOR_MIN = 0.80
+PACE_FACTOR_MAX = 1.12
+
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
 ICE_BASE_POWER_KW = 750.0          # F1 2025 ICE ~750kW (1000hp hybrid unit)
+ICE_MAX_POWER_KW = 900.0           # cap after boosts
 ERS_MAX_KW = 160.0                 # MGU-K deploy peak (FIA limit ~160kW in 2025)
 ERS_MAX_ENERGY_MJ = 4.0            # max battery capacity
 ERS_DEPLOY_LIMIT_MJ_PER_LAP = 4.0
 ERS_RECOVERY_LIMIT_MJ_PER_LAP = 2.0
 FUEL_BASE_BURN_KG_PER_S = 0.035    # ~2.1 kg/min at race pace
+PACE_FACTOR_MIN = 0.80
+PACE_FACTOR_MAX = 1.12
 
 # Section kind impact on MGU-H generation (lookup via section.kind.value)
 SECTION_MGUH_FACTORS = {
@@ -88,7 +88,7 @@ def generate_output(
     # --- Resolve active map params ---
     map_params: EngineMapParams = config.pu_maps.get(
         pu_state.active_map,
-        config.pu_maps.get(EngineMapName.STANDARD, EngineMapParams(name=EngineMapName.STANDARD)),
+        config.pu_maps.get(EngineMapName.RACE, EngineMapParams(name=EngineMapName.RACE)),
     )
 
     map_budget = _map_budget(config, pu_state.active_map)
@@ -96,7 +96,8 @@ def generate_output(
 
     # --- ICE power ---
     ice_wear_factor = 1.0 - pu_state.ice_wear_pct * 0.002
-    ice_power_raw = ICE_BASE_POWER_KW * map_params.torque_ramp * ice_wear_factor
+    ice_power_pct = _compute_ice_power_pct(map_params, driver_intent)
+    ice_power_raw = ICE_BASE_POWER_KW * ice_power_pct * ice_wear_factor
 
     # Derating from temperature
     ice_derating_factor = 1.0
@@ -313,15 +314,16 @@ def generate_output(
     )
 
     # --- Fuel burn ---
-    fuel_burn_rate = FUEL_BASE_BURN_KG_PER_S * map_params.torque_ramp * fuel_mix_mult
+    fuel_burn_rate = FUEL_BASE_BURN_KG_PER_S * ice_power_pct * fuel_mix_mult
     fuel_burned = fuel_burn_rate * dt_estimate_s
     pu_state.fuel_kg = max(0.0, pu_state.fuel_kg - fuel_burned)
     pu_state.fuel_burn_rate_kg_per_s = fuel_burn_rate
 
     # --- Wear ---
     # Over-rev factor: high torque_ramp maps stress the ICE/ERS more
-    overrev_ice = rel.ice_overrev_factor if map_params.torque_ramp > 0.85 else 1.0
-    overrev_ers = rel.ers_overrev_factor if map_params.torque_ramp > 0.85 else 1.0
+    overrev_threshold = max(map_params.power_pct_base, map_params.torque_ramp)
+    overrev_ice = rel.ice_overrev_factor if ice_power_pct > overrev_threshold else 1.0
+    overrev_ers = rel.ers_overrev_factor if ice_power_pct > overrev_threshold else 1.0
     # Shock factor: kerb impacts and bumps cause extra mechanical stress
     shock_level = aero_forces.kerb_severity + aero_forces.bump_penalty
     shock_ice = 1.0 + (rel.ice_shock_factor - 1.0) * shock_level
@@ -366,6 +368,31 @@ def _map_budget(config: CircuitConfig, map_name: EngineMapName) -> Dict[str, flo
     maps = config.ers_budget.get("maps") or {}
     map_key = map_name.value if isinstance(map_name, EngineMapName) else map_name
     return maps.get(map_key, {})
+
+
+def _compute_ice_power_pct(map_params: EngineMapParams, intent: DriverIntent) -> float:
+    pct_min = clamp(map_params.power_pct_min, 0.2, 1.5)
+    pct_max = clamp(map_params.power_pct_max, pct_min, 1.5)
+    pct_base = clamp(map_params.power_pct_base, pct_min, pct_max)
+
+    pace = clamp(getattr(intent, "pace_factor", 1.0), PACE_FACTOR_MIN, PACE_FACTOR_MAX)
+    pace_norm = (pace - PACE_FACTOR_MIN) / max(PACE_FACTOR_MAX - PACE_FACTOR_MIN, 1e-6)
+
+    push_level = getattr(intent, "push_level", 10)
+    push_norm = clamp((push_level - 1) / 9.0, 0.0, 1.0)
+
+    intent_weight = 0.55 * push_norm + 0.45 * pace_norm
+    pct = pct_min + (pct_max - pct_min) * intent_weight
+
+    # Bias toward base to avoid extreme oscillations
+    pct = pct * 0.65 + pct_base * 0.35
+
+    if intent.fuel_save_mode or intent.tyre_save_mode:
+        pct = min(pct, pct_base)
+    if intent.ers_push_mode and not intent.fuel_save_mode:
+        pct += (pct_max - pct) * 0.12
+
+    return clamp(pct, pct_min, pct_max)
 
 
 def _estimate_mguh_power_kw(
@@ -446,7 +473,7 @@ def _ensure_bucket_budget(
     pct_sum = max(primary_pct + secondary_pct + exit_pct, 1e-6)
 
     defense_reserve = map_budget.get("defense_reserve_mj", map_params.defense_reserve_mj)
-    if pu_state.active_map == EngineMapName.QUALY:
+    if pu_state.active_map == EngineMapName.QUALIFY:
         defense_reserve = 0.0
     defense_reserve = clamp(defense_reserve, 0.0, deploy_total * 0.6)
     available = max(deploy_total - defense_reserve, 0.0)
@@ -519,7 +546,7 @@ def _apply_bucket_allocation(
         pu_state.last_defense_used_mj = 0.0
         return 0.0
 
-    if pu_state.active_map == EngineMapName.QUALY:
+    if pu_state.active_map == EngineMapName.QUALIFY:
         total_attr, used_attr = _bucket_attrs(bucket_key)
         used = getattr(pu_state, used_attr, 0.0)
         setattr(pu_state, used_attr, used + requested_mj)

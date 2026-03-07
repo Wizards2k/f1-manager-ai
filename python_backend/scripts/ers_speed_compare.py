@@ -10,7 +10,7 @@ per-section effective speed delta to highlight the impact of ERS.
 
 Usage:
     PYTHONPATH=python_backend python3 python_backend/scripts/ers_speed_compare.py \
-        --circuit it-1922_monza --map STANDARD
+        --circuit it-1922_monza --map RACE
 """
 from __future__ import annotations
 
@@ -113,7 +113,7 @@ def build_driver_skills() -> DriverSkills:
 def build_car_state() -> CarState:
     state = CarState(car_id=CAR_ID)
     state.pu.fuel_kg = DEFAULT_FUEL_KG
-    state.pu.active_map = EngineMapName.STANDARD
+    state.pu.active_map = EngineMapName.RACE
     for tyre in state.tyres.values():
         tyre.compound = FABRIC_TYRE_COMPOUND
         tyre.surface_temp_c = 95.0
@@ -188,7 +188,7 @@ def format_rows(rows):
 def main():
     parser = argparse.ArgumentParser(description="Compare lap pace with/without ERS deploy")
     parser.add_argument("--circuit", default="it-1922_monza", help="Circuit telemetry ID (default: it-1922_monza)")
-    parser.add_argument("--map", default="STANDARD", help="Engine map to evaluate (default: STANDARD)")
+    parser.add_argument("--map", default="RACE", help="Engine map to evaluate (default: RACE)")
     args = parser.parse_args()
 
     map_name = EngineMapName[args.map.upper()]

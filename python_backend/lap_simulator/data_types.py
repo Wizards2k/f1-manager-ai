@@ -46,12 +46,10 @@ class WheelPosition(str, Enum):
 
 
 class EngineMapName(str, Enum):
-    ECONOMY = "ECONOMY"
-    STANDARD = "STANDARD"
-    RICH = "RICH"
-    QUALY = "QUALY"
-    WET = "WET"
-    RECHARGE = "RECHARGE"
+    SAFETY_CAR = "SAFETY_CAR"
+    PRACTICE = "PRACTICE"
+    RACE = "RACE"
+    QUALIFY = "QUALIFY"
 
 
 class ERSModeName(str, Enum):
@@ -230,6 +228,9 @@ class BrakeState:
 class EngineMapParams:
     """Parameters for a single engine map (from config JSON)."""
     name: EngineMapName
+    power_pct_min: float = 0.75
+    power_pct_max: float = 0.95
+    power_pct_base: float = 0.85
     heat_load_kw: float = 260.0
     torque_ramp: float = 0.6
     deployment_style: str = "balanced"
@@ -261,7 +262,7 @@ class PUReliabilityParams:
 @dataclass
 class PUState:
     """Mutable power unit state (per car)."""
-    active_map: EngineMapName = EngineMapName.STANDARD
+    active_map: EngineMapName = EngineMapName.RACE
     # ICE
     ice_temp_c: float = 95.0
     ice_wear_pct: float = 0.0

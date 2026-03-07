@@ -73,8 +73,8 @@ def _build_player_cars(count: int = 2):
 def test_power_unit_clamps_when_deploy_budget_exhausted():
     config = CircuitConfig(
         pu_maps={
-            EngineMapName.QUALY: EngineMapParams(
-                name=EngineMapName.QUALY,
+            EngineMapName.QUALIFY: EngineMapParams(
+                name=EngineMapName.QUALIFY,
                 torque_ramp=1.0,
                 cooling_share=0.5,
                 ers_output_kw=120.0,
@@ -85,7 +85,7 @@ def test_power_unit_clamps_when_deploy_budget_exhausted():
             "deploy_limit_mj": 0.2,
             "harvest_limit_mj": 0.05,
             "maps": {
-                "QUALY": {
+                "QUALIFY": {
                     "deploy_mj_per_lap": 0.05,
                     "harvest_mj_per_lap": 0.02,
                 }
@@ -112,7 +112,7 @@ def test_power_unit_clamps_when_deploy_budget_exhausted():
     env = EnvContext()
     driver = DriverIntent(ers_deploy_request=True)
     aero = SimpleNamespace(cooling_capacity=1.0, kerb_severity=0.0, bump_penalty=0.0)
-    pu_state = PUState(active_map=EngineMapName.QUALY, ers_energy_mj=0.2)
+    pu_state = PUState(active_map=EngineMapName.QUALIFY, ers_energy_mj=0.2)
 
     # First section consumes the requested energy (bounded by per-bucket share)
     generate_output(pu_state, driver, aero, section, env, config, dt_estimate_s=1.0)
@@ -135,8 +135,8 @@ def test_power_unit_clamps_when_deploy_budget_exhausted():
 def test_brake_migration_respects_hydraulic_ratio():
     config = CircuitConfig(
         pu_maps={
-            EngineMapName.STANDARD: EngineMapParams(
-                name=EngineMapName.STANDARD,
+            EngineMapName.RACE: EngineMapParams(
+                name=EngineMapName.RACE,
                 torque_ramp=1.0,
                 cooling_share=0.5,
                 ers_output_kw=60.0,
@@ -163,7 +163,7 @@ def test_brake_migration_respects_hydraulic_ratio():
     env = EnvContext()
     driver = DriverIntent(ers_deploy_request=False)
     aero = SimpleNamespace(cooling_capacity=1.0, kerb_severity=0.0, bump_penalty=0.0)
-    pu_state = PUState(active_map=EngineMapName.STANDARD, ers_energy_mj=2.0)
+    pu_state = PUState(active_map=EngineMapName.RACE, ers_energy_mj=2.0)
 
     generate_output(pu_state, driver, aero, section, env, config, dt_estimate_s=1.0)
 
@@ -178,8 +178,8 @@ def test_brake_migration_respects_hydraulic_ratio():
 def test_brake_migration_warns_when_soc_full():
     config = CircuitConfig(
         pu_maps={
-            EngineMapName.STANDARD: EngineMapParams(
-                name=EngineMapName.STANDARD,
+            EngineMapName.RACE: EngineMapParams(
+                name=EngineMapName.RACE,
                 torque_ramp=1.0,
                 cooling_share=0.5,
                 ers_output_kw=60.0,
@@ -206,7 +206,7 @@ def test_brake_migration_warns_when_soc_full():
     env = EnvContext()
     driver = DriverIntent(ers_deploy_request=False)
     aero = SimpleNamespace(cooling_capacity=1.0, kerb_severity=0.0, bump_penalty=0.0)
-    pu_state = PUState(active_map=EngineMapName.STANDARD, ers_energy_mj=ERS_MAX_ENERGY_MJ)
+    pu_state = PUState(active_map=EngineMapName.RACE, ers_energy_mj=ERS_MAX_ENERGY_MJ)
 
     generate_output(pu_state, driver, aero, section, env, config, dt_estimate_s=1.0)
 

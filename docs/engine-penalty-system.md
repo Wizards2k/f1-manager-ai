@@ -17,12 +17,10 @@ The Engine Penalty System has been successfully implemented and integrated into 
 - **Low-Speed Circuits** (Monaco): 0.008 (20 CV = 0.16s)
 
 ### 3. Engine Map Penalties
-- **QUALY**: 0.0s (reference zero penalty)
-- **RICH**: 0.12s per straight section
-- **STANDARD**: 0.25s per straight section
-- **ECONOMY**: 0.40s per straight section
-- **WET**: 0.18s per straight section
-- **RECHARGE**: 0.50s per straight section
+- **QUALIFY**: 0.0s (reference zero penalty)
+- **RACE**: 0.18s per straight section
+- **PRACTICE**: 0.35s per straight section
+- **SAFETY_CAR**: 0.55s per straight section
 
 ### 4. Straight-Only Application
 Penalties are applied only on:
@@ -84,18 +82,18 @@ team_code: str = ""  # For engine CV lookup
 
 ### McLaren Reference (Zero Penalty)
 ```python
-# McLaren with Mercedes engine, QUALY map
+# McLaren with Mercedes engine, QUALIFY map
 team_cv = 1008.0  # Exactly Mercedes reference
-engine_map = EngineMapName.QUALY  # Zero map penalty
+engine_map = EngineMapName.QUALIFY  # Zero map penalty
 # Result: 0.000s penalty on all circuits
 ```
 
 ### RBR Performance Penalty
 ```python
-# RBR with Honda engine, STANDARD map
+# RBR with Honda engine, RACE map
 team_cv = 1015.0  # +7 CV vs Mercedes
-engine_map = EngineMapName.STANDARD  # +0.25s per straight
-# Baku result: 11 straights × (0.07s CV + 0.25s map) = +3.520s
+engine_map = EngineMapName.RACE  # +0.18s per straight
+# Baku result: 11 straights × (0.07s CV + 0.18s map) = +2.750s
 ```
 
 ## Integration with LapSimulator

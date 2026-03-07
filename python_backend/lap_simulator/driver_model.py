@@ -25,7 +25,7 @@ from .data_types import (
 
 
 ERS_MAX_ENERGY_MJ = 4.0
-DEFAULT_MAP_PARAMS = EngineMapParams(name=EngineMapName.STANDARD)
+DEFAULT_MAP_PARAMS = EngineMapParams(name=EngineMapName.RACE)
 
 SECTION_PRIORITY_BASE = {
     SectionKind.STRAIGHT: 1.0,
@@ -147,14 +147,14 @@ def compute_inputs(
     soc_pct = clamp(battery_mj / ERS_MAX_ENERGY_MJ, 0.0, 1.0)
     lap_sections = max(len(config.sections), 1)
     lap_progress = clamp(car_state.current_section_idx / lap_sections, 0.0, 1.0)
-    active_map = getattr(car_state.pu, "active_map", EngineMapName.STANDARD) or EngineMapName.STANDARD
-    map_params = config.pu_maps.get(active_map, config.pu_maps.get(EngineMapName.STANDARD, DEFAULT_MAP_PARAMS))
+    active_map = getattr(car_state.pu, "active_map", EngineMapName.RACE) or EngineMapName.RACE
+    map_params = config.pu_maps.get(active_map, config.pu_maps.get(EngineMapName.RACE, DEFAULT_MAP_PARAMS))
     if map_params is None:
         map_params = DEFAULT_MAP_PARAMS
     map_budget = _lookup_map_budget(config, active_map)
     target_soc = map_budget.get("target_soc_end_lap")
     
-    is_qualy = (active_map == EngineMapName.QUALY)
+    is_qualy = (active_map == EngineMapName.QUALIFY)
     
     if target_soc is None:
         target_soc = 0.05 if is_qualy else 0.55

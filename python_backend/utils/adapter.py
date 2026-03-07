@@ -195,13 +195,13 @@ def _build_aero_setup(auto, base: Optional[AeroSetup] = None) -> AeroSetup:
 def _resolve_engine_map(car) -> EngineMapName:
     # Game stores ICE mode as string (Save/Standard/Push) → map to EngineMapName
     mapping = {
-        "save": EngineMapName.ECONOMY,
-        "standard": EngineMapName.STANDARD,
-        "push": EngineMapName.RICH,
-        "qualy": EngineMapName.QUALY,
+        "save": EngineMapName.SAFETY_CAR,
+        "standard": EngineMapName.RACE,
+        "push": EngineMapName.RACE,
+        "qualy": EngineMapName.QUALIFY,
     }
     ice_mode = getattr(car, "ice_mode", "standard")
-    return mapping.get(str(ice_mode).lower(), EngineMapName.STANDARD)
+    return mapping.get(str(ice_mode).lower(), EngineMapName.RACE)
 
 
 def _build_sim_state(car_id: str, car) -> SimCarState:

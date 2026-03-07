@@ -5,77 +5,65 @@
     "notes": "Global default PU maps (non calibrated). Circuit/weather/setup modifiers adjust cooling; da ritarare su dati FastF1." 
   },
   "maps": {
-    "ECONOMY": {
-      "heat_load_kw": 220,
-      "torque_ramp": 0.4,
-      "deployment_style": "conservative",
+    "SAFETY_CAR": {
+      "power_pct_min": 0.40,
+      "power_pct_max": 0.40,
+      "power_pct_base": 0.40,
+      "heat_load_kw": 210,
+      "torque_ramp": 0.40,
+      "deployment_style": "neutralized",
+      "cooling_share": 0.62,
+      "ers_output_kw": 65,
+      "deploy_mj_per_lap": 0.6,
+      "harvest_mj_per_lap": 2.2,
+      "mguh_direct_ratio": 0.22,
+      "target_soc_end_lap": 0.92,
+      "torque_bias": -0.10
+    },
+    "PRACTICE": {
+      "power_pct_min": 0.75,
+      "power_pct_max": 0.85,
+      "power_pct_base": 0.80,
+      "heat_load_kw": 245,
+      "torque_ramp": 0.65,
+      "deployment_style": "practice",
       "cooling_share": 0.55,
-      "ers_output_kw": 80,
-      "deploy_mj_per_lap": 2.2,
+      "ers_output_kw": 115,
+      "deploy_mj_per_lap": 2.6,
       "harvest_mj_per_lap": 1.8,
-      "mguh_direct_ratio": 0.25,
-      "target_soc_end_lap": 0.8,
-      "torque_bias": -0.05
+      "mguh_direct_ratio": 0.30,
+      "target_soc_end_lap": 0.72,
+      "torque_bias": -0.02
     },
-    "STANDARD": {
-      "heat_load_kw": 260,
-      "torque_ramp": 0.6,
-      "deployment_style": "balanced",
-      "cooling_share": 0.50,
-      "ers_output_kw": 120,
-      "deploy_mj_per_lap": 3.0,
-      "harvest_mj_per_lap": 1.6,
-      "mguh_direct_ratio": 0.35,
-      "target_soc_end_lap": 0.6,
-      "torque_bias": 0.0
-    },
-    "RICH": {
-      "heat_load_kw": 300,
-      "torque_ramp": 0.75,
-      "deployment_style": "aggressive",
-      "cooling_share": 0.45,
+    "RACE": {
+      "power_pct_min": 0.90,
+      "power_pct_max": 1.00,
+      "power_pct_base": 0.95,
+      "heat_load_kw": 285,
+      "torque_ramp": 0.82,
+      "deployment_style": "race",
+      "cooling_share": 0.48,
       "ers_output_kw": 150,
       "deploy_mj_per_lap": 3.4,
       "harvest_mj_per_lap": 1.3,
-      "mguh_direct_ratio": 0.45,
-      "target_soc_end_lap": 0.45,
-      "torque_bias": 0.04
+      "mguh_direct_ratio": 0.42,
+      "target_soc_end_lap": 0.40,
+      "torque_bias": 0.05
     },
-    "QUALY": {
+    "QUALITY": {
+      "power_pct_min": 1.08,
+      "power_pct_max": 1.12,
+      "power_pct_base": 1.10,
       "heat_load_kw": 330,
-      "torque_ramp": 0.9,
+      "torque_ramp": 0.95,
       "deployment_style": "time_attack",
       "cooling_share": 0.40,
-      "ers_output_kw": 170,
-      "deploy_mj_per_lap": 3.9,
-      "harvest_mj_per_lap": 1.0,
+      "ers_output_kw": 175,
+      "deploy_mj_per_lap": 4.0,
+      "harvest_mj_per_lap": 0.8,
       "mguh_direct_ratio": 0.55,
-      "target_soc_end_lap": 0.15,
-      "torque_bias": 0.08
-    },
-    "WET": {
-      "heat_load_kw": 240,
-      "torque_ramp": 0.55,
-      "deployment_style": "wet_grip",
-      "cooling_share": 0.60,
-      "ers_output_kw": 95,
-      "deploy_mj_per_lap": 2.6,
-      "harvest_mj_per_lap": 1.7,
-      "mguh_direct_ratio": 0.30,
-      "target_soc_end_lap": 0.7,
-      "torque_bias": -0.02
-    },
-    "RECHARGE": {
-      "heat_load_kw": 230,
-      "torque_ramp": 0.5,
-      "deployment_style": "harvest",
-      "cooling_share": 0.65,
-      "ers_output_kw": 70,
-      "deploy_mj_per_lap": 0.9,
-      "harvest_mj_per_lap": 2.0,
-      "mguh_direct_ratio": 0.4,
-      "target_soc_end_lap": 0.95,
-      "torque_bias": -0.06
+      "target_soc_end_lap": 0.10,
+      "torque_bias": 0.10
     }
   }
 }

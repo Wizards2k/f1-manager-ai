@@ -2,6 +2,7 @@
 import logging
 import time
 from flask import Flask, render_template, jsonify, send_from_directory, request
+from typing import Optional
 
 from data.teams import TEAMS
 from models import CarState, CarPhase, TireCompound, DEFAULT_SETUP_CONFIG
@@ -256,7 +257,28 @@ def register_routes(app):
             'driver_numbers': driver_numbers,
         })
 
-    ICE_MODES = {'Save', 'Standard', 'Push'}
+    ICE_MODE_CANONICAL = {
+        'SAFETY_CAR': 'SAFETY_CAR',
+        'PRACTICE': 'PRACTICE',
+        'RACE': 'RACE',
+        'QUALIFY': 'QUALIFY',
+    }
+    ICE_MODE_ALIASES = {
+        'SAVE': 'SAFETY_CAR',
+        'STANDARD': 'RACE',
+        'PUSH': 'RACE',
+        'QUALY': 'QUALIFY',
+        'QUALIFYING': 'QUALIFY',
+    }
+
+    def _normalize_ice_mode(value: Optional[str]) -> Optional[str]:
+        if not value:
+            return None
+        key = str(value).strip().replace(' ', '_').upper()
+        if key in ICE_MODE_CANONICAL:
+            return ICE_MODE_CANONICAL[key]
+        return ICE_MODE_ALIASES.get(key)
+
     ERS_MODES = {'Harvest', 'Neutral', 'Deploy', 'Overtake'}
     TYRE_MAP = {compound.value: compound for compound in (TireCompound.SOFT, TireCompound.MEDIUM, TireCompound.HARD)}
 
@@ -343,12 +365,13 @@ def register_routes(app):
             updates_applied['pace_level'] = pace
 
         if 'ice_mode' in payload:
-            ice_mode = str(payload['ice_mode']).title()
-            if ice_mode not in ICE_MODES:
-                return _error_response(f'ice_mode must be one of: {", ".join(sorted(ICE_MODES))}')
-            car.ice_mode = ice_mode
-            car.player_config['ice_mode'] = ice_mode
-            updates_applied['ice_mode'] = ice_mode
+            normalized_ice = _normalize_ice_mode(payload['ice_mode'])
+            if not normalized_ice:
+                valid_values = ', '.join(sorted(ICE_MODE_CANONICAL.keys()))
+                return _error_response(f'ice_mode must be one of: {valid_values}')
+            car.ice_mode = normalized_ice
+            car.player_config['ice_mode'] = normalized_ice
+            updates_applied['ice_mode'] = normalized_ice
 
         if 'ers_mode' in payload:
             ers_mode = str(payload['ers_mode']).title()
