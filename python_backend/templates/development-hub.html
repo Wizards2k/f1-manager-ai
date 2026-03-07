@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Manager AI · Development Hub</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-v3.css') }}">
+    <style>
+        :root {
+            --bg: #06070c;
+            --panel: #10131f;
+            --card: #161a2a;
+            --accent: #ff2e52;
+            --accent-soft: rgba(255,46,82,.15);
+            --text: #f2f4ff;
+            --muted: #7c83a6;
+            --grid: rgba(255,255,255,.04);
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --danger: #ff4444;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Formula Condensed', 'Space Grotesk', system-ui;
+            background: linear-gradient(130deg, #05060b 0%, #0f1834 50%, #05060b 100%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            padding: 32px 56px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 1px solid var(--grid);
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 2.8rem;
+            letter-spacing: 0.08em;
+            background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .brand span {
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4em;
+            font-size: 0.8rem;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .status-chip {
+            padding: 8px 16px;
+            border: 1px solid var(--grid);
+            border-radius: 999px;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: .3em;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Layout */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 28px 56px 48px;
+            gap: 28px;
+        }
+
+        .hub-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            flex: 1;
+        }
+
+        /* Development Areas */
+        .dev-area {
+            background: var(--panel);
+            border-radius: 24px;
+            border: 1px solid var(--grid);
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .dev-area:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(255, 46, 82, 0.15);
+        }
+
+        .dev-area-header {
+            padding: 32px;
+            background: linear-gradient(135deg, rgba(255,46,82,0.1) 0%, rgba(255,46,82,0.05) 100%);
+            border-bottom: 1px solid var(--grid);
+        }
+
+        .dev-area-icon {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            background: var(--accent);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: var(--bg);
+        }
+
+        .dev-area h2 {
+            margin: 0 0 8px;
+            font-size: 1.8rem;
+            letter-spacing: 0.05em;
+        }
+
+        .dev-area-subtitle {
+            color: var(--muted);
+            font-size: 0.9rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+        }
+
+        .dev-area-content {
+            padding: 24px 32px;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: var(--grid);
+            border-radius: 2px;
+            margin: 16px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--success) 100%);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        .dev-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 16px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--text);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+
+        /* Status Indicators */
+        .status-indicators {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .indicator {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+        }
+
+        .indicator.active {
+            background: var(--accent-soft);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
+
+        .indicator.completed {
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .indicator.pending {
+            background: rgba(255, 170, 0, 0.1);
+            color: var(--warning);
+            border: 1px solid var(--warning);
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            background: var(--card);
+            border: 1px solid var(--grid);
+            border-radius: 12px;
+            color: var(--text);
+            text-align: center;
+            text-decoration: none;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hub-grid {
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 20px 24px 16px;
+                flex-direction: column;
+                gap: 16px;
+                align-items: flex-start;
+            }
+
+            main {
+                padding: 20px 24px 32px;
+            }
+
+            .hub-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .dev-area-header {
+                padding: 24px;
+            }
+
+            .dev-area-content {
+                padding: 20px 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand">
+            <h1>F1 Manager AI</h1>
+            <span>Development Hub</span>
+        </div>
+        <div class="status-bar">
+            <div class="status-chip">
+                <span class="status-dot"></span>
+                <span>System Online</span>
+            </div>
+            <div class="status-chip">
+                <span>v2.4.0</span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="hub-grid">
+            <!-- Chassis Development -->
+            <div class="dev-area" onclick="window.location.href='/chassis'">
+                <div class="dev-area-header">
+                    <div class="dev-area-icon">🏗️</div>
+                    <h2>Chassis</h2>
+                    <div class="dev-area-subtitle">Telaio</div>
+                </div>
+                <div class="dev-area-content">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 75%;"></div>
+                    </div>
+                    <div class="dev-stats">
+                        <div class="stat">
+                            <div class="stat-value">75%</div>
+                            <div class="stat-label">Progress</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">12</div>
+                            <div class="stat-label">Projects</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">3</div>
+                            <div class="stat-label">Active</div>
+                        </div>
+                    </div>
+                    <div class="status-indicators">
+                        <span class="indicator active">In Development</span>
+                        <span class="indicator completed">Aero Ready</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Engine Development -->
+            <div class="dev-area" onclick="window.location.href='/engine'">
+                <div class="dev-area-header">
+                    <div class="dev-area-icon">⚙️</div>
+                    <h2>Engine</h2>
+                    <div class="dev-area-subtitle">Motore</div>
+                </div>
+                <div class="dev-area-content">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 90%;"></div>
+                    </div>
+                    <div class="dev-stats">
+                        <div class="stat">
+                            <div class="stat-value">90%</div>
+                            <div class="stat-label">Progress</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">8</div>
+                            <div class="stat-label">Projects</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">2</div>
+                            <div class="stat-label">Testing</div>
+                        </div>
+                    </div>
+                    <div class="status-indicators">
+                        <span class="indicator active">Final Testing</span>
+                        <span class="indicator completed">ICE Ready</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Race Strategy -->
+            <div class="dev-area" onclick="window.location.href='/race'">
+                <div class="dev-area-header">
+                    <div class="dev-area-icon">🏁</div>
+                    <h2>Race</h2>
+                    <div class="dev-area-subtitle">Strategia Gara</div>
+                </div>
+                <div class="dev-area-content">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 60%;"></div>
+                    </div>
+                    <div class="dev-stats">
+                        <div class="stat">
+                            <div class="stat-value">60%</div>
+                            <div class="stat-label">Progress</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">15</div>
+                            <div class="stat-label">Strategies</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">5</div>
+                            <div class="stat-label">Simulated</div>
+                        </div>
+                    </div>
+                    <div class="status-indicators">
+                        <span class="indicator active">Simulation</span>
+                        <span class="indicator pending">Validation</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Driver Management -->
+            <div class="dev-area" onclick="window.location.href='/drivers'">
+                <div class="dev-area-header">
+                    <div class="dev-area-icon">👥</div>
+                    <h2>Drivers</h2>
+                    <div class="dev-area-subtitle">Piloti</div>
+                </div>
+                <div class="dev-area-content">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 85%;"></div>
+                    </div>
+                    <div class="dev-stats">
+                        <div class="stat">
+                            <div class="stat-value">85%</div>
+                            <div class="stat-label">Progress</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">4</div>
+                            <div class="stat-label">Drivers</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">2</div>
+                            <div class="stat-label">Ready</div>
+                        </div>
+                    </div>
+                    <div class="status-indicators">
+                        <span class="indicator completed">Skills Ready</span>
+                        <span class="indicator active">Training</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Staff Management -->
+            <div class="dev-area" onclick="window.location.href='/staff'">
+                <div class="dev-area-header">
+                    <div class="dev-area-icon">👔</div>
+                    <h2>Staff</h2>
+                    <div class="dev-area-subtitle">Personale</div>
+                </div>
+                <div class="dev-area-content">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 45%;"></div>
+                    </div>
+                    <div class="dev-stats">
+                        <div class="stat">
+                            <div class="stat-value">45%</div>
+                            <div class="stat-label">Progress</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">12</div>
+                            <div class="stat-label">Staff</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">3</div>
+                            <div class="stat-label">Departments</div>
+                        </div>
+                    </div>
+                    <div class="status-indicators">
+                        <span class="indicator active">Recruiting</span>
+                        <span class="indicator pending">Training</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Overview -->
+            <div class="dev-area" onclick="window.location.href='/system'">
+                <div class="dev-area-header">
+                    <div class="dev-area-icon">🎛️</div>
+                    <h2>System</h2>
+                    <div class="dev-area-subtitle">Panoramica</div>
+                </div>
+                <div class="dev-area-content">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 95%;"></div>
+                    </div>
+                    <div class="dev-stats">
+                        <div class="stat">
+                            <div class="stat-value">95%</div>
+                            <div class="stat-label">Progress</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">8</div>
+                            <div class="stat-label">Systems</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-value">7</div>
+                            <div class="stat-label">Online</div>
+                        </div>
+                    </div>
+                    <div class="status-indicators">
+                        <span class="indicator completed">Penalty System</span>
+                        <span class="indicator active">Monitoring</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Bar -->
+        <div class="quick-actions">
+            <a href="/simulation" class="action-btn">🏎️ Quick Race</a>
+            <a href="/analytics" class="action-btn">📊 Analytics</a>
+            <a href="/settings" class="action-btn">⚙️ Settings</a>
+            <a href="/help" class="action-btn">❓ Help</a>
+        </div>
+    </main>
+
+    <script>
+        // Add interactive hover effects
+        document.querySelectorAll('.dev-area').forEach(area => {
+            area.addEventListener('mouseenter', function() {
+                const progressFill = this.querySelector('.progress-fill');
+                if (progressFill) {
+                    const currentWidth = progressFill.style.width;
+                    progressFill.style.width = '0%';
+                    setTimeout(() => {
+                        progressFill.style.width = currentWidth;
+                    }, 100);
+                }
+            });
+        });
+
+        // Simulate real-time updates
+        setInterval(() => {
+            const statusDots = document.querySelectorAll('.status-dot');
+            statusDots.forEach(dot => {
+                dot.style.background = dot.style.background === 'var(--success)' ? 'var(--warning)' : 'var(--success)';
+            });
+        }, 3000);
+    </script>
+</body>
+</html>
