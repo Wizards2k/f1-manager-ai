@@ -58,13 +58,14 @@
         /* Game Title */
         .game-title {
             position: absolute;
-            top: 60px;
+            top: 40px;
             text-align: center;
             z-index: 10;
+            margin-bottom: 40px;
         }
 
         .game-title h1 {
-            font-size: 4rem;
+            font-size: 3.5rem;
             font-weight: 900;
             letter-spacing: 0.1em;
             margin: 0;
@@ -82,11 +83,11 @@
         }
 
         .game-title .subtitle {
-            font-size: 1.2rem;
+            font-size: 1rem;
             color: var(--muted);
             letter-spacing: 0.3em;
             text-transform: uppercase;
-            margin-top: 10px;
+            margin-top: 8px;
         }
 
         /* Menu Grid */
@@ -95,9 +96,10 @@
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: repeat(2, 1fr);
             gap: 40px;
-            padding: 40px;
+            padding: 60px 40px 40px;
             max-width: 1200px;
             width: 100%;
+            margin-top: 80px;
         }
 
         /* Menu Items */
@@ -234,7 +236,8 @@
                 grid-template-columns: repeat(2, 1fr);
                 grid-template-rows: repeat(3, 1fr);
                 gap: 30px;
-                padding: 30px;
+                padding: 40px 30px 30px;
+                margin-top: 60px;
             }
             
             .menu-item {
@@ -248,6 +251,10 @@
             .game-title h1 {
                 font-size: 3rem;
             }
+            
+            .game-title {
+                top: 30px;
+            }
         }
 
         @media (max-width: 768px) {
@@ -255,11 +262,16 @@
                 grid-template-columns: 1fr;
                 grid-template-rows: repeat(6, 1fr);
                 gap: 20px;
-                padding: 20px;
+                padding: 30px 20px 20px;
+                margin-top: 50px;
             }
             
             .menu-item {
                 padding: 25px 20px;
+            }
+            
+            .menu-icon {
+                font-size: 2.5rem;
             }
             
             .game-title h1 {
@@ -267,7 +279,7 @@
             }
             
             .game-title {
-                top: 30px;
+                top: 20px;
             }
             
             .status-bar {
