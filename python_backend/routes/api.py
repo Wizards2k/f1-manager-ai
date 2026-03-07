@@ -271,6 +271,32 @@ def register_routes(app):
         'QUALIFYING': 'QUALIFY',
     }
 
+    def _normalize_ers_mode(value: Optional[str]) -> Optional[str]:
+        """Normalize ERS mode string to canonical name."""
+        if not value:
+            return None
+        key = str(value).strip().replace(' ', '_').upper()
+        # Map legacy names to new canonical names
+        legacy_mapping = {
+            'HARVEST': 'RECHARGE',
+            'NEUTRAL': 'STANDARD',
+            'DEPLOY': 'QUALIFY',
+            'ATTACK': 'OVERTAKE',
+        }
+        # Direct canonical mapping
+        canonical_modes = {
+            'RECHARGE': 'RECHARGE',
+            'STANDARD': 'STANDARD',
+            'OVERTAKE': 'OVERTAKE',
+            'QUALIFY': 'QUALIFY',
+            'DEFENCE': 'DEFENCE',
+        }
+        # Check canonical first
+        if key in canonical_modes:
+            return canonical_modes[key]
+        # Check legacy mapping
+        return legacy_mapping.get(key)
+
     def _normalize_ice_mode(value: Optional[str]) -> Optional[str]:
         if not value:
             return None
@@ -279,7 +305,7 @@ def register_routes(app):
             return ICE_MODE_CANONICAL[key]
         return ICE_MODE_ALIASES.get(key)
 
-    ERS_MODES = {'Harvest', 'Neutral', 'Deploy', 'Overtake'}
+    ERS_MODES = {'RECHARGE', 'STANDARD', 'OVERTAKE', 'QUALIFY', 'DEFENCE', 'HARVEST', 'NEUTRAL', 'DEPLOY', 'ATTACK'}
     TYRE_MAP = {compound.value: compound for compound in (TireCompound.SOFT, TireCompound.MEDIUM, TireCompound.HARD)}
 
     def _get_player_car(driver_number: int):
@@ -374,12 +400,13 @@ def register_routes(app):
             updates_applied['ice_mode'] = normalized_ice
 
         if 'ers_mode' in payload:
-            ers_mode = str(payload['ers_mode']).title()
-            if ers_mode not in ERS_MODES:
-                return _error_response(f'ers_mode must be one of: {", ".join(sorted(ERS_MODES))}')
-            car.ers_mode = ers_mode
-            car.player_config['ers_mode'] = ers_mode
-            updates_applied['ers_mode'] = ers_mode
+            normalized_ers = _normalize_ers_mode(payload['ers_mode'])
+            if not normalized_ers:
+                valid_values = ', '.join(sorted({'RECHARGE', 'STANDARD', 'OVERTAKE', 'QUALIFY', 'DEFENCE'}))
+                return _error_response(f'ers_mode must be one of: {valid_values}')
+            car.ers_mode = normalized_ers
+            car.player_config['ers_mode'] = normalized_ers
+            updates_applied['ers_mode'] = normalized_ers
 
         if 'tyre_compound' in payload:
             compound_key = str(payload['tyre_compound']).lower()

@@ -13,7 +13,7 @@ export class PlayerGarage {
             { value: 'hard', label: 'Hard' }
         ];
         this.iceOptions = ['Save', 'Standard', 'Push'];
-        this.ersOptions = ['Harvest', 'Neutral', 'Deploy', 'Overtake'];
+        this.ersOptions = ['RECHARGE', 'STANDARD', 'OVERTAKE', 'QUALIFY', 'DEFENCE'];
         this.STATE_DISPLAY = {
             BOX: 'BOX',
             OUT_LAP: 'OUT LAP',
@@ -180,7 +180,7 @@ export class PlayerGarage {
         const stintTarget = car.player_config?.stint_target_laps ?? car.stint_target_laps ?? 5;
         const paceLevel = car.player_config?.pace_level ?? car.pace_level ?? 5;
         const iceMode = car.player_config?.ice_mode ?? car.ice_mode ?? 'Standard';
-        const ersMode = car.player_config?.ers_mode ?? car.ers_mode ?? 'Neutral';
+        const ersMode = car.player_config?.ers_mode ?? car.ers_mode ?? 'STANDARD';
         const maxStint = car.max_stint_laps ?? stintTarget;
         const tireWear = Math.max(0, Math.min(1, car.tire_wear ?? 0));
         const tireHealthPct = Math.round((1 - tireWear) * 100);

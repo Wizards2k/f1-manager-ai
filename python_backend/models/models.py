@@ -443,7 +443,7 @@ class RaceCar:
         self.fuel_percent = 100
         self.pace_level = 5
         self.ice_mode = "PRACTICE"
-        self.ers_mode = "Neutral"
+        self.ers_mode = "STANDARD"
         self.player_config: Dict[str, Any] = {
             "tyre_compound": self.current_tire.value,
             "fuel_percent": self.fuel_percent,

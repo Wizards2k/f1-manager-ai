@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>F1 Manager AI · Mission Control</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-v3.css') }}">
+  <style>
+    :root {
+      --bg: #06070c;
+      --panel: #10131f;
+      --card: #161a2a;
+      --accent: #ff2e52;
+      --accent-soft: rgba(255,46,82,.15);
+      --text: #f2f4ff;
+      --muted: #7c83a6;
+      --grid: rgba(255,255,255,.04);
+    }
+    body {
+      margin: 0;
+      font-family: 'Formula Condensed', 'Space Grotesk', system-ui;
+      background: linear-gradient(130deg, #05060b 0%, #0f1834 50%, #05060b 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 32px 56px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-bottom: 1px solid var(--grid);
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 2.8rem;
+      letter-spacing: 0.08em;
+    }
+    .brand span {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4em;
+      font-size: 0.8rem;
+    }
+    .session-chip {
+      padding: 8px 16px;
+      border: 1px solid var(--grid);
+      border-radius: 999px;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: .3em;
+      color: var(--muted);
+    }
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 2.2fr 1fr;
+      gap: 28px;
+      padding: 28px 56px 48px;
+    }
+    .panel {
+      background: var(--panel);
+      border-radius: 28px;
+      padding: 28px;
+      border: 1px solid var(--grid);
+      box-shadow: 0 20px 35px rgba(0,0,0,.45);
+    }
+    .panel h2 {
+      margin: 0 0 16px;
+      letter-spacing: .4em;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
+      gap: 16px;
+    }
+    .mode-card {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 20px;
+      border: 1px solid var(--grid);
+      cursor: pointer;
+      transition: border-color .2s, transform .2s;
+    }
+    .mode-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-3px);
+    }
+    .mode-card span {
+      font-size: 0.75rem;
+      color: var(--muted);
+      letter-spacing: .35em;
+    }
+    .mode-card h3 {
+      margin: 8px 0 4px;
+      font-size: 1.3rem;
+    }
+    .mode-card p {
+      margin: 0;
+      color: rgba(242,244,255,.75);
+      font-size: 0.95rem;
+    }
+    .status-board {
+      margin-top: 26px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
+      gap: 16px;
+    }
+    .status-tile {
+      background: var(--card);
+      border-radius: 18px;
+      padding: 18px;
+      border: 1px solid var(--grid);
+    }
+    .status-tile h4 {
+      margin: 6px 0;
+      font-size: 1.1rem;
+    }
+    .status-tile small {
+      letter-spacing: .3em;
+      color: var(--muted);
+    }
+    .timeline {
+      margin-top: 24px;
+      background: rgba(255,255,255,.03);
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .timeline ul {
+      padding: 0;
+      margin: 0;
+    }
+    .timeline li {
+      list-style: none;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .timeline li:last-child { border-bottom: none; }
+    .timeline time {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .map-preview {
+      height: 220px;
+      background-image: url("{{ url_for('static', filename='images/mock_circuit.png') }}");
+      background-size: cover;
+      border-radius: 20px;
+      border: 1px solid var(--grid);
+    }
+    .action-btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 16px;
+      font-size: 1rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .2em;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span>Mission Control</span>
+      <h1>F1 MANAGER AI</h1>
+    </div>
+    <div class="session-chip">Circuito selezionato · JP-1962 Suzuka</div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>SESSIONI DISPONIBILI</h2>
+      <div class="mode-grid">
+        <article class="mode-card">
+          <span>FP1</span>
+          <h3>Free Practice</h3>
+          <p>Briefing piloti, prove set-up, run plan su 3 stint.</p>
+        </article>
+        <article class="mode-card">
+          <span>QUALIFY</span>
+          <h3>Qualifica</h3>
+          <p>Gestione Q1-Q3, mappature ICE, aggressività AI.</p>
+        </article>
+        <article class="mode-card">
+          <span>RACE</span>
+          <h3>Gran Premio</h3>
+          <p>Strategia full-distance, safety car, tyre phase.</p>
+        </article>
+        <article class="mode-card">
+          <span>TOOLS</span>
+          <h3>Telemetry Lab</h3>
+          <p>Analisi brake bias, ERS buckets, fuel projection.</p>
+        </article>
+      </div>
+
+      <div class="status-board">
+        <div class="status-tile">
+          <small>BRIEFING</small>
+          <h4>Piloti disponibili</h4>
+          <p>VER · PER · SAINZ · LEC</p>
+        </div>
+        <div class="status-tile">
+          <small>ERS MAP</small>
+          <h4>Qualify preset pronto</h4>
+          <p>Deploy 4.1 MJ · SOC 62%</p>
+        </div>
+        <div class="status-tile">
+          <small>METEO</small>
+          <h4>Track Temp 34°C</h4>
+          <p>Prob. pioggia 10%</p>
+        </div>
+      </div>
+
+      <div class="timeline">
+        <ul>
+          <li>
+            <time>14:12</time> · AI Red Bull ha completato run 2 (FP1) · push level 8
+          </li>
+          <li>
+            <time>14:08</time> · Setup feedback disponibile per #16
+          </li>
+          <li>
+            <time>14:02</time> · Sessione caricata: Suzuka 1962 (14 sezioni)
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <aside class="right-panel">
+      <div class="panel">
+        <h2>CIRCUITO LIVE</h2>
+        <div class="map-preview"></div>
+        <p style="color:var(--muted);margin-top:12px;">Ultimo tempo migliore: 1:31.772 · Fuel delta -0.8 laps</p>
+        <button class="action-btn">Continua sessione</button>
+      </div>
+      <div class="panel">
+        <h2>QUICK ACTIONS</h2>
+        <button class="action-btn" style="background:transparent;border:1px solid var(--grid);color:var(--text);margin-bottom:12px;">Seleziona circuito</button>
+        <button class="action-btn" style="background:var(--accent-soft);color:var(--accent);">Apri garage giocatore</button>
+      </div>
+    </aside>
+  </main>
+</body>
+</html>

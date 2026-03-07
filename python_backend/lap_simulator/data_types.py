@@ -53,6 +53,11 @@ class EngineMapName(str, Enum):
 
 
 class ERSModeName(str, Enum):
+    RECHARGE = "RECHARGE"
+    STANDARD = "STANDARD"
+    OVERTAKE = "OVERTAKE"
+    QUALIFY = "QUALIFY"
+    DEFENCE = "DEFENCE"
     DEPLOY = "DEPLOY"
     BALANCED = "BALANCED"
     HARVEST = "HARVEST"

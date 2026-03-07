@@ -242,6 +242,26 @@ _LEGACY_MAP_ALIAS = {
     "QUALITY": EngineMapName.QUALIFY,
 }
 
+_LEGACY_ERS_MODE_ALIAS = {
+    "HARVEST": "RECHARGE",
+    "NEUTRAL": "STANDARD", 
+    "DEPLOY": "QUALIFY",
+    "ATTACK": "OVERTAKE",
+    "DEFENSE": "DEFENCE",  # Handle US spelling
+    "DEFENCE": "DEFENCE",
+    "RECHARGE": "RECHARGE",
+    "STANDARD": "STANDARD",
+    "OVERTAKE": "OVERTAKE",
+    "QUALIFY": "QUALIFY",
+}
+
+def normalize_ers_mode(mode: str) -> str:
+    """Normalize ERS mode string to canonical name."""
+    if not mode:
+        return "STANDARD"
+    key = str(mode).strip().replace(' ', '_').upper()
+    return _LEGACY_ERS_MODE_ALIAS.get(key, "STANDARD")
+
 _LEGACY_PRIORITY = {
     "RECHARGE": 1,
     "ECONOMY": 1,

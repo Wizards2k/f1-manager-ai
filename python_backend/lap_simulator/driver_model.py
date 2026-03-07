@@ -125,16 +125,16 @@ def compute_inputs(
         brake_bias_adjust = -craft_norm * 0.003  # slightly more rear
 
     # --- ERS mode heuristics ---
-    ers_mode_raw = (getattr(car_state, "ers_mode", "Neutral") or "Neutral").lower()
+    ers_mode_raw = (getattr(car_state, "ers_mode", "STANDARD") or "STANDARD").lower()
     ers_push_mode = False
     ers_defense_mode = False
     ers_recharge_mode = False
 
-    if ers_mode_raw in ("harvest", "recharge", "safety_car"):
+    if ers_mode_raw in ("harvest", "recharge", "safety_car", "recharge"):
         ers_recharge_mode = True
-    elif ers_mode_raw in ("deploy", "push"):
+    elif ers_mode_raw in ("deploy", "push", "qualify"):
         ers_push_mode = True
-    elif ers_mode_raw in ("overtake", "attack"):
+    elif ers_mode_raw in ("overtake", "attack", "defence", "defense"):
         ers_push_mode = True
 
     if car_state.overtake_window > 0.55 and car_state.attack_cooldown <= 0:

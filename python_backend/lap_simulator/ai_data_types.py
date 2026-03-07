@@ -28,9 +28,12 @@ class SessionType(str, Enum):
 class RunProgram(str, Enum):
     """Practice run programs as defined in ai-driver-engine-spec §3."""
     SETUP_VALIDATION = "SetupValidation"
+    TYRE_TEST = "TyreTest"
     TYRE_DEG = "TyreDeg"
     QUALI_SIM = "QualiSim"
+    RACE_SIM = "RaceSim"
     RACE_TRIM = "RaceTrim"
+    AERO_TEST = "AeroTest"
     AERO_RND = "AeroRnD"          # placeholder
 
 
@@ -135,7 +138,7 @@ class RunPlan:
     fuel_kg: float = 60.0
     compound: TyreCompound = TyreCompound.C3
     engine_map: EngineMapName = EngineMapName.RACE
-    ers_mode: ERSModeName = ERSModeName.BALANCED
+    ers_mode: ERSModeName = ERSModeName.STANDARD
     push_level: float = 0.95           # AI push level for this run
     objective: str = ""                # human-readable objective
     priority: int = 1                  # 1=high, 3=low
@@ -148,43 +151,61 @@ RUN_PROGRAM_DEFAULTS: Dict[RunProgram, dict] = {
         fuel_kg=50.0,
         compound=TyreCompound.C3,  # Medium equivalent
         engine_map=EngineMapName.PRACTICE,
-        ers_mode=ERSModeName.BALANCED,
+        ers_mode=ERSModeName.STANDARD,
         push_level=7,  # Conservative setup validation
         objective="Validate setup seed vs real data",
     ),
-    RunProgram.TYRE_DEG: dict(
-        laps_range=(6, 9),
+    RunProgram.TYRE_TEST: dict(
+        laps_range=(8, 12),
         fuel_kg=75.0,
         compound=TyreCompound.C4,    # Soft equivalent
         engine_map=EngineMapName.RACE,
-        ers_mode=ERSModeName.HARVEST,
+        ers_mode=ERSModeName.RECHARGE,
         push_level=8,  # Medium pace for tyre testing
         objective="Measure tyre degradation and brake temps",
     ),
+    RunProgram.TYRE_DEG: dict(
+        laps_range=(10, 15),
+        fuel_kg=80.0,
+        compound=TyreCompound.C4,    # Soft equivalent
+        engine_map=EngineMapName.RACE,
+        ers_mode=ERSModeName.STANDARD,
+        push_level=8,  # Medium pace for tyre degradation
+        objective="Long-run tyre wear analysis",
+    ),
     RunProgram.QUALI_SIM: dict(
-        laps_range=(3, 4),       # out + push + cool
+        laps_range=(2, 4),
         fuel_kg=15.0,
         compound=TyreCompound.C4,    # Soft equivalent
         engine_map=EngineMapName.QUALIFY,
-        ers_mode=ERSModeName.ATTACK,
+        ers_mode=ERSModeName.OVERTAKE,
         push_level=10,  # Maximum attack for qualifying
         objective="Calibrate qualifying reference time",
     ),
-    RunProgram.RACE_TRIM: dict(
-        laps_range=(5, 8),
+    RunProgram.RACE_SIM: dict(
+        laps_range=(15, 25),
         fuel_kg=95.0,
         compound=TyreCompound.C2,    # Hard equivalent
         engine_map=EngineMapName.RACE,
-        ers_mode=ERSModeName.BALANCED,
+        ers_mode=ERSModeName.STANDARD,
         push_level=8,  # Race pace
         objective="Validate full-tank race behavior",
     ),
-    RunProgram.AERO_RND: dict(
-        laps_range=(3, 5),
+    RunProgram.RACE_TRIM: dict(
+        laps_range=(12, 20),
+        fuel_kg=90.0,
+        compound=TyreCompound.C3,    # Medium equivalent
+        engine_map=EngineMapName.RACE,
+        ers_mode=ERSModeName.STANDARD,
+        push_level=8,  # Race trim
+        objective="Race setup validation",
+    ),
+    RunProgram.AERO_TEST: dict(
+        laps_range=(6, 10),
         fuel_kg=40.0,
         compound=TyreCompound.C3,  # Medium equivalent
         engine_map=EngineMapName.PRACTICE,
-        ers_mode=ERSModeName.BALANCED,
+        ers_mode=ERSModeName.STANDARD,
         push_level=6,  # Low pace for aero testing
         objective="Correlate aero/R&D upgrade (placeholder)",
     ),
