@@ -51,6 +51,11 @@ def register_routes(app):
     def circuits_selection():
         return render_template('circuits.html')
 
+    @app.route('/quick-race')
+    def quick_race():
+        """Quick Race - redirects to circuit selection"""
+        return render_template('circuits.html')
+
     @app.route('/race')
     def index():
         return render_template('index.html')
