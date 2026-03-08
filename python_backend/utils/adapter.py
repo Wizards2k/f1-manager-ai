@@ -265,13 +265,11 @@ def racecar_to_car_entry(
         avg_skill = (pilot.velocita + pilot.qualifica) / 2
         # Map: 85→7, 90→8, 95→9, 98→10
         push_level = max(1, min(10, int(7 + (avg_skill - 85) / 5)))
-        logger.info(f"Adapter: {car.team.sigla_scuderia} pilot {pilot.nome} skills={pilot.velocita}/{pilot.qualifica} → push_level={push_level}")
     else:
         # Fallback to car's pace_level
         pace = getattr(car, "pace_level", 5)
         push_level = max(1, min(10, int(pace)))
-        logger.info(f"Adapter: {car.team.sigla_scuderia} using fallback pace_level={pace} → push_level={push_level}")
-
+        
     state = _build_sim_state(car_id, car)
 
     # Calculate team penalties (AI + player use same logic)
