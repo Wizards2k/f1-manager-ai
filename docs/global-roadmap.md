@@ -165,9 +165,8 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 5. **User Experience**: Keyboard navigation, hover effects, status bar
 
 ### 7.3 RaceSimulator backend integration (DA IMPLEMENTARE)
-1. Scheduler sezioni, orchestrazione multi-car, storage `section_progress`, sincronizzazione multiplayer fantasma.
-2. Strategia/Engineer AI: usare output LapSimulator per suggerire setup/strategie e gestire traffico.
-3. QA harness scenari: test automatici (20 auto, DRS train, wet stint) con seed deterministico e utilizzo dei nuovi log.
+1. Strategia/Engineer AI: usare output LapSimulator per suggerire setup/strategie e gestire traffico.
+2. QA harness scenari: test automatici (20 auto, DRS train, wet stint) con seed deterministico e utilizzo dei nuovi log.
 
 ### 7.4 UI/UX & Player Experience (`docs/setup-ui-plan.md`, `docs/setup-engine-spec-v0.1.md`)
 1. HUD aggiornato (eventi Side-by-side, Attempt blocked, cooldown timer, engineer radio).
