@@ -73,6 +73,42 @@ def _load_reference_telemetry(circuit_id: str):
     return normalized
 
 
+def _load_circuit_telemetry_markers(circuit_id: str):
+    if not circuit_id:
+        return []
+    root = Path(__file__).resolve().parents[1]
+    telemetry_path = root / 'data' / 'circuits' / '2025' / f'{circuit_id}_Telemetry.json'
+    if not telemetry_path.exists():
+        return []
+    try:
+        payload = json.loads(telemetry_path.read_text(encoding='utf-8'))
+    except Exception:
+        return []
+    sections = (((payload or {}).get('geometry') or {}).get('sections') or [])
+    markers = []
+    for section in sections:
+        start_m = section.get('start_m')
+        if start_m is None:
+            continue
+        kind = str(section.get('kind') or 'Section')
+        kind_key = kind.strip().lower()
+        corner_number = section.get('corner_number')
+        is_corner = corner_number is not None or 'corner' in kind_key or kind_key.startswith('turn')
+        if not is_corner:
+            continue
+        name = section.get('name') or section.get('id') or 'Section'
+        short_label = f"T{corner_number}" if corner_number else name
+        markers.append({
+            'id': section.get('id') or name,
+            'name': f"Turn {corner_number}" if corner_number else name,
+            'short_label': short_label,
+            'kind': kind,
+            'corner_number': corner_number,
+            'distance_m': round(float(start_m), 1),
+        })
+    return markers
+
+
 def register_routes(app):
     """Registra tutte le route API"""
     
@@ -473,6 +509,17 @@ def register_routes(app):
                 'lap_time_s': session_best.get('lap_time_s') if session_best else None,
             },
             'traces': traces,
+        })
+
+    @app.route('/api/telemetry/circuit-markers')
+    def get_telemetry_circuit_markers():
+        import config
+
+        circuit_id = request.args.get('circuit_id') or getattr(config, 'current_circuit', None)
+        markers = _load_circuit_telemetry_markers(circuit_id)
+        return jsonify({
+            'circuit_id': circuit_id,
+            'markers': markers,
         })
 
     def _validate_setup_payload(setup_payload):

@@ -133,6 +133,7 @@ export class PlayerGarageV3 {
         this.statusTimer = null;
         this.tyreInventoryCache = new Map();
         this.telemetryCache = new Map();
+        this.telemetryCircuitMarkerCache = new Map();
         this.telemetryViewState = null;
         this.bindEvents();
     }
@@ -257,7 +258,8 @@ export class PlayerGarageV3 {
         `;
     }
 
-    buildTelemetryPickerControls(rivalChipOptions, lapChipOptions, rivalValue) {
+    buildTelemetryPickerControls(rivalChipOptions, lapChipOptions, rivalValue, lapSelector = 'best') {
+        const lapPillLabel = lapSelector === 'latest' ? 'LAST' : 'BEST';
         const rivalContent = rivalChipOptions || '<option value="">No rivals</option>';
         return `
             <div class="telemetry-controls-group-v3 telemetry-controls-group-v3--compact telemetry-controls-group-v3--pretty">
@@ -271,8 +273,8 @@ export class PlayerGarageV3 {
                 </label>
                 <label class="telemetry-control-v3 telemetry-control-v3--pretty">
                     <span>Player Lap</span>
-                    <div class="telemetry-select-wrap-v3">
-                        <select class="telemetry-select-v3 telemetry-select-v3--small" data-field="telemetry_lap_selector">
+                    <div class="telemetry-select-wrap-v3 telemetry-select-wrap-v3--tagged" data-pill="${lapPillLabel}">
+                        <select class="telemetry-select-v3 telemetry-select-v3--small telemetry-select-v3--tagged" data-field="telemetry_lap_selector">
                             ${lapChipOptions}
                         </select>
                     </div>
@@ -2125,6 +2127,37 @@ export class PlayerGarageV3 {
         return data;
     }
 
+    async fetchTelemetryCircuitMarkers(circuitId) {
+        const resolvedCircuitId = circuitId || this.getResolvedCircuitId();
+        if (!resolvedCircuitId) return [];
+        if (this.telemetryCircuitMarkerCache.has(resolvedCircuitId)) {
+            return this.telemetryCircuitMarkerCache.get(resolvedCircuitId);
+        }
+        const res = await fetch(`/api/telemetry/circuit-markers?circuit_id=${encodeURIComponent(resolvedCircuitId)}`);
+        if (!res.ok) throw new Error('Circuit markers unavailable');
+        const data = await res.json();
+        const markers = (Array.isArray(data?.markers) ? data.markers : [])
+            .map((marker) => {
+                const cornerNumber = Number(marker?.corner_number);
+                const name = String(marker?.name || '').trim();
+                const shortLabel = String(marker?.short_label || '').trim();
+                const kind = String(marker?.kind || '').trim().toLowerCase();
+                const hasCornerNumber = Number.isFinite(cornerNumber) && cornerNumber > 0;
+                const isStraightLabel = /straight/i.test(name) || /straight/i.test(shortLabel) || kind.includes('straight');
+                const isCornerLike = hasCornerNumber || kind.includes('corner') || kind.startsWith('turn');
+                if (!isCornerLike && isStraightLabel) return null;
+                return {
+                    ...marker,
+                    corner_number: hasCornerNumber ? cornerNumber : null,
+                    short_label: hasCornerNumber ? `T${cornerNumber}` : (isStraightLabel ? '' : shortLabel),
+                    name: hasCornerNumber ? `Turn ${cornerNumber}` : (isStraightLabel ? '' : name),
+                };
+            })
+            .filter((marker) => marker && (marker.corner_number || marker.short_label || marker.name));
+        this.telemetryCircuitMarkerCache.set(resolvedCircuitId, markers);
+        return markers;
+    }
+
     formatLapTime(lapTimeS) {
         const numeric = Number(lapTimeS);
         if (!Number.isFinite(numeric) || numeric <= 0) return '--';
@@ -2262,9 +2295,31 @@ export class PlayerGarageV3 {
         return `${horizontal}${vertical}`;
     }
 
-    buildTelemetryChartSvg(traces, valueKey, { width = 720, height = 220, maxValue = 360, minValue = 0 } = {}) {
+    buildTelemetryTrackMarkerMarkup(markers, geometry, range) {
+        if (!Array.isArray(markers) || !markers.length) return '';
+        return markers.map((marker) => {
+            const distance = Number(marker?.distance_m || 0);
+            if (distance <= range.minDistance || distance >= range.maxDistance) return '';
+            const x = geometry.padX + ((distance - range.minDistance) / Math.max(1, range.maxDistance - range.minDistance)) * geometry.usableWidth;
+            const label = marker.short_label || marker.name || 'Marker';
+            const title = marker.name || label;
+            if (!label || /straight/i.test(label) || /straight/i.test(title)) return '';
+            return `
+                <g class="telemetry-track-marker-svg" transform="translate(${x.toFixed(2)},0)">
+                    <line x1="0" y1="18" x2="0" y2="${(geometry.height - 18).toFixed(2)}" stroke="rgba(255,255,255,0.10)" stroke-width="1" stroke-dasharray="3 5"></line>
+                    <text x="0" y="14" text-anchor="middle" fill="#7f8ba0" font-size="9" font-weight="700">${label}</text>
+                    <title>${title}</title>
+                </g>
+            `;
+        }).join('');
+    }
+
+    buildTelemetryChartSvg(traces, valueKey, { width = 720, height = 220, maxValue = 360, minValue = 0, trackMarkers = [] } = {}) {
         const orderedTraces = [...traces];
+        const geometry = this.getTelemetryChartGeometry(width, height);
+        const range = this.getTelemetryDistanceRange(traces);
         const gridMarkup = this.buildTelemetryGridMarkup(width, height, valueKey === 'speed_kph' ? 6 : 4, valueKey === 'speed_kph' ? 8 : 6);
+        const markerMarkup = valueKey === 'speed_kph' ? this.buildTelemetryTrackMarkerMarkup(trackMarkers, geometry, range) : '';
         const lineMarkup = orderedTraces.map((trace, index) => {
             const path = this.buildTelemetryTracePath(trace.points || [], valueKey, width, height, maxValue, minValue);
             if (!path) return '';
@@ -2282,6 +2337,7 @@ export class PlayerGarageV3 {
             <svg class="telemetry-chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
                 <rect x="0" y="0" width="${width}" height="${height}" rx="14" ry="14" fill="#171717"></rect>
                 ${gridMarkup}
+                ${markerMarkup}
                 <line x1="16" y1="16" x2="16" y2="${height - 16}" stroke="#3a3a3a" stroke-width="1"></line>
                 <line x1="16" y1="${height - 16}" x2="${width - 16}" y2="${height - 16}" stroke="#3a3a3a" stroke-width="1"></line>
                 ${lineMarkup}
@@ -2293,22 +2349,35 @@ export class PlayerGarageV3 {
         const width = options.width || 720;
         const height = options.height || 220;
         const maxValue = this.getTelemetryChartMax(traces, valueKey, options.maxValue || 100);
+        const range = this.getTelemetryDistanceRange(traces);
         return {
             chartKey: options.chartKey || valueKey,
             chartTitle,
             valueKey,
             unit: options.unit || '',
+            trackMarkers: options.trackMarkers || [],
             maxValue,
             minValue: options.minValue || 0,
             geometry: this.getTelemetryChartGeometry(width, height),
-            range: this.getTelemetryDistanceRange(traces),
+            range,
             traces: traces.map((trace, index) => ({
                 id: trace.car_id || `trace-${index}`,
                 label: trace.driver_name || `Driver #${trace.driver_number}`,
                 color: trace.display_color || this.getTelemetryRoleColor(trace.role_label, index),
+                roleLabel: trace.role_label || '',
+                lapTimeS: Number(trace.lap_time_s || 0) || null,
                 points: trace.points || [],
             })),
         };
+    }
+
+    getTelemetryEstimatedElapsedAtPoint(targetPoint, lapTimeS, range) {
+        const lapTime = Number(lapTimeS || 0);
+        if (!targetPoint || !Number.isFinite(lapTime) || lapTime <= 0 || !range) return null;
+        const distance = Number(targetPoint?.distance_m || 0);
+        const span = Math.max(1, Number(range.maxDistance || 0) - Number(range.minDistance || 0));
+        const progress = Math.max(0, Math.min(1, (distance - Number(range.minDistance || 0)) / span));
+        return lapTime * progress;
     }
 
     renderTelemetryHoverAtDistance(distance) {
@@ -2334,23 +2403,39 @@ export class PlayerGarageV3 {
                 return {
                     label: trace.label,
                     color: trace.color,
+                    roleLabel: trace.roleLabel,
                     point: nearest,
                     x: coords.x,
                     y: coords.y,
                     value: coords.value,
+                    elapsedS: this.getTelemetryEstimatedElapsedAtPoint(nearest, trace.lapTimeS, model.range),
                 };
             }).filter(Boolean);
 
             if (!samples.length) return;
             const anchor = samples[0];
+            const baseline = samples[0];
             const markers = samples.map(sample => `<div class="telemetry-hover-marker" style="left:${(sample.x / model.geometry.width) * 100}%;top:${(sample.y / model.geometry.height) * 100}%;border-color:${sample.color};box-shadow:0 0 0 3px ${sample.color}22;"></div>`).join('');
-            const rows = samples.map(sample => `<div class="telemetry-hover-row"><span class="telemetry-hover-dot" style="background:${sample.color}"></span><span>${sample.label}</span><strong>${sample.value.toFixed(1)}${model.unit}</strong></div>`).join('');
+            const activeMarker = (model.trackMarkers || []).reduce((best, marker) => {
+                const delta = Math.abs(Number(marker?.distance_m || 0) - distance);
+                if (!best || delta < best.delta) return { marker, delta };
+                return best;
+            }, null);
+            const markerLabel = activeMarker && activeMarker.delta <= 120 ? (activeMarker.marker.name || activeMarker.marker.short_label) : '';
+            const rows = samples.map((sample, index) => {
+                const deltaValue = index === 0 ? null : (sample.value - baseline.value);
+                const deltaTime = index === 0 || sample.elapsedS == null || baseline.elapsedS == null ? null : (sample.elapsedS - baseline.elapsedS);
+                const deltaLabel = deltaValue == null ? '' : `<em class="telemetry-hover-delta ${deltaValue >= 0 ? 'is-positive' : 'is-negative'}">${deltaValue >= 0 ? '+' : ''}${deltaValue.toFixed(1)}${model.unit}</em>`;
+                const deltaTimeLabel = deltaTime == null ? '' : `<em class="telemetry-hover-time-delta ${deltaTime >= 0 ? 'is-positive' : 'is-negative'}">${deltaTime >= 0 ? '+' : ''}${deltaTime.toFixed(3)}s</em>`;
+                return `<div class="telemetry-hover-row"><span class="telemetry-hover-dot" style="background:${sample.color}"></span><span class="telemetry-hover-labels"><span>${sample.label}</span>${sample.roleLabel ? `<small>${sample.roleLabel}</small>` : ''}</span><span class="telemetry-hover-values"><strong>${sample.value.toFixed(1)}${model.unit}</strong>${deltaLabel}${deltaTimeLabel}</span></div>`;
+            }).join('');
             overlay.innerHTML = `
                 <div class="telemetry-hover-line" style="left:${(anchor.x / model.geometry.width) * 100}%"></div>
                 ${markers}
                 <div class="telemetry-hover-tooltip" style="left:clamp(12px, calc(${(anchor.x / model.geometry.width) * 100}% + 10px), calc(100% - 180px));top:12px;">
                     <div class="telemetry-hover-title">${model.chartTitle}</div>
                     <div class="telemetry-hover-distance">${(anchor.point.distance_m || 0).toFixed(1)} m</div>
+                    ${markerLabel ? `<div class="telemetry-hover-corner">${markerLabel}</div>` : ''}
                     ${rows}
                 </div>
             `;
@@ -2407,6 +2492,7 @@ export class PlayerGarageV3 {
         const lapSelector = car.telemetry_lap_selector || 'best';
         let playerTelemetryData = null;
         let compareTelemetryData = null;
+        let circuitMarkers = [];
         try {
             playerTelemetryData = await this.fetchTelemetryCompare(car.driver_number, [car.driver_number], lapSelector);
             const sessionBestCompareId = String(playerTelemetryData?.session_best?.car_id || '');
@@ -2414,6 +2500,7 @@ export class PlayerGarageV3 {
             const compareIds = [];
             if (options.teammate?.driver_number) compareIds.push(options.teammate.driver_number);
             if (effectiveRivalValue) compareIds.push(effectiveRivalValue);
+            circuitMarkers = await this.fetchTelemetryCircuitMarkers(playerTelemetryData?.circuit_id || this.getResolvedCircuitId());
             compareTelemetryData = compareIds.length
                 ? await this.fetchTelemetryCompare(car.driver_number, compareIds, 'best')
                 : { traces: [], session_best: null };
@@ -2484,7 +2571,7 @@ export class PlayerGarageV3 {
                             <button type="button" class="telemetry-info-badge-v3 telemetry-info-badge-v3--action ${rivalValue === '__session_best__' ? 'is-active' : ''}" data-field="telemetry_rival_target" data-value="__session_best__"><span>Session Best</span><strong>${this.formatLapTime(telemetryData?.session_best?.lap_time_s)}</strong></button>
                             ${driverBadges}
                         </div>
-                        ${this.buildTelemetryPickerControls(rivalOptions, lapOptions, rivalValue)}
+                        ${this.buildTelemetryPickerControls(rivalOptions, lapOptions, rivalValue, lapSelector)}
                     </div>
                     <div class="telemetry-empty-v3">No telemetry available yet. Send the car on track and complete a timed lap.</div>
                 </div>
@@ -2494,11 +2581,11 @@ export class PlayerGarageV3 {
         const throttleMax = this.getTelemetryChartMax(traces, 'throttle_pct', 100);
         const brakeMax = this.getTelemetryChartMax(traces, 'brake_pct', 100);
         this.telemetryViewState = {
-            speed: this.buildTelemetryHoverModel(traces, 'speed_kph', 'Speed', { chartKey: 'speed', height: 240, minValue: speedBounds.minValue, maxValue: speedBounds.maxValue, unit: ' km/h' }),
+            speed: this.buildTelemetryHoverModel(traces, 'speed_kph', 'Speed', { chartKey: 'speed', height: 240, minValue: speedBounds.minValue, maxValue: speedBounds.maxValue, unit: ' km/h', trackMarkers: circuitMarkers }),
             throttle: this.buildTelemetryHoverModel(traces, 'throttle_pct', 'Throttle', { chartKey: 'throttle', height: 150, maxValue: throttleMax, unit: '%' }),
             brake: this.buildTelemetryHoverModel(traces, 'brake_pct', 'Brake', { chartKey: 'brake', height: 150, maxValue: brakeMax, unit: '%' }),
         };
-        const speedSvg = this.buildTelemetryChartSvg(traces, 'speed_kph', { height: 240, minValue: speedBounds.minValue, maxValue: speedBounds.maxValue });
+        const speedSvg = this.buildTelemetryChartSvg(traces, 'speed_kph', { height: 240, minValue: speedBounds.minValue, maxValue: speedBounds.maxValue, trackMarkers: circuitMarkers });
         const throttleSvg = this.buildTelemetryChartSvg(traces, 'throttle_pct', { height: 150, maxValue: throttleMax });
         const brakeSvg = this.buildTelemetryChartSvg(traces, 'brake_pct', { height: 150, maxValue: brakeMax });
         return `
@@ -2508,7 +2595,7 @@ export class PlayerGarageV3 {
                         <button type="button" class="telemetry-info-badge-v3 telemetry-info-badge-v3--action ${rivalValue === '__session_best__' ? 'is-active' : ''}" data-field="telemetry_rival_target" data-value="__session_best__"><span>Session Best</span><strong>${this.formatLapTime(telemetryData?.session_best?.lap_time_s)}</strong></button>
                         ${driverBadges}
                     </div>
-                    ${this.buildTelemetryPickerControls(rivalOptions, lapOptions, rivalValue)}
+                    ${this.buildTelemetryPickerControls(rivalOptions, lapOptions, rivalValue, lapSelector)}
                     <div class="telemetry-legend-v3">${this.buildTelemetryLegend(traces)}</div>
                 </div>
                 <div class="telemetry-chart-card-v3">

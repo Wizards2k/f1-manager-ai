@@ -732,17 +732,6 @@ class SessionBridge:
 
                 ts.lap_section_results.append(result)
 
-                # DEBUG: Log telemetry point sample to dedicated file
-                if ts.current_section_idx < 3:
-                    import os
-                    import json
-                    log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
-                    os.makedirs(log_dir, exist_ok=True)
-                    log_file = os.path.join(log_dir, 'telemetry_debug.log')
-                    sample_points = getattr(result, 'telemetry_points', [])[:3]
-                    with open(log_file, 'a') as f:
-                        f.write(f"SECTION car={car_id} section={ts.current_section_idx} points_count={len(getattr(result, 'telemetry_points', []))} sample={json.dumps(sample_points)}\n")
-
                 # Track sector time accumulation
                 ts.sector_dt_acc += result.dt_s
 
