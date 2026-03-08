@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Iterable, Optional
 
 from models.tyre_inventory import DriverTyreInventory, TyreSet
 
@@ -58,6 +58,21 @@ class TyreInventoryService:
         store = self._load_store()
         store[self._inventory_key(inventory.driver_id, inventory.circuit_id)] = inventory.to_dict()
         self._save_store()
+
+    def reset_inventories_for_circuit(self, circuit_id: str) -> None:
+        """Drop persisted/cache inventories for a circuit so a new session starts fresh."""
+
+        circuit_key = str(circuit_id or "").strip()
+        if not circuit_key:
+            return
+
+        store = self._load_store()
+        keys_to_remove = [key for key in list(store.keys()) if key.endswith(f":{circuit_key}")]
+        for key in keys_to_remove:
+            store.pop(key, None)
+            self._inventory_cache.pop(key, None)
+        if keys_to_remove:
+            self._save_store()
 
     # ------------------------------------------------------------------
     # Public API
@@ -152,6 +167,41 @@ class TyreInventoryService:
         tyre_set.is_available = False
         self._persist_inventory(inventory)
         return tyre_set
+
+    def reserve_best_available_set_with_fallback(
+        self,
+        driver_id: str,
+        circuit_id: str,
+        compound: str,
+        fallback_compounds: Optional[Iterable[str]] = None,
+        preferred_set_id: Optional[str] = None,
+        minimum_condition: float = 40.0,
+    ) -> TyreSet:
+        """Reserve the best available set, trying the requested compound first then fallbacks."""
+
+        requested = str(compound or "").strip().lower()
+        ordered_compounds = [requested]
+        for candidate in fallback_compounds or []:
+            normalized = str(candidate or "").strip().lower()
+            if normalized and normalized not in ordered_compounds:
+                ordered_compounds.append(normalized)
+
+        last_error: Optional[Exception] = None
+        for candidate in ordered_compounds:
+            try:
+                return self.reserve_best_available_set(
+                    driver_id=driver_id,
+                    circuit_id=circuit_id,
+                    compound=candidate,
+                    preferred_set_id=preferred_set_id,
+                    minimum_condition=minimum_condition,
+                )
+            except ValueError as exc:
+                last_error = exc
+
+        if last_error is not None:
+            raise last_error
+        raise ValueError(f"No available tyre sets for driver {driver_id}")
 
     def complete_stint(
         self,

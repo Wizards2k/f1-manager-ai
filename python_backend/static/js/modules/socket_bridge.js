@@ -30,6 +30,7 @@ export class SocketBridge {
 
         const seenPlayerDrivers = new Set();
         cars.forEach(car => {
+            this.state.setCar?.(car);
             if (car.is_player_controlled) {
                 // Clear pendingSend only when server confirms car is on track (no longer pending)
                 const isOnTrack = car.is_on_track === true || (car.state && car.state !== 'BOX');
@@ -73,6 +74,7 @@ export class SocketBridge {
             const cars = await fetch('/api/cars').then(response => response.json());
             const playerCars = [];
             (cars || []).forEach(car => {
+                this.state.setCar?.(car);
                 if (car.is_player_controlled) {
                     this.playerGarage.applyLocalCarState(car.driver_number, car);
                     this.state.setPlayerCar(car);
