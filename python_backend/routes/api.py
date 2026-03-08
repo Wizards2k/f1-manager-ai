@@ -17,6 +17,7 @@ from utils import (
     mark_simulation_pending,
 )
 from services.setup_engine_service import SetupEngineService
+from services.tyre_inventory_service import TyreInventoryService
 from utils.debug_log import log_debug_event
 
 
@@ -39,6 +40,9 @@ def _find_team_by_id(team_id: int):
 
 def _error_response(message: str, status: int = 400):
     return jsonify({'error': message}), status
+
+tyre_inventory_service = TyreInventoryService()
+
 
 def register_routes(app):
     """Registra tutte le route API"""
@@ -218,6 +222,59 @@ def register_routes(app):
                 break
         return jsonify(info)
 
+    @app.route('/api/driver/<driver_id>/tyre-inventory/<circuit_id>')
+    def get_driver_tyre_inventory(driver_id, circuit_id):
+        try:
+            inventory = tyre_inventory_service.get_inventory(driver_id, circuit_id)
+            return jsonify(inventory.to_dict())
+        except FileNotFoundError as exc:
+            return _error_response(str(exc), 404)
+        except ValueError as exc:
+            return _error_response(str(exc), 400)
+        except Exception as exc:
+            circuit_logger.exception("Failed to load tyre inventory", exc_info=exc)
+            return _error_response('Failed to load tyre inventory', 500)
+
+    @app.route('/api/driver/<driver_id>/tyre-usage', methods=['POST'])
+    def update_driver_tyre_usage(driver_id):
+        payload = request.get_json(silent=True) or {}
+        circuit_id = payload.get('circuit_id')
+        set_id = payload.get('set_id')
+        if not circuit_id or not set_id:
+            return _error_response('circuit_id and set_id are required')
+
+        try:
+            if 'available' in payload:
+                tyre_set = tyre_inventory_service.mark_availability(
+                    driver_id,
+                    circuit_id,
+                    set_id,
+                    available=bool(payload.get('available')),
+                )
+            else:
+                laps = payload.get('laps')
+                if laps is None:
+                    return _error_response('laps is required when updating wear')
+                wear_factor = float(payload.get('wear_factor', 1.0))
+                tyre_set = tyre_inventory_service.apply_usage(
+                    driver_id,
+                    circuit_id,
+                    set_id,
+                    laps=int(laps),
+                    wear_factor=wear_factor,
+                )
+
+            return jsonify({
+                'driver_id': driver_id,
+                'circuit_id': circuit_id,
+                'set': tyre_set.to_dict(),
+            })
+        except (ValueError, FileNotFoundError) as exc:
+            return _error_response(str(exc), 400)
+        except Exception as exc:
+            circuit_logger.exception('Failed to update tyre usage', exc_info=exc)
+            return _error_response('Failed to update tyre usage', 500)
+
     @app.route('/api/toggle_pause', methods=['POST'])
     def toggle_pause_route():
         """Attiva/disattiva la pausa"""
@@ -378,7 +435,7 @@ def register_routes(app):
         is_in_box = car.state == CarState.BOX
         allowed_fields = {'pace_level', 'ice_mode', 'ers_mode'}
         if is_in_box:
-            allowed_fields |= {'tyre_compound', 'fuel_percent', 'stint_target_laps'}
+            allowed_fields |= {'tyre_compound', 'tyre_set_id', 'fuel_percent', 'stint_target_laps'}
 
         invalid_fields = [key for key in payload.keys() if key not in allowed_fields]
         if invalid_fields:
@@ -416,6 +473,29 @@ def register_routes(app):
             car.ers_mode = normalized_ers
             car.player_config['ers_mode'] = normalized_ers
             updates_applied['ers_mode'] = normalized_ers
+
+        if 'tyre_set_id' in payload:
+            try:
+                import config
+
+                circuit_id = getattr(config, 'current_circuit', None)
+                if not circuit_id:
+                    return _error_response('Current circuit unavailable for tyre selection', 409)
+
+                tyre_set_id = str(payload['tyre_set_id']).strip()
+                inventory = tyre_inventory_service.get_inventory(str(driver_number), circuit_id)
+                tyre_set = inventory.find_set(tyre_set_id)
+                if tyre_set is None:
+                    return _error_response(f'tyre_set_id {tyre_set_id} not found for driver {driver_number}')
+                if not tyre_set.is_available:
+                    return _error_response(f'tyre_set_id {tyre_set_id} is not available')
+
+                car.player_config['tyre_set_id'] = tyre_set.set_id
+                car.player_config['tyre_compound'] = tyre_set.compound
+                updates_applied['tyre_set_id'] = tyre_set.set_id
+                updates_applied['tyre_compound'] = tyre_set.compound
+            except (ValueError, FileNotFoundError) as exc:
+                return _error_response(str(exc), 400)
 
         if 'tyre_compound' in payload:
             compound_key = str(payload['tyre_compound']).lower()

@@ -25,6 +25,7 @@ from lap_simulator.ai_data_types import (
     AIDriverConfig,
     AITeamConfig,
     RunProgram,
+    RUN_PROGRAM_DEFAULTS,
     SessionType,
 )
 from utils.ai_setup_search import AISetupState
@@ -60,6 +61,7 @@ from utils.adapter import (
     set_racecar_phase,
     sim_compound_to_game,
 )
+from services.tyre_inventory_service import TyreInventoryService
 from models.models import TireCompound as GameTireCompound
 from debug_log import log_debug_event
 
@@ -321,6 +323,7 @@ class SessionBridge:
 
     def __init__(self):
         self.active = False
+        self.circuit_id: Optional[str] = None
         self.circuit_config: Optional[CircuitConfig] = None
         self.sections: List[SectionContext] = []
         self.env = EnvContext()
@@ -340,6 +343,7 @@ class SessionBridge:
         self.session_kind: str = "FP1"
         self._ai_report_enabled = os.getenv("F1_AI_SETUP_REPORT", "0").lower() in {"1", "true", "yes"}
         self._event_feed: List[Dict[str, Any]] = []
+        self.tyre_inventory_service = TyreInventoryService()
 
     # ------------------------------------------------------------------
     # Initialization
@@ -351,6 +355,7 @@ class SessionBridge:
         race_cars: list,
         session_type: str = "FP1",
     ) -> bool:
+        self.circuit_id = circuit_id
         try:
             self.circuit_config = load_circuit_config(circuit_id)
         except Exception as e:
@@ -505,6 +510,47 @@ class SessionBridge:
                 if compound == sim_value:
                     return role.lower()
         return sim_compound_to_game(sim_compound)
+
+    def _resolve_program_compound_label(self, run_plan) -> str:
+        """Resolve intended game-level compound for a run without overfitting to event nomination."""
+
+        defaults = RUN_PROGRAM_DEFAULTS.get(getattr(run_plan, 'program', None), {})
+        default_compound = defaults.get('compound')
+        if default_compound is not None:
+            return sim_compound_to_game(default_compound)
+        return sim_compound_to_game(getattr(run_plan, 'compound', None))
+
+    def _reserve_ai_tyre_set(self, car_id: str, run_plan) -> Optional[tuple[str, str]]:
+        if not self.circuit_id:
+            return None
+        race_car = self.race_cars_map.get(str(car_id))
+        preferred_set_id = None
+        if race_car and hasattr(race_car, 'player_config'):
+            preferred_set_id = race_car.player_config.get('tyre_set_id')
+        compound_label = self._resolve_program_compound_label(run_plan)
+        tyre_set = self.tyre_inventory_service.reserve_best_available_set(
+            driver_id=str(car_id),
+            circuit_id=self.circuit_id,
+            compound=compound_label,
+            preferred_set_id=preferred_set_id,
+            minimum_condition=40.0,
+        )
+        reused = bool(preferred_set_id and tyre_set.set_id == preferred_set_id)
+        log_debug_event(
+            'ai_tyre_reserved',
+            car_id=str(car_id),
+            circuit_id=self.circuit_id,
+            compound_requested=compound_label,
+            preferred_set_id=preferred_set_id,
+            tyre_set_id=tyre_set.set_id,
+            reused=reused,
+            tyre_compound=tyre_set.compound,
+            condition=round(tyre_set.condition, 2),
+            heat_cycles=tyre_set.heat_cycles,
+            laps_completed=tyre_set.laps_completed,
+            is_q3_reserve=tyre_set.is_q3_reserve,
+        )
+        return tyre_set.set_id, tyre_set.compound
 
     # ------------------------------------------------------------------
     # Tick — the main loop (spec §2.1)
@@ -1280,11 +1326,29 @@ class SessionBridge:
                     continue
                 run_plan = engine.session_plan.runs[run_idx]
 
+                try:
+                    reserved_tyre = self._reserve_ai_tyre_set(car_id, run_plan)
+                except Exception as exc:
+                    log_debug_event(
+                        'ai_tyre_reserve_failed',
+                        car_id=str(car_id),
+                        circuit_id=self.circuit_id,
+                        compound_requested=self._resolve_program_compound_label(run_plan),
+                        error=str(exc),
+                    )
+                    logger.warning("AI dispatch: failed to reserve tyre set for %s: %s", car_id, exc)
+                    sr.dispatched = True
+                    continue
+
+                reserved_set_id = reserved_tyre[0] if reserved_tyre else None
+                reserved_compound = reserved_tyre[1] if reserved_tyre else self._resolve_program_compound_label(run_plan)
+
                 # Sync RaceCar/current_tire so frontend badges mirror actual compound
                 try:
-                    label = self._resolve_game_compound_label(run_plan.compound)
-                    game_compound = GameTireCompound(label)
+                    game_compound = GameTireCompound(reserved_compound)
                     race_car.set_tire_compound(game_compound)
+                    race_car.player_config['tyre_compound'] = reserved_compound
+                    race_car.player_config['tyre_set_id'] = reserved_set_id
                 except Exception as exc:
                     logger.warning("AI dispatch: failed to sync tyre compound for %s: %s", car_id, exc)
 
@@ -1318,6 +1382,23 @@ class SessionBridge:
                         len(engine.session_plan.runs),
                         run_plan.program.value, session_time, sr.planned_start_s,
                     )
+                elif reserved_set_id and self.circuit_id:
+                    try:
+                        self.tyre_inventory_service.mark_availability(
+                            str(car_id),
+                            self.circuit_id,
+                            reserved_set_id,
+                            available=True,
+                        )
+                        log_debug_event(
+                            'ai_tyre_released',
+                            car_id=str(car_id),
+                            circuit_id=self.circuit_id,
+                            tyre_set_id=reserved_set_id,
+                            reason='dispatch_failed',
+                        )
+                    except Exception as exc:
+                        logger.warning("AI dispatch: failed to release tyre set %s for %s: %s", reserved_set_id, car_id, exc)
 
     # ------------------------------------------------------------------
     # Internal: complete run
@@ -1351,6 +1432,52 @@ class SessionBridge:
                 best_lap_s=best_lap, km_driven=km_driven,
                 pit_work_duration_s=30.0,
             )
+
+        if race_car and self.circuit_id:
+            tyre_set_id = race_car.player_config.get('tyre_set_id') if hasattr(race_car, 'player_config') else None
+            if tyre_set_id:
+                try:
+                    previous_set_id = tyre_set_id
+                    inventory = self.tyre_inventory_service.get_inventory(str(car_id), self.circuit_id)
+                    current_set = inventory.find_set(str(tyre_set_id))
+                    before_condition = round(current_set.condition, 2) if current_set else None
+                    before_heat_cycles = current_set.heat_cycles if current_set else None
+                    before_laps = current_set.laps_completed if current_set else None
+                    self.tyre_inventory_service.complete_stint(
+                        driver_id=str(car_id),
+                        circuit_id=self.circuit_id,
+                        set_id=str(tyre_set_id),
+                        laps=laps_done,
+                    )
+                    updated_inventory = self.tyre_inventory_service.get_inventory(str(car_id), self.circuit_id)
+                    updated_set = updated_inventory.find_set(str(tyre_set_id))
+                    log_debug_event(
+                        'ai_tyre_stint_completed',
+                        car_id=str(car_id),
+                        circuit_id=self.circuit_id,
+                        tyre_set_id=str(tyre_set_id),
+                        reused=bool(previous_set_id and str(previous_set_id) == str(tyre_set_id) and (before_heat_cycles or 0) > 0),
+                        tyre_compound=getattr(race_car.current_tire, 'value', None),
+                        laps_done=laps_done,
+                        best_lap_s=round(best_lap, 3) if best_lap else 0.0,
+                        km_driven=round(km_driven, 3),
+                        condition_before=before_condition,
+                        condition_after=round(updated_set.condition, 2) if updated_set else None,
+                        heat_cycles_before=before_heat_cycles,
+                        heat_cycles_after=updated_set.heat_cycles if updated_set else None,
+                        laps_completed_before=before_laps,
+                        laps_completed_after=updated_set.laps_completed if updated_set else None,
+                    )
+                except Exception as exc:
+                    log_debug_event(
+                        'ai_tyre_stint_update_failed',
+                        car_id=str(car_id),
+                        circuit_id=self.circuit_id,
+                        tyre_set_id=str(tyre_set_id),
+                        laps_done=laps_done,
+                        error=str(exc),
+                    )
+                    logger.warning("AI stint completion: failed to update tyre set %s for %s: %s", tyre_set_id, car_id, exc)
 
         # AI Setup Search: process run → adjust sliders → check convergence
         ai_ss = self._ai_setup_states.get(car_id)

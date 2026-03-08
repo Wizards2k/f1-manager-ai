@@ -38,11 +38,7 @@ export class PlayerGarageV3 {
                 pillLabel: 'MGU-H assist',
             },
         };
-        this.tyreOptions = [
-            { value: 'soft', label: 'Soft' },
-            { value: 'medium', label: 'Medium' },
-            { value: 'hard', label: 'Hard' }
-        ];
+        this.tyreOptions = [];
         this.iceOptions = [
             { label: 'SAFETY CAR', value: 'SAFETY_CAR' },
             { label: 'PRACTICE', value: 'PRACTICE' },
@@ -135,7 +131,171 @@ export class PlayerGarageV3 {
         this.lastDriverFeedback = new Map();
         this.RUNTIME_FIELDS = new Set(['pace_level', 'ice_mode', 'ers_mode']);
         this.statusTimer = null;
+        this.tyreInventoryCache = new Map();
         this.bindEvents();
+    }
+
+    async loadTyreInventory(driverId) {
+        try {
+            const circuitId = this.getResolvedCircuitId();
+            if (!driverId || !circuitId) return null;
+            const cacheKey = `${driverId}:${circuitId}`;
+            if (this.tyreInventoryCache.has(cacheKey)) {
+                return this.tyreInventoryCache.get(cacheKey);
+            }
+            const res = await fetch(`/api/driver/${driverId}/tyre-inventory/${circuitId}`);
+            if (!res.ok) throw new Error('Tyre inventory unavailable');
+            const data = await res.json();
+            this.tyreInventoryCache.set(cacheKey, data);
+            return data;
+        } catch (err) {
+            console.warn('[GarageV3] Failed to load tyre inventory:', err);
+            return null;
+        }
+    }
+
+    getResolvedCircuitId() {
+        const stateCircuit = this.state?.getCircuitId?.() || this.state?.circuitId;
+        if (stateCircuit) return stateCircuit;
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('circuit');
+        }
+        return null;
+    }
+
+    getTyreInventory(driverId) {
+        const circuitId = this.getResolvedCircuitId();
+        if (!driverId || !circuitId) return null;
+        return this.tyreInventoryCache.get(`${driverId}:${circuitId}`) || null;
+    }
+
+    primeTyreInventory(driverId, inventory) {
+        const circuitId = inventory?.circuit_id || this.getResolvedCircuitId();
+        if (!driverId || !circuitId || !inventory) return;
+        this.tyreInventoryCache.set(`${driverId}:${circuitId}`, inventory);
+    }
+
+    formatTyreCompoundLabel(compound) {
+        if (!compound) return 'Tyre';
+        const value = String(compound).replace(/_/g, ' ').toLowerCase();
+        return value.charAt(0).toUpperCase() + value.slice(1);
+    }
+
+    getTyreSetConditionLabel(tyreSet) {
+        const condition = typeof tyreSet?.condition === 'number' ? Math.round(tyreSet.condition) : null;
+        return condition == null ? '--%' : `${condition}%`;
+    }
+
+    getTyreSetStatusLabel(tyreSet) {
+        if (!tyreSet) return 'Unknown';
+        if (tyreSet.is_q3_reserve) return 'Q3 reserve';
+        if (tyreSet.is_available === false) return 'Unavailable';
+        return 'Available';
+    }
+
+    shouldShowWetTyres() {
+        return false;
+    }
+
+    getVisibleTyreSets(sets = []) {
+        if (this.shouldShowWetTyres()) {
+            return [...sets];
+        }
+        return sets.filter(tyreSet => !['intermediate', 'wet'].includes(String(tyreSet?.compound || '').toLowerCase()));
+    }
+
+    sortTyreSets(sets = []) {
+        return [...sets].sort((a, b) => {
+            const availabilityDelta = Number(b?.is_available ?? false) - Number(a?.is_available ?? false);
+            if (availabilityDelta !== 0) return availabilityDelta;
+            const compoundDelta = String(a?.compound || '').localeCompare(String(b?.compound || ''));
+            if (compoundDelta !== 0) return compoundDelta;
+            const conditionDelta = (b?.condition ?? -1) - (a?.condition ?? -1);
+            if (conditionDelta !== 0) return conditionDelta;
+            return String(a?.set_id || '').localeCompare(String(b?.set_id || ''));
+        });
+    }
+
+    buildTyreSelect(car, tyreChoice, isBox) {
+        const inventory = this.getTyreInventory(car.driver_number);
+        const sets = this.sortTyreSets(this.getVisibleTyreSets(inventory?.sets || []));
+        if (!sets.length) {
+            return `
+                <select class="select-compact-v3" data-field="tyre_compound" ${isBox ? '' : 'disabled'}>
+                    <option value="${tyreChoice}">${this.formatTyreCompoundLabel(tyreChoice)}</option>
+                </select>
+            `;
+        }
+
+        const preferredAvailableSet = sets.find(tyreSet => tyreSet.compound === tyreChoice && tyreSet.is_available !== false)
+            || sets.find(tyreSet => tyreSet.is_available !== false)
+            || sets[0];
+        const selectedSetId = car.player_config?.tyre_set_id || preferredAvailableSet?.set_id || null;
+        const grouped = sets.reduce((acc, tyreSet) => {
+            const key = tyreSet.compound || 'other';
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(tyreSet);
+            return acc;
+        }, {});
+
+        const options = Object.entries(grouped).map(([compound, compoundSets]) => {
+            const optionRows = compoundSets.map(tyreSet => {
+                const selected = selectedSetId ? tyreSet.set_id === selectedSetId : false;
+                const statusSuffix = tyreSet.is_available === false ? ' · unavailable' : tyreSet.is_q3_reserve ? ' · Q3' : '';
+                return `<option value="${tyreSet.set_id}" data-compound="${tyreSet.compound}" ${selected ? 'selected' : ''} ${!isBox || tyreSet.is_available === false ? 'disabled' : ''}>${tyreSet.set_id} · ${this.getTyreSetConditionLabel(tyreSet)}${statusSuffix}</option>`;
+            }).join('');
+            return `<optgroup label="${this.formatTyreCompoundLabel(compound)}">${optionRows}</optgroup>`;
+        }).join('');
+
+        return `
+            <select class="select-compact-v3" data-field="tyre_set_id" ${isBox ? '' : 'disabled'}>
+                ${options}
+            </select>
+        `;
+    }
+
+    buildTyreInventoryPanel(car) {
+        const inventory = this.getTyreInventory(car.driver_number);
+        const sets = this.sortTyreSets(this.getVisibleTyreSets(inventory?.sets || []));
+        if (!sets.length) {
+            return '<div class="dock-tyre-empty">Tyre inventory unavailable.</div>';
+        }
+
+        const selectedSetId = car.player_config?.tyre_set_id || null;
+        const activeCompound = String(car.player_config?.tyre_compound || car.current_tire || '').toLowerCase();
+        const fallbackSelectedSetId = selectedSetId
+            || sets.find(tyreSet => tyreSet.compound === activeCompound && tyreSet.is_available !== false)?.set_id
+            || sets.find(tyreSet => tyreSet.compound === activeCompound)?.set_id
+            || null;
+
+        const grouped = sets.reduce((acc, tyreSet) => {
+            const key = tyreSet.compound || 'other';
+            if (!acc[key]) acc[key] = [];
+            acc[key].push(tyreSet);
+            return acc;
+        }, {});
+
+        return Object.entries(grouped).map(([compound, compoundSets]) => `
+            <div class="dock-tyre-stack">
+                <div class="dock-tyre-stack-title">${this.formatTyreCompoundLabel(compound)}</div>
+                <div class="dock-tyre-set-list">
+                    ${compoundSets.map(tyreSet => `
+                        <div class="dock-tyre-set ${tyreSet.is_available === false ? 'is-unavailable' : ''} ${tyreSet.set_id === fallbackSelectedSetId ? 'is-selected' : ''}">
+                            <div class="dock-tyre-set-main">
+                                <strong>${tyreSet.set_id}</strong>
+                                <span>${this.getTyreSetConditionLabel(tyreSet)}</span>
+                            </div>
+                            <div class="dock-tyre-set-meta">
+                                <span>${this.getTyreSetStatusLabel(tyreSet)}</span>
+                                <span>${tyreSet.heat_cycles || 0} HC</span>
+                                <span>${tyreSet.laps_completed || 0} laps</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
     }
 
     formatMapLabel(name) {
@@ -178,6 +338,8 @@ export class PlayerGarageV3 {
                     this.handleErsAutoBalanceChange(event);
                 } else if (event.target.dataset.ersBucket) {
                     this.handleErsBucketInput(event, { forceRefresh: true });
+                } else if (event.target.dataset.field) {
+                    this.handleFieldChange(event);
                 }
             });
         }
@@ -1419,9 +1581,7 @@ export class PlayerGarageV3 {
             <div class="dock-row-4">
                 <div class="dock-field" style="flex: 1.5;">
                     <label>Compound</label>
-                    <select class="select-compact-v3" data-field="tyre_compound" ${isBox ? '' : 'disabled'}>
-                        ${this.tyreOptions.map(opt => `<option value="${opt.value}" ${opt.value === tyreChoice ? 'selected' : ''}>${opt.label}</option>`).join('')}
-                    </select>
+                    ${this.buildTyreSelect(car, tyreChoice, isBox)}
                 </div>
                 <div class="dock-field dock-tyre-health" style="flex: 1.2;">
                     <label>Tyre %</label>
@@ -1508,6 +1668,7 @@ export class PlayerGarageV3 {
         const tyreStates = car.tyre_states || {};
         const rawWindow = car.tire_temp_window;
         const tempWindow = PlayerGarageV3.extractTempWindow(rawWindow);
+        const inventoryPanel = this.buildTyreInventoryPanel(car);
         
         const fl = tyreTemps.fl ?? null;
         const fr = tyreTemps.fr ?? null;
@@ -1596,6 +1757,9 @@ export class PlayerGarageV3 {
                 <span class="dock-flag ${grainingWarn ? 'flag-warn' : 'flag-ok'}">Grain ${grainingDisplay}</span>
                 <span class="dock-flag ${blisteringWarn ? 'flag-warn' : 'flag-ok'}">Blister ${blisteringDisplay}</span>
                 <span class="dock-flag flag-info">Health ${tireHealthPct}%</span>
+            </div>
+            <div class="dock-tyre-inventory-panel">
+                ${inventoryPanel}
             </div>
         `;
     }
@@ -1687,6 +1851,12 @@ export class PlayerGarageV3 {
 
     async buildPUModal(car) {
         if (!this.overlayContainer) return;
+        if (!this.getTyreInventory(car.driver_number)) {
+            const inventory = await this.loadTyreInventory(car.driver_number);
+            if (inventory) {
+                this.primeTyreInventory(car.driver_number, inventory);
+            }
+        }
         const puStats = car.pu_stats || {};
         const brakeDiag = car.brake_diagnostics || {};
         const driverName = car.driver_name || `Driver #${car.driver_number}`;
@@ -1829,6 +1999,9 @@ export class PlayerGarageV3 {
         
         // Render Setup Panel
         const setupHtml = await this.renderSetupPanelHtml(car, isBox);
+        const tireWear = typeof car.tire_wear === 'number' ? Math.max(0, Math.min(1, car.tire_wear)) : 0;
+        const tireHealthPct = Math.round((1 - tireWear) * 100);
+        const tyresPanel = this.buildTabTyres(car, { tireHealthPct });
         
         // Render ERS Panel
         const ersPanel = this.buildErsMapPanel(car, puStats, isBox);
@@ -1841,12 +2014,16 @@ export class PlayerGarageV3 {
                 </div>
                 <div class="pu-modal-tabs-v3">
                     <button class="pu-tab-btn ${this.activePuTab === 'setup' && isBox ? 'active' : ''}" data-action="switch-pu-tab" data-tab="setup" ${!isBox ? 'disabled' : ''}>Setup Vettura</button>
+                    <button class="pu-tab-btn ${this.activePuTab === 'tyres' ? 'active' : ''}" data-action="switch-pu-tab" data-tab="tyres">Gomme</button>
                     <button class="pu-tab-btn ${this.activePuTab === 'stats' ? 'active' : ''}" data-action="switch-pu-tab" data-tab="stats">PU / Motore</button>
                     <button class="pu-tab-btn ${this.activePuTab === 'ers-map' ? 'active' : ''}" data-action="switch-pu-tab" data-tab="ers-map">Mappa ERS</button>
                 </div>
                 <div class="pu-modal-body-v3">
                     <section data-panel="setup" style="${this.activePuTab === 'setup' ? '' : 'display:none;'}">
                         ${setupHtml}
+                    </section>
+                    <section data-panel="tyres" style="${this.activePuTab === 'tyres' ? '' : 'display:none;'}">
+                        ${tyresPanel}
                     </section>
                     <section data-panel="stats" style="${this.activePuTab === 'stats' ? '' : 'display:none;'}">
                         ${puStatsPanel}
@@ -2031,7 +2208,7 @@ export class PlayerGarageV3 {
 
     async fetchCircuitMapping() {
         try {
-            const circuitId = this.state?.circuitId || 'default';
+            const circuitId = this.getResolvedCircuitId() || 'default';
             const res = await fetch(`/api/setup/ranges/${circuitId}`);
             if (!res.ok) return;
             const data = await res.json();
@@ -2046,7 +2223,7 @@ export class PlayerGarageV3 {
             const car = this.state.getPlayerCar(driverNumber);
             if (!car) return null;
             const payload = this.buildSetupPayloadFromDraft(driverNumber, car);
-            const circuitId = this.state?.circuitId || 'default';
+            const circuitId = this.getResolvedCircuitId() || 'default';
             const res = await fetch('/api/setup/validate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2184,6 +2361,10 @@ export class PlayerGarageV3 {
 
         const setupState = this.getSetupPayload(car);
         const { values, recommendation } = setupState;
+        const tyreChoice = car.player_config?.tyre_compound || car.current_tire || 'medium';
+        const fuelPercent = car.player_config?.fuel_percent ?? car.fuel_percent ?? 100;
+        const stintTarget = car.player_config?.stint_target_laps ?? car.stint_target_laps ?? 5;
+        const maxStint = car.max_stint_laps ?? stintTarget;
         const hasFeedback = !!car.has_setup_feedback;
         const infoPct = car.setup_info_percent ?? 0;
         const fieldFeedback = hasFeedback ? (recommendation?.fields || {}) : {};
@@ -2230,6 +2411,24 @@ export class PlayerGarageV3 {
                 </div>
                 ${progressHtml || ''}
                 ${hasFeedback ? `<div class="setup-cats-v3">${this.buildCategoryChips(categories)}</div>` : ''}
+                <div class="dock-row-4" style="margin-bottom: 12px;">
+                    <div class="dock-field" style="flex: 1.5;">
+                        <label>Compound</label>
+                        ${this.buildTyreSelect(car, tyreChoice, isBox)}
+                    </div>
+                    <div class="dock-field dock-fuel" style="flex: 1;">
+                        <label>Fuel %</label>
+                        <input class="input-compact-v3" type="number" data-field="fuel_percent" min="1" max="100" value="${fuelPercent}" ${isBox ? '' : 'disabled'}>
+                    </div>
+                    <div class="dock-field dock-stint" style="flex: 1;">
+                        <label>Stint (${maxStint})</label>
+                        <input class="input-compact-v3" type="number" data-field="stint_target_laps" min="1" max="${maxStint}" value="${stintTarget}" ${isBox ? '' : 'disabled'}>
+                    </div>
+                    <div class="dock-field" style="flex: 1; justify-content: center;">
+                        <label>Inventario</label>
+                        <span class="dock-val">${(this.getTyreInventory(driverNumber)?.sets || []).length} set</span>
+                    </div>
+                </div>
                 <div class="setup-slider-grid-v3">
                     ${sliderCards}
                 </div>
@@ -2421,6 +2620,17 @@ export class PlayerGarageV3 {
             }
         });
 
+        cars.forEach(car => {
+            if (!this.getTyreInventory(car.driver_number)) {
+                this.loadTyreInventory(car.driver_number).then((inventory) => {
+                    if (inventory) {
+                        this.primeTyreInventory(car.driver_number, inventory);
+                        this.render(true);
+                    }
+                });
+            }
+        });
+
         this.cardsContainer.innerHTML = cars.map(car => this.buildCarCard(car)).join('');
         
         // Restore active tabs
@@ -2476,6 +2686,12 @@ export class PlayerGarageV3 {
                 ? Number(el.value)
                 : el.value;
         });
+        if (payload.tyre_set_id && !payload.tyre_compound) {
+            const selected = card.querySelector('[data-field="tyre_set_id"] option:checked');
+            if (selected?.dataset?.compound) {
+                payload.tyre_compound = selected.dataset.compound;
+            }
+        }
         return payload;
     }
 
@@ -2485,6 +2701,7 @@ export class PlayerGarageV3 {
         car.player_config = { ...(car.player_config || {}), ...payload };
         Object.entries(payload).forEach(([key, value]) => {
             if (key === 'tyre_compound') car.current_tire = value;
+            if (key === 'tyre_set_id') car.player_config.tyre_set_id = value;
             if (key === 'fuel_percent') car.fuel_percent = value;
             if (key === 'pace_level') car.pace_level = value;
             if (key === 'ice_mode') car.ice_mode = value;
@@ -2533,6 +2750,10 @@ export class PlayerGarageV3 {
         clampNumericField('fuel_percent', 1, 100);
         clampNumericField('pace_level', 1, 10);
 
+        if (typeof allowedPayload.tyre_set_id === 'string') {
+            allowedPayload.tyre_set_id = allowedPayload.tyre_set_id.trim();
+        }
+
         if (typeof allowedPayload.tyre_compound === 'string') {
             const normalized = allowedPayload.tyre_compound.toLowerCase();
             if (normalized !== allowedPayload.tyre_compound) {
@@ -2546,6 +2767,7 @@ export class PlayerGarageV3 {
 
         if (state !== 'BOX') {
             delete allowedPayload.tyre_compound;
+            delete allowedPayload.tyre_set_id;
             delete allowedPayload.fuel_percent;
             delete allowedPayload.stint_target_laps;
         }
@@ -2762,6 +2984,9 @@ export class PlayerGarageV3 {
         payload[field] = target.type === 'range' || target.type === 'number'
             ? Number(target.value)
             : target.value;
+        if (field === 'tyre_set_id') {
+            payload.tyre_compound = target.selectedOptions?.[0]?.dataset?.compound || payload.tyre_compound;
+        }
         this.sendPlayerConfig(driverNumber, payload, state);
     }
 

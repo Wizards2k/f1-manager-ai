@@ -1,5 +1,6 @@
 export class AppState {
     constructor() {
+        const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
         this.sessionBests = {
             best_lap: null,
             best_sectors: { sector1: null, sector2: null, sector3: null }
@@ -8,6 +9,15 @@ export class AppState {
         this.playerCars = new Map();
         this.playerTeamId = null;
         this.timelineEvents = [];
+        this.circuitId = params?.get('circuit') || null;
+    }
+
+    setCircuitId(circuitId) {
+        this.circuitId = circuitId || null;
+    }
+
+    getCircuitId() {
+        return this.circuitId;
     }
 
     updateSessionBests(bests) {

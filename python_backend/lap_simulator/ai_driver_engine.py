@@ -161,9 +161,7 @@ def _create_run_plan(
     defaults = RUN_PROGRAM_DEFAULTS[program]
     laps_lo, laps_hi = defaults["laps_range"]
     laps = random.randint(laps_lo, laps_hi)
-
-    # Use compound from defaults (more realistic than hardcoded selection)
-    compound = defaults.get("compound", TyreCompound.C3)
+    compound = _select_compound(program, session_type)
 
     return RunPlan(
         program=program,
@@ -182,13 +180,30 @@ def _select_compound(program: RunProgram, session_type: SessionType) -> TyreComp
     """Select tyre compound based on program and session (spec §4)."""
     if program == RunProgram.QUALI_SIM:
         return TyreCompound.C4  # soft for quali sim
+    if program == RunProgram.TYRE_TEST:
+        return TyreCompound.C4 if session_type != SessionType.FP1 else TyreCompound.C3
+    if program == RunProgram.TYRE_DEG:
+        if session_type == SessionType.FP1:
+            return random.choice([TyreCompound.C2, TyreCompound.C3])
+        if session_type == SessionType.FP2:
+            return random.choice([TyreCompound.C3, TyreCompound.C4])
+        return TyreCompound.C3
+    if program == RunProgram.RACE_SIM:
+        return TyreCompound.C2
     if program == RunProgram.RACE_TRIM:
-        return TyreCompound.C2  # hard for race trim
+        return random.choice([TyreCompound.C2, TyreCompound.C3])
+    if program == RunProgram.AERO_TEST:
+        return TyreCompound.C3
+    if program == RunProgram.SETUP_VALIDATION:
+        if session_type == SessionType.FP1:
+            return random.choice([TyreCompound.C2, TyreCompound.C3])
+        if session_type == SessionType.FP3:
+            return TyreCompound.C3
+        return TyreCompound.C3
     if session_type == SessionType.FP1:
-        return TyreCompound.C2  # hard/medium for FP1
+        return random.choice([TyreCompound.C2, TyreCompound.C3])
     if session_type == SessionType.FP3:
-        return TyreCompound.C4  # soft for FP3 quali rehearsal
-    # Default: medium
+        return random.choice([TyreCompound.C3, TyreCompound.C4])
     return TyreCompound.C3
 
 

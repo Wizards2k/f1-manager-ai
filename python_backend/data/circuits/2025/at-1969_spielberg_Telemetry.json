@@ -6165,5 +6165,34 @@
       "y": 0.0
     },
     "map_scale": 1.0
+  },
+  "tyre_allocation": {
+    "weekend_type": "standard",
+    "dry_compounds": {
+      "hard": "C3",
+      "medium": "C4",
+      "soft": "C5"
+    },
+    "dry_allocation": {
+      "soft": 8,
+      "medium": 3,
+      "hard": 2
+    },
+    "wet_allocation": {
+      "intermediate": 5,
+      "wet": 2
+    },
+    "special_rules": {
+      "mandatory_race_compounds": 2,
+      "q3_soft_reserve": true,
+      "practice_returns": 2,
+      "monaco_extra_wet": false,
+      "monaco_mandatory_sets": 2
+    },
+    "circuit_characteristics": {
+      "wear_profile": "medium",
+      "degradation_factor": 1.0,
+      "thermal_stress": "medium"
+    }
   }
 }

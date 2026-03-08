@@ -8,6 +8,7 @@ export class MapModuleV3 {
         this.state = state;
         const params = new URLSearchParams(window.location.search);
         this.selectedCircuit = params.get('circuit');
+        this.state?.setCircuitId?.(this.selectedCircuit);
         if (this.selectedCircuit) {
             document.title = `F1 Manager AI - ${this.selectedCircuit}`;
         }
@@ -64,6 +65,10 @@ export class MapModuleV3 {
         const circuitQuery = this.selectedCircuit 
             ? `?circuit=${encodeURIComponent(this.selectedCircuit)}` 
             : '';
+
+        if (this.selectedCircuit) {
+            this.state?.setCircuitId?.(this.selectedCircuit);
+        }
 
         if (this.selectedCircuit) {
             try {

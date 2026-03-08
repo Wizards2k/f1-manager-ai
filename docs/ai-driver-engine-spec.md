@@ -40,6 +40,25 @@ Ogni team compone un **programma sessione** scegliendo 2‑3 run coerenti con la
 - **Tyre allocation**: ogni team consuma set reali del weekend. Il Practice Planner controlla la disponibilità e sceglie composti coerenti (es. FP1 usa soprattutto Hard/Medium, FP3 Soft nuovi). TBD il dettaglio numerico nel modulo gomme.
 - **Traffico**: se il LapSimulator segnala congestione, l'AI può ritardare l'uscita fino a 60s (slot di respiro) per simulare queue pitlane.
 
+### 4.1 Heuristica compound (aggiornamento 2026-03-08)
+- Il planner applica una scelta compound contestuale:
+  - **FP1** → bias Hard/Medium (`C2/C3`) sia per Setup Validation sia per Tyre Deg.
+  - **FP2** → prima metà più aggressiva (Tyre Deg/Quali Sim su `C3/C4`), seconda metà (Race Trim) su `C2/C3`.
+  - **FP3** → Quali rehearsal su `C4`; eventuali Setup Validation residui su `C3` per non consumare gli ultimi Soft.
+- Programmi speciali:
+  - `Tyre Test` usa `C4` tranne in FP1 dove scala a `C3`.
+  - `Race Sim` resta su `C2` (full-fuel validation).
+  - `Race Trim` alterna `C2/C3` in base alla disponibilità.
+- L’AI pesca sempre da `TyreInventoryService`, quindi le scelte rispettano i set rimasti e le riserve Q3.
+
+### 4.2 Policy riuso set (Practice)
+- L’AI prova a riutilizzare lo stesso set del run precedente quando:
+  - il programma richiede lo stesso compound,
+  - il set è ancora marcato disponibile,
+  - la `condition` è ≥ **40%**.
+- Se il set scende sotto il 40% viene automaticamente scartato per i run successivi ed entra nello stato `unavailable`.
+- Il riuso è tracciato nei log QA tramite flag `reused` (vedi §7) ma non viene mostrato nella UI del giocatore.
+
 ### 4.1 Pit work – lavori ai box e tempi
 
 Ogni sosta ai box è composta da uno o più lavori. I tempi si sommano con overlap parziale (il team lavora in parallelo su aree diverse): `total = max(work_times) + 15s` (overhead base ingresso/uscita box).
@@ -107,6 +126,14 @@ Se più lavori sono in corso contemporaneamente, la label mostra il lavoro princ
   - `ai_setup_adjustment` con dettaglio slider cambiati.
   - `ai_rnd_correlation` (placeholder) per when R&D runs saranno attivi.
 - I log vengono usati anche dal QA harness per validare comportamenti multi-car.
+
+### 7.1 Tracciamento gomme AI (2026-03-08)
+- Gli eventi `ai_tyre_reserved`, `ai_tyre_stint_completed`, `ai_tyre_reserve_failed`, `ai_tyre_released` vengono emessi da `SessionBridge` e duplicati su `python_backend/logs/ai_tyre_debug.log`.
+- Ogni evento include:
+  - `compound_requested`, `tyre_set_id`, `condition`, `heat_cycles`, `laps_completed`.
+  - Flag `reused` per distinguere set nuovi vs riutilizzati.
+  - Delta usura (`condition_before/after`) e chilometraggio per le chiusure stint.
+- I log restano backend-only (nessuna esposizione di dati AI all'interfaccia giocatore) e vengono usati dal QA harness per auditare allocation e riuso set.
 
 ### 7.1 Notifiche barra (player car)
 

@@ -1150,6 +1150,100 @@ timeline-toggle-btn:hover {
 .flag-warn { background: rgba(244,67,54,.2); color: #ff6b6b; }
 .flag-info { background: rgba(255,193,7,.2); color: #ffd740; }
 
+.dock-tyre-inventory-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.dock-tyre-empty {
+    border: 1px dashed #30343b;
+    border-radius: 8px;
+    padding: 12px;
+    color: #8e97a8;
+    font-size: 11px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.dock-tyre-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+    border: 1px solid #252b33;
+}
+
+.dock-tyre-stack-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #ffd24c;
+}
+
+.dock-tyre-set-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 6px;
+}
+
+.dock-tyre-set {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px 9px;
+    border-radius: 8px;
+    background: #17191d;
+    border: 1px solid #2d333c;
+}
+
+.dock-tyre-set.is-selected {
+    border-color: #ffd24c;
+    background: linear-gradient(180deg, rgba(255, 210, 76, 0.12), rgba(255, 210, 76, 0.05));
+    box-shadow: 0 0 0 1px rgba(255, 210, 76, 0.18), 0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
+.dock-tyre-set.is-unavailable {
+    opacity: 0.58;
+    border-color: #493033;
+    background: #1a1415;
+}
+
+.dock-tyre-set-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: #eef3ff;
+    font-size: 12px;
+}
+
+.dock-tyre-set-main strong {
+    color: #ffffff;
+    font-size: 12px;
+}
+
+.dock-tyre-set-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.dock-tyre-set-meta span {
+    font-size: 9px;
+    line-height: 1.2;
+    padding: 2px 5px;
+    border-radius: 999px;
+    background: #222831;
+    color: #aeb8ca;
+    border: 1px solid #313846;
+}
+
 /* Legacy grid support */
 .field-span-2 { grid-column: span 2; }
 .field-span-3 { grid-column: span 3; }
