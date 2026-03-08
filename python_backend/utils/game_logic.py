@@ -8,6 +8,7 @@ from config import circuit_sectors, SESSION_DURATION
 # --- V2 Engine flag ---
 USE_NEW_ENGINE = True
 session_bridge = None  # SessionBridge instance (lazy init)
+session_telemetry_store = None
 
 # --- Penalty System flags ---
 USE_NEW_PENALTY_SYSTEM = True      # Master toggle per tutto il sistema penalty
@@ -86,6 +87,7 @@ def start_session_for_circuit():
     global last_speed_change_time, pause_start_time, is_paused, simulation_ready
     global game_speed_multiplier
     global session_bridge
+    global session_telemetry_store
 
     start_time = time.time()
     with state_lock:
@@ -108,14 +110,20 @@ def start_session_for_circuit():
             if circuit_id:
                 import logging
                 logging.getLogger(__name__).info("V2 engine: Initializing SessionBridge for circuit %s", circuit_id)
+                from services.tyre_inventory_service import TyreInventoryService
                 from utils.session_bridge import SessionBridge
+                from utils.session_telemetry_store import SessionTelemetryStore
+                TyreInventoryService().reset_inventories_for_circuit(circuit_id)
+                session_telemetry_store = SessionTelemetryStore(circuit_id=circuit_id)
                 session_bridge = SessionBridge()
+                session_bridge.telemetry_store = session_telemetry_store
                 logging.getLogger(__name__).info("V2 engine: SessionBridge created, initializing session...")
                 ok = session_bridge.init_session(circuit_id, race_cars, session_type="FP1")
                 logging.getLogger(__name__).info("V2 engine: SessionBridge init returned %s", ok)
                 if not ok:
                     logging.getLogger(__name__).warning("V2 engine: SessionBridge init failed")
                     session_bridge = None
+                    session_telemetry_store = None
             else:
                 import logging
                 logging.getLogger(__name__).warning("V2 engine: No circuit_id found")
@@ -125,6 +133,7 @@ def start_session_for_circuit():
             logging.getLogger(__name__).error("V2 engine init failed: %s", e)
             logging.getLogger(__name__).error("V2 engine traceback: %s", traceback.format_exc())
             session_bridge = None
+            session_telemetry_store = None
 
     return start_time
 
@@ -343,6 +352,11 @@ def get_session_bests():
 def get_session_bridge():
     """Return the active SessionBridge (V2 engine) or None."""
     return session_bridge
+
+
+def get_session_telemetry_store():
+    """Return the active session telemetry store or None."""
+    return session_telemetry_store
 
 
 def is_v2_engine_active() -> bool:

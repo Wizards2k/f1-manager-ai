@@ -325,6 +325,7 @@ class SessionBridge:
         self.active = False
         self.circuit_id: Optional[str] = None
         self.circuit_config: Optional[CircuitConfig] = None
+        self.telemetry_store = None
         self.sections: List[SectionContext] = []
         self.env = EnvContext()
         self.pso: Optional[PracticeSessionOrchestrator] = None
@@ -485,6 +486,8 @@ class SessionBridge:
         self.active = True
         self._accumulated_time_s = 0.0
         self._track_states = {}
+        if self.telemetry_store is not None:
+            self.telemetry_store.reset(circuit_id=circuit_id)
 
         # Generate randomized team session plans
         self._team_plans = _build_team_plans(self.ai_engines, self._ai_teams_cars)
@@ -520,6 +523,14 @@ class SessionBridge:
             return sim_compound_to_game(default_compound)
         return sim_compound_to_game(getattr(run_plan, 'compound', None))
 
+    def _get_ai_tyre_fallback_compounds(self, preferred_compound: str) -> list[str]:
+        preferred = str(preferred_compound or '').strip().lower()
+        dry_order = ['soft', 'medium', 'hard']
+        wet_order = ['intermediate', 'wet']
+        if preferred in wet_order:
+            return [compound for compound in wet_order if compound != preferred]
+        return [compound for compound in dry_order if compound != preferred]
+
     def _reserve_ai_tyre_set(self, car_id: str, run_plan) -> Optional[tuple[str, str]]:
         if not self.circuit_id:
             return None
@@ -528,10 +539,12 @@ class SessionBridge:
         if race_car and hasattr(race_car, 'player_config'):
             preferred_set_id = race_car.player_config.get('tyre_set_id')
         compound_label = self._resolve_program_compound_label(run_plan)
-        tyre_set = self.tyre_inventory_service.reserve_best_available_set(
+        fallback_compounds = self._get_ai_tyre_fallback_compounds(compound_label)
+        tyre_set = self.tyre_inventory_service.reserve_best_available_set_with_fallback(
             driver_id=str(car_id),
             circuit_id=self.circuit_id,
             compound=compound_label,
+            fallback_compounds=fallback_compounds,
             preferred_set_id=preferred_set_id,
             minimum_condition=40.0,
         )
@@ -549,6 +562,7 @@ class SessionBridge:
             heat_cycles=tyre_set.heat_cycles,
             laps_completed=tyre_set.laps_completed,
             is_q3_reserve=tyre_set.is_q3_reserve,
+            fallback_used=tyre_set.compound != compound_label,
         )
         return tyre_set.set_id, tyre_set.compound
 
@@ -688,12 +702,46 @@ class SessionBridge:
 
                 # Apply out lap / in lap penalty to the recorded dt_s
                 from dataclasses import replace as _dc_replace
+                lap_speed_factor = 1.0
                 if ts.lap_phase == LapPhase.OUT_LAP:
-                    result = _dc_replace(result, dt_s=result.dt_s / OUT_LAP_SPEED_FACTOR)
+                    lap_speed_factor = OUT_LAP_SPEED_FACTOR
                 elif ts.lap_phase == LapPhase.IN_LAP:
-                    result = _dc_replace(result, dt_s=result.dt_s / IN_LAP_SPEED_FACTOR)
+                    lap_speed_factor = IN_LAP_SPEED_FACTOR
+                elif ts.lap_phase == LapPhase.SLOW_LAP:
+                    lap_speed_factor = SLOW_LAP_SPEED_FACTOR
+
+                if lap_speed_factor != 1.0:
+                    scaled_points = []
+                    for point in getattr(result, 'telemetry_points', []) or []:
+                        scaled_point = dict(point)
+                        if scaled_point.get('speed_kph') is not None:
+                            scaled_point['speed_kph'] = round(float(scaled_point['speed_kph']) * lap_speed_factor, 3)
+                        if scaled_point.get('dt_s') is not None:
+                            scaled_point['dt_s'] = round(float(scaled_point['dt_s']) / lap_speed_factor, 4)
+                        scaled_points.append(scaled_point)
+
+                    result = _dc_replace(
+                        result,
+                        dt_s=result.dt_s / lap_speed_factor,
+                        v_exit_kph=result.v_exit_kph * lap_speed_factor,
+                        v_entry_kph=result.v_entry_kph * lap_speed_factor,
+                        v_effective_kph=result.v_effective_kph * lap_speed_factor,
+                        v_max_kph=result.v_max_kph * lap_speed_factor,
+                        telemetry_points=scaled_points,
+                    )
 
                 ts.lap_section_results.append(result)
+
+                # DEBUG: Log telemetry point sample to dedicated file
+                if ts.current_section_idx < 3:
+                    import os
+                    import json
+                    log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'logs')
+                    os.makedirs(log_dir, exist_ok=True)
+                    log_file = os.path.join(log_dir, 'telemetry_debug.log')
+                    sample_points = getattr(result, 'telemetry_points', [])[:3]
+                    with open(log_file, 'a') as f:
+                        f.write(f"SECTION car={car_id} section={ts.current_section_idx} points_count={len(getattr(result, 'telemetry_points', []))} sample={json.dumps(sample_points)}\n")
 
                 # Track sector time accumulation
                 ts.sector_dt_acc += result.dt_s
@@ -819,6 +867,28 @@ class SessionBridge:
         }
         race_car.last_lap_type = phase_to_state.get(ts.lap_phase, GameCarState.HOT_LAP)
         race_car.distance_traveled = 0
+
+        lap_points = []
+        for result in ts.lap_section_results:
+            for point in getattr(result, 'telemetry_points', []) or []:
+                lap_points.append(point)
+
+        lap_telemetry = {
+            'lap_number': ts.lap_number - 1,
+            'lap_time_s': round(lap_time, 3),
+            'lap_phase': ts.lap_phase,
+            'is_competitive': bool(is_competitive),
+            'points': lap_points,
+        }
+        if self.telemetry_store is not None:
+            self.telemetry_store.append_lap(
+                car_id=car_id,
+                lap_number=lap_telemetry['lap_number'],
+                lap_time_s=lap_telemetry['lap_time_s'],
+                lap_phase=lap_telemetry['lap_phase'],
+                is_competitive=lap_telemetry['is_competitive'],
+                points=lap_points,
+            )
 
         # Accumulate setup info points (player only — AI uses ai_setup_search)
         ai_ready_for_box = False

@@ -7,6 +7,7 @@ export class AppState {
         };
         this.carMarkers = new Map();
         this.playerCars = new Map();
+        this.allCars = new Map();
         this.playerTeamId = null;
         this.timelineEvents = [];
         this.circuitId = params?.get('circuit') || null;
@@ -58,7 +59,27 @@ export class AppState {
 
     setPlayerCar(car) {
         if (!car || !car.driver_number) return;
-        this.playerCars.set(car.driver_number, car);
+        const previous = this.playerCars.get(car.driver_number) || {};
+        const merged = {
+            ...car,
+            telemetry_rival_target: car.telemetry_rival_target ?? previous.telemetry_rival_target ?? '',
+            telemetry_lap_selector: car.telemetry_lap_selector ?? previous.telemetry_lap_selector ?? 'best',
+        };
+        this.playerCars.set(car.driver_number, merged);
+        this.allCars.set(car.driver_number, merged);
+    }
+
+    setCar(car) {
+        if (!car || !car.driver_number) return;
+        this.allCars.set(car.driver_number, car);
+    }
+
+    getCar(driverNumber) {
+        return this.allCars.get(driverNumber);
+    }
+
+    getAllCarsSorted() {
+        return [...this.allCars.values()].sort((a, b) => a.driver_number - b.driver_number);
     }
 
     getPlayerCar(driverNumber) {

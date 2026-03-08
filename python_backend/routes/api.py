@@ -3,6 +3,8 @@ import logging
 import time
 from flask import Flask, render_template, jsonify, send_from_directory, request
 from typing import Optional
+from pathlib import Path
+import json
 
 from data.teams import TEAMS
 from models import CarState, CarPhase, TireCompound, DEFAULT_SETUP_CONFIG
@@ -42,6 +44,33 @@ def _error_response(message: str, status: int = 400):
     return jsonify({'error': message}), status
 
 tyre_inventory_service = TyreInventoryService()
+
+
+def _load_reference_telemetry(circuit_id: str):
+    if not circuit_id:
+        return []
+    root = Path(__file__).resolve().parents[1]
+    telemetry_path = root / 'data' / 'circuits' / '2025' / f'{circuit_id}_Telemetry.json'
+    if not telemetry_path.exists():
+        return []
+    try:
+        payload = json.loads(telemetry_path.read_text(encoding='utf-8'))
+    except Exception:
+        return []
+    points = payload.get('reference_lap', {}).get('telemetry_points', [])
+    normalized = []
+    for point in points:
+        normalized.append({
+            'distance_m': round(float(point.get('distance', 0.0)), 3),
+            'dt_s': 0.0,
+            'speed_kph': round(float(point.get('speed', 0.0)), 3),
+            'throttle_pct': float(point.get('throttle', 0.0)),
+            'brake_pct': float(point.get('brake', 0.0)),
+            'drs_active': point.get('drs') in {10, 12, 14},
+            'steering_angle_deg': 0.0,
+            'target_g_lat': 0.0,
+        })
+    return normalized
 
 
 def register_routes(app):
@@ -401,6 +430,50 @@ def register_routes(app):
             'setup_info_percent': round(getattr(car, 'setup_info_percent', 0), 1),
             'ideal_setup': car.player_config.get('ideal_setup'),
         }
+
+    @app.route('/api/telemetry/compare')
+    def get_telemetry_compare():
+        from utils.game_logic import get_session_telemetry_store
+        import config
+
+        raw_car_ids = request.args.get('car_ids', '')
+        lap_selector = request.args.get('lap', 'best')
+        requested_ids = [item.strip() for item in raw_car_ids.split(',') if item.strip()]
+        telemetry_store = get_session_telemetry_store()
+        traces = []
+
+        session_best = telemetry_store.build_session_best_trace() if telemetry_store else {}
+        session_best_car_id = str(session_best.get('car_id')) if session_best else None
+
+        for car_id in requested_ids:
+            car = get_car_by_driver_number(int(car_id)) if car_id.isdigit() else None
+            telemetry = telemetry_store.build_trace_payload(car_id, lap=lap_selector) if telemetry_store else {}
+            points = telemetry.get('points', []) if telemetry else []
+            traces.append({
+                'car_id': car_id,
+                'driver_number': car.driver_number if car else int(car_id) if car_id.isdigit() else car_id,
+                'driver_name': car.driver_name if car else f'Driver #{car_id}',
+                'team_name': car.team_name if car else None,
+                'team_color': car.team_color if car else None,
+                'lap_number': telemetry.get('lap_number') if telemetry else None,
+                'lap_time_s': telemetry.get('lap_time_s') if telemetry else None,
+                'lap_phase': telemetry.get('lap_phase') if telemetry else None,
+                'is_session_best': bool(session_best_car_id and str(car_id) == session_best_car_id),
+                'points': points,
+            })
+        circuit_id = getattr(config, 'current_circuit', None)
+
+        return jsonify({
+            'circuit_id': circuit_id,
+            'lap': lap_selector,
+            'session_best': {
+                'car_id': session_best_car_id,
+                'driver_number': int(session_best_car_id) if session_best_car_id and session_best_car_id.isdigit() else session_best_car_id,
+                'lap_number': session_best.get('lap_number') if session_best else None,
+                'lap_time_s': session_best.get('lap_time_s') if session_best else None,
+            },
+            'traces': traces,
+        })
 
     def _validate_setup_payload(setup_payload):
         if not isinstance(setup_payload, dict):

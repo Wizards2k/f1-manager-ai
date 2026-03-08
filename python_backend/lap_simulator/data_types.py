@@ -510,6 +510,7 @@ class CarState:
     lap_time_acc_s: float = 0.0
     lap_number: int = 1
     v_current_ms: float = 0.0  # current simulated speed
+    telemetry_points_current_lap: List[Dict[str, Any]] = field(default_factory=list)
     # battle signals
     overtake_window: float = 0.0         # 0-1
     attack_cooldown: int = 0             # sections remaining
@@ -545,6 +546,7 @@ class SectionResult:
     v_entry_kph: float = 0.0             # entry speed at section start
     v_effective_kph: float = 0.0         # effective speed through section
     v_max_kph: float = 0.0               # peak speed reached during the section
+    telemetry_points: List[Dict[str, Any]] = field(default_factory=list)
     events: List[SectionEvent] = field(default_factory=list)
     # signals for BattleResolver
     overtake_window: float = 0.0

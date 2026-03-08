@@ -132,6 +132,8 @@ export class PlayerGarageV3 {
         this.RUNTIME_FIELDS = new Set(['pace_level', 'ice_mode', 'ers_mode']);
         this.statusTimer = null;
         this.tyreInventoryCache = new Map();
+        this.telemetryCache = new Map();
+        this.telemetryViewState = null;
         this.bindEvents();
     }
 
@@ -255,6 +257,30 @@ export class PlayerGarageV3 {
         `;
     }
 
+    buildTelemetryPickerControls(rivalChipOptions, lapChipOptions, rivalValue) {
+        const rivalContent = rivalChipOptions || '<option value="">No rivals</option>';
+        return `
+            <div class="telemetry-controls-group-v3 telemetry-controls-group-v3--compact telemetry-controls-group-v3--pretty">
+                <label class="telemetry-control-v3 telemetry-control-v3--pretty">
+                    <span>Rival</span>
+                    <div class="telemetry-select-wrap-v3">
+                        <select class="telemetry-select-v3" data-field="telemetry_rival_target">
+                            ${rivalContent}
+                        </select>
+                    </div>
+                </label>
+                <label class="telemetry-control-v3 telemetry-control-v3--pretty">
+                    <span>Player Lap</span>
+                    <div class="telemetry-select-wrap-v3">
+                        <select class="telemetry-select-v3 telemetry-select-v3--small" data-field="telemetry_lap_selector">
+                            ${lapChipOptions}
+                        </select>
+                    </div>
+                </label>
+            </div>
+        `;
+    }
+
     buildTyreInventoryPanel(car) {
         const inventory = this.getTyreInventory(car.driver_number);
         const sets = this.sortTyreSets(this.getVisibleTyreSets(inventory?.sets || []));
@@ -312,6 +338,12 @@ export class PlayerGarageV3 {
         this.cardsContainer.addEventListener('focusout', (event) => this.handleFocusOut(event));
         if (this.overlayContainer) {
             this.overlayContainer.addEventListener('click', (event) => {
+                const chip = event.target.closest('[data-field][data-value]');
+                if (chip && this.overlayContainer?.contains(chip)) {
+                    event.preventDefault();
+                    this.handleTelemetryChipSelection(chip);
+                    return;
+                }
                 const actionBtn = event.target.closest('[data-action]');
                 if (actionBtn) {
                     const driver = Number(this.overlayContainer.dataset.driver);
@@ -342,6 +374,33 @@ export class PlayerGarageV3 {
                     this.handleFieldChange(event);
                 }
             });
+            this.overlayContainer.addEventListener('mousemove', (event) => {
+                const shell = event.target.closest('.telemetry-chart-shell');
+                if (!shell) return;
+                this.handleTelemetryChartHover(event, shell);
+            });
+            this.overlayContainer.addEventListener('mouseleave', (event) => {
+                if (event.target === this.overlayContainer) {
+                    this.clearTelemetryChartHover();
+                }
+            }, true);
+        }
+    }
+
+    handleOverlayAction(driverNumber, action, actionBtn) {
+        if (action === 'close-pu') {
+            this.togglePUModal(driverNumber, false);
+            return;
+        }
+
+        if (action === 'switch-pu-tab') {
+            const tab = actionBtn?.dataset?.tab;
+            if (!tab) return;
+            this.activePuTab = tab;
+            const car = this.state.getPlayerCar(driverNumber);
+            if (car) {
+                this.buildPUModal(car);
+            }
         }
     }
 
@@ -2005,6 +2064,7 @@ export class PlayerGarageV3 {
         
         // Render ERS Panel
         const ersPanel = this.buildErsMapPanel(car, puStats, isBox);
+        const telemetryPanel = await this.buildTelemetryPanel(car);
         
         this.overlayContainer.innerHTML = `
             <div class="pu-modal-v3">
@@ -2015,6 +2075,7 @@ export class PlayerGarageV3 {
                 <div class="pu-modal-tabs-v3">
                     <button class="pu-tab-btn ${this.activePuTab === 'setup' && isBox ? 'active' : ''}" data-action="switch-pu-tab" data-tab="setup" ${!isBox ? 'disabled' : ''}>Setup Vettura</button>
                     <button class="pu-tab-btn ${this.activePuTab === 'tyres' ? 'active' : ''}" data-action="switch-pu-tab" data-tab="tyres">Gomme</button>
+                    <button class="pu-tab-btn ${this.activePuTab === 'telemetry' ? 'active' : ''}" data-action="switch-pu-tab" data-tab="telemetry">Telemetry</button>
                     <button class="pu-tab-btn ${this.activePuTab === 'stats' ? 'active' : ''}" data-action="switch-pu-tab" data-tab="stats">PU / Motore</button>
                     <button class="pu-tab-btn ${this.activePuTab === 'ers-map' ? 'active' : ''}" data-action="switch-pu-tab" data-tab="ers-map">Mappa ERS</button>
                 </div>
@@ -2024,6 +2085,9 @@ export class PlayerGarageV3 {
                     </section>
                     <section data-panel="tyres" style="${this.activePuTab === 'tyres' ? '' : 'display:none;'}">
                         ${tyresPanel}
+                    </section>
+                    <section data-panel="telemetry" style="${this.activePuTab === 'telemetry' ? '' : 'display:none;'}">
+                        ${telemetryPanel}
                     </section>
                     <section data-panel="stats" style="${this.activePuTab === 'stats' ? '' : 'display:none;'}">
                         ${puStatsPanel}
@@ -2038,6 +2102,440 @@ export class PlayerGarageV3 {
         this.overlayContainer.classList.add('is-visible', 'pu-modal-active');
         this.overlayContainer.classList.remove('is-hiding');
         this.setPauseForPU(true);
+    }
+
+    getTelemetryComparisonOptions(car) {
+        const allCars = this.state?.getAllCarsSorted?.() || [];
+        const playerCars = this.state?.getPlayerCarsSorted?.() || [];
+        const teammate = playerCars.find(item => String(item.driver_number) !== String(car.driver_number));
+        const rivals = allCars.filter(item => item && !item.is_player_controlled && String(item.driver_number) !== String(car.driver_number));
+        return {
+            teammate,
+            rivals,
+        };
+    }
+
+    async fetchTelemetryCompare(driverNumber, carIds = [], lapSelector = 'best') {
+        const normalizedIds = [...new Set((carIds || []).filter(Boolean).map(value => String(value)))];
+        const cacheKey = `${driverNumber}:${normalizedIds.join(',')}:${lapSelector}`;
+        const res = await fetch(`/api/telemetry/compare?car_ids=${encodeURIComponent(normalizedIds.join(','))}&lap=${encodeURIComponent(lapSelector)}`);
+        if (!res.ok) throw new Error('Telemetry unavailable');
+        const data = await res.json();
+        this.telemetryCache.set(cacheKey, data);
+        return data;
+    }
+
+    formatLapTime(lapTimeS) {
+        const numeric = Number(lapTimeS);
+        if (!Number.isFinite(numeric) || numeric <= 0) return '--';
+        const totalMs = Math.round(numeric * 1000);
+        const minutes = Math.floor(totalMs / 60000);
+        const seconds = Math.floor((totalMs % 60000) / 1000);
+        const millis = totalMs % 1000;
+        return `${minutes}:${String(seconds).padStart(2, '0')}.${String(millis).padStart(3, '0')}`;
+    }
+
+    normalizeTelemetryValue(valueKey, rawValue) {
+        const numeric = Number(rawValue || 0);
+        if ((valueKey === 'throttle_pct' || valueKey === 'brake_pct') && numeric <= 1) {
+            return numeric * 100;
+        }
+        return numeric;
+    }
+
+    normalizeTelemetryColor(color, fallback = '#ff3b30') {
+        const value = String(color || '').trim();
+        if (/^#[0-9a-f]{6}$/i.test(value)) return value;
+        if (/^[0-9a-f]{6}$/i.test(value)) return `#${value}`;
+        return fallback;
+    }
+
+    getOppositeTelemetryColor(color) {
+        const normalized = this.normalizeTelemetryColor(color, '#ff3b30');
+        const r = 255 - parseInt(normalized.slice(1, 3), 16);
+        const g = 255 - parseInt(normalized.slice(3, 5), 16);
+        const b = 255 - parseInt(normalized.slice(5, 7), 16);
+        return `#${[r, g, b].map(value => value.toString(16).padStart(2, '0')).join('')}`;
+    }
+
+    getTelemetryRoleColor(roleLabel, index = 0) {
+        if (roleLabel === 'Your Lap') return '#ff3b30';
+        if (roleLabel === 'Teammate Best') return '#54a6ff';
+        if (roleLabel === 'Rival Best') return '#ff9f0a';
+        if (roleLabel === 'Session Best') return '#f4c84d';
+        return ['#ff3b30', '#54a6ff', '#ff9f0a', '#8b96a9'][index % 4];
+    }
+
+    assignTelemetryDisplayColors(traces) {
+        const teamCounts = new Map();
+        return (traces || []).map((trace, index) => {
+            const teamKey = String(trace.team_name || trace.team_color || trace.driver_number || index);
+            const count = teamCounts.get(teamKey) || 0;
+            teamCounts.set(teamKey, count + 1);
+            const baseColor = this.normalizeTelemetryColor(trace.team_color, this.getTelemetryRoleColor(trace.role_label, index));
+            const displayColor = count === 0 ? baseColor : this.getOppositeTelemetryColor(baseColor);
+            return {
+                ...trace,
+                display_color: displayColor,
+            };
+        });
+    }
+
+    getTelemetryValueBounds(traces, valueKey, fallbackMin, fallbackMax, options = {}) {
+        const values = (traces || []).flatMap(trace => (trace.points || []).map(point => this.normalizeTelemetryValue(valueKey, point?.[valueKey])));
+        const observedMin = values.length ? Math.min(...values) : fallbackMin;
+        const observedMax = values.length ? Math.max(...values) : fallbackMax;
+        if (valueKey === 'speed_kph') {
+            const pad = options.pad ?? 6;
+            const minSpan = options.minSpan ?? 28;
+            const center = (observedMin + observedMax) / 2;
+            const span = Math.max(minSpan, observedMax - observedMin + pad * 2);
+            return {
+                minValue: Math.max(0, center - span / 2),
+                maxValue: Math.max(center + span / 2, center - span / 2 + 1),
+            };
+        }
+        return {
+            minValue: fallbackMin,
+            maxValue: Math.max(fallbackMax, observedMax, 1),
+        };
+    }
+
+    getTelemetryChartMax(traces, valueKey, fallbackMax) {
+        const values = (traces || []).flatMap(trace => (trace.points || []).map(point => this.normalizeTelemetryValue(valueKey, point?.[valueKey])));
+        const observedMax = values.length ? Math.max(...values) : 0;
+        if (valueKey === 'brake_pct') {
+            return observedMax <= 5 ? Math.max(1, observedMax, 0.2) : Math.max(20, observedMax, 1);
+        }
+        if (valueKey === 'throttle_pct') {
+            return 100;
+        }
+        return Math.max(fallbackMax, observedMax, 1);
+    }
+
+    getTelemetryChartGeometry(width, height, padX = 16, padY = 16) {
+        return {
+            width,
+            height,
+            padX,
+            padY,
+            usableWidth: Math.max(1, width - padX * 2),
+            usableHeight: Math.max(1, height - padY * 2),
+        };
+    }
+
+    getTelemetryDistanceRange(traces) {
+        const distances = (traces || []).flatMap(trace => (trace.points || []).map(point => Number(point?.distance_m || 0)));
+        const minDistance = distances.length ? Math.min(...distances) : 0;
+        const maxDistance = distances.length ? Math.max(...distances) : 1;
+        return { minDistance, maxDistance: Math.max(maxDistance, minDistance + 1) };
+    }
+
+    telemetryPointToCoords(point, valueKey, geometry, range, maxValue, minValue = 0) {
+        const x = geometry.padX + ((Number(point?.distance_m || 0) - range.minDistance) / Math.max(1, range.maxDistance - range.minDistance)) * geometry.usableWidth;
+        const rawValue = this.normalizeTelemetryValue(valueKey, point?.[valueKey]);
+        const valueSpan = Math.max(1, maxValue - minValue);
+        const normalized = Math.max(0, Math.min(1, (rawValue - minValue) / valueSpan));
+        const y = geometry.padY + (1 - normalized) * geometry.usableHeight;
+        return { x, y, value: rawValue };
+    }
+
+    buildTelemetryTracePath(points, valueKey, width, height, maxValue, minValue = 0, padX = 16, padY = 16) {
+        if (!Array.isArray(points) || points.length < 2) return '';
+        const geometry = this.getTelemetryChartGeometry(width, height, padX, padY);
+        const range = this.getTelemetryDistanceRange([{ points }]);
+        return points.map((point, index) => {
+            const { x, y } = this.telemetryPointToCoords(point, valueKey, geometry, range, maxValue, minValue);
+            return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
+        }).join(' ');
+    }
+
+    buildTelemetryGridMarkup(width, height, rows = 5, columns = 6) {
+        const horizontal = Array.from({ length: rows }, (_, index) => {
+            const y = 16 + ((height - 32) / Math.max(rows - 1, 1)) * index;
+            return `<line x1="16" y1="${y.toFixed(2)}" x2="${width - 16}" y2="${y.toFixed(2)}" stroke="#2a2a2a" stroke-width="1" opacity="${index === rows - 1 ? '0.85' : '0.45'}"></line>`;
+        }).join('');
+        const vertical = Array.from({ length: columns + 1 }, (_, index) => {
+            const x = 16 + ((width - 32) / Math.max(columns, 1)) * index;
+            return `<line x1="${x.toFixed(2)}" y1="16" x2="${x.toFixed(2)}" y2="${height - 16}" stroke="#242424" stroke-width="1" opacity="0.38"></line>`;
+        }).join('');
+        return `${horizontal}${vertical}`;
+    }
+
+    buildTelemetryChartSvg(traces, valueKey, { width = 720, height = 220, maxValue = 360, minValue = 0 } = {}) {
+        const orderedTraces = [...traces];
+        const gridMarkup = this.buildTelemetryGridMarkup(width, height, valueKey === 'speed_kph' ? 6 : 4, valueKey === 'speed_kph' ? 8 : 6);
+        const lineMarkup = orderedTraces.map((trace, index) => {
+            const path = this.buildTelemetryTracePath(trace.points || [], valueKey, width, height, maxValue, minValue);
+            if (!path) return '';
+            const color = trace.display_color || this.getTelemetryRoleColor(trace.role_label, index);
+            const isPrimary = trace.role_label === 'Your Lap';
+            const strokeWidth = isPrimary ? 3.8 : 3.2;
+            const opacity = isPrimary ? 0.98 : 0.96;
+            const glowOuter = `<path d="${path}" fill="none" stroke="${color}" stroke-width="${strokeWidth + 7}" stroke-linecap="round" stroke-linejoin="round" opacity="0.10"></path>`;
+            const glowInner = `<path d="${path}" fill="none" stroke="${color}" stroke-width="${strokeWidth + 3.5}" stroke-linecap="round" stroke-linejoin="round" opacity="0.18"></path>`;
+            const outline = `<path d="${path}" fill="none" stroke="#0f1013" stroke-width="${strokeWidth + 1.2}" stroke-linecap="round" stroke-linejoin="round" opacity="0.88"></path>`;
+            const line = `<path d="${path}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${opacity}"></path>`;
+            return `${glowOuter}${glowInner}${outline}${line}`;
+        }).join('');
+        return `
+            <svg class="telemetry-chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+                <rect x="0" y="0" width="${width}" height="${height}" rx="14" ry="14" fill="#171717"></rect>
+                ${gridMarkup}
+                <line x1="16" y1="16" x2="16" y2="${height - 16}" stroke="#3a3a3a" stroke-width="1"></line>
+                <line x1="16" y1="${height - 16}" x2="${width - 16}" y2="${height - 16}" stroke="#3a3a3a" stroke-width="1"></line>
+                ${lineMarkup}
+            </svg>
+        `;
+    }
+
+    buildTelemetryHoverModel(traces, valueKey, chartTitle, options = {}) {
+        const width = options.width || 720;
+        const height = options.height || 220;
+        const maxValue = this.getTelemetryChartMax(traces, valueKey, options.maxValue || 100);
+        return {
+            chartKey: options.chartKey || valueKey,
+            chartTitle,
+            valueKey,
+            unit: options.unit || '',
+            maxValue,
+            minValue: options.minValue || 0,
+            geometry: this.getTelemetryChartGeometry(width, height),
+            range: this.getTelemetryDistanceRange(traces),
+            traces: traces.map((trace, index) => ({
+                id: trace.car_id || `trace-${index}`,
+                label: trace.driver_name || `Driver #${trace.driver_number}`,
+                color: trace.display_color || this.getTelemetryRoleColor(trace.role_label, index),
+                points: trace.points || [],
+            })),
+        };
+    }
+
+    renderTelemetryHoverAtDistance(distance) {
+        if (!this.overlayContainer || !this.telemetryViewState) return;
+        Object.values(this.telemetryViewState).forEach((model) => {
+            if (!model) return;
+            const shell = this.overlayContainer.querySelector(`.telemetry-chart-shell[data-chart-key="${model.chartKey}"]`);
+            const overlay = shell?.querySelector('.telemetry-hover-overlay');
+            if (!shell || !overlay) return;
+
+            const samples = model.traces.map(trace => {
+                if (!trace.points.length) return null;
+                let nearest = trace.points[0];
+                let nearestDelta = Math.abs((nearest.distance_m || 0) - distance);
+                for (const point of trace.points) {
+                    const delta = Math.abs((point.distance_m || 0) - distance);
+                    if (delta < nearestDelta) {
+                        nearest = point;
+                        nearestDelta = delta;
+                    }
+                }
+                const coords = this.telemetryPointToCoords(nearest, model.valueKey, model.geometry, model.range, model.maxValue, model.minValue);
+                return {
+                    label: trace.label,
+                    color: trace.color,
+                    point: nearest,
+                    x: coords.x,
+                    y: coords.y,
+                    value: coords.value,
+                };
+            }).filter(Boolean);
+
+            if (!samples.length) return;
+            const anchor = samples[0];
+            const markers = samples.map(sample => `<div class="telemetry-hover-marker" style="left:${(sample.x / model.geometry.width) * 100}%;top:${(sample.y / model.geometry.height) * 100}%;border-color:${sample.color};box-shadow:0 0 0 3px ${sample.color}22;"></div>`).join('');
+            const rows = samples.map(sample => `<div class="telemetry-hover-row"><span class="telemetry-hover-dot" style="background:${sample.color}"></span><span>${sample.label}</span><strong>${sample.value.toFixed(1)}${model.unit}</strong></div>`).join('');
+            overlay.innerHTML = `
+                <div class="telemetry-hover-line" style="left:${(anchor.x / model.geometry.width) * 100}%"></div>
+                ${markers}
+                <div class="telemetry-hover-tooltip" style="left:clamp(12px, calc(${(anchor.x / model.geometry.width) * 100}% + 10px), calc(100% - 180px));top:12px;">
+                    <div class="telemetry-hover-title">${model.chartTitle}</div>
+                    <div class="telemetry-hover-distance">${(anchor.point.distance_m || 0).toFixed(1)} m</div>
+                    ${rows}
+                </div>
+            `;
+            overlay.classList.add('is-visible');
+        });
+    }
+
+    handleTelemetryChartHover(event, shell) {
+        const chartKey = shell?.dataset?.chartKey;
+        const model = this.telemetryViewState?.[chartKey];
+        if (!chartKey || !model) return;
+
+        const svg = shell.querySelector('.telemetry-chart-svg');
+        if (!svg) return;
+
+        const rect = svg.getBoundingClientRect();
+        const relX = Math.max(0, Math.min(rect.width, event.clientX - rect.left));
+        const xView = (relX / Math.max(rect.width, 1)) * model.geometry.width;
+        const distance = model.range.minDistance + ((xView - model.geometry.padX) / Math.max(model.geometry.usableWidth, 1)) * (model.range.maxDistance - model.range.minDistance);
+        this.renderTelemetryHoverAtDistance(distance);
+    }
+
+    clearTelemetryChartHover() {
+        if (!this.overlayContainer) return;
+        this.overlayContainer.querySelectorAll('.telemetry-hover-overlay').forEach(node => {
+            node.classList.remove('is-visible');
+            node.innerHTML = '';
+        });
+    }
+
+    buildTelemetryLegend(traces) {
+        return traces.map((trace, index) => {
+            const color = trace.display_color || this.getTelemetryRoleColor(trace.role_label, index);
+            const label = trace.driver_name || `Driver #${trace.driver_number}`;
+            const lapLabel = trace.lap_number ? `Lap ${trace.lap_number}` : null;
+            const timeLabel = trace.lap_time_s ? this.formatLapTime(trace.lap_time_s) : null;
+            const badges = [];
+            if (trace.role_label) badges.push(trace.role_label);
+            if (trace.is_session_best) badges.push('Session Best');
+            const meta = [...badges, [lapLabel, timeLabel].filter(Boolean).join(' · ')].filter(Boolean).join(' · ') || 'No lap';
+            return `
+                <div class="telemetry-legend-item">
+                    <span class="telemetry-legend-swatch" style="background:${color};"></span>
+                    <span class="telemetry-legend-name">${label}</span>
+                    <span class="telemetry-legend-meta">${meta}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async buildTelemetryPanel(car) {
+        const options = this.getTelemetryComparisonOptions(car);
+        const rivalValue = car.telemetry_rival_target || String(options.rivals?.[0]?.driver_number || '');
+        const lapSelector = car.telemetry_lap_selector || 'best';
+        let playerTelemetryData = null;
+        let compareTelemetryData = null;
+        try {
+            playerTelemetryData = await this.fetchTelemetryCompare(car.driver_number, [car.driver_number], lapSelector);
+            const sessionBestCompareId = String(playerTelemetryData?.session_best?.car_id || '');
+            const effectiveRivalValue = rivalValue === '__session_best__' ? sessionBestCompareId : rivalValue;
+            const compareIds = [];
+            if (options.teammate?.driver_number) compareIds.push(options.teammate.driver_number);
+            if (effectiveRivalValue) compareIds.push(effectiveRivalValue);
+            compareTelemetryData = compareIds.length
+                ? await this.fetchTelemetryCompare(car.driver_number, compareIds, 'best')
+                : { traces: [], session_best: null };
+        } catch (err) {
+            console.warn('[GarageV3] Telemetry fetch failed:', err);
+        }
+        const telemetryData = {
+            session_best: playerTelemetryData?.session_best || compareTelemetryData?.session_best || null,
+            traces: [
+                ...(playerTelemetryData?.traces || []),
+                ...(compareTelemetryData?.traces || []),
+            ],
+        };
+        const effectiveRivalValue = rivalValue === '__session_best__'
+            ? String(telemetryData?.session_best?.car_id || '')
+            : rivalValue;
+        const sessionBestCarId = String(telemetryData?.session_best?.car_id || '');
+        const traces = this.assignTelemetryDisplayColors((telemetryData?.traces || [])
+            .filter(trace => Array.isArray(trace.points) && trace.points.length > 1)
+            .map(trace => ({
+                ...trace,
+                role_label: String(trace.driver_number) === String(car.driver_number)
+                    ? 'Your Lap'
+                    : (rivalValue === '__session_best__' && String(trace.car_id) === sessionBestCarId)
+                        ? 'Session Best'
+                        : String(trace.driver_number) === String(options.teammate?.driver_number || '')
+                            ? 'Teammate Best'
+                            : String(trace.driver_number) === String(effectiveRivalValue || '')
+                                ? 'Rival Best'
+                                : null,
+                is_session_best: Boolean(telemetryData?.session_best?.car_id && String(trace.car_id) === String(telemetryData.session_best.car_id)),
+            })));
+        const traceMetaByDriver = new Map(traces.map(trace => [String(trace.driver_number), trace]));
+        const playerTrace = traces.find(trace => String(trace.driver_number) === String(car.driver_number));
+        const teammateTrace = traces.find(trace => String(trace.driver_number) === String(options.teammate?.driver_number || ''));
+        const rivalTrace = traces.find(trace => String(trace.driver_number) === String(effectiveRivalValue || ''));
+        const sessionBestOptionLabel = telemetryData?.session_best?.driver_name
+            ? `${telemetryData.session_best.driver_name} · ${this.formatLapTime(telemetryData.session_best.lap_time_s)}`
+            : this.formatLapTime(telemetryData?.session_best?.lap_time_s);
+        const rivalChipOptions = (options.rivals || []).map(option => {
+            const chipTrace = traceMetaByDriver.get(String(option.driver_number));
+            const lapTime = this.formatLapTime(
+                option?.best_lap_time
+                ?? chipTrace?.lap_time_s
+                ?? option?.last_lap_time
+                ?? null
+            );
+            return `<option value="${option.driver_number}" ${String(option.driver_number) === String(rivalValue) ? 'selected' : ''}>${option.driver_name || `Driver #${option.driver_number}`} · ${lapTime}</option>`;
+        }).join('');
+        const rivalOptions = `${telemetryData?.session_best?.car_id ? `<option value="__session_best__" ${rivalValue === '__session_best__' ? 'selected' : ''}>Session Best · ${sessionBestOptionLabel}</option>` : ''}${rivalChipOptions}`;
+        const lapOptions = [
+            { value: 'best', label: 'Best Lap' },
+            { value: 'latest', label: 'Latest Lap' },
+        ].map(option => `<option value="${option.value}" ${option.value === lapSelector ? 'selected' : ''}>${option.label}</option>`).join('');
+        const driverBadges = [playerTrace, teammateTrace, rivalTrace].filter(Boolean).map(trace => `
+            <div class="telemetry-driver-badge-v3" style="--telemetry-accent:${trace.display_color};">
+                <span class="telemetry-driver-badge-dot"></span>
+                <span class="telemetry-driver-badge-name">${trace.driver_name}</span>
+                <span class="telemetry-driver-badge-role">${trace.role_label || 'Lap'}</span>
+                <strong>${this.formatLapTime(trace.lap_time_s)}</strong>
+            </div>
+        `).join('');
+        if (!traces.length) {
+            return `
+                <div class="telemetry-panel-v3 telemetry-panel-v3--empty">
+                    <div class="telemetry-toolbar-v3">
+                        <div class="telemetry-badge-row-v3">
+                            <button type="button" class="telemetry-info-badge-v3 telemetry-info-badge-v3--action ${rivalValue === '__session_best__' ? 'is-active' : ''}" data-field="telemetry_rival_target" data-value="__session_best__"><span>Session Best</span><strong>${this.formatLapTime(telemetryData?.session_best?.lap_time_s)}</strong></button>
+                            ${driverBadges}
+                        </div>
+                        ${this.buildTelemetryPickerControls(rivalOptions, lapOptions, rivalValue)}
+                    </div>
+                    <div class="telemetry-empty-v3">No telemetry available yet. Send the car on track and complete a timed lap.</div>
+                </div>
+            `;
+        }
+        const speedBounds = this.getTelemetryValueBounds(traces, 'speed_kph', 0, 360, { pad: 8, minSpan: 38 });
+        const throttleMax = this.getTelemetryChartMax(traces, 'throttle_pct', 100);
+        const brakeMax = this.getTelemetryChartMax(traces, 'brake_pct', 100);
+        this.telemetryViewState = {
+            speed: this.buildTelemetryHoverModel(traces, 'speed_kph', 'Speed', { chartKey: 'speed', height: 240, minValue: speedBounds.minValue, maxValue: speedBounds.maxValue, unit: ' km/h' }),
+            throttle: this.buildTelemetryHoverModel(traces, 'throttle_pct', 'Throttle', { chartKey: 'throttle', height: 150, maxValue: throttleMax, unit: '%' }),
+            brake: this.buildTelemetryHoverModel(traces, 'brake_pct', 'Brake', { chartKey: 'brake', height: 150, maxValue: brakeMax, unit: '%' }),
+        };
+        const speedSvg = this.buildTelemetryChartSvg(traces, 'speed_kph', { height: 240, minValue: speedBounds.minValue, maxValue: speedBounds.maxValue });
+        const throttleSvg = this.buildTelemetryChartSvg(traces, 'throttle_pct', { height: 150, maxValue: throttleMax });
+        const brakeSvg = this.buildTelemetryChartSvg(traces, 'brake_pct', { height: 150, maxValue: brakeMax });
+        return `
+            <div class="telemetry-panel-v3">
+                <div class="telemetry-toolbar-v3">
+                    <div class="telemetry-badge-row-v3">
+                        <button type="button" class="telemetry-info-badge-v3 telemetry-info-badge-v3--action ${rivalValue === '__session_best__' ? 'is-active' : ''}" data-field="telemetry_rival_target" data-value="__session_best__"><span>Session Best</span><strong>${this.formatLapTime(telemetryData?.session_best?.lap_time_s)}</strong></button>
+                        ${driverBadges}
+                    </div>
+                    ${this.buildTelemetryPickerControls(rivalOptions, lapOptions, rivalValue)}
+                    <div class="telemetry-legend-v3">${this.buildTelemetryLegend(traces)}</div>
+                </div>
+                <div class="telemetry-chart-card-v3">
+                    <div class="telemetry-card-header-v3">
+                        <strong>Speed</strong>
+                        <span>km/h vs distance</span>
+                    </div>
+                    <div class="telemetry-chart-shell" data-chart-key="speed">${speedSvg}<div class="telemetry-hover-overlay"></div></div>
+                </div>
+                <div class="telemetry-stack-v3">
+                    <div class="telemetry-chart-card-v3 telemetry-chart-card-v3--compact">
+                        <div class="telemetry-card-header-v3">
+                            <strong>Throttle</strong>
+                            <span>% application</span>
+                        </div>
+                        <div class="telemetry-chart-shell" data-chart-key="throttle">${throttleSvg}<div class="telemetry-hover-overlay"></div></div>
+                    </div>
+                    <div class="telemetry-chart-card-v3 telemetry-chart-card-v3--compact">
+                        <div class="telemetry-card-header-v3">
+                            <strong>Brake</strong>
+                            <span>% pressure</span>
+                        </div>
+                        <div class="telemetry-chart-shell" data-chart-key="brake">${brakeSvg}<div class="telemetry-hover-overlay"></div></div>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     buildBrakeRegenTile(puStats, brakeDiag, regenClampActive) {
@@ -2261,7 +2759,6 @@ export class PlayerGarageV3 {
             if (msgEl && eval_.message) {
                 const brakeWarnings = this.buildBrakeWarningsFromFeedback(validation);
                 const fullMessage = brakeWarnings ? `${eval_.message}\n${brakeWarnings}` : eval_.message;
-                msgEl.textContent = fullMessage;
                 
                 // Auto-resize feedback message if too long
                 const lineHeight = 18;
@@ -2800,41 +3297,6 @@ export class PlayerGarageV3 {
         }
     }
 
-    handleOverlayAction(driverNumber, action, target = null) {
-        if (action === 'close-setup' || action === 'close-pu') {
-            this.togglePUModal(driverNumber, false);
-        } else if (action === 'reset-setup') {
-            this.resetSetupDraft(driverNumber);
-            const carData = this.state.getPlayerCar(driverNumber);
-            if (carData) {
-                this.buildPUModal(carData);
-            }
-        } else if (action === 'apply-setup') {
-            const carData = this.state.getPlayerCar(driverNumber);
-            if (!carData) {
-                this.setStatus('Player car unavailable.', 'error');
-                return;
-            }
-            const state = this.getCarState(carData);
-            const payload = this.buildSetupPayloadFromDraft(driverNumber, carData);
-            this.submitSetupConfig(driverNumber, payload, state);
-        } else if (action === 'switch-pu-tab') {
-            const tab = target?.dataset?.tab || 'stats';
-            const carData = this.state.getPlayerCar(driverNumber);
-            this.activePuTab = tab;
-            if (carData) {
-                this.buildPUModal(carData);
-            }
-        } else if (action === 'ers-reset') {
-            const carData = this.state.getPlayerCar(driverNumber);
-            if (carData) {
-                const puStats = carData.pu_stats || {};
-                this.resetErsEditorState(driverNumber, puStats);
-                this.refreshErsEditorPanel(driverNumber);
-            }
-        }
-    }
-
     async sendPlayerCarOut(driverNumber) {
         try {
             // console.log('[GarageV3] Sending car out:', driverNumber);
@@ -2958,19 +3420,38 @@ export class PlayerGarageV3 {
         }
     }
 
-    handleFieldChange(event) {
-        const target = event.target;
-        const field = target.dataset.field;
+    handleFieldChange(event, driverNumber = null, container = null) {
+        const field = event.target.dataset.field;
         if (!field) return;
-        const card = target.closest('.car-card-v3');
+        const target = event.target;
+
+        if (field === 'telemetry_rival_target' || field === 'telemetry_lap_selector') {
+            const overlayDriver = driverNumber || Number(this.overlayContainer?.dataset?.driver);
+            const carData = this.state.getPlayerCar(overlayDriver);
+            if (carData) {
+                if (field === 'telemetry_rival_target') {
+                    carData.telemetry_rival_target = target.value || '';
+                }
+                if (field === 'telemetry_lap_selector') {
+                    carData.telemetry_lap_selector = target.value || 'best';
+                }
+                if (typeof this.state.setPlayerCar === 'function') {
+                    this.state.setPlayerCar(carData);
+                }
+                this.buildPUModal(carData);
+            }
+            return;
+        }
+
+        const card = container || target.closest('.car-card-v3');
         if (!card) return;
-        const driverNumber = Number(card.dataset.driver);
+        const resolvedDriverNumber = driverNumber || Number(card.dataset.driver);
         const state = card.dataset.state;
-        if (!driverNumber) return;
+        if (!resolvedDriverNumber) return;
 
         if (state !== 'BOX' && this.BOX_ONLY_FIELDS.has(field)) {
             this.setStatus('Bring the car into the garage to change tyres, fuel, or stint laps.', 'error');
-            const carData = this.state.getPlayerCar(driverNumber);
+            const carData = this.state.getPlayerCar(resolvedDriverNumber);
             if (carData) {
                 const revertValue = carData.player_config?.[field] ?? carData[field];
                 if (revertValue !== undefined) {
@@ -2985,9 +3466,36 @@ export class PlayerGarageV3 {
             ? Number(target.value)
             : target.value;
         if (field === 'tyre_set_id') {
-            payload.tyre_compound = target.selectedOptions?.[0]?.dataset?.compound || payload.tyre_compound;
+            const option = event.target.selectedOptions?.[0];
+            const compound = option?.dataset?.compound;
+            if (compound) {
+                this.updateLocalPlayerConfig(resolvedDriverNumber, { tyre_set_id: event.target.value, tyre_compound: compound });
+            }
+            return;
         }
-        this.sendPlayerConfig(driverNumber, payload, state);
+
+        this.sendPlayerConfig(resolvedDriverNumber, payload, state);
+    }
+
+    handleTelemetryChipSelection(target) {
+        const field = target?.dataset?.field;
+        if (!field) return;
+        const value = target.dataset.value || '';
+        const overlayDriver = Number(this.overlayContainer?.dataset?.driver);
+        if (!overlayDriver) return;
+        const carData = this.state.getPlayerCar(overlayDriver);
+        if (!carData) return;
+        if (field === 'telemetry_rival_target') {
+            carData.telemetry_rival_target = value;
+        } else if (field === 'telemetry_lap_selector') {
+            carData.telemetry_lap_selector = value || 'best';
+        } else {
+            return;
+        }
+        if (typeof this.state.setPlayerCar === 'function') {
+            this.state.setPlayerCar(carData);
+        }
+        this.buildPUModal(carData);
     }
 
     handleSetupInput(event, forcedDriverNumber, forcedContainer) {

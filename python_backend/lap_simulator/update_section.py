@@ -228,6 +228,7 @@ def update_section(
     # ===================================================================
     import math
     is_corner = section.kind in CORNER_KINDS
+    telemetry_points: List[Dict[str, float]] = []
     
     # Costanti fisiche di conversione e taratura
     MASS_DRY = 798.0
@@ -361,24 +362,44 @@ def update_section(
             F_lat_max = F_z * mu
             max_brake_force = F_z * mu * braking_efficiency
             
-            # === ACCELERAZIONE DERIVATA DA V_REF ===
-            # Invece di usare un modello di forze teoriche, calcoliamo l'accelerazione
-            # necessaria per raggiungere esattamente la velocità indicata dalla telemetria
-            # per il prossimo waypoint.
-            v_target = next_wp.v_ref_kph / 3.6 if next_wp.v_ref_kph > 0 else v
-            
-            # Non applichiamo il pace_factor qui, la telemetria è il ground truth.
-            # Il pace_factor verrà gestito a livello macro o penalizzando il tempo finale.
-            
-            # Calcolo cinematico dell'accelerazione: v² = v₀² + 2as  ->  a = (v² - v₀²) / 2s
-            a = (v_target**2 - v**2) / (2 * max(dist_step, 0.1))
-            
-            # Traffico
-            if traffic_v_max_kph > 0 and (v * 3.6) > traffic_v_max_kph:
-                a = min(a, -F_drag/mass)
-                
-            # La nuova velocità è esattamente il target (limitato ai cap)
-            v_new = v_target
+            # Usiamo la telemetria HD come guida morbida, non come target rigido.
+            # Questo permette alle differenze di auto/setup/driver di emergere davvero.
+            v_ref_ms = next_wp.v_ref_kph / 3.6 if next_wp.v_ref_kph > 0 else v
+            accel_limit = max((power_kw * 1000.0) / max(v, 1.0), 0.0)
+            brake_limit = max_brake_force
+            traction_limit = F_z * mu
+            if hasattr(next_wp, 'target_g_lat') and next_wp.target_g_lat and abs(next_wp.target_g_lat) > 0:
+                lat_force_req = mass * 9.81 * abs(float(next_wp.target_g_lat))
+                if lat_force_req < F_lat_max:
+                    traction_limit = math.sqrt(max(0.0, F_lat_max**2 - lat_force_req**2))
+                else:
+                    traction_limit = 0.0
+
+            F_drive = min(accel_limit, traction_limit)
+            F_net = F_drive - F_drag
+
+            throttle_ref = clamp(float(getattr(next_wp, 'throttle_pct', 100.0)), 0.0, 100.0) / 100.0
+            brake_ref = clamp(float(getattr(next_wp, 'brake_pct', 0.0)), 0.0, 100.0) / 100.0
+            F_net *= throttle_ref
+            if brake_ref > 0:
+                F_net -= brake_limit * brake_ref
+
+            a_physics = F_net / max(mass, 1.0)
+            v_physics_sq = max(v**2 + 2 * a_physics * max(dist_step, 0.1), 0.0)
+            v_physics = math.sqrt(v_physics_sq)
+
+            if section.kind in CORNER_KINDS and section.v_min_kph > 0:
+                corner_cap = v_apex_limit * (0.985 + 0.03 * driver_intent.pace_factor)
+                v_physics = min(v_physics, corner_cap)
+
+            reference_pull = 0.15
+            pace_scale = clamp(driver_intent.pace_factor, 0.92, 1.08)
+            v_target = v_ref_ms * pace_scale
+            v_new = (v_physics * (1.0 - reference_pull)) + (v_target * reference_pull)
+
+            if traffic_v_max_kph > 0:
+                v_new = min(v_new, traffic_v_max_kph / 3.6)
+
             v_new = clamp(v_new, config.v_min_kph / 3.6, config.v_cap_kph / 3.6)
             
             # Avanzamento esatto allo step
@@ -387,6 +408,17 @@ def update_section(
             
             t += actual_dt
             v = v_new
+
+            telemetry_points.append({
+                "distance_m": round(float(next_wp.dist_m), 3),
+                "dt_s": round(float(actual_dt), 4),
+                "speed_kph": round(float(v_new * 3.6), 3),
+                "throttle_pct": float(getattr(next_wp, 'throttle_pct', 0.0)),
+                "brake_pct": float(getattr(next_wp, 'brake_pct', 0.0)),
+                "drs_active": bool(getattr(next_wp, 'drs_active', False)),
+                "steering_angle_deg": round(float(getattr(next_wp, 'steering_angle_deg', 0.0)), 3),
+                "target_g_lat": round(float(getattr(next_wp, 'target_g_lat', 0.0)), 4),
+            })
             
             if v > v_max_reached_ms:
                 v_max_reached_ms = v
@@ -823,15 +855,15 @@ def update_section(
 
     return SectionResult(
         dt_s=dt_s,
-        v_exit_kph=car_state.v_current_ms * 3.6,
+        v_exit_kph=v * 3.6,
         v_entry_kph=v_entry_kph,
         v_effective_kph=v_effective,
         v_max_kph=v_max_reached_ms * 3.6,
+        telemetry_points=telemetry_points,
         events=all_events,
         overtake_window=car_state.overtake_window,
-        section_progress=1.0,
         braking_efficiency=braking_efficiency,
-        late_brake_tag=late_brake,
+        late_brake_tag=any(e.event_type == "late_brake" for e in all_events),
         df_available=aero_forces.df_total,
         drag_eff=aero_forces.drag_eff,
         power_kw=total_power_kw,
