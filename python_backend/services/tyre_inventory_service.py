@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from json import JSONDecodeError
 from pathlib import Path
 from typing import Dict, Iterable, Optional
 
@@ -26,7 +27,10 @@ class TyreInventoryService:
             return self._store_cache
 
         if self._store_path.exists():
-            self._store_cache = json.loads(self._store_path.read_text(encoding="utf-8"))
+            try:
+                self._store_cache = json.loads(self._store_path.read_text(encoding="utf-8"))
+            except JSONDecodeError:
+                self._store_cache = {}
         else:
             self._store_cache = {}
         return self._store_cache

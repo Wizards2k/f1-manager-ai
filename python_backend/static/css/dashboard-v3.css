@@ -3135,6 +3135,28 @@ font-weight: 500;
     opacity: 0.9;
 }
 
+.telemetry-select-wrap-v3--tagged::after {
+    right: 34px;
+}
+
+.telemetry-select-wrap-v3--tagged::before {
+    content: attr(data-pill);
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    color: #f6e3a7;
+    background: rgba(244, 200, 77, 0.16);
+    border: 1px solid rgba(244, 200, 77, 0.35);
+    border-radius: 999px;
+    padding: 2px 8px;
+    pointer-events: none;
+    text-transform: uppercase;
+}
+
 .telemetry-select-v3 {
     width: 100%;
     min-width: 0;
@@ -3348,6 +3370,13 @@ font-weight: 500;
     position: relative;
 }
 
+.telemetry-track-marker-svg text {
+    paint-order: stroke;
+    stroke: rgba(15, 18, 22, 0.92);
+    stroke-width: 3px;
+    stroke-linejoin: round;
+}
+
 .telemetry-hover-overlay {
     position: absolute;
     inset: 0;
@@ -3402,7 +3431,22 @@ font-weight: 500;
 .telemetry-hover-distance {
     font-size: 13px;
     font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.telemetry-hover-corner {
+    display: inline-flex;
+    align-items: center;
+    min-height: 20px;
+    padding: 0 8px;
     margin-bottom: 8px;
+    border-radius: 999px;
+    background: rgba(244, 200, 77, 0.12);
+    border: 1px solid rgba(244, 200, 77, 0.2);
+    color: #f7dc8b;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
 }
 
 .telemetry-hover-row {
@@ -3423,6 +3467,60 @@ font-weight: 500;
     width: 8px;
     height: 8px;
     border-radius: 999px;
+}
+
+.telemetry-hover-labels {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.telemetry-hover-labels span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.telemetry-hover-labels small {
+    font-size: 9px;
+    color: #8ea0b6;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.telemetry-hover-values {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.telemetry-hover-delta,
+.telemetry-hover-time-delta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    font-variant-numeric: tabular-nums;
+}
+
+.telemetry-hover-delta.is-positive,
+.telemetry-hover-time-delta.is-positive {
+    color: #ffb26b;
+    background: rgba(255, 149, 0, 0.12);
+}
+
+.telemetry-hover-delta.is-negative,
+.telemetry-hover-time-delta.is-negative {
+    color: #78dba9;
+    background: rgba(88, 214, 141, 0.12);
 }
 
 .telemetry-chart-card-v3--compact .telemetry-chart-svg {
