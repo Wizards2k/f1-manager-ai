@@ -9,6 +9,7 @@ Reference: docs/lap-physics-spec-v0.5.md §3.3 (Passi 1-8)
 from __future__ import annotations
 
 from typing import Dict, List, Optional
+import logging
 
 from .aero_package import compute_forces
 from .brake_system import update_brakes
@@ -30,7 +31,12 @@ from .data_types import (
     clamp,
 )
 from .driver_model import compute_inputs, update_mental_state
-from .engine_penalty import compute_engine_penalty, get_engine_cv_for_team
+from .engine_penalty import (
+    DEFAULT_ENGINE_MAP_PENALTIES,
+    STRAIGHT_KINDS,
+    compute_engine_penalty,
+    get_engine_cv_for_team,
+)
 from .brake_penalty import compute_brake_penalty
 from .power_unit import generate_output
 from .push_penalty import compute_push_penalty_per_section
@@ -47,6 +53,9 @@ from .setup_penalty_v2 import (
     clamp_penalties,
 )
 from .penalty_cache import get_penalty_cache
+
+PENALTY_LOGGER_NAME = "lap_simulator.penalties"
+logger = logging.getLogger(PENALTY_LOGGER_NAME)
 
 # Import penalty system flags
 try:
@@ -119,6 +128,14 @@ def update_section(
     driver_id : str             – Driver identifier for penalty RNG
     lap_number : int            – Lap number for penalty RNG
     """
+    logger.debug(
+        "[PEN] start sec=%s push=%.2f map=%s ers=%s tyres=%s",
+        section.section_id,
+        push_level,
+        getattr(getattr(car_state.pu, "active_map", None), "value", None),
+        getattr(car_state, "ers_mode", None),
+        {wp.name: car_state.tyres[wp].compound.name for wp in WheelPosition if wp in car_state.tyres},
+    )
     all_events: List[SectionEvent] = []
 
     # Get penalty cache if enabled
@@ -668,13 +685,63 @@ def update_section(
     
     # Engine penalty (CV + map) - Step 6 integration
     engine_delta_s = 0.0
-    if ENABLE_ENGINE_PENALTIES and USE_NEW_PENALTY_SYSTEM and hasattr(car_state, 'team_code') and car_state.team_code:
-        team_cv = get_engine_cv_for_team(car_state.team_code)
+    engine_penalty_enabled = ENABLE_ENGINE_PENALTIES and USE_NEW_PENALTY_SYSTEM
+    team_code = getattr(car_state, "team_code", "")
+    engine_map = getattr(car_state.pu, "active_map", None)
+    section_kind = getattr(section.kind, "name", str(section.kind))
+    straight_kind = section.kind in STRAIGHT_KINDS
+
+    if logger.isEnabledFor(logging.INFO):
+        map_penalties = config.engine_map_penalties or DEFAULT_ENGINE_MAP_PENALTIES
+        preview_map_penalty = map_penalties.get(engine_map, 0.0) if engine_map else 0.0
+        logger.info(
+            "[PEN] engine_input sec=%s kind=%s straight=%s enabled=%s team_code=%s map=%s coeff=%.6f ref_cv=%.1f map_penalty=%.4f",
+            section.section_id,
+            section_kind,
+            straight_kind,
+            engine_penalty_enabled,
+            team_code or "<missing>",
+            getattr(engine_map, "value", engine_map),
+            config.engine_penalty_coeff,
+            config.engine_reference_cv,
+            preview_map_penalty,
+        )
+
+    if engine_penalty_enabled and team_code:
+        team_cv = get_engine_cv_for_team(team_code)
         engine_delta_s = compute_engine_penalty(
             team_cv=team_cv,
-            engine_map=car_state.pu.active_map,
+            engine_map=engine_map,
             section=section,
             config=config
+        )
+
+        if logger.isEnabledFor(logging.INFO):
+            cv_delta = team_cv - config.engine_reference_cv
+            cv_penalty = cv_delta * config.engine_penalty_coeff if straight_kind else 0.0
+            logger.info(
+                "[PEN] engine_result sec=%s team=%s map=%s straight=%s cv=%.1f cv_delta=%.1f cv_penalty=%.4f engine_s=%.4f",
+                section.section_id,
+                team_code,
+                getattr(engine_map, "value", engine_map),
+                straight_kind,
+                team_cv,
+                cv_delta,
+                cv_penalty,
+                engine_delta_s,
+            )
+    elif logger.isEnabledFor(logging.INFO):
+        reason = "disabled"
+        if engine_penalty_enabled and not team_code:
+            reason = "team_code_missing"
+        elif engine_penalty_enabled and not straight_kind:
+            reason = "non_straight_section"
+        elif not engine_penalty_enabled:
+            reason = "engine_penalty_flag_off"
+        logger.info(
+            "[PEN] engine_result sec=%s skipped reason=%s",
+            section.section_id,
+            reason,
         )
     
     # Brake penalty (duct + fade) - Step 5b extension
@@ -853,9 +920,9 @@ def update_section(
     # ===================================================================
     late_brake = any(e.event_type == "late_brake_success" for e in all_events)
 
-    return SectionResult(
+    result = SectionResult(
         dt_s=dt_s,
-        v_exit_kph=v * 3.6,
+        v_exit_kph=car_state.v_current_ms * 3.6,
         v_entry_kph=v_entry_kph,
         v_effective_kph=v_effective,
         v_max_kph=v_max_reached_ms * 3.6,
@@ -880,3 +947,13 @@ def update_section(
         drag_penalty_s=setup_penalty_result.drag_penalty_s,
         drag_bonus_s=setup_penalty_result.drag_bonus_s,
     )
+    logger.info(
+        "[PEN] sec=%s push=%.1f fuel=%.4f tyre=%.4f push_s=%.4f engine_s=%.4f",
+        section.section_id,
+        push_level,
+        fuel_delta_s,
+        tyre_delta_s,
+        push_delta_s,
+        engine_delta_s,
+    )
+    return result

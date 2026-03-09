@@ -39,6 +39,7 @@ from lap_simulator.data_types import (
     SectionContext,
     SectionResult,
     TyreCompound,
+    EngineMapName,
 )
 from lap_simulator.update_section import update_section
 from lap_simulator.battle_resolver import (
@@ -96,6 +97,20 @@ BRAKE_WARN_BLINK_WINDOW_S = 3.0
 # Session categorization for blue flag policy
 PRACTICE_SESSION_KINDS = {"FP1", "FP2", "FP3", "P1", "P2", "P3", "Q", "QUALI", "QUALIFYING"}
 RACE_SESSION_KINDS = {"RACE", "GP", "GRAND_PRIX"}
+
+ICE_MODE_TO_ENGINE_MAP = {
+    "PRACTICE": EngineMapName.PRACTICE,
+    "RACE": EngineMapName.RACE,
+    "QUALIFY": EngineMapName.QUALIFY,
+}
+
+ERS_MODE_CANONICAL = {
+    "RECHARGE": "RECHARGE",
+    "STANDARD": "STANDARD",
+    "OVERTAKE": "OVERTAKE",
+    "QUALIFY": "QUALIFY",
+    "DEFENCE": "DEFENCE",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -345,6 +360,7 @@ class SessionBridge:
         self._ai_report_enabled = os.getenv("F1_AI_SETUP_REPORT", "0").lower() in {"1", "true", "yes"}
         self._event_feed: List[Dict[str, Any]] = []
         self.tyre_inventory_service = TyreInventoryService()
+        self._player_runtime_state: Dict[str, Dict[str, Any]] = {}
 
     # ------------------------------------------------------------------
     # Initialization
@@ -690,6 +706,10 @@ class SessionBridge:
                     )
                 except Exception as e:
                     logger.error("update_section error for %s: %s", car_id, e)
+                    result = None
+
+                if result is None:
+                    logger.error("update_section returned None for %s; using fallback section result", car_id)
                     result = SectionResult(dt_s=dt_ref, v_exit_kph=speed_kph)
 
                 # Apply out lap / in lap penalty to the recorded dt_s
@@ -1272,6 +1292,39 @@ class SessionBridge:
         ts = self._track_states.get(car_id)
         if ts:
             ts.laps_planned = ts.laps_done_in_run
+
+    # ------------------------------------------------------------------
+    # Runtime player config propagation
+    # ------------------------------------------------------------------
+
+    def update_player_runtime_config(
+        self,
+        driver_number: int,
+        *,
+        pace_level: Optional[int] = None,
+        ice_mode: Optional[str] = None,
+        ers_mode: Optional[str] = None,
+    ) -> None:
+        """Apply runtime config changes to the live CarEntry if on track."""
+        car_id = str(driver_number)
+        ts = self._track_states.get(car_id)
+        if not ts or not ts.is_player:
+            return
+
+        entry = ts.car_entry
+        if pace_level is not None:
+            new_push = max(1, min(10, int(pace_level)))
+            entry.push_level = new_push
+        if ice_mode:
+            canonical = str(ice_mode).strip().upper()
+            engine_map = ICE_MODE_TO_ENGINE_MAP.get(canonical)
+            if engine_map:
+                entry.state.pu.active_map = engine_map
+        if ers_mode:
+            canonical = ERS_MODE_CANONICAL.get(str(ers_mode).strip().upper())
+            if canonical:
+                entry.state.ers_mode = canonical
+
 
     # ------------------------------------------------------------------
     # Queries

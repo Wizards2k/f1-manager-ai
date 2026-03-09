@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
+import os
 
 from .data_types import (
     AeroSetup,
@@ -25,7 +26,36 @@ from .data_types import (
 )
 from .update_section import update_section
 
-logger = logging.getLogger(__name__)
+PENALTY_LOGGER_NAME = "lap_simulator.penalties"
+logger = logging.getLogger(PENALTY_LOGGER_NAME)
+# For debug session we force penalty logging on regardless of env
+DEBUG_PENALTIES = True
+if DEBUG_PENALTIES:
+    _penalty_log_path = Path("logs/penalties.log")
+    _penalty_log_path.parent.mkdir(parents=True, exist_ok=True)
+    if not any(getattr(h, "_penalty_debug", False) for h in logger.handlers):
+        handler = logging.FileHandler(_penalty_log_path)
+        handler.setLevel(logging.DEBUG)
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+        handler._penalty_debug = True
+        logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+    logger.info("[PEN] DEBUG_PENALTIES attivo in LapSimulator")
+
+
+def _parse_penalty_log_filter() -> set:
+    raw_value = os.getenv("PENALTY_LOG_DRIVER_IDS", "16")
+    ids = {item.strip() for item in raw_value.split(",") if item.strip()}
+    return ids
+
+
+_TARGET_PENALTY_DRIVER_IDS = _parse_penalty_log_filter()
+
+
+def _should_log_penalties(car_id: Optional[str]) -> bool:
+    if not _TARGET_PENALTY_DRIVER_IDS:
+        return True
+    return str(car_id) in _TARGET_PENALTY_DRIVER_IDS
 
 _LAP_LOG_FILE = Path("logs/lap_times_debug.log")
 _LAP_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -202,21 +232,51 @@ class LapSimulator:
             traffic = self._compute_traffic_constraint(entry.car_id)
 
             # Physics step
-            result = update_section(
-                car_state=state,
-                aero_setup=entry.aero_setup,
-                driver_skills=entry.driver_skills,
-                section=section,
-                env=self.env,
-                config=self.config,
-                push_level=entry.push_level,
-                airflow_penalty=airflow,
-                traffic_v_max_kph=traffic,
-                delta_aero=entry.delta_aero,
-                delta_grip=entry.delta_grip,
-                setup_sliders=entry.setup_sliders if entry.setup_sliders else None,
-                ideal_setup_sliders=entry.ideal_setup_sliders if entry.ideal_setup_sliders else None,
-            )
+            try:
+                result = update_section(
+                    car_state=state,
+                    aero_setup=entry.aero_setup,
+                    driver_skills=entry.driver_skills,
+                    section=section,
+                    env=self.env,
+                    config=self.config,
+                    push_level=entry.push_level,
+                    airflow_penalty=airflow,
+                    traffic_v_max_kph=traffic,
+                    delta_aero=entry.delta_aero,
+                    delta_grip=entry.delta_grip,
+                    apply_baseline_delta=entry.apply_baseline_delta,
+                    is_qualifying=False,
+                    circuit_id=self.config.circuit_id,
+                    driver_id=entry.car_id,
+                    lap_number=state.lap_number,
+                    setup_sliders=entry.setup_sliders,
+                    ideal_setup_sliders=entry.ideal_setup_sliders,
+                )
+            except Exception:
+                logger.exception("update_section error for %s (section %s)", entry.car_id, section.section_id)
+                raise
+
+            if DEBUG_PENALTIES and _should_log_penalties(entry.car_id):
+                try:
+                    compound = entry.state.tyres[WheelPosition.LF].compound
+                    compound_name = compound.value if hasattr(compound, "value") else str(compound)
+                except Exception:
+                    compound_name = "unknown"
+                logger.info(
+                    "[PEN] car=%s sec=%s kind=%s push=%.1f fuel=%.4f tyre=%.4f push_s=%.4f engine_s=%.4f map=%s ers=%s compound=%s",
+                    entry.car_id,
+                    section.section_id,
+                    section.kind.name,
+                    entry.push_level,
+                    result.fuel_penalty_s,
+                    result.tyre_penalty_s,
+                    result.push_penalty_s,
+                    result.engine_penalty_s,
+                    getattr(entry.state.pu.active_map, "value", str(entry.state.pu.active_map)),
+                    getattr(entry.state, "ers_mode", ""),
+                    compound_name,
+                )
 
             section_results.append(result)
             all_events.extend(result.events)
@@ -285,6 +345,8 @@ class LapSimulator:
         timestamp = datetime.utcnow().isoformat()
         lines: List[str] = [f"{timestamp} | Lap Results:"]
         for car_id, lr in results.items():
+            if _TARGET_PENALTY_DRIVER_IDS and car_id not in _TARGET_PENALTY_DRIVER_IDS:
+                continue
             entry = self.cars.get(car_id)
             delta_aero = entry.delta_aero if entry else 0.0
             delta_grip = entry.delta_grip if entry else 0.0
@@ -347,20 +409,45 @@ class LapSimulator:
                 airflow = self._compute_airflow_penalty(car_id)
                 traffic = self._compute_traffic_constraint(car_id)
 
-                result = update_section(
-                    car_state=entry.state,
-                    aero_setup=entry.aero_setup,
-                    driver_skills=entry.driver_skills,
-                    section=section,
-                    env=self.env,
-                    config=self.config,
-                    push_level=entry.push_level,
-                    airflow_penalty=airflow,
-                    traffic_v_max_kph=traffic,
-                    delta_aero=entry.delta_aero,
-                    delta_grip=entry.delta_grip,
-                    apply_baseline_delta=entry.apply_baseline_delta,
-                )
+                try:
+                    result = update_section(
+                        car_state=entry.state,
+                        aero_setup=entry.aero_setup,
+                        driver_skills=entry.driver_skills,
+                        section=section,
+                        env=self.env,
+                        config=self.config,
+                        push_level=entry.push_level,
+                        airflow_penalty=airflow,
+                        traffic_v_max_kph=traffic,
+                        delta_aero=entry.delta_aero,
+                        delta_grip=entry.delta_grip,
+                        apply_baseline_delta=entry.apply_baseline_delta,
+                    )
+                except Exception:
+                    logger.exception("update_section error for %s (section %s)", car_id, section.section_id)
+                    raise
+
+                if DEBUG_PENALTIES and _should_log_penalties(car_id):
+                    try:
+                        compound = entry.state.tyres[WheelPosition.LF].compound
+                        compound_name = compound.value if hasattr(compound, "value") else str(compound)
+                    except Exception:
+                        compound_name = "unknown"
+                    logger.info(
+                        "[PEN] car=%s sec=%s kind=%s push=%.1f fuel=%.4f tyre=%.4f push_s=%.4f engine_s=%.4f map=%s ers=%s compound=%s",
+                        car_id,
+                        section.section_id,
+                        section.kind.name,
+                        entry.push_level,
+                        result.fuel_penalty_s,
+                        result.tyre_penalty_s,
+                        result.push_penalty_s,
+                        result.engine_penalty_s,
+                        getattr(entry.state.pu.active_map, "value", str(entry.state.pu.active_map)),
+                        getattr(entry.state, "ers_mode", ""),
+                        compound_name,
+                    )
                 section_results[car_id] = result
                 car_section_results[car_id].append(result)
                 car_events[car_id].extend(result.events)

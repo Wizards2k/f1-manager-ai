@@ -545,6 +545,11 @@ def register_routes(app):
     @app.route('/api/player/car/<int:driver_number>/configure', methods=['POST'])
     def configure_player_car(driver_number):
         payload = request.get_json(silent=True) or {}
+        app.logger.info(
+            "player_configure_request driver=%s payload=%s",
+            driver_number,
+            json.dumps(payload, ensure_ascii=False, sort_keys=True),
+        )
         if not payload:
             return _error_response('Missing configuration payload')
 
@@ -650,6 +655,21 @@ def register_routes(app):
 
         if not updates_applied:
             return _error_response('No valid fields provided for current state')
+
+        # Propagate runtime fields to active simulator entry if car is on track
+        runtime_fields = {'pace_level', 'ice_mode', 'ers_mode'}
+        touched_runtime = runtime_fields.intersection(updates_applied.keys())
+        if touched_runtime and car.state != CarState.BOX:
+            from utils.game_logic import get_session_bridge
+
+            bridge = get_session_bridge()
+            if bridge and bridge.active:
+                bridge.update_player_runtime_config(
+                    driver_number,
+                    pace_level=updates_applied.get('pace_level'),
+                    ice_mode=updates_applied.get('ice_mode'),
+                    ers_mode=updates_applied.get('ers_mode'),
+                )
 
         return jsonify({
             'message': 'Configuration updated',

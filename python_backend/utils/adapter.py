@@ -257,18 +257,22 @@ def racecar_to_car_entry(
         # Ensure base aero values exist even if external setup provided
         setup = _build_aero_setup(auto, base=setup)
 
-    # Map push level from driver skills instead of fixed pace_level
-    # Higher skill drivers should have higher push levels
-    pilot = car.pilot
-    if hasattr(pilot, 'velocita') and hasattr(pilot, 'qualifica'):
-        # Calculate push level from driver skills (85-98 range → 7-10 push level)
-        avg_skill = (pilot.velocita + pilot.qualifica) / 2
-        # Map: 85→7, 90→8, 95→9, 98→10
-        push_level = max(1, min(10, int(7 + (avg_skill - 85) / 5)))
-    else:
-        # Fallback to car's pace_level
-        pace = getattr(car, "pace_level", 5)
-        push_level = max(1, min(10, int(pace)))
+    # Prefer player-configured pace level; fallback to driver skills if missing
+    pace_value = getattr(car, "pace_level", None)
+    push_level = None
+    if pace_value is not None:
+        try:
+            push_level = max(1, min(10, int(round(pace_value))))
+        except (TypeError, ValueError):
+            push_level = None
+
+    if push_level is None:
+        pilot = getattr(car, "pilot", None)
+        if pilot and hasattr(pilot, 'velocita') and hasattr(pilot, 'qualifica'):
+            avg_skill = (pilot.velocita + pilot.qualifica) / 2
+            push_level = max(1, min(10, int(7 + (avg_skill - 85) / 5)))
+        else:
+            push_level = 7
         
     state = _build_sim_state(car_id, car)
 
@@ -276,11 +280,11 @@ def racecar_to_car_entry(
     delta_aero = 0.0
     delta_grip = 0.0
     
+    team_code = None
     try:
         from utils.team_performance import compute_team_penalties
         from lap_simulator.config_loader import load_circuit_config
 
-        # Get circuit config
         circuit_config = None
         try:
             import config
@@ -292,38 +296,26 @@ def racecar_to_car_entry(
         except Exception as e:
             logger.warning("Failed to load circuit config: %s", e)
 
-        # Determine team code
-        team_code = None
-        team_name = getattr(car.team, 'nome_scuderia', 'Unknown') if car.team else 'Unknown'
-        sigla = getattr(car.team, 'sigla_scuderia', None) if car.team else None
-        if sigla:
-            team_code = sigla.upper()
-
-        driver_team_map = {
-            1: 'RBR',   # Max Verstappen
-            22: 'RBR',  # Yuki Tsunoda  
-            63: 'MER',  # George Russell
-            12: 'MER',  # Andrea Kimi Antonelli
-            4: 'MCL',   # Lando Norris
-            81: 'MCL',  # Oscar Piastri
-            14: 'AST',  # Fernando Alonso
-            18: 'AST',  # Lance Stroll
-            10: 'ALP',  # Pierre Gasly
-            43: 'ALP',  # Franco Colapinto
-            23: 'WIL',  # Alexander Albon
-            55: 'WIL',  # Carlos Sainz
-            30: 'RB',   # Liam Lawson
-            6: 'RB',    # Isack Hadjar
-            27: 'SAU',  # Nico Hülkenberg
-            5: 'SAU',   # Gabriel Bortoleto
-            31: 'HAAS', # Esteban Ocon
-            87: 'HAAS', # Oliver Bearman
-        }
+        team = getattr(car, "team", None)
+        if team:
+            team_code = getattr(team, 'team_code', None) or getattr(team, 'sigla_scuderia', None)
         if not team_code:
+            driver_team_map = {
+                1: 'RBR', 22: 'RBR',
+                11: 'RBR',  # Perez legacy fallback
+                63: 'MER', 44: 'MER', 12: 'MER',
+                4: 'MCL', 81: 'MCL',
+                16: 'FER', 55: 'FER',
+                14: 'AST', 18: 'AST',
+                23: 'WIL', 2: 'WIL',
+                30: 'RB', 6: 'RB',
+                27: 'SAU', 5: 'SAU', 31: 'ALP', 10: 'ALP',
+                20: 'HAAS', 77: 'SAU', 24: 'SAU', 43: 'ALP', 87: 'HAAS',
+            }
             team_code = driver_team_map.get(int(car_id))
 
-
         if team_code:
+            team_code = team_code.upper()
             delta_aero, delta_grip = compute_team_penalties(team_code, circuit_config)
         else:
             logger.warning("Unable to resolve team_code for car %s", car_id)
@@ -340,6 +332,9 @@ def racecar_to_car_entry(
             ideal_setup_sliders = dict(player_config.get("ideal_setup", {}))
     except Exception as e:
         logger.debug("Failed to extract setup sliders for car %s: %s", car_id, e)
+
+    if team_code:
+        setattr(state, "team_code", team_code)
 
     return CarEntry(
         car_id=car_id,
