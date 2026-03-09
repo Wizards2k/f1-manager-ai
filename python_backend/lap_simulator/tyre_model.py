@@ -122,7 +122,7 @@ def _update_single_tyre(
     straight_cooling_multiplier = 1.0
     if section.kind in STRAIGHT_KINDS:
         straight_time_factor = min(1.0, dt_s / 8.0)
-        straight_cooling_multiplier += 0.30 + straight_time_factor * 0.28
+        straight_cooling_multiplier += 0.42 + straight_time_factor * 0.42
         convective_cool *= straight_cooling_multiplier
     if low_push_steps > 0:
         convective_cool *= low_push_cooling_bonus
