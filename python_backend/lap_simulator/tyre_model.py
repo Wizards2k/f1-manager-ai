@@ -15,6 +15,7 @@ from typing import Dict, List, Tuple, Optional
 from .data_types import (
     AeroForces,
     AeroSetup,
+    BrakeState,
     CarState,
     CircuitConfig,
     CORNER_KINDS,
@@ -57,6 +58,7 @@ def _update_single_tyre(
     driver: DriverIntent,
     dt_s: float,
     v_kph: float,
+    brake_state: BrakeState | None = None,
     aero_setup: AeroSetup | None = None,
     debug_ctx: Optional[Dict[str, str]] = None,
 ) -> List[SectionEvent]:
@@ -76,24 +78,54 @@ def _update_single_tyre(
     # --- Heat generation ---
     # Base heat from section type
     base_heat = section.heat_factor * driver.pace_factor
-    heat_gen = base_heat
     if low_push_steps > 0:
-        heat_gen *= low_push_heat_multiplier
+        base_heat *= low_push_heat_multiplier
+
+    section_time_heat_factor = 1.0
+    if section.kind in CORNER_KINDS:
+        section_time_heat_factor = 0.75 + min(0.35, dt_s / 8.0)
+
+    cornering_heat = base_heat * section_time_heat_factor
+    instability_heat = 0.0
+    mech_instability_heat = 0.0
+    traction_heat = 0.0
+    brake_contact_heat = 0.0
+    brake_transfer_heat = 0.0
 
     # Axis-specific modifiers (spec §5.1 / degradation doc)
     if is_front:
-        axis_multiplier = (1.0 + aero.understeer_level * 0.08)
-        heat_gen *= axis_multiplier
-        # Braking heat on front axle
-        brake_heat = section.braking_energy_mj * 0.20
-        heat_gen += brake_heat
+        axis_multiplier = 1.0
+        if section.kind in CORNER_KINDS:
+            instability_heat = base_heat * aero.understeer_level * 0.28
+        front_brake_temp_c = getattr(brake_state, "temp_front_c", 400.0) if brake_state is not None else 400.0
+        brake_duct_opening = getattr(brake_state, "duct_opening", 0.5) if brake_state is not None else 0.5
+        brake_bias_front_pct = getattr(brake_state, "bias_front_pct", 55.0) if brake_state is not None else 55.0
+        brake_contact_heat = section.braking_energy_mj * (0.11 + max(0.0, (brake_bias_front_pct - 54.0)) * 0.002)
+        brake_temp_excess = max(0.0, front_brake_temp_c - 560.0)
+        duct_transfer_factor = 0.55 - brake_duct_opening * 0.12
+        brake_transfer_heat = (brake_temp_excess / 1800.0) * duct_transfer_factor
+        if section.kind in STRAIGHT_KINDS:
+            brake_transfer_heat *= 0.12
+        elif section.kind in CORNER_KINDS:
+            brake_transfer_heat *= 0.18 + min(0.08, dt_s / 14.0)
+        brake_heat = brake_contact_heat + brake_transfer_heat
+        heat_gen = cornering_heat + brake_heat + instability_heat
+        rear_instability_multiplier = 1.0
+        traction_multiplier = 1.0
     else:
-        axis_multiplier = (1.0 + aero.oversteer_level * 0.24)
-        heat_gen *= axis_multiplier
+        axis_multiplier = 1.0
         # Traction heat on rear
         torque_ramp_approx = driver.pace_factor * 0.6 if section.kind in CORNER_KINDS else 0.0
-        traction_multiplier = (1.0 + torque_ramp_approx * 0.2)
-        heat_gen *= traction_multiplier
+        traction_multiplier = 1.0
+        if section.kind in CORNER_KINDS:
+            if section.kind.name == "SLOW_CORNER":
+                traction_section_factor = 1.0
+            elif section.kind.name == "MEDIUM_CORNER":
+                traction_section_factor = 0.8
+            else:
+                traction_section_factor = 0.45
+            traction_heat = base_heat * torque_ramp_approx * 0.24 * traction_section_factor
+            instability_heat = base_heat * aero.oversteer_level * 0.30
         rear_instability_multiplier = 1.0
         if section.kind in CORNER_KINDS and aero_setup is not None:
             front_mech_balance = (
@@ -105,24 +137,30 @@ def _update_single_tyre(
                 + aero_setup.antiroll_rear_rigidity
             )
             mech_rear_bias = max(0.0, rear_mech_balance - front_mech_balance)
-            rear_instability_multiplier += aero.oversteer_level * 0.22
-            rear_instability_multiplier += mech_rear_bias * 0.18
-            heat_gen *= rear_instability_multiplier
+            mech_instability_heat = base_heat * mech_rear_bias * 0.22
+        heat_gen = cornering_heat + traction_heat + instability_heat + mech_instability_heat
         brake_heat = 0.0
+        front_brake_temp_c = getattr(brake_state, "temp_front_c", None) if brake_state is not None else None
+        brake_duct_opening = getattr(brake_state, "duct_opening", None) if brake_state is not None else None
+        brake_bias_front_pct = getattr(brake_state, "bias_front_pct", None) if brake_state is not None else None
 
     # --- Heat dissipation ---
-    air_speed_factor = max(v_kph / 300.0, 0.1)
+    air_speed_factor = max(v_kph / 280.0, 0.12)
+    corner_cooling_factor = 1.0
+    if section.kind in CORNER_KINDS:
+        corner_cooling_factor += min(0.16, dt_s / 20.0)
     convective_cool_raw = (
         params.cooling_coeff
         * air_speed_factor
         * section.cool_factor
+        * corner_cooling_factor
         * (1.0 - aero.airflow_penalty)
     )
     convective_cool = convective_cool_raw
     straight_cooling_multiplier = 1.0
     if section.kind in STRAIGHT_KINDS:
         straight_time_factor = min(1.0, dt_s / 8.0)
-        straight_cooling_multiplier += 0.42 + straight_time_factor * 0.42
+        straight_cooling_multiplier += 0.38 + straight_time_factor * 0.34
         convective_cool *= straight_cooling_multiplier
     if low_push_steps > 0:
         convective_cool *= low_push_cooling_bonus
@@ -163,14 +201,25 @@ def _update_single_tyre(
             "push_level": push_level,
             "pace_factor": driver.pace_factor,
             "base_heat": base_heat,
+            "section_time_heat_factor": section_time_heat_factor,
+            "cornering_heat": cornering_heat,
+            "instability_heat": instability_heat,
+            "mech_instability_heat": mech_instability_heat,
             "heat_low_push_multiplier": low_push_heat_multiplier if low_push_steps > 0 else 1.0,
             "axis_multiplier": axis_multiplier if 'axis_multiplier' in locals() else 1.0,
             "traction_multiplier": traction_multiplier if not is_front else 1.0,
             "rear_instability_multiplier": rear_instability_multiplier if not is_front else 1.0,
+            "brake_contact_heat": brake_contact_heat,
+            "brake_transfer_heat": brake_transfer_heat,
             "brake_heat": brake_heat,
+            "front_brake_temp_c_local": front_brake_temp_c,
+            "brake_duct_opening": brake_duct_opening,
+            "brake_bias_front_pct": brake_bias_front_pct,
+            "traction_heat": traction_heat,
             "heat_gen_total": heat_gen,
             "convective_cool_raw": convective_cool_raw,
             "convective_cool": convective_cool,
+            "corner_cooling_factor": corner_cooling_factor,
             "straight_cooling_multiplier": straight_cooling_multiplier,
             "surface_temp_before": surface_temp_before,
             "surface_temp_after": tyre.surface_temp_c,
@@ -384,7 +433,19 @@ def update_tyres(
                 "tyre_core_temp_c": tyre.core_temp_c,
                 "tyre_wear_pct": tyre.wear_pct,
             }
-        evts = _update_single_tyre(tyre, params, section, env, aero, driver, dt_s, v_kph, aero_setup, debug_ctx)
+        evts = _update_single_tyre(
+            tyre,
+            params,
+            section,
+            env,
+            aero,
+            driver,
+            dt_s,
+            v_kph,
+            car_state.brakes,
+            aero_setup,
+            debug_ctx,
+        )
         all_events.extend(evts)
 
     # Average grip per axis
