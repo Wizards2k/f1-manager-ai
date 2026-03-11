@@ -125,6 +125,21 @@ Il calore front deve dipendere meglio da:
 - effetto `brake_duct`
 - criticità della sezione
 
+## 4.5 Surface e core non devono dipendere da un solo canale termico
+
+La validazione contro `docs/TyreModel_Thermal_Gemini` ha confermato che il modello deve distinguere meglio:
+- calore superficiale da attrito/slip;
+- calore di carcassa (`bulk/core`) da deformazione e isteresi;
+- raffreddamento più rapido della surface rispetto al core nei rettilinei.
+
+Indicazioni progettuali:
+- il `core` non deve scaldarsi solo per conduzione dalla `surface`;
+- serve un contributo diretto, piccolo ma esplicito, di **bulk hysteresis heat**;
+- il contributo deve crescere soprattutto con velocità e massa carburante (inerzia) e restare moderato nelle sezioni a bassa severità;
+- il logging deve mostrare il nuovo termine per calibrazione (flag `TYRE_DEBUG`).
+
+Stato: fase introduttiva implementata nel refactor fuel-aware (Mar 2026) con termine conservativo sul core. Ulteriori raffinamenti (camber/toe, distribuzione inner/outer) restano fuori scope di questa fase.
+
 ## 5. Nuova struttura concettuale del blocco termico
 
 ## 5.1 Section load

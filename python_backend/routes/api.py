@@ -825,7 +825,27 @@ def register_routes(app):
         target_laps = config.get('stint_target_laps', car.stint_target_laps)
         target_laps = max(1, min(max_stint_laps, target_laps))
 
-        car.set_tire_compound(compound)
+        selected_set_id = str(config.get('tyre_set_id') or '').strip() or None
+        selected_set = None
+        if selected_set_id:
+            try:
+                import config as app_config
+
+                circuit_id = getattr(app_config, 'current_circuit', None)
+                if circuit_id:
+                    inventory = tyre_inventory_service.get_inventory(str(driver_number), circuit_id)
+                    selected_set = inventory.find_set(selected_set_id)
+            except (ValueError, FileNotFoundError):
+                selected_set = None
+
+        tyre_life = (selected_set.condition / 100.0) if selected_set else 1.0
+        tyre_laps_completed = selected_set.laps_completed if selected_set else 0
+        car.set_tire_compound(
+            compound,
+            percentuale_vita=tyre_life,
+            laps_completed=tyre_laps_completed,
+            preserve_temps=False,
+        )
         car.fuel_percent = fuel_percent
         car.pace_level = config.get('pace_level', car.pace_level)
         car.ice_mode = config.get('ice_mode', car.ice_mode)

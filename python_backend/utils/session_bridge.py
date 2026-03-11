@@ -62,6 +62,13 @@ from utils.adapter import (
     set_racecar_phase,
     sim_compound_to_game,
 )
+from utils.microsector_logger import log_microsector
+from utils.driver_feedback import (
+    get_driver_feedback,
+    should_trigger_feedback,
+    emit_thermal_feedback,
+)
+from config import get_current_circuit_profile
 from services.tyre_inventory_service import TyreInventoryService
 from models.models import TireCompound as GameTireCompound
 from debug_log import log_debug_event
@@ -327,6 +334,15 @@ def _ai_setup_target(sim_efficiency: int) -> float:
 # Session Bridge
 # ---------------------------------------------------------------------------
 
+THERMAL_FEEDBACK_EVENTS = {
+    "tyre_overheat",
+    "tyre_blistering",
+    "brake_hot_section",
+    "brake_fade",
+    "brake_critical",
+}
+
+
 class SessionBridge:
     """
     Bridges the new LapSimulator engine with the existing game backend.
@@ -340,6 +356,7 @@ class SessionBridge:
         self.active = False
         self.circuit_id: Optional[str] = None
         self.circuit_config: Optional[CircuitConfig] = None
+        self.circuit_profile: Optional[Dict[str, Any]] = None
         self.telemetry_store = None
         self.sections: List[SectionContext] = []
         self.env = EnvContext()
@@ -383,6 +400,11 @@ class SessionBridge:
         if not self.sections:
             logger.error("No sections in circuit config for %s", circuit_id)
             return False
+
+        try:
+            self.circuit_profile = get_current_circuit_profile()
+        except Exception:
+            self.circuit_profile = None
 
         self.session_kind = (session_type or "FP1").upper()
         try:
@@ -742,6 +764,71 @@ class SessionBridge:
                         telemetry_points=scaled_points,
                     )
 
+                try:
+                    tyres_payload: Dict[str, Dict[str, Any]] = {}
+                    tyre_wear_vals: List[float] = []
+                    tyre_temp_vals: List[float] = []
+                    for wp, tyre in getattr(entry.state, 'tyres', {}).items():
+                        compound = getattr(getattr(tyre, 'compound', None), 'value', None)
+                        tyres_payload[wp.name] = {
+                            'compound': compound,
+                            'wear_pct': getattr(tyre, 'wear_pct', None),
+                            'surface_temp_c': getattr(tyre, 'surface_temp_c', None),
+                            'age_laps': getattr(tyre, 'lap_age', None),
+                        }
+                        if getattr(tyre, 'wear_pct', None) is not None:
+                            tyre_wear_vals.append(tyre.wear_pct)
+                        if getattr(tyre, 'surface_temp_c', None) is not None:
+                            tyre_temp_vals.append(tyre.surface_temp_c)
+
+                    pu_state = getattr(entry.state, 'pu', None)
+                    log_microsector({
+                        'car_id': entry.car_id,
+                        'lap': ts.lap_number,
+                        'section_id': section.section_id,
+                        'section_index': ts.current_section_idx,
+                        'section_kind': section.kind.name,
+                        'section_length_m': section.length_m,
+                        'dt_s': result.dt_s,
+                        'v_entry_kph': result.v_entry_kph,
+                        'v_exit_kph': result.v_exit_kph,
+                        'v_max_kph': result.v_max_kph,
+                        'v_effective_kph': result.v_effective_kph,
+                        'penalties': {
+                            'fuel_s': result.fuel_penalty_s,
+                            'tyre_s': result.tyre_penalty_s,
+                            'push_s': result.push_penalty_s,
+                            'engine_s': result.engine_penalty_s,
+                            'brake_s': result.brake_penalty_s,
+                            'setup_s': result.setup_penalty_s,
+                            'df_curve_penalty_s': result.df_curve_penalty_s,
+                            'df_curve_bonus_s': result.df_curve_bonus_s,
+                            'drag_penalty_s': result.drag_penalty_s,
+                            'drag_bonus_s': result.drag_bonus_s,
+                            'handling_penalty': result.handling_penalty,
+                        },
+                        'push_level': entry.push_level,
+                        'delta_aero': getattr(entry, 'delta_aero', 0.0),
+                        'delta_grip': getattr(entry, 'delta_grip', 0.0),
+                        'apply_baseline_delta': getattr(entry, 'apply_baseline_delta', True),
+                        'setup_sliders': getattr(entry, 'setup_sliders', {}),
+                        'ideal_setup_sliders': getattr(entry, 'ideal_setup_sliders', {}),
+                        'tyres': tyres_payload,
+                        'tyre_avg_wear_pct': sum(tyre_wear_vals) / len(tyre_wear_vals) if tyre_wear_vals else None,
+                        'tyre_avg_temp_c': sum(tyre_temp_vals) / len(tyre_temp_vals) if tyre_temp_vals else None,
+                        'fuel_kg': getattr(pu_state, 'fuel_kg', None),
+                        'ers_energy_mj': getattr(pu_state, 'ers_energy_mj', None),
+                        'ers_mode': getattr(entry.state, 'ers_mode', None),
+                        'engine_map': getattr(getattr(pu_state, 'active_map', None), 'value', None),
+                        'overtake_window': result.overtake_window,
+                        'braking_efficiency': result.braking_efficiency,
+                        'power_kw': result.power_kw,
+                        'events': [evt.event_type for evt in result.events],
+                        'lap_phase': str(ts.lap_phase),
+                    })
+                except Exception:
+                    logger.debug('microsector logging failed for %s', entry.car_id, exc_info=True)
+
                 ts.lap_section_results.append(result)
 
                 # Track sector time accumulation
@@ -751,6 +838,7 @@ class SessionBridge:
                 section_end_m = self._section_end_m[ts.current_section_idx] if ts.current_section_idx < len(self._section_end_m) else 0
                 if ts.current_sector < len(self._sector_end_m) and section_end_m >= self._sector_end_m[ts.current_sector]:
                     sector_key = f"sector{ts.current_sector + 1}"
+                    sector_index = ts.current_sector
                     sector_time = ts.sector_dt_acc
                     if not hasattr(race_car, 'current_lap_sectors') or race_car.current_lap_sectors is None:
                         race_car.current_lap_sectors = {}
@@ -769,6 +857,12 @@ class SessionBridge:
                 # Update RaceCar with section data/telemetry
                 for ev in result.events:
                     self._update_brake_warning(race_car, ev.event_type)
+                    if (
+                        ts.is_player
+                        and ts.lap_phase == LapPhase.HOT_LAP
+                        and ev.event_type in THERMAL_FEEDBACK_EVENTS
+                    ):
+                        emit_thermal_feedback(race_car, ev.event_type, getattr(ev, "message", None))
                 self._apply_section_to_racecar(race_car, entry, result, section)
 
                 # Advance to next section
@@ -1213,6 +1307,27 @@ class SessionBridge:
             "front": cooling["front"],
             "rear": cooling["rear"],
         }
+
+    def _maybe_emit_driver_feedback(self, race_car, sector_index: int) -> None:
+        if not race_car or not getattr(race_car, "is_player_controlled", False):
+            return
+
+        event_map = {
+            0: ("braking_zone", "sector1"),
+            1: ("sector_entry", "sector2"),
+            2: ("corner_exit", "sector3"),
+        }
+        event = event_map.get(sector_index)
+        if event is None:
+            return
+
+        event_type, sector_name = event
+        if not should_trigger_feedback(race_car, event_type):
+            return
+
+        feedback = get_driver_feedback(race_car, self.circuit_profile, sector_name)
+        if feedback:
+            race_car.last_driver_feedback = feedback
 
     # ------------------------------------------------------------------
     # Player commands

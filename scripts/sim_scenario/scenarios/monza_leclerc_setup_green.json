@@ -1,0 +1,153 @@
+{
+  "meta": {
+    "name": "monza_leclerc_setup_green",
+    "description": "Circuit-specific green setup for Monza using setup ranges and Pirelli nomination",
+    "source": "logs/leclerc_microsectors.jsonl lap 1"
+  },
+  "env": {
+    "air_temp_c": 24.0,
+    "track_temp_c": 32.0,
+    "track_rubber_level": 1.0
+  },
+  "car": {
+    "car_id": "LEC_DEBUG",
+    "team_code": "FER",
+    "push_level": 5.0,
+    "driver_skills": {
+      "raw_pace": 92,
+      "race_craft": 86,
+      "aggression": 64,
+      "consistency": 88,
+      "tyre_management": 78,
+      "overtaking_skill": 80,
+      "defending_skill": 82,
+      "wet_skill": 74,
+      "smoothness": 83,
+      "setup_finding": 79
+    },
+    "setup_sliders": {
+      "front_wing": 52,
+      "rear_wing": 58,
+      "beam_wing": 50,
+      "ride_height_front": 48,
+      "ride_height_rear": 55,
+      "suspension_front": 50,
+      "suspension_rear": 50,
+      "antiroll_front": 50,
+      "antiroll_rear": 50,
+      "brake_balance": 50,
+      "brake_duct": 50
+    },
+    "state": {
+      "ers_mode": "STANDARD",
+      "tyres": {
+        "LF": {
+          "compound": "C4",
+          "surface_temp_c": 95.0,
+          "core_temp_c": 90.0,
+          "wear_pct": 0.0,
+          "lap_age": 0
+        },
+        "RF": {
+          "compound": "C4",
+          "surface_temp_c": 95.0,
+          "core_temp_c": 90.0,
+          "wear_pct": 0.0,
+          "lap_age": 0
+        },
+        "LR": {
+          "compound": "C4",
+          "surface_temp_c": 95.0,
+          "core_temp_c": 90.0,
+          "wear_pct": 0.0,
+          "lap_age": 0
+        },
+        "RR": {
+          "compound": "C4",
+          "surface_temp_c": 95.0,
+          "core_temp_c": 90.0,
+          "wear_pct": 0.0,
+          "lap_age": 0
+        }
+      },
+      "pu": {
+        "active_map": "RACE",
+        "fuel_kg": 109.0,
+        "ers_energy_mj": 3.9,
+        "ice_temp_c": 103.0,
+        "ers_temp_c": 62.0
+      },
+      "brakes": {
+        "temp_front_c": 400.0,
+        "temp_rear_c": 350.0,
+        "duct_opening": 0.499,
+        "bias_front_pct": 55.2
+      }
+    },
+    "aero_setup": {
+      "front_wing": {
+        "base_downforce": 12.0,
+        "base_drag": 4.8,
+        "angle_deg": 16.25,
+        "angle_ref_deg": 40.0
+      },
+      "rear_wing": {
+        "base_downforce": 13.5,
+        "base_drag": 8.2,
+        "angle_deg": 19.0,
+        "angle_ref_deg": 42.0,
+        "drs_drag_reduction": 0.28
+      },
+      "beam_wing": {
+        "base_downforce": 6.0,
+        "base_drag": 2.2,
+        "angle_deg": 9.0
+      },
+      "front_floor": {
+        "base_downforce": 15.5,
+        "base_drag": 4.6
+      },
+      "rear_floor": {
+        "base_downforce": 15.8,
+        "base_drag": 4.8
+      },
+      "sidepods": {
+        "base_downforce": 5.0,
+        "base_drag": 3.5
+      },
+      "engine_cover": {
+        "base_downforce": 3.0,
+        "base_drag": 2.5
+      },
+      "b_wing": {
+        "base_downforce": 2.5,
+        "base_drag": 1.2
+      },
+      "suspension_front": {
+        "rigidity": 0.6,
+        "efficiency": 0.775
+      },
+      "suspension_rear": {
+        "rigidity": 0.65,
+        "efficiency": 0.785
+      },
+      "antiroll_front_rigidity": 0.575,
+      "antiroll_rear_rigidity": 0.625,
+      "ride_height_front_mm": 44.4,
+      "ride_height_rear_mm": 58.0
+    },
+    "ideal_setup_sliders": {
+      "front_wing": 52,
+      "rear_wing": 58,
+      "beam_wing": 50,
+      "ride_height_front": 48,
+      "ride_height_rear": 55,
+      "suspension_front": 50,
+      "suspension_rear": 50,
+      "antiroll_front": 50,
+      "antiroll_rear": 50,
+      "brake_balance": 50,
+      "brake_duct": 50
+    }
+  }
+}

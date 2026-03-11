@@ -25,11 +25,15 @@ from .data_types import (
     SectionResult,
 )
 from .update_section import update_section
+from utils.microsector_logger import (
+    is_microsector_logging_enabled,
+    log_microsector,
+)
 
 PENALTY_LOGGER_NAME = "lap_simulator.penalties"
 logger = logging.getLogger(PENALTY_LOGGER_NAME)
-# For debug session we force penalty logging on regardless of env
-DEBUG_PENALTIES = True
+# Disabled by default; enable explicitly for penalty investigations
+DEBUG_PENALTIES = os.getenv("DEBUG_PENALTIES", "0").lower() in {"1", "true", "yes", "on"}
 if DEBUG_PENALTIES:
     _penalty_log_path = Path("logs/penalties.log")
     _penalty_log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -134,9 +138,93 @@ class LapSimulator:
         self.cars: Dict[str, CarEntry] = {}
         self.battle_resolver = None
         self._dirty_air_cache: Dict[str, float] = {}
+        self._microsector_logging = is_microsector_logging_enabled()
         if enable_battles:
             BR = _get_battle_resolver_class()
             self.battle_resolver = BR()
+
+    def _emit_microsector_log(
+        self,
+        *,
+        entry: CarEntry,
+        section,
+        result: SectionResult,
+        lap_number: int,
+        section_index: int,
+        airflow_penalty: float,
+        traffic_constraint: float,
+    ) -> None:
+        if not self._microsector_logging:
+            return
+
+        state = entry.state
+        tyres_payload: Dict[str, Dict[str, Any]] = {}
+        tyre_wear_vals: List[float] = []
+        tyre_temp_vals: List[float] = []
+        for wp, tyre in getattr(state, "tyres", {}).items():
+            compound = getattr(getattr(tyre, "compound", None), "value", None)
+            tyres_payload[wp.name] = {
+                "compound": compound,
+                "wear_pct": getattr(tyre, "wear_pct", None),
+                "surface_temp_c": getattr(tyre, "surface_temp_c", None),
+                "age_laps": getattr(tyre, "lap_age", None),
+            }
+            if getattr(tyre, "wear_pct", None) is not None:
+                tyre_wear_vals.append(tyre.wear_pct)
+            if getattr(tyre, "surface_temp_c", None) is not None:
+                tyre_temp_vals.append(tyre.surface_temp_c)
+
+        pu_state = getattr(state, "pu", None)
+        entry_payload = {
+            "car_id": entry.car_id,
+            "lap": lap_number,
+            "section_id": section.section_id,
+            "section_index": section_index,
+            "section_kind": section.kind.name,
+            "section_length_m": section.length_m,
+            "dt_s": result.dt_s,
+            "v_entry_kph": result.v_entry_kph,
+            "v_exit_kph": result.v_exit_kph,
+            "v_max_kph": result.v_max_kph,
+            "v_effective_kph": result.v_effective_kph,
+            "penalties": {
+                "fuel_s": result.fuel_penalty_s,
+                "tyre_s": result.tyre_penalty_s,
+                "push_s": result.push_penalty_s,
+                "engine_s": result.engine_penalty_s,
+                "brake_s": result.brake_penalty_s,
+                "setup_s": result.setup_penalty_s,
+                "df_curve_penalty_s": result.df_curve_penalty_s,
+                "df_curve_bonus_s": result.df_curve_bonus_s,
+                "drag_penalty_s": result.drag_penalty_s,
+                "drag_bonus_s": result.drag_bonus_s,
+                "handling_penalty": result.handling_penalty,
+            },
+            "push_level": entry.push_level,
+            "delta_aero": entry.delta_aero,
+            "delta_grip": entry.delta_grip,
+            "apply_baseline_delta": entry.apply_baseline_delta,
+            "setup_sliders": entry.setup_sliders,
+            "ideal_setup_sliders": entry.ideal_setup_sliders,
+            "tyres": tyres_payload,
+            "tyre_avg_wear_pct": sum(tyre_wear_vals) / len(tyre_wear_vals) if tyre_wear_vals else None,
+            "tyre_avg_temp_c": sum(tyre_temp_vals) / len(tyre_temp_vals) if tyre_temp_vals else None,
+            "fuel_kg": getattr(pu_state, "fuel_kg", None),
+            "ers_energy_mj": getattr(pu_state, "ers_energy_mj", None),
+            "ers_mode": getattr(state, "ers_mode", None),
+            "engine_map": getattr(getattr(pu_state, "active_map", None), "value", None),
+            "airflow_penalty": airflow_penalty,
+            "traffic_v_max_kph": traffic_constraint,
+            "overtake_window": result.overtake_window,
+            "braking_efficiency": result.braking_efficiency,
+            "power_kw": result.power_kw,
+            "events": [evt.event_type for evt in result.events],
+        }
+
+        try:
+            log_microsector(entry_payload)
+        except Exception:  # pragma: no cover - logging should never break sim
+            logger.debug("microsector logging failed for car %s", entry.car_id, exc_info=True)
 
     # ------------------------------------------------------------------
     # Registration
@@ -278,7 +366,15 @@ class LapSimulator:
                     compound_name,
                 )
 
-            section_results.append(result)
+            self._emit_microsector_log(
+                entry=entry,
+                section=section,
+                result=result,
+                lap_number=state.lap_number,
+                section_index=i,
+                airflow_penalty=airflow,
+                traffic_constraint=traffic,
+            )
             all_events.extend(result.events)
 
             # Sector tracking
@@ -448,9 +544,18 @@ class LapSimulator:
                         getattr(entry.state, "ers_mode", ""),
                         compound_name,
                     )
+
+                self._emit_microsector_log(
+                    entry=entry,
+                    section=section,
+                    result=result,
+                    lap_number=entry.state.lap_number,
+                    section_index=i,
+                    airflow_penalty=airflow,
+                    traffic_constraint=traffic,
+                )
+
                 section_results[car_id] = result
-                car_section_results[car_id].append(result)
-                car_events[car_id].extend(result.events)
 
             # Phase 2: BattleResolver
             # Build cars_in_section sorted by position (leader first)

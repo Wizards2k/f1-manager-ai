@@ -296,6 +296,10 @@ export class PlayerGarageV3 {
             || sets.find(tyreSet => tyreSet.compound === activeCompound && tyreSet.is_available !== false)?.set_id
             || sets.find(tyreSet => tyreSet.compound === activeCompound)?.set_id
             || null;
+        const carState = this.getCarState(car);
+        const isBox = carState === 'BOX';
+        const liveTyreWear = typeof car.tire_wear === 'number' ? Math.max(0, Math.min(1, car.tire_wear)) : null;
+        const liveTyreCondition = liveTyreWear == null ? null : Math.round((1 - liveTyreWear) * 100);
 
         const grouped = sets.reduce((acc, tyreSet) => {
             const key = tyreSet.compound || 'other';
@@ -308,19 +312,26 @@ export class PlayerGarageV3 {
             <div class="dock-tyre-stack">
                 <div class="dock-tyre-stack-title">${this.formatTyreCompoundLabel(compound)}</div>
                 <div class="dock-tyre-set-list">
-                    ${compoundSets.map(tyreSet => `
-                        <div class="dock-tyre-set ${tyreSet.is_available === false ? 'is-unavailable' : ''} ${tyreSet.set_id === fallbackSelectedSetId ? 'is-selected' : ''}">
-                            <div class="dock-tyre-set-main">
-                                <strong>${tyreSet.set_id}</strong>
-                                <span>${this.getTyreSetConditionLabel(tyreSet)}</span>
+                    ${compoundSets.map(tyreSet => {
+                        const isCurrentSet = tyreSet.set_id === fallbackSelectedSetId;
+                        const displayCondition = !isBox && isCurrentSet && liveTyreCondition != null
+                            ? liveTyreCondition
+                            : (typeof tyreSet?.condition === 'number' ? Math.round(tyreSet.condition) : null);
+                        const conditionLabel = displayCondition == null ? '--%' : `${displayCondition}%`;
+                        return `
+                            <div class="dock-tyre-set ${tyreSet.is_available === false ? 'is-unavailable' : ''} ${tyreSet.set_id === fallbackSelectedSetId ? 'is-selected' : ''}">
+                                <div class="dock-tyre-set-main">
+                                    <strong>${tyreSet.set_id}</strong>
+                                    <span>${conditionLabel}</span>
+                                </div>
+                                <div class="dock-tyre-set-meta">
+                                    <span>${this.getTyreSetStatusLabel(tyreSet)}</span>
+                                    <span>${this.formatTyreCompoundLabel(tyreSet.compound)}</span>
+                                    <span>${tyreSet.laps_completed || 0} laps</span>
+                                </div>
                             </div>
-                            <div class="dock-tyre-set-meta">
-                                <span>${this.getTyreSetStatusLabel(tyreSet)}</span>
-                                <span>${tyreSet.heat_cycles || 0} HC</span>
-                                <span>${tyreSet.laps_completed || 0} laps</span>
-                            </div>
-                        </div>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </div>
             </div>
         `).join('');
@@ -399,6 +410,27 @@ export class PlayerGarageV3 {
             const tab = actionBtn?.dataset?.tab;
             if (!tab) return;
             this.activePuTab = tab;
+            const car = this.state.getPlayerCar(driverNumber);
+            if (car) {
+                this.buildPUModal(car);
+            }
+            return;
+        }
+
+        if (action === 'apply-setup') {
+            const car = this.state.getPlayerCar(driverNumber);
+            if (!car) {
+                this.setStatus('Player car unavailable.', 'error');
+                return;
+            }
+            const state = this.getCarState(car);
+            const payload = this.buildSetupPayloadFromDraft(driverNumber, car);
+            this.submitSetupConfig(driverNumber, payload, state);
+            return;
+        }
+
+        if (action === 'reset-setup') {
+            this.resetSetupDraft(driverNumber);
             const car = this.state.getPlayerCar(driverNumber);
             if (car) {
                 this.buildPUModal(car);
@@ -1265,7 +1297,7 @@ export class PlayerGarageV3 {
         if (last === msg) return;
         this.lastDriverFeedback.set(car.driver_number, msg);
         const name = car.driver_name || `Driver #${car.driver_number}`;
-        this.pushNotification(`${name}: ${msg}`, 'info');
+        this.setStatus(`${name}: ${msg}`, 'success', 5000);
     }
 
     normalizeStateValue(state) {
@@ -3349,11 +3381,33 @@ export class PlayerGarageV3 {
             }
         }
 
+        const normalizeMode = (value, options) => {
+            if (typeof value !== 'string') return null;
+            const normalized = value.trim().toUpperCase().replace(/\s+/g, '_');
+            const exists = options.some(opt => (typeof opt === 'string' ? opt : opt.value) === normalized);
+            return exists ? normalized : null;
+        };
+
+        const normalizedIce = normalizeMode(allowedPayload.ice_mode, this.iceOptions);
+        if (allowedPayload.ice_mode && !normalizedIce) {
+            delete allowedPayload.ice_mode;
+        } else if (normalizedIce) {
+            allowedPayload.ice_mode = normalizedIce;
+        }
+
+        const normalizedErs = normalizeMode(allowedPayload.ers_mode, this.ersOptions);
+        if (allowedPayload.ers_mode && !normalizedErs) {
+            delete allowedPayload.ers_mode;
+        } else if (normalizedErs) {
+            allowedPayload.ers_mode = normalizedErs;
+        }
+
         if (state !== 'BOX') {
             delete allowedPayload.tyre_compound;
             delete allowedPayload.tyre_set_id;
             delete allowedPayload.fuel_percent;
             delete allowedPayload.stint_target_laps;
+            delete allowedPayload.ice_mode;
         }
         if (Object.keys(allowedPayload).length === 0) {
             this.setStatus('No configurable fields available right now.', 'error');

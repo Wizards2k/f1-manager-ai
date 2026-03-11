@@ -471,13 +471,31 @@ class RaceCar:
         self.feedback_zones_used_this_lap: set = set()
         self.current_lap_for_feedback: int = 0
 
-    def set_tire_compound(self, compound, percentuale_vita: float = 1.0):
+    def set_tire_compound(
+        self,
+        compound,
+        percentuale_vita: float = 1.0,
+        *,
+        laps_completed: int = 0,
+        preserve_temps: bool = False,
+    ):
         """Imposta il compound di gomme"""
+        previous_temps = dict(self.tire_temps) if preserve_temps and isinstance(getattr(self, 'tire_temps', None), dict) else None
         self.current_tire = compound
         self.current_gomma = Gomma(compound, percentuale_vita=percentuale_vita)
-        self.tire_age = 0
-        self.tire_wear = 0.0
+        self.tire_age = max(0, int(laps_completed or 0))
+        self.tire_wear = max(0.0, min(1.0, 1.0 - float(percentuale_vita)))
         self.tire_temp_window = self.get_tire_temp_window(compound)
+        if previous_temps is not None:
+            self.tire_temps = previous_temps
+        else:
+            target_temp = sum(self.tire_temp_window) / 2
+            self.tire_temps = {
+                'fl': target_temp,
+                'fr': target_temp,
+                'rl': target_temp,
+                'rr': target_temp,
+            }
         self.player_config["tyre_compound"] = self.current_tire.value
 
     def get_tire_temp_window(self, compound: TireCompound) -> tuple[float, float]:

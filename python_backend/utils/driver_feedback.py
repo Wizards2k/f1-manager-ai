@@ -149,6 +149,31 @@ VAGUE_MESSAGES = [
     "Car could be better",
 ]
 
+# Thermal alerts for tyres and brakes
+THERMAL_MESSAGES = {
+    'tyre_overheat': [
+        "Tyre temps are spiking, need to cool them down",
+        "Losing grip from tyre overheating",
+        "Tyres are cooking, pace will drop",
+    ],
+    'tyre_blistering': [
+        "Blistering on the tyres, grip falling off",
+        "Tyres are blistering badly",
+    ],
+    'brake_hot_section': [
+        "Brakes are too hot through that section",
+        "Brake temps are climbing, need more cooling",
+    ],
+    'brake_fade': [
+        "Brakes are fading from temperature",
+        "Struggling to slow the car, brakes are cooked",
+    ],
+    'brake_critical': [
+        "Brake temps critical, need to back off",
+        "Brakes on the limit, can't keep this up",
+    ],
+}
+
 
 def calculate_setup_balance_scores(setup: Dict[str, int]) -> Dict[str, float]:
     """Calculate balance scores from setup values."""
@@ -314,6 +339,57 @@ def get_driver_feedback(
     car.feedback_zones_used_this_lap.add(zone_key)
     
     return message
+
+
+def emit_direct_feedback(car, message: str, zone_key: Optional[str] = 'general') -> bool:
+    """Emit a deterministic driver feedback message, bypassing probability checks."""
+    if not car or not getattr(car, 'is_player_controlled', False):
+        return False
+
+    pilot = getattr(car, 'pilot', None)
+    if not pilot:
+        return False
+
+    _, config = get_feedback_config(pilot.ricerca_assetto)
+    if config['max_per_lap'] == 0:
+        return False
+
+    current_lap = car.total_session_laps
+    if current_lap != car.current_lap_for_feedback:
+        car.current_lap_for_feedback = current_lap
+        car.feedback_count_this_lap = 0
+        car.feedback_zones_used_this_lap.clear()
+
+    if zone_key and zone_key in car.feedback_zones_used_this_lap:
+        return False
+
+    if car.feedback_count_this_lap >= config['max_per_lap']:
+        return False
+
+    car.last_driver_feedback = message
+    car.driver_feedback_timestamp = time.time()
+    car.feedback_count_this_lap += 1
+    if zone_key:
+        car.feedback_zones_used_this_lap.add(zone_key)
+    return True
+
+
+def _build_thermal_message(event_type: str, detail: Optional[str]) -> Optional[str]:
+    options = THERMAL_MESSAGES.get(event_type)
+    if not options and not detail:
+        return None
+    base = random.choice(options) if options else None
+    if detail and base:
+        return f"{detail}. {base}"
+    return detail or base
+
+
+def emit_thermal_feedback(car, event_type: str, detail: Optional[str] = None) -> bool:
+    message = _build_thermal_message(event_type, detail)
+    if not message:
+        return False
+    zone_key = f"thermal:{event_type}"
+    return emit_direct_feedback(car, message, zone_key=zone_key)
 
 
 def should_trigger_feedback(car, event_type: str) -> bool:

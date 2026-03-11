@@ -172,17 +172,74 @@ def compute_forces(
     antiroll_front_mod = 1.0 + (aero.antiroll_front_rigidity - 0.5) * 0.1
     antiroll_rear_mod = 1.0 + (aero.antiroll_rear_rigidity - 0.5) * 0.1
 
-    handling_penalty = abs(balance_error) * config.k_handling
+    front_mech_stiffness = (
+        aero.suspension_front.rigidity * antiroll_front_mod
+        + aero.antiroll_front_rigidity
+    )
+    rear_mech_stiffness = (
+        aero.suspension_rear.rigidity * antiroll_rear_mod
+        + aero.antiroll_rear_rigidity
+    )
+    mech_balance_shift = clamp((front_mech_stiffness - rear_mech_stiffness) * 0.22, -0.12, 0.12)
+
+    wing_balance_shift = clamp(
+        (aero.front_wing.angle_deg - aero.rear_wing.angle_deg) * 0.0032,
+        -0.07,
+        0.07,
+    )
+    rake_mm = aero.ride_height_rear_mm - aero.ride_height_front_mm
+    rake_balance_shift = clamp((rake_mm - 12.0) * -0.0028, -0.05, 0.05)
+
+    fuel_kg = max(getattr(car_state.pu, "fuel_kg", 0.0), 0.0)
+    fuel_load_ratio = clamp(fuel_kg / 110.0, 0.0, 1.0)
+    fuel_balance_shift = 0.025 * fuel_load_ratio
+
+    mech_rear_excess = max(0.0, rear_mech_stiffness - front_mech_stiffness)
+    rear_aero_support_deficit = max(0.0, aero.front_wing.angle_deg - aero.rear_wing.angle_deg)
+    low_rake_instability = max(0.0, 12.0 - rake_mm)
+    rear_instability_bias = clamp(
+        mech_rear_excess * rear_aero_support_deficit * 0.16
+        + mech_rear_excess * low_rake_instability * 0.025,
+        0.0,
+        0.16,
+    )
+
+    front_mech_excess = max(0.0, front_mech_stiffness - rear_mech_stiffness)
+    rear_aero_support_excess = max(0.0, aero.rear_wing.angle_deg - aero.front_wing.angle_deg)
+    high_rake_understeer = max(0.0, rake_mm - 12.0)
+
+    understeer_signal = (
+        max(0.0, balance_error)
+        + front_mech_excess * 0.16
+        + rear_aero_support_excess * 0.020
+        + high_rake_understeer * 0.010
+        + fuel_balance_shift * 0.35
+    )
+    oversteer_signal = (
+        max(0.0, -balance_error)
+        + mech_rear_excess * 0.18
+        + rear_aero_support_deficit * 0.024
+        + low_rake_instability * 0.012
+        + rear_instability_bias
+        + fuel_balance_shift * 0.20
+    )
+
+    combined_balance_error = (
+        balance_error
+        + mech_balance_shift
+        + wing_balance_shift
+        + rake_balance_shift
+        + fuel_balance_shift
+        + rear_instability_bias
+    )
+
+    handling_penalty = abs(combined_balance_error) * config.k_handling
     handling_penalty += car_state.damage.handling_penalty_damage
     handling_penalty = clamp(handling_penalty, 0.0, 0.5)
 
     # Under/oversteer signals
-    understeer_level = 0.0
-    oversteer_level = 0.0
-    if balance_error > 0.02:
-        understeer_level = clamp((balance_error - 0.02) * 5.0, 0.0, 1.0)
-    elif balance_error < -0.02:
-        oversteer_level = clamp((-balance_error - 0.02) * 5.0, 0.0, 1.0)
+    understeer_level = clamp((understeer_signal - 0.035) * 3.8, 0.0, 1.0)
+    oversteer_level = clamp((oversteer_signal - 0.035) * 4.2, 0.0, 1.0)
 
     # --- Bump / kerb penalties ---
     ride_height_low_factor = clamp(

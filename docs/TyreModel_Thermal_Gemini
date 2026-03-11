@@ -1,0 +1,62 @@
+La gestione termica degli pneumatici in F1 è una danza complessa tra chimica, cinematica e aerodinamica. Il calore non è "solo calore": si divide in **Surface Temperature** (pelle esterna) e **Bulk Temperature** (nucleo della carcassa).
+
+Ecco la disamina termica distribuita sulle variabili che hai indicato:
+
+---
+
+### 1. Assetto e Sospensioni (Il calore meccanico)
+
+Le sospensioni controllano come l'energia viene "iniettata" nella gomma:
+
+* **Camber (Campanatura):** Un camber aggressivo concentra tutto il calore sulla **spalla interna**. Se l'angolo è eccessivo, la spalla interna surriscalda (blistering) mentre l'esterno resta freddo, riducendo l'area di contatto effettiva.
+* **Toe (Convergenza):** Crea un costante attrito di trascinamento in rettilineo. È lo strumento principale per il **warm-up**: i team aumentano il *Toe* per generare calore interno prima della qualifica, a costo di usura maggiore.
+* **Damping (Ammortizzatori):** Sospensioni troppo rigide trasmettono picchi di energia istantanei alla gomma. Questo causa micro-slittamenti che alzano la temperatura superficiale in modo irregolare.
+
+### 2. Peso Benzina (L'inerzia termica)
+
+La massa extra (110 kg a inizio gara) agisce come un moltiplicatore:
+
+* **Aumento del Lavoro:** Più peso significa che la carcassa deve flettersi di più sotto carico. Questa flessione ciclica genera calore per **isteresi** (attrito molecolare interno).
+* **Stabilità Termica:** Una macchina pesante fatica a raffreddare le gomme tra una curva e l'altra perché lo sforzo richiesto per far voltare la massa è costante e prolungato.
+
+### 3. Velocità in Curva e Verso (Carico Laterale)
+
+Il riscaldamento è asimmetrico per definizione:
+
+* **Gomme Esterne:** In una curva a destra, la sinistra anteriore e posteriore subiscono il massimo carico. La temperatura sale per lo **stress laterale** e la deformazione.
+* **Gomme Interne:** Possono raffreddarsi troppo (drop-off termico), rendendole imprevedibili nella curva successiva del verso opposto.
+* **Velocità:** Nelle curve ad alta velocità (es. *Curva Grande* a Monza), il calore è generato principalmente dalla **deformazione della carcassa**. Nelle curve lente (es. *Tornantino* di Monaco), è generato dallo **sfregamento superficiale** (friction) dovuto allo sterzo.
+
+---
+
+### 4. Il Rettilineo (Il sistema di raffreddamento)
+
+In rettilineo la gomma attraversa due processi opposti:
+
+* **Raffreddamento Convettivo:** L'aria a 300+ km/h lambisce la superficie raffreddando la "pelle".
+* **Riscaldamento da Rotolamento:** La forza centrifuga deforma la gomma, mantenendo alta la temperatura del nucleo (Bulk).
+* **Ducts dei Freni:** Parte del calore dei dischi in carbonio viene trasferito al cerchione e, per irraggiamento, all'aria interna della gomma. È fondamentale per mantenere le gomme in "finestra" durante i lunghi rettilinei.
+
+### 5. Circuito (Esempi Monza vs Monaco)
+
+* **Monza (Longitudinal Heavy):** Il riscaldamento avviene in frenata (trasferimento di calore dai dischi) e in trazione. Il rischio è il raffreddamento eccessivo della superficie nei lunghi rettilinei, causando bloccaggi alla prima variante.
+* **Monaco (Lateral/Traction Heavy):** Non essendoci alte velocità, manca il raffreddamento convettivo. Il calore si accumula per i continui colpi di acceleratore (wheelspin) e sterzate strette. Qui la sfida è evitare il surriscaldamento superficiale.
+
+---
+
+### 🏎️ Integrazione nel tuo Modello (Logica per il codice)
+
+Per il tuo simulatore, la variazione di temperatura ($\Delta T$) di una sezione dovrebbe seguire questa logica:
+
+$$\Delta T_{total} = \underbrace{K_{fric} \cdot (F_z \cdot slip)}_{\text{Attrito Superficiale}} + \underbrace{K_{hyst} \cdot (F_z \cdot v)}_{\text{Deformazione Carcassa}} - \underbrace{K_{cool} \cdot v}_{\text{Raffreddamento Aria}}$$
+
+| Variabile | Effetto Termico | Nota per il simulatore |
+| --- | --- | --- |
+| **Assetto Rigido** | $\uparrow$ Picchi Superficiali | Rischio surriscaldamento in trazione. |
+| **Benzina (Pieno)** | $\uparrow$ Temperatura Nucleo | La gomma si degrada più velocemente per calore interno. |
+| **Curva Stretta** | $\uparrow$ Superficie Interna | Differenziale aperto = meno calore da slittamento. |
+| **Rettilineo** | $\downarrow$ Superficie / $\leftrightarrow$ Nucleo | Fondamentale per il calcolo del bloccaggio ruota. |
+
+### Prossimo Step suggerito:
+
+Vuoi che definisca una funzione `update_tyre_temps()` che calcoli separatamente la **Surface** e la **Bulk** temperature in base ai waypoint di FastF1 che abbiamo discusso? Questo ti permetterebbe di simulare i bloccaggi in staccata quando la "pelle" è troppo fredda.

@@ -107,9 +107,9 @@
       {
         "set_id": "M1",
         "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
+        "condition": 74.5,
+        "heat_cycles": 3,
+        "laps_completed": 17,
         "is_available": true,
         "is_q3_reserve": false
       },
@@ -214,8 +214,8 @@
       }
     ]
   },
-  "44:jp-1962_suzuka": {
-    "driver_id": "44",
+  "55:jp-1962_suzuka": {
+    "driver_id": "55",
     "circuit_id": "jp-1962_suzuka",
     "allocation": {
       "weekend_type": "standard",
@@ -250,9 +250,9 @@
       {
         "set_id": "S1",
         "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
+        "condition": 79.0,
+        "heat_cycles": 1,
+        "laps_completed": 14,
         "is_available": true,
         "is_q3_reserve": false
       },
@@ -322,9 +322,869 @@
       {
         "set_id": "M1",
         "compound": "medium",
+        "condition": 88.0,
+        "heat_cycles": 2,
+        "laps_completed": 8,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M2",
+        "compound": "medium",
         "condition": 100.0,
         "heat_cycles": 0,
         "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M3",
+        "compound": "medium",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H1",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H2",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I1",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I2",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I3",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I4",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I5",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W1",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W2",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      }
+    ]
+  },
+  "23:jp-1962_suzuka": {
+    "driver_id": "23",
+    "circuit_id": "jp-1962_suzuka",
+    "allocation": {
+      "weekend_type": "standard",
+      "dry_compounds": {
+        "hard": "C1",
+        "medium": "C2",
+        "soft": "C3"
+      },
+      "dry_allocation": {
+        "soft": 8,
+        "medium": 3,
+        "hard": 2
+      },
+      "wet_allocation": {
+        "intermediate": 5,
+        "wet": 2
+      },
+      "special_rules": {
+        "mandatory_race_compounds": 2,
+        "q3_soft_reserve": true,
+        "practice_returns": 2,
+        "monaco_extra_wet": false,
+        "monaco_mandatory_sets": 2
+      },
+      "circuit_characteristics": {
+        "wear_profile": "medium",
+        "degradation_factor": 1.0,
+        "thermal_stress": "medium"
+      }
+    },
+    "sets": [
+      {
+        "set_id": "S1",
+        "compound": "soft",
+        "condition": 85.0,
+        "heat_cycles": 1,
+        "laps_completed": 10,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S2",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S3",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S4",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S5",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S6",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S7",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S8",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": true
+      },
+      {
+        "set_id": "M1",
+        "compound": "medium",
+        "condition": 91.0,
+        "heat_cycles": 2,
+        "laps_completed": 6,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M2",
+        "compound": "medium",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M3",
+        "compound": "medium",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H1",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H2",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I1",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I2",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I3",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I4",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I5",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W1",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W2",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      }
+    ]
+  },
+  "18:jp-1962_suzuka": {
+    "driver_id": "18",
+    "circuit_id": "jp-1962_suzuka",
+    "allocation": {
+      "weekend_type": "standard",
+      "dry_compounds": {
+        "hard": "C1",
+        "medium": "C2",
+        "soft": "C3"
+      },
+      "dry_allocation": {
+        "soft": 8,
+        "medium": 3,
+        "hard": 2
+      },
+      "wet_allocation": {
+        "intermediate": 5,
+        "wet": 2
+      },
+      "special_rules": {
+        "mandatory_race_compounds": 2,
+        "q3_soft_reserve": true,
+        "practice_returns": 2,
+        "monaco_extra_wet": false,
+        "monaco_mandatory_sets": 2
+      },
+      "circuit_characteristics": {
+        "wear_profile": "medium",
+        "degradation_factor": 1.0,
+        "thermal_stress": "medium"
+      }
+    },
+    "sets": [
+      {
+        "set_id": "S1",
+        "compound": "soft",
+        "condition": 82.0,
+        "heat_cycles": 1,
+        "laps_completed": 12,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S2",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S3",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S4",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S5",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S6",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S7",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S8",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": true
+      },
+      {
+        "set_id": "M1",
+        "compound": "medium",
+        "condition": 88.0,
+        "heat_cycles": 2,
+        "laps_completed": 8,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M2",
+        "compound": "medium",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M3",
+        "compound": "medium",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H1",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H2",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I1",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I2",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I3",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I4",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I5",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W1",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W2",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      }
+    ]
+  },
+  "43:jp-1962_suzuka": {
+    "driver_id": "43",
+    "circuit_id": "jp-1962_suzuka",
+    "allocation": {
+      "weekend_type": "standard",
+      "dry_compounds": {
+        "hard": "C1",
+        "medium": "C2",
+        "soft": "C3"
+      },
+      "dry_allocation": {
+        "soft": 8,
+        "medium": 3,
+        "hard": 2
+      },
+      "wet_allocation": {
+        "intermediate": 5,
+        "wet": 2
+      },
+      "special_rules": {
+        "mandatory_race_compounds": 2,
+        "q3_soft_reserve": true,
+        "practice_returns": 2,
+        "monaco_extra_wet": false,
+        "monaco_mandatory_sets": 2
+      },
+      "circuit_characteristics": {
+        "wear_profile": "medium",
+        "degradation_factor": 1.0,
+        "thermal_stress": "medium"
+      }
+    },
+    "sets": [
+      {
+        "set_id": "S1",
+        "compound": "soft",
+        "condition": 82.0,
+        "heat_cycles": 1,
+        "laps_completed": 12,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S2",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S3",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S4",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S5",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S6",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S7",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S8",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": true
+      },
+      {
+        "set_id": "M1",
+        "compound": "medium",
+        "condition": 86.5,
+        "heat_cycles": 2,
+        "laps_completed": 9,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M2",
+        "compound": "medium",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M3",
+        "compound": "medium",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H1",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H2",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I1",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I2",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I3",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I4",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I5",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W1",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W2",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      }
+    ]
+  },
+  "81:jp-1962_suzuka": {
+    "driver_id": "81",
+    "circuit_id": "jp-1962_suzuka",
+    "allocation": {
+      "weekend_type": "standard",
+      "dry_compounds": {
+        "hard": "C1",
+        "medium": "C2",
+        "soft": "C3"
+      },
+      "dry_allocation": {
+        "soft": 8,
+        "medium": 3,
+        "hard": 2
+      },
+      "wet_allocation": {
+        "intermediate": 5,
+        "wet": 2
+      },
+      "special_rules": {
+        "mandatory_race_compounds": 2,
+        "q3_soft_reserve": true,
+        "practice_returns": 2,
+        "monaco_extra_wet": false,
+        "monaco_mandatory_sets": 2
+      },
+      "circuit_characteristics": {
+        "wear_profile": "medium",
+        "degradation_factor": 1.0,
+        "thermal_stress": "medium"
+      }
+    },
+    "sets": [
+      {
+        "set_id": "S1",
+        "compound": "soft",
+        "condition": 94.0,
+        "heat_cycles": 1,
+        "laps_completed": 4,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S2",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S3",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S4",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S5",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S6",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S7",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S8",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": true
+      },
+      {
+        "set_id": "M1",
+        "compound": "medium",
+        "condition": 83.5,
+        "heat_cycles": 2,
+        "laps_completed": 11,
         "is_available": true,
         "is_q3_reserve": false
       },
@@ -465,9 +1325,9 @@
       {
         "set_id": "S1",
         "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
+        "condition": 79.0,
+        "heat_cycles": 1,
+        "laps_completed": 14,
         "is_available": true,
         "is_q3_reserve": false
       },
@@ -537,225 +1397,10 @@
       {
         "set_id": "M1",
         "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M2",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
+        "condition": 91.0,
+        "heat_cycles": 2,
+        "laps_completed": 6,
         "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M3",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H1",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H2",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I1",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I2",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I3",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I4",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I5",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W1",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W2",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      }
-    ]
-  },
-  "30:jp-1962_suzuka": {
-    "driver_id": "30",
-    "circuit_id": "jp-1962_suzuka",
-    "allocation": {
-      "weekend_type": "standard",
-      "dry_compounds": {
-        "hard": "C1",
-        "medium": "C2",
-        "soft": "C3"
-      },
-      "dry_allocation": {
-        "soft": 8,
-        "medium": 3,
-        "hard": 2
-      },
-      "wet_allocation": {
-        "intermediate": 5,
-        "wet": 2
-      },
-      "special_rules": {
-        "mandatory_race_compounds": 2,
-        "q3_soft_reserve": true,
-        "practice_returns": 2,
-        "monaco_extra_wet": false,
-        "monaco_mandatory_sets": 2
-      },
-      "circuit_characteristics": {
-        "wear_profile": "medium",
-        "degradation_factor": 1.0,
-        "thermal_stress": "medium"
-      }
-    },
-    "sets": [
-      {
-        "set_id": "S1",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S2",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S3",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S4",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S5",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S6",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S7",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S8",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": true
-      },
-      {
-        "set_id": "M1",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
         "is_q3_reserve": false
       },
       {
@@ -895,9 +1540,9 @@
       {
         "set_id": "S1",
         "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
+        "condition": 88.0,
+        "heat_cycles": 1,
+        "laps_completed": 8,
         "is_available": true,
         "is_q3_reserve": false
       },
@@ -967,1730 +1612,10 @@
       {
         "set_id": "M1",
         "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M2",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
+        "condition": 85.0,
+        "heat_cycles": 2,
+        "laps_completed": 10,
         "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M3",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H1",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H2",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I1",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I2",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I3",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I4",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I5",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W1",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W2",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      }
-    ]
-  },
-  "63:jp-1962_suzuka": {
-    "driver_id": "63",
-    "circuit_id": "jp-1962_suzuka",
-    "allocation": {
-      "weekend_type": "standard",
-      "dry_compounds": {
-        "hard": "C1",
-        "medium": "C2",
-        "soft": "C3"
-      },
-      "dry_allocation": {
-        "soft": 8,
-        "medium": 3,
-        "hard": 2
-      },
-      "wet_allocation": {
-        "intermediate": 5,
-        "wet": 2
-      },
-      "special_rules": {
-        "mandatory_race_compounds": 2,
-        "q3_soft_reserve": true,
-        "practice_returns": 2,
-        "monaco_extra_wet": false,
-        "monaco_mandatory_sets": 2
-      },
-      "circuit_characteristics": {
-        "wear_profile": "medium",
-        "degradation_factor": 1.0,
-        "thermal_stress": "medium"
-      }
-    },
-    "sets": [
-      {
-        "set_id": "S1",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S2",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S3",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S4",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S5",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S6",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S7",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S8",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": true
-      },
-      {
-        "set_id": "M1",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M2",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M3",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H1",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H2",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I1",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I2",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I3",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I4",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I5",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W1",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W2",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      }
-    ]
-  },
-  "14:jp-1962_suzuka": {
-    "driver_id": "14",
-    "circuit_id": "jp-1962_suzuka",
-    "allocation": {
-      "weekend_type": "standard",
-      "dry_compounds": {
-        "hard": "C1",
-        "medium": "C2",
-        "soft": "C3"
-      },
-      "dry_allocation": {
-        "soft": 8,
-        "medium": 3,
-        "hard": 2
-      },
-      "wet_allocation": {
-        "intermediate": 5,
-        "wet": 2
-      },
-      "special_rules": {
-        "mandatory_race_compounds": 2,
-        "q3_soft_reserve": true,
-        "practice_returns": 2,
-        "monaco_extra_wet": false,
-        "monaco_mandatory_sets": 2
-      },
-      "circuit_characteristics": {
-        "wear_profile": "medium",
-        "degradation_factor": 1.0,
-        "thermal_stress": "medium"
-      }
-    },
-    "sets": [
-      {
-        "set_id": "S1",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S2",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S3",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S4",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S5",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S6",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S7",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S8",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": true
-      },
-      {
-        "set_id": "M1",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M2",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M3",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H1",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H2",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I1",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I2",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I3",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I4",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I5",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W1",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W2",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      }
-    ]
-  },
-  "87:jp-1962_suzuka": {
-    "driver_id": "87",
-    "circuit_id": "jp-1962_suzuka",
-    "allocation": {
-      "weekend_type": "standard",
-      "dry_compounds": {
-        "hard": "C1",
-        "medium": "C2",
-        "soft": "C3"
-      },
-      "dry_allocation": {
-        "soft": 8,
-        "medium": 3,
-        "hard": 2
-      },
-      "wet_allocation": {
-        "intermediate": 5,
-        "wet": 2
-      },
-      "special_rules": {
-        "mandatory_race_compounds": 2,
-        "q3_soft_reserve": true,
-        "practice_returns": 2,
-        "monaco_extra_wet": false,
-        "monaco_mandatory_sets": 2
-      },
-      "circuit_characteristics": {
-        "wear_profile": "medium",
-        "degradation_factor": 1.0,
-        "thermal_stress": "medium"
-      }
-    },
-    "sets": [
-      {
-        "set_id": "S1",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S2",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S3",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S4",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S5",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S6",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S7",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S8",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": true
-      },
-      {
-        "set_id": "M1",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M2",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M3",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H1",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H2",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I1",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I2",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I3",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I4",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I5",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W1",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W2",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      }
-    ]
-  },
-  "10:jp-1962_suzuka": {
-    "driver_id": "10",
-    "circuit_id": "jp-1962_suzuka",
-    "allocation": {
-      "weekend_type": "standard",
-      "dry_compounds": {
-        "hard": "C1",
-        "medium": "C2",
-        "soft": "C3"
-      },
-      "dry_allocation": {
-        "soft": 8,
-        "medium": 3,
-        "hard": 2
-      },
-      "wet_allocation": {
-        "intermediate": 5,
-        "wet": 2
-      },
-      "special_rules": {
-        "mandatory_race_compounds": 2,
-        "q3_soft_reserve": true,
-        "practice_returns": 2,
-        "monaco_extra_wet": false,
-        "monaco_mandatory_sets": 2
-      },
-      "circuit_characteristics": {
-        "wear_profile": "medium",
-        "degradation_factor": 1.0,
-        "thermal_stress": "medium"
-      }
-    },
-    "sets": [
-      {
-        "set_id": "S1",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S2",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S3",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S4",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S5",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S6",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S7",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S8",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": true
-      },
-      {
-        "set_id": "M1",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M2",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M3",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H1",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H2",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I1",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I2",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I3",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I4",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I5",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W1",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W2",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      }
-    ]
-  },
-  "81:jp-1962_suzuka": {
-    "driver_id": "81",
-    "circuit_id": "jp-1962_suzuka",
-    "allocation": {
-      "weekend_type": "standard",
-      "dry_compounds": {
-        "hard": "C1",
-        "medium": "C2",
-        "soft": "C3"
-      },
-      "dry_allocation": {
-        "soft": 8,
-        "medium": 3,
-        "hard": 2
-      },
-      "wet_allocation": {
-        "intermediate": 5,
-        "wet": 2
-      },
-      "special_rules": {
-        "mandatory_race_compounds": 2,
-        "q3_soft_reserve": true,
-        "practice_returns": 2,
-        "monaco_extra_wet": false,
-        "monaco_mandatory_sets": 2
-      },
-      "circuit_characteristics": {
-        "wear_profile": "medium",
-        "degradation_factor": 1.0,
-        "thermal_stress": "medium"
-      }
-    },
-    "sets": [
-      {
-        "set_id": "S1",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S2",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S3",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S4",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S5",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S6",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S7",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S8",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": true
-      },
-      {
-        "set_id": "M1",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M2",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M3",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H1",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H2",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I1",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I2",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I3",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I4",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I5",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W1",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W2",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      }
-    ]
-  },
-  "18:jp-1962_suzuka": {
-    "driver_id": "18",
-    "circuit_id": "jp-1962_suzuka",
-    "allocation": {
-      "weekend_type": "standard",
-      "dry_compounds": {
-        "hard": "C1",
-        "medium": "C2",
-        "soft": "C3"
-      },
-      "dry_allocation": {
-        "soft": 8,
-        "medium": 3,
-        "hard": 2
-      },
-      "wet_allocation": {
-        "intermediate": 5,
-        "wet": 2
-      },
-      "special_rules": {
-        "mandatory_race_compounds": 2,
-        "q3_soft_reserve": true,
-        "practice_returns": 2,
-        "monaco_extra_wet": false,
-        "monaco_mandatory_sets": 2
-      },
-      "circuit_characteristics": {
-        "wear_profile": "medium",
-        "degradation_factor": 1.0,
-        "thermal_stress": "medium"
-      }
-    },
-    "sets": [
-      {
-        "set_id": "S1",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S2",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S3",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S4",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S5",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S6",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S7",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S8",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": true
-      },
-      {
-        "set_id": "M1",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M2",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M3",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H1",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H2",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I1",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I2",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I3",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I4",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I5",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W1",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W2",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      }
-    ]
-  },
-  "55:jp-1962_suzuka": {
-    "driver_id": "55",
-    "circuit_id": "jp-1962_suzuka",
-    "allocation": {
-      "weekend_type": "standard",
-      "dry_compounds": {
-        "hard": "C1",
-        "medium": "C2",
-        "soft": "C3"
-      },
-      "dry_allocation": {
-        "soft": 8,
-        "medium": 3,
-        "hard": 2
-      },
-      "wet_allocation": {
-        "intermediate": 5,
-        "wet": 2
-      },
-      "special_rules": {
-        "mandatory_race_compounds": 2,
-        "q3_soft_reserve": true,
-        "practice_returns": 2,
-        "monaco_extra_wet": false,
-        "monaco_mandatory_sets": 2
-      },
-      "circuit_characteristics": {
-        "wear_profile": "medium",
-        "degradation_factor": 1.0,
-        "thermal_stress": "medium"
-      }
-    },
-    "sets": [
-      {
-        "set_id": "S1",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S2",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S3",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S4",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S5",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S6",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S7",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S8",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": true
-      },
-      {
-        "set_id": "M1",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M2",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M3",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H1",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H2",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I1",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I2",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I3",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I4",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I5",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W1",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W2",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      }
-    ]
-  },
-  "22:jp-1962_suzuka": {
-    "driver_id": "22",
-    "circuit_id": "jp-1962_suzuka",
-    "allocation": {
-      "weekend_type": "standard",
-      "dry_compounds": {
-        "hard": "C1",
-        "medium": "C2",
-        "soft": "C3"
-      },
-      "dry_allocation": {
-        "soft": 8,
-        "medium": 3,
-        "hard": 2
-      },
-      "wet_allocation": {
-        "intermediate": 5,
-        "wet": 2
-      },
-      "special_rules": {
-        "mandatory_race_compounds": 2,
-        "q3_soft_reserve": true,
-        "practice_returns": 2,
-        "monaco_extra_wet": false,
-        "monaco_mandatory_sets": 2
-      },
-      "circuit_characteristics": {
-        "wear_profile": "medium",
-        "degradation_factor": 1.0,
-        "thermal_stress": "medium"
-      }
-    },
-    "sets": [
-      {
-        "set_id": "S1",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S2",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S3",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S4",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S5",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S6",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S7",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S8",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": true
-      },
-      {
-        "set_id": "M1",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
         "is_q3_reserve": false
       },
       {
@@ -2902,10 +1827,10 @@
       {
         "set_id": "M1",
         "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
+        "condition": 86.5,
+        "heat_cycles": 2,
+        "laps_completed": 9,
+        "is_available": true,
         "is_q3_reserve": false
       },
       {
@@ -3009,8 +1934,223 @@
       }
     ]
   },
-  "43:jp-1962_suzuka": {
-    "driver_id": "43",
+  "63:jp-1962_suzuka": {
+    "driver_id": "63",
+    "circuit_id": "jp-1962_suzuka",
+    "allocation": {
+      "weekend_type": "standard",
+      "dry_compounds": {
+        "hard": "C1",
+        "medium": "C2",
+        "soft": "C3"
+      },
+      "dry_allocation": {
+        "soft": 8,
+        "medium": 3,
+        "hard": 2
+      },
+      "wet_allocation": {
+        "intermediate": 5,
+        "wet": 2
+      },
+      "special_rules": {
+        "mandatory_race_compounds": 2,
+        "q3_soft_reserve": true,
+        "practice_returns": 2,
+        "monaco_extra_wet": false,
+        "monaco_mandatory_sets": 2
+      },
+      "circuit_characteristics": {
+        "wear_profile": "medium",
+        "degradation_factor": 1.0,
+        "thermal_stress": "medium"
+      }
+    },
+    "sets": [
+      {
+        "set_id": "S1",
+        "compound": "soft",
+        "condition": 89.5,
+        "heat_cycles": 1,
+        "laps_completed": 7,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S2",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S3",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S4",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S5",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S6",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S7",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S8",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": true
+      },
+      {
+        "set_id": "M1",
+        "compound": "medium",
+        "condition": 86.5,
+        "heat_cycles": 2,
+        "laps_completed": 9,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M2",
+        "compound": "medium",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M3",
+        "compound": "medium",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H1",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H2",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I1",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I2",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I3",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I4",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I5",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W1",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W2",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      }
+    ]
+  },
+  "10:jp-1962_suzuka": {
+    "driver_id": "10",
     "circuit_id": "jp-1962_suzuka",
     "allocation": {
       "weekend_type": "standard",
@@ -3117,225 +2257,10 @@
       {
         "set_id": "M1",
         "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M2",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
+        "condition": 89.5,
+        "heat_cycles": 2,
+        "laps_completed": 7,
         "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "M3",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H1",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "H2",
-        "compound": "hard",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I1",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I2",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I3",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I4",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "I5",
-        "compound": "intermediate",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W1",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "W2",
-        "compound": "wet",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      }
-    ]
-  },
-  "23:jp-1962_suzuka": {
-    "driver_id": "23",
-    "circuit_id": "jp-1962_suzuka",
-    "allocation": {
-      "weekend_type": "standard",
-      "dry_compounds": {
-        "hard": "C1",
-        "medium": "C2",
-        "soft": "C3"
-      },
-      "dry_allocation": {
-        "soft": 8,
-        "medium": 3,
-        "hard": 2
-      },
-      "wet_allocation": {
-        "intermediate": 5,
-        "wet": 2
-      },
-      "special_rules": {
-        "mandatory_race_compounds": 2,
-        "q3_soft_reserve": true,
-        "practice_returns": 2,
-        "monaco_extra_wet": false,
-        "monaco_mandatory_sets": 2
-      },
-      "circuit_characteristics": {
-        "wear_profile": "medium",
-        "degradation_factor": 1.0,
-        "thermal_stress": "medium"
-      }
-    },
-    "sets": [
-      {
-        "set_id": "S1",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S2",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S3",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S4",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S5",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S6",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S7",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": false
-      },
-      {
-        "set_id": "S8",
-        "compound": "soft",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": true,
-        "is_q3_reserve": true
-      },
-      {
-        "set_id": "M1",
-        "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
         "is_q3_reserve": false
       },
       {
@@ -3547,10 +2472,10 @@
       {
         "set_id": "M1",
         "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
+        "condition": 86.5,
+        "heat_cycles": 2,
+        "laps_completed": 9,
+        "is_available": true,
         "is_q3_reserve": false
       },
       {
@@ -3762,10 +2687,440 @@
       {
         "set_id": "M1",
         "compound": "medium",
+        "condition": 86.5,
+        "heat_cycles": 2,
+        "laps_completed": 9,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M2",
+        "compound": "medium",
         "condition": 100.0,
         "heat_cycles": 0,
         "laps_completed": 0,
-        "is_available": false,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M3",
+        "compound": "medium",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H1",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H2",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I1",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I2",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I3",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I4",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I5",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W1",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W2",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      }
+    ]
+  },
+  "22:jp-1962_suzuka": {
+    "driver_id": "22",
+    "circuit_id": "jp-1962_suzuka",
+    "allocation": {
+      "weekend_type": "standard",
+      "dry_compounds": {
+        "hard": "C1",
+        "medium": "C2",
+        "soft": "C3"
+      },
+      "dry_allocation": {
+        "soft": 8,
+        "medium": 3,
+        "hard": 2
+      },
+      "wet_allocation": {
+        "intermediate": 5,
+        "wet": 2
+      },
+      "special_rules": {
+        "mandatory_race_compounds": 2,
+        "q3_soft_reserve": true,
+        "practice_returns": 2,
+        "monaco_extra_wet": false,
+        "monaco_mandatory_sets": 2
+      },
+      "circuit_characteristics": {
+        "wear_profile": "medium",
+        "degradation_factor": 1.0,
+        "thermal_stress": "medium"
+      }
+    },
+    "sets": [
+      {
+        "set_id": "S1",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S2",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S3",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S4",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S5",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S6",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S7",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S8",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": true
+      },
+      {
+        "set_id": "M1",
+        "compound": "medium",
+        "condition": 85.0,
+        "heat_cycles": 2,
+        "laps_completed": 10,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M2",
+        "compound": "medium",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M3",
+        "compound": "medium",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H1",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H2",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I1",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I2",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I3",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I4",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I5",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W1",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W2",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      }
+    ]
+  },
+  "14:jp-1962_suzuka": {
+    "driver_id": "14",
+    "circuit_id": "jp-1962_suzuka",
+    "allocation": {
+      "weekend_type": "standard",
+      "dry_compounds": {
+        "hard": "C1",
+        "medium": "C2",
+        "soft": "C3"
+      },
+      "dry_allocation": {
+        "soft": 8,
+        "medium": 3,
+        "hard": 2
+      },
+      "wet_allocation": {
+        "intermediate": 5,
+        "wet": 2
+      },
+      "special_rules": {
+        "mandatory_race_compounds": 2,
+        "q3_soft_reserve": true,
+        "practice_returns": 2,
+        "monaco_extra_wet": false,
+        "monaco_mandatory_sets": 2
+      },
+      "circuit_characteristics": {
+        "wear_profile": "medium",
+        "degradation_factor": 1.0,
+        "thermal_stress": "medium"
+      }
+    },
+    "sets": [
+      {
+        "set_id": "S1",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S2",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S3",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S4",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S5",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S6",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S7",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S8",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": true
+      },
+      {
+        "set_id": "M1",
+        "compound": "medium",
+        "condition": 88.0,
+        "heat_cycles": 2,
+        "laps_completed": 8,
+        "is_available": true,
         "is_q3_reserve": false
       },
       {
@@ -3977,10 +3332,440 @@
       {
         "set_id": "M1",
         "compound": "medium",
+        "condition": 83.5,
+        "heat_cycles": 2,
+        "laps_completed": 11,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M2",
+        "compound": "medium",
         "condition": 100.0,
         "heat_cycles": 0,
         "laps_completed": 0,
-        "is_available": false,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M3",
+        "compound": "medium",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H1",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H2",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I1",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I2",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I3",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I4",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I5",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W1",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W2",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      }
+    ]
+  },
+  "87:jp-1962_suzuka": {
+    "driver_id": "87",
+    "circuit_id": "jp-1962_suzuka",
+    "allocation": {
+      "weekend_type": "standard",
+      "dry_compounds": {
+        "hard": "C1",
+        "medium": "C2",
+        "soft": "C3"
+      },
+      "dry_allocation": {
+        "soft": 8,
+        "medium": 3,
+        "hard": 2
+      },
+      "wet_allocation": {
+        "intermediate": 5,
+        "wet": 2
+      },
+      "special_rules": {
+        "mandatory_race_compounds": 2,
+        "q3_soft_reserve": true,
+        "practice_returns": 2,
+        "monaco_extra_wet": false,
+        "monaco_mandatory_sets": 2
+      },
+      "circuit_characteristics": {
+        "wear_profile": "medium",
+        "degradation_factor": 1.0,
+        "thermal_stress": "medium"
+      }
+    },
+    "sets": [
+      {
+        "set_id": "S1",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S2",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S3",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S4",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S5",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S6",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S7",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S8",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": true
+      },
+      {
+        "set_id": "M1",
+        "compound": "medium",
+        "condition": 88.0,
+        "heat_cycles": 2,
+        "laps_completed": 8,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M2",
+        "compound": "medium",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "M3",
+        "compound": "medium",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H1",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "H2",
+        "compound": "hard",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I1",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I2",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I3",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I4",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "I5",
+        "compound": "intermediate",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W1",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "W2",
+        "compound": "wet",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      }
+    ]
+  },
+  "30:jp-1962_suzuka": {
+    "driver_id": "30",
+    "circuit_id": "jp-1962_suzuka",
+    "allocation": {
+      "weekend_type": "standard",
+      "dry_compounds": {
+        "hard": "C1",
+        "medium": "C2",
+        "soft": "C3"
+      },
+      "dry_allocation": {
+        "soft": 8,
+        "medium": 3,
+        "hard": 2
+      },
+      "wet_allocation": {
+        "intermediate": 5,
+        "wet": 2
+      },
+      "special_rules": {
+        "mandatory_race_compounds": 2,
+        "q3_soft_reserve": true,
+        "practice_returns": 2,
+        "monaco_extra_wet": false,
+        "monaco_mandatory_sets": 2
+      },
+      "circuit_characteristics": {
+        "wear_profile": "medium",
+        "degradation_factor": 1.0,
+        "thermal_stress": "medium"
+      }
+    },
+    "sets": [
+      {
+        "set_id": "S1",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S2",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S3",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S4",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S5",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S6",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S7",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": false
+      },
+      {
+        "set_id": "S8",
+        "compound": "soft",
+        "condition": 100.0,
+        "heat_cycles": 0,
+        "laps_completed": 0,
+        "is_available": true,
+        "is_q3_reserve": true
+      },
+      {
+        "set_id": "M1",
+        "compound": "medium",
+        "condition": 85.0,
+        "heat_cycles": 2,
+        "laps_completed": 10,
+        "is_available": true,
         "is_q3_reserve": false
       },
       {
@@ -4192,10 +3977,10 @@
       {
         "set_id": "M1",
         "compound": "medium",
-        "condition": 100.0,
-        "heat_cycles": 0,
-        "laps_completed": 0,
-        "is_available": false,
+        "condition": 83.5,
+        "heat_cycles": 2,
+        "laps_completed": 11,
+        "is_available": true,
         "is_q3_reserve": false
       },
       {
