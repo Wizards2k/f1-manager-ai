@@ -76,6 +76,24 @@ def _format_section_name(critical: Dict[str, Any], section: SectionContext) -> s
     return critical.get("name") or section.name or section.section_id
 
 
+def _compute_warmup_heat(brakes: BrakeState, driver: DriverIntent, bp: BrakeSystemParams) -> Tuple[float, float]:
+    if not driver.brake_warmup_active or driver.brake_warmup_intensity <= 0.0:
+        return 0.0, 0.0
+    front_gap = max(driver.brake_warmup_target_front_c - brakes.temp_front_c, 0.0)
+    rear_gap = max(driver.brake_warmup_target_rear_c - brakes.temp_rear_c, 0.0)
+    if front_gap <= 0.0 and rear_gap <= 0.0:
+        return 0.0, 0.0
+    duct_factor = 1.0 + max(0.0, 0.60 - brakes.duct_opening) * 1.0
+    front_need = clamp(front_gap / max(driver.brake_warmup_target_front_c, 1.0), 0.0, 1.0)
+    rear_need = clamp(rear_gap / max(driver.brake_warmup_target_rear_c, 1.0), 0.0, 1.0)
+    front_bias_factor = clamp((brakes.bias_front_pct - 54.0) / 4.0, 0.0, 1.0)
+    rear_bias_factor = clamp((56.0 - brakes.bias_front_pct) / 4.0, 0.0, 1.0)
+    warmup_base = 2.55 * driver.brake_warmup_intensity * duct_factor
+    warmup_front = warmup_base * (1.28 + front_bias_factor * 0.72) * front_need * max(bp.thermal_mass_front, 0.1)
+    warmup_rear = warmup_base * (1.66 + rear_bias_factor * 1.05) * rear_need * max(bp.thermal_mass_rear, 0.1)
+    return warmup_front, warmup_rear
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -146,10 +164,18 @@ def update_brakes(
     # Heat quality: better system disperses heat more efficiently
     heat_in_front *= (2.0 - bp.heat_quality)  # quality 1.0 → factor 1.0
     heat_in_rear *= (2.0 - bp.heat_quality)
+    warmup_heat_front, warmup_heat_rear = _compute_warmup_heat(brakes, driver, bp)
+    heat_in_front += warmup_heat_front
+    heat_in_rear += warmup_heat_rear
 
     # --- Cooling ---
+    duct_opening_effective = brakes.duct_opening
+    if brakes.duct_opening > 0.5:
+        duct_opening_effective += (brakes.duct_opening - 0.5) * 0.95
+    if brakes.duct_opening > 0.7:
+        duct_opening_effective += (brakes.duct_opening - 0.7) * 0.60
     duct_cooling = (
-        brakes.duct_opening
+        duct_opening_effective
         * bp.cooling_coeff
         * (1.0 - aero.airflow_penalty)
     )
@@ -158,8 +184,25 @@ def update_brakes(
     base_cooling = duct_cooling * air_speed_factor * 0.002 * COOLING_GAIN_MULTIPLIER
     temp_delta_front = max(brakes.temp_front_c - env.air_temp_c, 0.0)
     temp_delta_rear = max(brakes.temp_rear_c - env.air_temp_c, 0.0)
-    cool_front = base_cooling * temp_delta_front
-    cool_rear = base_cooling * temp_delta_rear
+    temp_ref_low = env.air_temp_c + 50.0
+    front_ratio = (brakes.temp_front_c - temp_ref_low) / max(bp.fade_threshold_front_c - temp_ref_low, 1.0)
+    rear_ratio = (brakes.temp_rear_c - temp_ref_low) / max(bp.fade_threshold_rear_c - temp_ref_low, 1.0)
+    front_cooling_scale = clamp(0.42 + front_ratio * 3.15, 0.42, 5.4)
+    rear_cooling_scale = clamp(0.42 + rear_ratio * 2.10, 0.42, 3.4)
+    if brakes.temp_front_c > bp.fade_threshold_front_c * 0.84:
+        front_cooling_scale *= 1.18
+    if brakes.temp_front_c > bp.fade_threshold_front_c * 0.90:
+        front_cooling_scale *= 1.28
+    if brakes.temp_front_c > bp.fade_threshold_front_c * 0.96:
+        front_cooling_scale *= 1.26
+    if brakes.temp_front_c > bp.fade_threshold_front_c * 1.02:
+        front_cooling_scale *= 1.30
+    if brakes.temp_rear_c > bp.fade_threshold_rear_c * 0.88:
+        rear_cooling_scale *= 1.22
+    if brakes.temp_rear_c > bp.fade_threshold_rear_c * 0.96:
+        rear_cooling_scale *= 1.18
+    cool_front = base_cooling * temp_delta_front * front_cooling_scale
+    cool_rear = base_cooling * temp_delta_rear * rear_cooling_scale
 
     duct_rec = brake_profile.get("duct_recommendation", {})
     if duct_rec and braking_energy >= 1.0:

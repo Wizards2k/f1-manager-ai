@@ -60,6 +60,7 @@ def compute_inputs(
     car_state: CarState,
     config: CircuitConfig,
     push_level: float = 1.0,
+    lap_number: int = 1,
 ) -> DriverIntent:
     """
     Determine what the driver wants to do in this section.
@@ -229,8 +230,35 @@ def compute_inputs(
     if push_level < 0.85:
         fuel_save = True
 
+    brake_warmup_active = False
+    brake_warmup_target_front_c = 0.0
+    brake_warmup_target_rear_c = 0.0
+    brake_warmup_intensity = 0.0
+    if lap_number <= 1:
+        front_target = config.brake_params.fade_threshold_front_c * 1.00
+        rear_target = config.brake_params.fade_threshold_rear_c * 1.00
+        front_gap = max(front_target - car_state.brakes.temp_front_c, 0.0)
+        rear_gap = max(rear_target - car_state.brakes.temp_rear_c, 0.0)
+        warmup_gap = max(
+            front_gap / max(front_target, 1.0),
+            rear_gap / max(rear_target, 1.0),
+        )
+        if warmup_gap > 0.02:
+            brake_warmup_active = True
+            brake_warmup_target_front_c = front_target
+            brake_warmup_target_rear_c = rear_target
+            craft_norm = skills.race_craft / 100.0
+            aggression_norm = skills.aggression / 100.0
+            brake_warmup_intensity = clamp(
+                1.65 + warmup_gap * 2.2 + craft_norm * 0.26 + aggression_norm * 0.18,
+                0.0,
+                3.8,
+            )
+
     return DriverIntent(
         pace_factor=pace_factor,
+        push_level=max(1, min(10, int(round(push_level * 10 if push_level <= 1.5 else push_level)))) if push_level is not None else 10,
+        tyre_management_skill=skills.tyre_management,
         aggression_curve_bonus=aggression_curve_bonus,
         target_line=target_line,
         brake_bias_adjust=brake_bias_adjust,
@@ -240,6 +268,10 @@ def compute_inputs(
         ers_recharge_mode=ers_recharge_mode,
         tyre_save_mode=tyre_save,
         fuel_save_mode=fuel_save,
+        brake_warmup_active=brake_warmup_active,
+        brake_warmup_target_front_c=brake_warmup_target_front_c,
+        brake_warmup_target_rear_c=brake_warmup_target_rear_c,
+        brake_warmup_intensity=brake_warmup_intensity,
     )
 
 

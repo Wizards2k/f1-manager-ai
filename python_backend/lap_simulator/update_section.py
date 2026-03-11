@@ -166,6 +166,7 @@ def update_section(
         car_state=car_state,
         config=config,
         push_level=push_level,
+        lap_number=lap_number,
     )
 
     # ===================================================================

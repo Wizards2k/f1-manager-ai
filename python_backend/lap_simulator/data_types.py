@@ -428,6 +428,7 @@ class DriverIntent:
     """Output of DriverModel.compute_inputs() — commands for the section."""
     pace_factor: float = 1.0             # 0.8 (conserve) → 1.1 (push)
     push_level: int = 10                 # 1..10 (10 = zero penalty reference)
+    tyre_management_skill: int = 70      # static hint for tyre thermal modulation
     aggression_curve_bonus: float = 0.0
     target_line: str = "optimal"         # optimal / defensive / aggressive
     brake_bias_adjust: float = 0.0       # delta from setup
@@ -437,6 +438,10 @@ class DriverIntent:
     ers_recharge_mode: bool = False
     tyre_save_mode: bool = False
     fuel_save_mode: bool = False
+    brake_warmup_active: bool = False
+    brake_warmup_target_front_c: float = 0.0
+    brake_warmup_target_rear_c: float = 0.0
+    brake_warmup_intensity: float = 0.0
 
 
 # ---------------------------------------------------------------------------
