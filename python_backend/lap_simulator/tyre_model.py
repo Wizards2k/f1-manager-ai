@@ -10,7 +10,7 @@ Reference: docs/lap-physics-spec-v0.5.md §3.3 Passo 5
 """
 from __future__ import annotations
 
-from typing import Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Tuple, Optional
 
 from .data_types import (
     AeroForces,
@@ -58,6 +58,8 @@ def _update_single_tyre(
     driver: DriverIntent,
     dt_s: float,
     v_kph: float,
+    fuel_kg: float = 100.0,
+    fuel_max_kg: float = 110.0,
     brake_state: BrakeState | None = None,
     aero_setup: AeroSetup | None = None,
     debug_ctx: Optional[Dict[str, str]] = None,
@@ -74,18 +76,29 @@ def _update_single_tyre(
     push_five_cooling_bonus = 1.0
     if push_level == 5 and tyre_management_bonus > 0:
         push_five_cooling_bonus += min(0.06, tyre_management_bonus * 0.03)
+    fuel_load_ratio = clamp(fuel_kg / max(fuel_max_kg, 1.0), 0.0, 1.0)
+    fuel_heat_multiplier = 1.0 - fuel_load_ratio * 0.012
+    fuel_straight_cooling_bonus = 1.0 + fuel_load_ratio * 0.01
+    if driver.fuel_save_mode:
+        fuel_heat_multiplier *= 0.99
+        fuel_straight_cooling_bonus += 0.01
 
     # --- Heat generation ---
     # Base heat from section type
     base_heat = section.heat_factor * driver.pace_factor
     if low_push_steps > 0:
         base_heat *= low_push_heat_multiplier
+    base_heat *= fuel_heat_multiplier
 
     section_time_heat_factor = 1.0
     if section.kind in CORNER_KINDS:
-        section_time_heat_factor = 0.75 + min(0.35, dt_s / 8.0)
+        section_time_heat_factor = 0.73 + min(0.33, dt_s / 8.0)
 
     cornering_heat = base_heat * section_time_heat_factor
+    if section.kind.name == "VERY_SLOW_CORNER":
+        cornering_heat *= 0.78
+    elif section.kind.name == "SLOW_CORNER":
+        cornering_heat *= 0.86
     instability_heat = 0.0
     mech_instability_heat = 0.0
     traction_heat = 0.0
@@ -96,7 +109,7 @@ def _update_single_tyre(
     if is_front:
         axis_multiplier = 1.0
         if section.kind in CORNER_KINDS:
-            instability_heat = base_heat * aero.understeer_level * 0.28
+            instability_heat = base_heat * aero.understeer_level * 0.26
         front_brake_temp_c = getattr(brake_state, "temp_front_c", 400.0) if brake_state is not None else 400.0
         brake_duct_opening = getattr(brake_state, "duct_opening", 0.5) if brake_state is not None else 0.5
         brake_bias_front_pct = getattr(brake_state, "bias_front_pct", 55.0) if brake_state is not None else 55.0
@@ -117,15 +130,19 @@ def _update_single_tyre(
         # Traction heat on rear
         torque_ramp_approx = driver.pace_factor * 0.6 if section.kind in CORNER_KINDS else 0.0
         traction_multiplier = 1.0
+        rear_core_overtemp_c = max(0.0, tyre.core_temp_c - params.temp_opt_core)
+        rear_core_overtemp_factor = min(1.0, rear_core_overtemp_c / 8.0)
         if section.kind in CORNER_KINDS:
             if section.kind.name == "SLOW_CORNER":
-                traction_section_factor = 1.0
+                traction_section_factor = 0.78
             elif section.kind.name == "MEDIUM_CORNER":
-                traction_section_factor = 0.8
+                traction_section_factor = 0.60
             else:
-                traction_section_factor = 0.45
-            traction_heat = base_heat * torque_ramp_approx * 0.24 * traction_section_factor
-            instability_heat = base_heat * aero.oversteer_level * 0.30
+                traction_section_factor = 0.34
+            traction_heat = base_heat * torque_ramp_approx * 0.16 * traction_section_factor
+            traction_heat *= 1.0 - 0.18 * rear_core_overtemp_factor
+            instability_heat = base_heat * aero.oversteer_level * 0.18
+            instability_heat *= 1.0 - 0.12 * rear_core_overtemp_factor
         rear_instability_multiplier = 1.0
         if section.kind in CORNER_KINDS and aero_setup is not None:
             front_mech_balance = (
@@ -137,7 +154,8 @@ def _update_single_tyre(
                 + aero_setup.antiroll_rear_rigidity
             )
             mech_rear_bias = max(0.0, rear_mech_balance - front_mech_balance)
-            mech_instability_heat = base_heat * mech_rear_bias * 0.22
+            mech_instability_heat = base_heat * mech_rear_bias * 0.13
+            mech_instability_heat *= 1.0 - 0.10 * rear_core_overtemp_factor
         heat_gen = cornering_heat + traction_heat + instability_heat + mech_instability_heat
         brake_heat = 0.0
         front_brake_temp_c = getattr(brake_state, "temp_front_c", None) if brake_state is not None else None
@@ -148,7 +166,7 @@ def _update_single_tyre(
     air_speed_factor = max(v_kph / 280.0, 0.12)
     corner_cooling_factor = 1.0
     if section.kind in CORNER_KINDS:
-        corner_cooling_factor += min(0.16, dt_s / 20.0)
+        corner_cooling_factor += min(0.20, dt_s / 18.0)
     convective_cool_raw = (
         params.cooling_coeff
         * air_speed_factor
@@ -161,6 +179,11 @@ def _update_single_tyre(
     if section.kind in STRAIGHT_KINDS:
         straight_time_factor = min(1.0, dt_s / 8.0)
         straight_cooling_multiplier += 0.38 + straight_time_factor * 0.34
+        surface_overtemp_c = max(0.0, tyre.surface_temp_c - params.temp_opt_surface)
+        if surface_overtemp_c > 0.0:
+            straight_surface_overtemp_factor = min(1.0, surface_overtemp_c / 10.0)
+            straight_cooling_multiplier += (0.08 if is_front else 0.05) * straight_surface_overtemp_factor
+        straight_cooling_multiplier *= fuel_straight_cooling_bonus
         convective_cool *= straight_cooling_multiplier
     if low_push_steps > 0:
         convective_cool *= low_push_cooling_bonus
@@ -183,8 +206,58 @@ def _update_single_tyre(
     tyre.surface_temp_c -= track_conduction * dt_s
 
     # --- Core temperature (higher inertia) ---
+    # Direct hysteresis/bulk heating inspired by docs/TyreModel_Thermal_Gemini
+    hysteresis_severity = 0.0
+    straight_overtemp_factor = 0.0
+    if section.kind in STRAIGHT_KINDS:
+        hysteresis_severity = 0.35 + min(0.25, dt_s / 10.0)
+        straight_overtemp_factor = min(1.0, max(0.0, tyre.core_temp_c - params.temp_opt_core) / 10.0)
+        if straight_overtemp_factor > 0.0:
+            hysteresis_severity *= max(0.4, 1.0 - 0.45 * straight_overtemp_factor)
+    elif section.kind in CORNER_KINDS:
+        hysteresis_severity = 0.20 + min(0.18, v_kph / 600.0)
+    hysteresis_heat_core = (
+        hysteresis_severity
+        * driver.pace_factor
+        * (0.4 + fuel_load_ratio * 0.6)
+        * params.conduction_coeff
+    )
     core_exchange = params.conduction_coeff * 0.72 * (tyre.surface_temp_c - tyre.core_temp_c)
-    delta_t_core = core_exchange / max(params.thermal_mass_core, 0.1) * dt_s
+    straight_core_cooling_boost = 0.0
+    straight_length_factor = 1.0
+    if section.kind in STRAIGHT_KINDS:
+        core_overtemp_c = max(0.0, tyre.core_temp_c - params.temp_opt_core)
+        surface_overtemp_c = max(0.0, tyre.surface_temp_c - params.temp_opt_surface)
+        overtemp_delta_c = core_overtemp_c * 0.7 + surface_overtemp_c * 0.3
+        overtemp_factor = min(1.0, max(core_overtemp_c, surface_overtemp_c * 0.6) / 6.0)
+        if overtemp_factor > 0.0:
+            straight_time_factor = 0.4 + min(0.6, dt_s / 8.0)
+            axle_cooling_factor = 0.24 if is_front else 0.09
+            temp_excess_vs_track = max(0.0, tyre.core_temp_c - env.track_temp_c)
+            straight_length_factor = 0.9 + min(1.4, section.length_m / 700.0)
+            rear_cooling_balance = 1.0 if is_front else 0.34
+            rear_length_factor = straight_length_factor if is_front else (0.7 + min(0.55, section.length_m / 1600.0))
+            straight_core_cooling_boost = (
+                params.conduction_coeff
+                * air_speed_factor
+                * straight_time_factor
+                * fuel_straight_cooling_bonus
+                * axle_cooling_factor
+                * overtemp_factor
+                * max(0.0, overtemp_delta_c)
+                * (0.014 + temp_excess_vs_track * 0.0006)
+                * (1.0 + rear_length_factor * 0.35 * rear_cooling_balance)
+            )
+            if temp_excess_vs_track > 12.0:
+                track_pull = (
+                    (temp_excess_vs_track - 12.0)
+                    * (0.014 + rear_length_factor * 0.010 * rear_cooling_balance)
+                    * straight_time_factor
+                )
+                straight_core_cooling_boost += track_pull
+    delta_t_core = (
+        core_exchange + hysteresis_heat_core - straight_core_cooling_boost
+    ) / max(params.thermal_mass_core, 0.1) * dt_s
     tyre.core_temp_c += delta_t_core
     core_track_dissipation = 0.0016 * (tyre.core_temp_c - env.track_temp_c)
     tyre.core_temp_c -= core_track_dissipation * dt_s
@@ -201,6 +274,10 @@ def _update_single_tyre(
             "push_level": push_level,
             "pace_factor": driver.pace_factor,
             "base_heat": base_heat,
+            "fuel_kg": fuel_kg,
+            "fuel_load_ratio": fuel_load_ratio,
+            "fuel_heat_multiplier": fuel_heat_multiplier,
+            "fuel_straight_cooling_bonus": fuel_straight_cooling_bonus,
             "section_time_heat_factor": section_time_heat_factor,
             "cornering_heat": cornering_heat,
             "instability_heat": instability_heat,
@@ -216,6 +293,9 @@ def _update_single_tyre(
             "brake_duct_opening": brake_duct_opening,
             "brake_bias_front_pct": brake_bias_front_pct,
             "traction_heat": traction_heat,
+            "hysteresis_heat_core": hysteresis_heat_core,
+            "straight_core_cooling_boost": straight_core_cooling_boost,
+            "straight_overtemp_factor": straight_overtemp_factor,
             "heat_gen_total": heat_gen,
             "convective_cool_raw": convective_cool_raw,
             "convective_cool": convective_cool,
@@ -442,6 +522,8 @@ def update_tyres(
             driver,
             dt_s,
             v_kph,
+            car_state.pu.fuel_kg,
+            config.fuel_max_kg,
             car_state.brakes,
             aero_setup,
             debug_ctx,
