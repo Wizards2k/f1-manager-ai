@@ -42,14 +42,14 @@
     },
     "C2": {
       "temp_window_surface_c": [
-        88.65,
+        86.65,
         120.65,
-        133.65
+        135.65
       ],
       "temp_window_core_c": [
-        87.19,
+        85.19,
         98.19,
-        109.19
+        111.19
       ],
       "gaussian_sigma_surface_c": 7.0,
       "gaussian_sigma_core_c": 6.0,

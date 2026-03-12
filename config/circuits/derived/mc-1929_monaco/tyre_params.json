@@ -86,14 +86,14 @@
     },
     "C4": {
       "temp_window_surface_c": [
-        83.65,
+        81.65,
         106.65,
-        118.65
+        120.65
       ],
       "temp_window_core_c": [
-        79.19,
+        77.19,
         91.19,
-        99.19
+        101.19
       ],
       "gaussian_sigma_surface_c": 7.0,
       "gaussian_sigma_core_c": 6.0,
@@ -130,14 +130,14 @@
     },
     "C6": {
       "temp_window_surface_c": [
-        78.65,
+        76.65,
         94.65,
-        103.65
+        105.65
       ],
       "temp_window_core_c": [
-        69.19,
+        67.19,
         83.19,
-        89.19
+        91.19
       ],
       "gaussian_sigma_surface_c": 7.0,
       "gaussian_sigma_core_c": 6.0,

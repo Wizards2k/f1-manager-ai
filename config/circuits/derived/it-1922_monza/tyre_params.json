@@ -108,14 +108,14 @@
     },
     "C5": {
       "temp_window_surface_c": [
-        81.1,
-        101.1,
-        114.1
+        76.65,
+        100.65,
+        117.65
       ],
       "temp_window_core_c": [
-        74.46,
-        87.46,
-        94.46
+        70.19,
+        87.19,
+        98.19
       ],
       "gaussian_sigma_surface_c": 7.0,
       "gaussian_sigma_core_c": 6.0,

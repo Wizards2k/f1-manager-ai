@@ -11160,7 +11160,9 @@
       "v_max_kph": 288.79,
       "dt_ref_s": 1.316,
       "radius_m": 50196.60431818182,
-      "telemetry_mu": 0.13568181818181818
+      "telemetry_mu": 0.13568181818181818,
+      "heat_factor": 0.5,
+      "cool_factor": 1.02
     },
     {
       "id": "sec_02",
@@ -11175,7 +11177,9 @@
       "v_max_kph": 258.213,
       "dt_ref_s": 2.791,
       "radius_m": 76.77246280145815,
-      "telemetry_mu": 3.17326437573621
+      "telemetry_mu": 3.17326437573621,
+      "heat_factor": 1.26,
+      "cool_factor": 0.46
     },
     {
       "id": "sec_03",
@@ -11190,7 +11194,9 @@
       "v_max_kph": 268.927,
       "dt_ref_s": 6.335,
       "radius_m": 222061.56209756096,
-      "telemetry_mu": 0.14371951219512194
+      "telemetry_mu": 0.14371951219512194,
+      "heat_factor": 0.7,
+      "cool_factor": 0.88
     },
     {
       "id": "sec_04",
@@ -11205,7 +11211,9 @@
       "v_max_kph": 264.755,
       "dt_ref_s": 5.267,
       "radius_m": 124.35870007508925,
-      "telemetry_mu": 2.45146205872784
+      "telemetry_mu": 2.45146205872784,
+      "heat_factor": 0.8,
+      "cool_factor": 0.85
     },
     {
       "id": "sec_05",
@@ -11220,7 +11228,9 @@
       "v_max_kph": 225.825,
       "dt_ref_s": 2.111,
       "radius_m": 41630.47711538461,
-      "telemetry_mu": 0.11530769230769232
+      "telemetry_mu": 0.11530769230769232,
+      "heat_factor": 0.2,
+      "cool_factor": 1.2
     },
     {
       "id": "sec_06",
@@ -11235,7 +11245,9 @@
       "v_max_kph": 220.005,
       "dt_ref_s": 3.775,
       "radius_m": 36.12359102788369,
-      "telemetry_mu": 4.310973549655528
+      "telemetry_mu": 4.310973549655528,
+      "heat_factor": 1.0,
+      "cool_factor": 0.78
     },
     {
       "id": "sec_07",
@@ -11250,7 +11262,9 @@
       "v_max_kph": 149.168,
       "dt_ref_s": 1.026,
       "radius_m": 1635.1412,
-      "telemetry_mu": 0.10980000000000001
+      "telemetry_mu": 0.10980000000000001,
+      "heat_factor": 0.4,
+      "cool_factor": 1.0
     },
     {
       "id": "sec_08",
@@ -11265,7 +11279,9 @@
       "v_max_kph": 135.343,
       "dt_ref_s": 7.806,
       "radius_m": 11.095589870083018,
-      "telemetry_mu": 6.386640464147038
+      "telemetry_mu": 6.386640464147038,
+      "heat_factor": 1.36,
+      "cool_factor": 0.4
     },
     {
       "id": "sec_09",
@@ -11280,7 +11296,9 @@
       "v_max_kph": 121.673,
       "dt_ref_s": 2.333,
       "radius_m": 40.606922473498535,
-      "telemetry_mu": 2.0303543198217975
+      "telemetry_mu": 2.0303543198217975,
+      "heat_factor": 1.28,
+      "cool_factor": 0.44
     },
     {
       "id": "sec_10",
@@ -11295,7 +11313,9 @@
       "v_max_kph": 286.0,
       "dt_ref_s": 8.468,
       "radius_m": 291676.4318947368,
-      "telemetry_mu": 0.19395614035087716
+      "telemetry_mu": 0.19395614035087716,
+      "heat_factor": 0.4,
+      "cool_factor": 1.0
     },
     {
       "id": "sec_11",
@@ -11310,7 +11330,9 @@
       "v_max_kph": 286.0,
       "dt_ref_s": 4.102,
       "radius_m": 24.965077207686797,
-      "telemetry_mu": 8.06035304301692
+      "telemetry_mu": 8.06035304301692,
+      "heat_factor": 1.34,
+      "cool_factor": 0.42
     },
     {
       "id": "sec_12",
@@ -11325,7 +11347,9 @@
       "v_max_kph": 231.767,
       "dt_ref_s": 3.673,
       "radius_m": 601675.6274,
-      "telemetry_mu": 0.04915
+      "telemetry_mu": 0.04915,
+      "heat_factor": 0.4,
+      "cool_factor": 1.0
     },
     {
       "id": "sec_13",
@@ -11340,7 +11364,9 @@
       "v_max_kph": 208.934,
       "dt_ref_s": 1.316,
       "radius_m": 150.0,
-      "telemetry_mu": 2.0374964201811006
+      "telemetry_mu": 2.0374964201811006,
+      "heat_factor": 1.0,
+      "cool_factor": 0.6
     },
     {
       "id": "sec_14",
@@ -11355,7 +11381,9 @@
       "v_max_kph": 252.816,
       "dt_ref_s": 3.485,
       "radius_m": 65723.50844680851,
-      "telemetry_mu": 0.3946170212765959
+      "telemetry_mu": 0.3946170212765959,
+      "heat_factor": 0.9,
+      "cool_factor": 0.75
     },
     {
       "id": "sec_15",
@@ -11370,7 +11398,9 @@
       "v_max_kph": 235.432,
       "dt_ref_s": 2.826,
       "radius_m": 85.91216655550106,
-      "telemetry_mu": 2.5316645821397565
+      "telemetry_mu": 2.5316645821397565,
+      "heat_factor": 1.27,
+      "cool_factor": 0.47
     },
     {
       "id": "sec_16",
@@ -11385,7 +11415,9 @@
       "v_max_kph": 201.371,
       "dt_ref_s": 2.122,
       "radius_m": 92125.77281818181,
-      "telemetry_mu": 0.32622727272727264
+      "telemetry_mu": 0.32622727272727264,
+      "heat_factor": 0.4,
+      "cool_factor": 1.0
     },
     {
       "id": "sec_17",
@@ -11400,7 +11432,9 @@
       "v_max_kph": 188.143,
       "dt_ref_s": 4.089,
       "radius_m": 22.154474102599593,
-      "telemetry_mu": 4.811887207026627
+      "telemetry_mu": 4.811887207026627,
+      "heat_factor": 1.34,
+      "cool_factor": 0.42
     },
     {
       "id": "sec_18",
@@ -11415,7 +11449,9 @@
       "v_max_kph": 110.971,
       "dt_ref_s": 1.955,
       "radius_m": 41.53505073767844,
-      "telemetry_mu": 1.8064034539199598
+      "telemetry_mu": 1.8064034539199598,
+      "heat_factor": 1.28,
+      "cool_factor": 0.45
     },
     {
       "id": "sec_19",
@@ -11430,7 +11466,9 @@
       "v_max_kph": 279.466,
       "dt_ref_s": 5.245,
       "radius_m": 264128.99135384616,
-      "telemetry_mu": 0.12410769230769228
+      "telemetry_mu": 0.12410769230769228,
+      "heat_factor": 0.4,
+      "cool_factor": 1.0
     }
   ],
   "drs_zones": []

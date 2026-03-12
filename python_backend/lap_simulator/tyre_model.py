@@ -320,7 +320,23 @@ def _update_single_tyre(
         * (0.4 + fuel_load_ratio * 0.6)
         * params.conduction_coeff
     )
-    core_exchange = params.conduction_coeff * 0.72 * (tyre.surface_temp_c - tyre.core_temp_c)
+    compound_is_soft_medium = params.degradation_rate_multiplier >= 0.8
+    compound_is_hard = params.degradation_rate_multiplier <= 0.7
+    compound_core_transfer_factor = 1.0
+    if compound_is_soft_medium:
+        compound_core_transfer_factor = 0.76 - compound_softness_factor * 0.18
+    elif compound_is_hard:
+        compound_core_transfer_factor = 0.92 + compound_hardness_factor * 0.14
+    core_exchange = (
+        params.conduction_coeff
+        * 0.72
+        * compound_core_transfer_factor
+        * (tyre.surface_temp_c - tyre.core_temp_c)
+    )
+    core_overtemp_buffer_c = max(0.0, tyre.core_temp_c - (params.temp_opt_core - 0.5))
+    soft_core_guard = 0.0
+    if compound_softness_factor > 0.0:
+        soft_core_guard = min(1.0, core_overtemp_buffer_c / 6.0)
     if tyre.surface_temp_c > tyre.core_temp_c:
         core_near_opt_factor = min(1.0, max(0.0, tyre.core_temp_c - (params.temp_opt_core - 1.0)) / 6.0)
         surface_core_gap_c = max(0.0, tyre.surface_temp_c - tyre.core_temp_c)
@@ -348,8 +364,24 @@ def _update_single_tyre(
             transfer_trim += dense_heat_section_factor
             if core_overtemp_pre_c > 0.0 and surface_core_gap_c > 10.0:
                 transfer_trim += min(0.10, (surface_core_gap_c - 10.0) * 0.01)
+            if soft_core_guard > 0.0:
+                transfer_trim += min(0.10, soft_core_guard * (0.05 + compound_softness_factor * 0.06))
             transfer_trim = min(0.46, transfer_trim)
             core_exchange *= 1.0 - transfer_trim
+    if soft_core_guard > 0.0:
+        soft_hysteresis_trim = min(0.16, soft_core_guard * (0.10 + compound_softness_factor * 0.12))
+        if section.kind in CORNER_KINDS:
+            soft_hysteresis_trim += min(0.06, soft_core_guard * 0.05)
+        if compound_is_soft_medium:
+            soft_hysteresis_trim += min(0.14, soft_core_guard * (0.08 + compound_softness_factor * 0.10))
+        hysteresis_heat_core *= 1.0 - min(0.32, soft_hysteresis_trim)
+    if compound_is_hard and tyre.surface_temp_c < params.temp_opt_surface:
+        hard_surface_gap_c = min(18.0, params.temp_opt_surface - tyre.surface_temp_c)
+        hard_core_gap_c = max(0.0, params.temp_opt_core - tyre.core_temp_c)
+        hard_surface_hold = min(0.30, hard_surface_gap_c * 0.018)
+        if section.kind in STRAIGHT_KINDS:
+            hard_surface_hold += min(0.12, hard_core_gap_c * 0.012)
+        tyre.surface_temp_c += hard_surface_hold * dt_s
     if core_undertemp_pre_c > 0.0 and tyre.surface_temp_c > tyre.core_temp_c:
         cold_recovery_factor = min(1.0, core_undertemp_pre_c / 6.0)
         compound_recovery_bias = 1.0 + max(0.0, 1.0 - params.degradation_rate_multiplier) * 0.35
@@ -401,6 +433,22 @@ def _update_single_tyre(
                     * straight_time_factor
                 )
                 straight_core_cooling_boost += track_pull
+            if compound_softness_factor > 0.0:
+                soft_core_cooling_bonus = min(
+                    0.18,
+                    (0.05 + compound_softness_factor * 0.10)
+                    * min(1.0, core_overtemp_c / 6.0),
+                )
+                straight_core_cooling_boost *= 1.0 + soft_core_cooling_bonus
+            if compound_is_soft_medium:
+                compound_overtemp_guard = min(1.0, max(0.0, tyre.core_temp_c - (params.temp_opt_core - 0.5)) / 5.0)
+                if compound_overtemp_guard > 0.0:
+                    straight_core_cooling_boost *= 1.0 + min(0.50, 0.22 + compound_overtemp_guard * 0.28)
+    if compound_is_hard and tyre.surface_temp_c < params.temp_opt_surface and section.kind in STRAIGHT_KINDS:
+        hard_surface_support = min(0.35, (params.temp_opt_surface - tyre.surface_temp_c) * 0.018)
+        if section.length_m >= 180.0:
+            hard_surface_support += min(0.12, section.length_m / 3000.0)
+        tyre.surface_temp_c += hard_surface_support * dt_s
     delta_t_core = (
         core_exchange + hysteresis_heat_core - straight_core_cooling_boost
     ) / max(params.thermal_mass_core, 0.1) * dt_s
@@ -695,3 +743,42 @@ def update_tyres(
     eff_grip_rear = sum(rear_grips) / max(len(rear_grips), 1)
 
     return eff_grip_front, eff_grip_rear, all_events
+
+
+# ---------------------------------------------------------------------------
+# Initial temperature setup
+# ---------------------------------------------------------------------------
+
+def set_optimal_initial_temperatures(
+    car_state: CarState,
+    circuit_id: str,
+    env: EnvContext | None = None,
+) -> None:
+    """
+    Imposta le temperature iniziali delle gomme nella finestra ottimale
+    per il compound specifico e il circuito.
+    
+    Args:
+        car_state: Stato dell'auto con le gomme da inizializzare
+        circuit_id: ID del circuito (es. "mc-1929_monaco")
+        env: Contesto ambientale (opzionale, per log di debug)
+    """
+    from .config_loader import load_circuit_config
+    
+    try:
+        config = load_circuit_config(circuit_id)
+        
+        for tyre in car_state.tyres.values():
+            compound_params = config.tyre_params[tyre.compound]
+            
+            # Usa il valore centrale della finestra come temperatura ottimale
+            optimal_surface = compound_params.temp_window_surface_c[1]  # [min, optimal, max]
+            optimal_core = compound_params.temp_window_core_c[1]        # [min, optimal, max]
+            
+            # Imposta le temperature ottimali
+            tyre.surface_temp_c = optimal_surface
+            tyre.core_temp_c = optimal_core
+                
+    except Exception:
+        # Fallback: se qualcosa va storto, mantieni le temperature esistenti
+        pass

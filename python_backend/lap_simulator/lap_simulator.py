@@ -231,6 +231,14 @@ class LapSimulator:
     # ------------------------------------------------------------------
 
     def register_car(self, entry: CarEntry) -> None:
+        # Imposta temperature iniziali ottimali basate su circuito e compound
+        from .tyre_model import set_optimal_initial_temperatures
+        
+        # Estrai circuit_id dalla config se disponibile
+        circuit_id = getattr(self.config, 'circuit_id', None)
+        if circuit_id:
+            set_optimal_initial_temperatures(entry.state, circuit_id, self.env)
+        
         self.cars[entry.car_id] = entry
 
     def register_cars(self, entries: List[CarEntry]) -> None:

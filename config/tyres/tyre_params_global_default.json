@@ -48,8 +48,8 @@
       "cooling_coeff": 1.00
     },
     "C4": {
-      "temp_window_surface_c": [85, 108, 120],
-      "temp_window_core_c": [80, 92, 100],
+      "temp_window_surface_c": [83, 108, 122],
+      "temp_window_core_c": [78, 92, 102],
       "gaussian_sigma_surface_c": 7.0,
       "gaussian_sigma_core_c": 6.0,
       "base_grip": 1.06,
@@ -76,8 +76,8 @@
       "cooling_coeff": 0.92
     },
     "C6": {
-      "temp_window_surface_c": [80, 96, 105],
-      "temp_window_core_c": [70, 84, 90],
+      "temp_window_surface_c": [78, 96, 107],
+      "temp_window_core_c": [68, 84, 92],
       "gaussian_sigma_surface_c": 7.0,
       "gaussian_sigma_core_c": 6.0,
       "base_grip": 1.18,

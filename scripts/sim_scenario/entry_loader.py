@@ -60,7 +60,7 @@ def _build_tyre_state(wp: WheelPosition, payload: Dict[str, Any]) -> TyreState:
     tyre.surface_temp_c = float(payload.get("surface_temp_c", tyre.surface_temp_c))
     tyre.core_temp_c = float(payload.get("core_temp_c", tyre.core_temp_c))
     tyre.wear_pct = float(payload.get("wear_pct", tyre.wear_pct))
-    tyre.lap_age = int(payload.get("lap_age", tyre.lap_age))
+    tyre.age_laps = int(payload.get("lap_age", payload.get("age_laps", tyre.age_laps)))
     tyre.heat_cycles = int(payload.get("heat_cycles", tyre.heat_cycles))
     return tyre
 
