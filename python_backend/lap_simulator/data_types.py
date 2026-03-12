@@ -174,18 +174,24 @@ class TyreCompoundParams:
 
 @dataclass
 class TyreState:
-    """Mutable state for a single tyre (per wheel)."""
-    wheel_pos: WheelPosition
-    compound: TyreCompound
-    surface_temp_c: float = 80.0
-    core_temp_c: float = 75.0
+    """Mutable tyre state (per wheel)."""
+    wheel_pos: WheelPosition = WheelPosition.LF
+    compound: TyreCompound = TyreCompound.C3
+    surface_temp_c: float = 25.0
+    core_temp_c: float = 25.0
     wear_pct: float = 0.0
-    lap_age: int = 0
-    heat_cycles: int = 0                 # incremented each time set is reused
+    age_laps: int = 0
+    heat_cycles: int = 0
+    grip_multiplier: float = 1.0
+    flatspot_severity: float = 0.0
     graining_level: float = 0.0
     blistering_level: float = 0.0
-    flatspot_severity: float = 0.0
-    puncture_risk: float = 0.0
+    snapshot: Dict[str, Any] = field(default_factory=dict)
+    # Progressive heat accumulation tracker (for green setups on high-density circuits)
+    recent_core_temps: List[float] = field(default_factory=list)
+    recent_cool_factors: List[float] = field(default_factory=list)
+    progressive_overtemp_sections: int = 0
+    adaptive_dissipation_boost: float = 0.0
     overheat_warning: bool = False
     cold_warning: bool = False
     effective_grip: float = 1.0          # computed each section

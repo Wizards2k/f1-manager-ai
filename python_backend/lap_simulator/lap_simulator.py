@@ -167,7 +167,7 @@ class LapSimulator:
                 "compound": compound,
                 "wear_pct": getattr(tyre, "wear_pct", None),
                 "surface_temp_c": getattr(tyre, "surface_temp_c", None),
-                "age_laps": getattr(tyre, "lap_age", None),
+                "age_laps": getattr(tyre, "age_laps", None),
             }
             if getattr(tyre, "wear_pct", None) is not None:
                 tyre_wear_vals.append(tyre.wear_pct)
@@ -398,7 +398,7 @@ class LapSimulator:
 
         # Increment lap age for all tyres
         for t in state.tyres.values():
-            t.lap_age += 1
+            t.age_laps += 1
 
         lap_result = LapResult(
             car_id=entry.car_id,
@@ -616,7 +616,7 @@ class LapSimulator:
             tyre_temps = [t.surface_temp_c for t in state.tyres.values()]
 
             for t in state.tyres.values():
-                t.lap_age += 1
+                t.age_laps += 1
 
             results[cid] = LapResult(
                 car_id=cid,

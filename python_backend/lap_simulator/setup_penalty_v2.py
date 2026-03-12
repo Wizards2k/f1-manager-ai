@@ -207,6 +207,47 @@ def is_setup_within_window(
     return True
 
 
+def compute_setup_window_quality(
+    current_sliders: Dict[str, int],
+    circuit_id: str,
+) -> float:
+    ranges = load_setup_ranges(circuit_id)
+    if not ranges:
+        return 0.0
+
+    weighted_score = 0.0
+    total_weight = 0.0
+
+    for slider_name, cfg in ranges.items():
+        if slider_name not in current_sliders:
+            continue
+
+        value = current_sliders[slider_name]
+        min_val = cfg.get("min", 0)
+        max_val = cfg.get("max", 100)
+        target = cfg.get("target", value)
+        tolerance = max(1.0, float(cfg.get("tolerance", 10)))
+        weight = max(0.1, float(cfg.get("weight", 1.0)))
+
+        if value < min_val or value > max_val:
+            slider_score = 0.0
+        else:
+            delta = abs(float(value) - float(target))
+            slider_score = max(0.0, 1.0 - delta / tolerance)
+            window_center = (float(min_val) + float(max_val)) * 0.5
+            half_window = max(1.0, (float(max_val) - float(min_val)) * 0.5)
+            center_score = max(0.0, 1.0 - abs(float(value) - window_center) / half_window)
+            slider_score = slider_score * 0.75 + center_score * 0.25
+
+        weighted_score += slider_score * weight
+        total_weight += weight
+
+    if total_weight <= 0.0:
+        return 0.0
+
+    return max(0.0, min(1.0, weighted_score / total_weight))
+
+
 def compute_df_curve_penalty(
     df_delta: int,
     curve_speed_category: str,

@@ -1,7 +1,7 @@
 {
   "meta": {
-    "name": "monza_leclerc_setup_green",
-    "description": "Circuit-specific green setup for Monza using setup ranges and Pirelli nomination",
+    "name": "suzuka_leclerc_setup_green",
+    "description": "Circuit-specific green setup for Suzuka using setup ranges and Pirelli nomination",
     "source": "logs/leclerc_microsectors.jsonl lap 1"
   },
   "env": {
@@ -42,30 +42,30 @@
       "ers_mode": "STANDARD",
       "tyres": {
         "LF": {
-          "compound": "C4",
-          "surface_temp_c": 94.5,
-          "core_temp_c": 94.5,
+          "compound": "C2",
+          "surface_temp_c": 90.5,
+          "core_temp_c": 90.5,
           "wear_pct": 0.0,
           "lap_age": 0
         },
         "RF": {
-          "compound": "C4",
-          "surface_temp_c": 94.5,
-          "core_temp_c": 94.5,
+          "compound": "C2",
+          "surface_temp_c": 90.5,
+          "core_temp_c": 90.5,
           "wear_pct": 0.0,
           "lap_age": 0
         },
         "LR": {
-          "compound": "C4",
-          "surface_temp_c": 94.5,
-          "core_temp_c": 94.5,
+          "compound": "C2",
+          "surface_temp_c": 90.5,
+          "core_temp_c": 90.5,
           "wear_pct": 0.0,
           "lap_age": 0
         },
         "RR": {
-          "compound": "C4",
-          "surface_temp_c": 94.5,
-          "core_temp_c": 94.5,
+          "compound": "C2",
+          "surface_temp_c": 90.5,
+          "core_temp_c": 90.5,
           "wear_pct": 0.0,
           "lap_age": 0
         }
@@ -88,20 +88,20 @@
       "front_wing": {
         "base_downforce": 12.0,
         "base_drag": 4.8,
-        "angle_deg": 16.25,
+        "angle_deg": 21.75,
         "angle_ref_deg": 40.0
       },
       "rear_wing": {
         "base_downforce": 13.5,
         "base_drag": 8.2,
-        "angle_deg": 19.0,
+        "angle_deg": 23.75,
         "angle_ref_deg": 42.0,
         "drs_drag_reduction": 0.28
       },
       "beam_wing": {
         "base_downforce": 6.0,
         "base_drag": 2.2,
-        "angle_deg": 9.0
+        "angle_deg": 11.75
       },
       "front_floor": {
         "base_downforce": 15.5,

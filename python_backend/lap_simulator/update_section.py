@@ -224,6 +224,7 @@ def update_section(
         dt_s=dt_estimate,
         v_kph=v_estimate,
         aero_setup=aero_setup,
+        setup_sliders=setup_sliders,
     )
     all_events.extend(tyre_events)
 

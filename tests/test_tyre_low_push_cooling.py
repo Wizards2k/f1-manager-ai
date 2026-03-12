@@ -110,3 +110,36 @@ def test_push_five_high_tyre_management_cools_slightly_more():
     normal_skill_avg = sum(tyre.surface_temp_c for tyre in car_normal_skill.tyres.values()) / 4.0
 
     assert high_skill_avg < normal_skill_avg
+
+
+def test_straight_core_cooling_does_not_pull_core_below_target_when_only_surface_is_hot():
+    config = _build_config()
+    env = EnvContext(air_temp_c=24.0, track_temp_c=30.0)
+    aero = AeroForces()
+    section = SectionContext(
+        section_id="s1",
+        name="Main Straight",
+        kind=SectionKind.STRAIGHT,
+        length_m=1100.0,
+        v_base_kph=300.0,
+        heat_factor=0.75,
+        cool_factor=1.2,
+        braking_energy_mj=0.1,
+    )
+
+    car = CarState(car_id="surface_hot_core_ok")
+    initial_core_values = []
+    for tyre in car.tyres.values():
+        tyre.compound = TyreCompound.C3
+        tyre.surface_temp_c = 118.0
+        tyre.core_temp_c = 90.0
+        initial_core_values.append(tyre.core_temp_c)
+
+    driver = DriverIntent(pace_factor=0.95, push_level=7)
+
+    update_tyres(car, section, env, aero, driver, config, dt_s=2.0, v_kph=285.0)
+
+    final_core_avg = sum(tyre.core_temp_c for tyre in car.tyres.values()) / 4.0
+    initial_core_avg = sum(initial_core_values) / 4.0
+
+    assert final_core_avg >= initial_core_avg - 0.2

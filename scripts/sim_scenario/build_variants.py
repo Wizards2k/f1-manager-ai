@@ -178,6 +178,12 @@ VARIANTS = [
 ]
 
 CIRCUIT_GREEN_VARIANTS = {
+    "jp-1962_suzuka": {
+        "name": "suzuka_leclerc_setup_green",
+        "description": "Circuit-specific green setup for Suzuka using setup ranges and Pirelli nomination",
+        "circuit_name": "Suzuka",
+        "compound_slot": "M",
+    },
     "it-1922_monza": {
         "name": "monza_leclerc_setup_green",
         "description": "Circuit-specific green setup for Monza using setup ranges and Pirelli nomination",
@@ -211,10 +217,30 @@ CIRCUIT_GREEN_VARIANTS = {
 }
 
 PIRELLI_PROFILE_PATH = REPO_ROOT / "config" / "tyres" / "pirelli_track_profile_2025.json"
-DEFAULT_TYRE_SURFACE_TEMP_C = 95.0
-DEFAULT_TYRE_CORE_TEMP_C = 90.0
 DEFAULT_TYRE_WEAR_PCT = 0.0
 DEFAULT_TYRE_LAP_AGE = 0
+DEFAULT_PUSH_LEVEL = 7.0
+
+GAME_SEND_OUT_TYRE_TEMPS_C = {
+    "SOFT": 98.5,
+    "MEDIUM": 94.5,
+    "HARD": 90.5,
+}
+
+
+def _compound_to_game_family(compound: str) -> str:
+    key = str(compound).upper()
+    if key in {"C5", "C6", "SOFT"}:
+        return "SOFT"
+    if key in {"C3", "C4", "MEDIUM"}:
+        return "MEDIUM"
+    if key in {"C1", "C2", "HARD"}:
+        return "HARD"
+    return "MEDIUM"
+
+
+def _game_send_out_tyre_temp_c(compound: str) -> float:
+    return GAME_SEND_OUT_TYRE_TEMPS_C[_compound_to_game_family(compound)]
 
 
 def _load_json(path: Path) -> Dict[str, Any]:
@@ -231,14 +257,11 @@ def _deep_merge(target: Dict[str, Any], patch: Dict[str, Any]) -> None:
 
 def _build_clean_tyre_state(compound: str, tyre_state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     source = tyre_state or {}
+    tyre_temp_c = _game_send_out_tyre_temp_c(compound)
     return {
         "compound": compound,
-        "surface_temp_c": source.get("surface_temp_c", DEFAULT_TYRE_SURFACE_TEMP_C)
-        if source.get("surface_temp_c") in {DEFAULT_TYRE_SURFACE_TEMP_C}
-        else DEFAULT_TYRE_SURFACE_TEMP_C,
-        "core_temp_c": source.get("core_temp_c", DEFAULT_TYRE_CORE_TEMP_C)
-        if source.get("core_temp_c") in {DEFAULT_TYRE_CORE_TEMP_C}
-        else DEFAULT_TYRE_CORE_TEMP_C,
+        "surface_temp_c": tyre_temp_c,
+        "core_temp_c": tyre_temp_c,
         "wear_pct": source.get("wear_pct", DEFAULT_TYRE_WEAR_PCT)
         if source.get("wear_pct") in {DEFAULT_TYRE_WEAR_PCT}
         else DEFAULT_TYRE_WEAR_PCT,
@@ -272,6 +295,7 @@ def _build_circuit_green_patch(base_data: Dict[str, Any], circuit_id: str, circu
 
     patch = {
         "car": {
+            "push_level": DEFAULT_PUSH_LEVEL,
             "setup_sliders": ideal_setup,
             "ideal_setup_sliders": ideal_setup,
             "state": {
@@ -333,11 +357,33 @@ def _build_generated_variants(base_data: Dict[str, Any], selected_circuits: Opti
     return variants
 
 
+def _build_green_variants_only(base_data: Dict[str, Any], selected_circuits: Optional[List[str]]) -> List[Dict[str, Any]]:
+    variants: List[Dict[str, Any]] = []
+    circuit_ids = selected_circuits or list(CIRCUIT_GREEN_VARIANTS.keys())
+    for circuit_id in circuit_ids:
+        spec = CIRCUIT_GREEN_VARIANTS.get(circuit_id)
+        if spec is None:
+            raise SystemExit(f"Unsupported circuit for green scenario generation: {circuit_id}")
+        variants.append(
+            {
+                "name": spec["name"],
+                "description": spec["description"],
+                "patch": _build_circuit_green_patch(
+                    base_data,
+                    circuit_id,
+                    spec["circuit_name"],
+                    spec["compound_slot"],
+                ),
+            }
+        )
+    return variants
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate scenario variants")
     parser.add_argument(
         "--base",
-        default=str(Path("scripts/sim_scenario/scenarios/suzuka_leclerc_push5.json")),
+        default=str(Path("scripts/sim_scenario/scenarios/monza_leclerc_setup_green.json")),
         help="Path to base scenario JSON",
     )
     parser.add_argument(
@@ -350,6 +396,11 @@ def main() -> None:
         nargs="*",
         help="Optional circuit IDs for generating circuit-specific green scenarios",
     )
+    parser.add_argument(
+        "--green-only",
+        action="store_true",
+        help="Generate only circuit-specific green scenarios",
+    )
     args = parser.parse_args()
 
     base_path = Path(args.base)
@@ -358,7 +409,11 @@ def main() -> None:
 
     base_data = json.loads(base_path.read_text(encoding="utf-8"))
 
-    variants = _build_generated_variants(base_data, args.circuits)
+    variants = (
+        _build_green_variants_only(base_data, args.circuits)
+        if args.green_only
+        else _build_generated_variants(base_data, args.circuits)
+    )
 
     for variant in variants:
         data = copy.deepcopy(base_data)

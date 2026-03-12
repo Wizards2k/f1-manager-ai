@@ -31,6 +31,7 @@ from .data_types import (
     clamp,
     gaussian,
 )
+from .setup_penalty_v2 import is_setup_within_window
 from utils.tyre_debug_logger import is_tyre_debug_enabled, log_tyre_debug
 
 
@@ -62,6 +63,8 @@ def _update_single_tyre(
     fuel_max_kg: float = 110.0,
     brake_state: BrakeState | None = None,
     aero_setup: AeroSetup | None = None,
+    circuit_id: Optional[str] = None,
+    setup_sliders: Optional[Dict[str, int]] = None,
     debug_ctx: Optional[Dict[str, str]] = None,
 ) -> List[SectionEvent]:
     """Update thermal state, wear and grip for one tyre. Returns events."""
@@ -104,6 +107,61 @@ def _update_single_tyre(
     traction_heat = 0.0
     brake_contact_heat = 0.0
     brake_transfer_heat = 0.0
+    surface_overtemp_pre_c = max(0.0, tyre.surface_temp_c - params.temp_opt_surface)
+    core_overtemp_pre_c = max(0.0, tyre.core_temp_c - params.temp_opt_core)
+    thermal_overtemp_factor = min(
+        1.0,
+        max(
+            core_overtemp_pre_c / 8.0,
+            surface_overtemp_pre_c / 10.0,
+        ),
+    )
+    core_undertemp_pre_c = max(0.0, params.temp_opt_core - tyre.core_temp_c)
+    compound_softness_factor = max(0.0, params.degradation_rate_multiplier - 1.0)
+    compound_hardness_factor = max(0.0, 1.0 - params.degradation_rate_multiplier)
+    green_balance_factor = 0.0
+    if circuit_id and setup_sliders:
+        try:
+            green_balance_factor = 1.0 if is_setup_within_window(setup_sliders, circuit_id) else 0.0
+        except Exception:
+            green_balance_factor = 0.0
+    slow_corner_overtemp_mitigation = 1.0
+    if section.kind.name in {"VERY_SLOW_CORNER", "SLOW_CORNER"} and thermal_overtemp_factor > 0.0:
+        slow_corner_overtemp_mitigation -= 0.08 * thermal_overtemp_factor
+        slow_corner_overtemp_mitigation -= min(0.08, compound_softness_factor * 0.10 * thermal_overtemp_factor)
+    if section.kind.name == "FAST_CORNER" and thermal_overtemp_factor > 0.0 and section.braking_energy_mj > 0.18:
+        slow_corner_overtemp_mitigation -= min(0.06, thermal_overtemp_factor * 0.07 + compound_softness_factor * 0.03)
+    cornering_heat *= slow_corner_overtemp_mitigation
+    if green_balance_factor > 0.0 and section.kind in CORNER_KINDS:
+        green_corner_heat_bonus = 0.08
+        if section.kind.name in {"VERY_SLOW_CORNER", "SLOW_CORNER"}:
+            green_corner_heat_bonus = 0.18
+        elif section.kind.name == "MEDIUM_CORNER":
+            green_corner_heat_bonus = 0.14
+        cornering_heat *= 1.0 - green_balance_factor * green_corner_heat_bonus
+    heavy_brake_overtemp_factor = 0.0
+    if section.braking_energy_mj > 0.55 and thermal_overtemp_factor > 0.0:
+        heavy_brake_overtemp_factor = min(1.0, thermal_overtemp_factor * (0.75 + min(0.25, section.braking_energy_mj / 2.0)))
+    severe_heat_section_factor = 0.0
+    if (
+        section.kind.name in {"VERY_SLOW_CORNER", "SLOW_CORNER", "MEDIUM_CORNER"}
+        and section.braking_energy_mj > 1.2
+        and section.cool_factor <= 0.6
+    ):
+        severe_heat_section_factor = min(
+            1.0,
+            (thermal_overtemp_factor * 0.6)
+            + compound_softness_factor * 0.5
+            + min(0.3, dt_s / 12.0),
+        )
+    fast_brake_corner_factor = 0.0
+    if section.kind.name == "FAST_CORNER" and section.braking_energy_mj > 0.18 and section.cool_factor <= 0.8:
+        fast_brake_corner_factor = min(
+            1.0,
+            thermal_overtemp_factor * 0.45
+            + compound_softness_factor * 0.35
+            + min(0.18, max(0.0, getattr(section, "braking_energy_mj", 0.0) - 0.18) * 0.25),
+        )
 
     # Axis-specific modifiers (spec §5.1 / degradation doc)
     if is_front:
@@ -114,6 +172,14 @@ def _update_single_tyre(
         brake_duct_opening = getattr(brake_state, "duct_opening", 0.5) if brake_state is not None else 0.5
         brake_bias_front_pct = getattr(brake_state, "bias_front_pct", 55.0) if brake_state is not None else 55.0
         brake_contact_heat = section.braking_energy_mj * (0.11 + max(0.0, (brake_bias_front_pct - 54.0)) * 0.002)
+        if section.kind.name in {"VERY_SLOW_CORNER", "SLOW_CORNER"} and thermal_overtemp_factor > 0.0:
+            brake_contact_heat *= 1.0 - 0.10 * thermal_overtemp_factor
+        if heavy_brake_overtemp_factor > 0.0:
+            brake_contact_heat *= 1.0 - 0.08 * heavy_brake_overtemp_factor
+        if severe_heat_section_factor > 0.0:
+            brake_contact_heat *= 1.0 - 0.12 * severe_heat_section_factor
+        if fast_brake_corner_factor > 0.0:
+            brake_contact_heat *= 1.0 - 0.10 * fast_brake_corner_factor
         brake_temp_excess = max(0.0, front_brake_temp_c - 560.0)
         duct_transfer_factor = 0.55 - brake_duct_opening * 0.12
         brake_transfer_heat = (brake_temp_excess / 1800.0) * duct_transfer_factor
@@ -121,6 +187,14 @@ def _update_single_tyre(
             brake_transfer_heat *= 0.12
         elif section.kind in CORNER_KINDS:
             brake_transfer_heat *= 0.18 + min(0.08, dt_s / 14.0)
+            if section.kind.name in {"VERY_SLOW_CORNER", "SLOW_CORNER"} and thermal_overtemp_factor > 0.0:
+                brake_transfer_heat *= 1.0 - 0.18 * thermal_overtemp_factor
+            if heavy_brake_overtemp_factor > 0.0:
+                brake_transfer_heat *= 1.0 - 0.14 * heavy_brake_overtemp_factor
+            if severe_heat_section_factor > 0.0:
+                brake_transfer_heat *= 1.0 - 0.18 * severe_heat_section_factor
+            if fast_brake_corner_factor > 0.0:
+                brake_transfer_heat *= 1.0 - 0.08 * fast_brake_corner_factor
         brake_heat = brake_contact_heat + brake_transfer_heat
         heat_gen = cornering_heat + brake_heat + instability_heat
         rear_instability_multiplier = 1.0
@@ -141,8 +215,18 @@ def _update_single_tyre(
                 traction_section_factor = 0.34
             traction_heat = base_heat * torque_ramp_approx * 0.16 * traction_section_factor
             traction_heat *= 1.0 - 0.18 * rear_core_overtemp_factor
+            if green_balance_factor > 0.0:
+                green_traction_heat_bonus = 0.10
+                if section.kind.name in {"VERY_SLOW_CORNER", "SLOW_CORNER"}:
+                    green_traction_heat_bonus = 0.24
+                elif section.kind.name == "MEDIUM_CORNER":
+                    green_traction_heat_bonus = 0.16
+                traction_heat *= 1.0 - green_balance_factor * green_traction_heat_bonus
             instability_heat = base_heat * aero.oversteer_level * 0.18
             instability_heat *= 1.0 - 0.12 * rear_core_overtemp_factor
+            if section.kind.name in {"VERY_SLOW_CORNER", "SLOW_CORNER"} and thermal_overtemp_factor > 0.0:
+                traction_heat *= 1.0 - 0.14 * thermal_overtemp_factor
+                instability_heat *= 1.0 - 0.10 * thermal_overtemp_factor
         rear_instability_multiplier = 1.0
         if section.kind in CORNER_KINDS and aero_setup is not None:
             front_mech_balance = (
@@ -156,6 +240,8 @@ def _update_single_tyre(
             mech_rear_bias = max(0.0, rear_mech_balance - front_mech_balance)
             mech_instability_heat = base_heat * mech_rear_bias * 0.13
             mech_instability_heat *= 1.0 - 0.10 * rear_core_overtemp_factor
+            if section.kind.name in {"VERY_SLOW_CORNER", "SLOW_CORNER"} and thermal_overtemp_factor > 0.0:
+                mech_instability_heat *= 1.0 - 0.10 * thermal_overtemp_factor
         heat_gen = cornering_heat + traction_heat + instability_heat + mech_instability_heat
         brake_heat = 0.0
         front_brake_temp_c = getattr(brake_state, "temp_front_c", None) if brake_state is not None else None
@@ -185,6 +271,16 @@ def _update_single_tyre(
             straight_cooling_multiplier += (0.08 if is_front else 0.05) * straight_surface_overtemp_factor
         straight_cooling_multiplier *= fuel_straight_cooling_bonus
         convective_cool *= straight_cooling_multiplier
+    if section.kind.name in {"VERY_SLOW_CORNER", "SLOW_CORNER", "MEDIUM_CORNER"}:
+        surface_overtemp_pre_c = max(0.0, tyre.surface_temp_c - params.temp_opt_surface)
+        if surface_overtemp_pre_c > 0.0 and section.cool_factor < 0.78:
+            dense_surface_cooling_boost = min(0.18, surface_overtemp_pre_c * 0.012)
+            if section.kind.name in {"VERY_SLOW_CORNER", "SLOW_CORNER"}:
+                dense_surface_cooling_boost += 0.04
+            if section.braking_energy_mj > 1.0:
+                dense_surface_cooling_boost += min(0.05, (section.braking_energy_mj - 1.0) * 0.03)
+            dense_surface_cooling_boost += min(0.04, max(0.0, 0.78 - section.cool_factor) * 0.20)
+            convective_cool *= 1.0 + min(0.24, dense_surface_cooling_boost)
     if low_push_steps > 0:
         convective_cool *= low_push_cooling_bonus
     if push_level == 5:
@@ -216,6 +312,8 @@ def _update_single_tyre(
             hysteresis_severity *= max(0.4, 1.0 - 0.45 * straight_overtemp_factor)
     elif section.kind in CORNER_KINDS:
         hysteresis_severity = 0.20 + min(0.18, v_kph / 600.0)
+        if section.kind.name in {"VERY_SLOW_CORNER", "SLOW_CORNER"} and thermal_overtemp_factor > 0.0:
+            hysteresis_severity *= 1.0 - 0.16 * thermal_overtemp_factor
     hysteresis_heat_core = (
         hysteresis_severity
         * driver.pace_factor
@@ -223,35 +321,83 @@ def _update_single_tyre(
         * params.conduction_coeff
     )
     core_exchange = params.conduction_coeff * 0.72 * (tyre.surface_temp_c - tyre.core_temp_c)
+    if tyre.surface_temp_c > tyre.core_temp_c:
+        core_near_opt_factor = min(1.0, max(0.0, tyre.core_temp_c - (params.temp_opt_core - 1.0)) / 6.0)
+        surface_core_gap_c = max(0.0, tyre.surface_temp_c - tyre.core_temp_c)
+        if core_near_opt_factor > 0.0 and surface_core_gap_c > 6.0:
+            transfer_trim = min(0.18, surface_core_gap_c * 0.01) * core_near_opt_factor
+            if section.kind.name in {"VERY_SLOW_CORNER", "SLOW_CORNER"}:
+                transfer_trim *= 1.15
+            if severe_heat_section_factor > 0.0:
+                transfer_trim += min(0.12, severe_heat_section_factor * 0.10)
+            if compound_softness_factor > 0.0 and section.braking_energy_mj > 1.0:
+                transfer_trim += min(0.08, compound_softness_factor * 0.08)
+            surface_overtemp_c = max(0.0, tyre.surface_temp_c - params.temp_opt_surface)
+            core_overtemp_pre_c = max(0.0, tyre.core_temp_c - params.temp_opt_core)
+            dense_heat_section_factor = 0.0
+            if section.kind.name in {"VERY_SLOW_CORNER", "SLOW_CORNER", "MEDIUM_CORNER"}:
+                dense_heat_section_factor += 0.08
+            if section.cool_factor < 0.75:
+                dense_heat_section_factor += min(0.10, (0.75 - section.cool_factor) * 0.18)
+            if section.braking_energy_mj > 1.0:
+                dense_heat_section_factor += min(0.10, (section.braking_energy_mj - 1.0) * 0.06)
+            if surface_overtemp_c > 0.0:
+                transfer_trim += min(0.16, surface_overtemp_c * 0.012) * (0.45 + core_near_opt_factor * 0.55)
+            if core_overtemp_pre_c > 0.0:
+                transfer_trim += min(0.12, core_overtemp_pre_c * 0.015)
+            transfer_trim += dense_heat_section_factor
+            if core_overtemp_pre_c > 0.0 and surface_core_gap_c > 10.0:
+                transfer_trim += min(0.10, (surface_core_gap_c - 10.0) * 0.01)
+            transfer_trim = min(0.46, transfer_trim)
+            core_exchange *= 1.0 - transfer_trim
+    if core_undertemp_pre_c > 0.0 and tyre.surface_temp_c > tyre.core_temp_c:
+        cold_recovery_factor = min(1.0, core_undertemp_pre_c / 6.0)
+        compound_recovery_bias = 1.0 + max(0.0, 1.0 - params.degradation_rate_multiplier) * 0.35
+        if params.degradation_rate_multiplier <= 0.7:
+            compound_recovery_bias += 0.12
+            if section.kind in STRAIGHT_KINDS or section.cool_factor >= 0.8:
+                compound_recovery_bias += 0.08 + compound_hardness_factor * 0.05
+        core_exchange *= 1.0 + cold_recovery_factor * 0.15 * compound_recovery_bias
+    if (
+        params.degradation_rate_multiplier <= 0.7
+        and section.kind in STRAIGHT_KINDS
+        and tyre.core_temp_c < params.temp_opt_core
+    ):
+        hard_compound_retention = min(0.12, (params.temp_opt_core - tyre.core_temp_c) * 0.02)
+        if section.length_m >= 250.0:
+            hard_compound_retention += min(0.08, section.length_m / 5000.0)
+        hysteresis_heat_core *= 1.0 + hard_compound_retention
     straight_core_cooling_boost = 0.0
     straight_length_factor = 1.0
     if section.kind in STRAIGHT_KINDS:
         core_overtemp_c = max(0.0, tyre.core_temp_c - params.temp_opt_core)
         surface_overtemp_c = max(0.0, tyre.surface_temp_c - params.temp_opt_surface)
-        overtemp_delta_c = core_overtemp_c * 0.7 + surface_overtemp_c * 0.3
-        overtemp_factor = min(1.0, max(core_overtemp_c, surface_overtemp_c * 0.6) / 6.0)
-        if overtemp_factor > 0.0:
-            straight_time_factor = 0.4 + min(0.6, dt_s / 8.0)
-            axle_cooling_factor = 0.24 if is_front else 0.09
+        if core_overtemp_c > 0.0:
+            core_overtemp_factor = min(1.0, core_overtemp_c / 8.0)
+            surface_support_factor = min(1.0, surface_overtemp_c / 12.0)
+            straight_time_factor = 0.32 + min(0.48, dt_s / 10.0)
+            axle_cooling_factor = 0.18 if is_front else 0.07
             temp_excess_vs_track = max(0.0, tyre.core_temp_c - env.track_temp_c)
-            straight_length_factor = 0.9 + min(1.4, section.length_m / 700.0)
-            rear_cooling_balance = 1.0 if is_front else 0.34
-            rear_length_factor = straight_length_factor if is_front else (0.7 + min(0.55, section.length_m / 1600.0))
+            straight_length_factor = 0.82 + min(0.95, section.length_m / 1100.0)
+            rear_cooling_balance = 1.0 if is_front else 0.32
+            rear_length_factor = straight_length_factor if is_front else (0.76 + min(0.28, section.length_m / 2200.0))
+            thermal_gradient_factor = 0.008 + min(0.020, temp_excess_vs_track * 0.00035)
             straight_core_cooling_boost = (
                 params.conduction_coeff
                 * air_speed_factor
                 * straight_time_factor
                 * fuel_straight_cooling_bonus
                 * axle_cooling_factor
-                * overtemp_factor
-                * max(0.0, overtemp_delta_c)
-                * (0.014 + temp_excess_vs_track * 0.0006)
-                * (1.0 + rear_length_factor * 0.35 * rear_cooling_balance)
+                * core_overtemp_c
+                * (0.75 + surface_support_factor * 0.25)
+                * thermal_gradient_factor
+                * (1.0 + rear_length_factor * 0.24 * rear_cooling_balance)
             )
-            if temp_excess_vs_track > 12.0:
+            if core_overtemp_c > 6.0 and temp_excess_vs_track > 18.0:
                 track_pull = (
-                    (temp_excess_vs_track - 12.0)
-                    * (0.014 + rear_length_factor * 0.010 * rear_cooling_balance)
+                    (core_overtemp_c - 6.0)
+                    * (temp_excess_vs_track - 18.0)
+                    * (0.00045 + rear_length_factor * 0.00022 * rear_cooling_balance)
                     * straight_time_factor
                 )
                 straight_core_cooling_boost += track_pull
@@ -472,6 +618,7 @@ def update_tyres(
     dt_s: float,
     v_kph: float,
     aero_setup: AeroSetup | None = None,
+    setup_sliders: Optional[Dict[str, int]] = None,
 ) -> Tuple[float, float, List[SectionEvent]]:
     """
     Update all four tyres and return effective grip per axis.
@@ -526,6 +673,8 @@ def update_tyres(
             config.fuel_max_kg,
             car_state.brakes,
             aero_setup,
+            config.circuit_id,
+            setup_sliders,
             debug_ctx,
         )
         all_events.extend(evts)

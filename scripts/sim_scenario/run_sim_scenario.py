@@ -24,6 +24,27 @@ from utils.tyre_debug_logger import is_tyre_debug_enabled, reset_tyre_debug_log 
 from entry_loader import load_scenario  # type: ignore  # noqa: E402
 
 
+GAME_SEND_OUT_TYRE_TEMPS_C = {
+    "SOFT": 98.5,
+    "MEDIUM": 94.5,
+    "HARD": 90.5,
+}
+
+
+def _compound_to_game_family(compound: TyreCompound) -> str:
+    if compound in {TyreCompound.C5, TyreCompound.C6}:
+        return "SOFT"
+    if compound in {TyreCompound.C3, TyreCompound.C4}:
+        return "MEDIUM"
+    if compound in {TyreCompound.C1, TyreCompound.C2}:
+        return "HARD"
+    return "MEDIUM"
+
+
+def _game_send_out_tyre_temp_c(compound: TyreCompound) -> float:
+    return GAME_SEND_OUT_TYRE_TEMPS_C[_compound_to_game_family(compound)]
+
+
 def _format_events(events: Dict[str, Any]) -> str:
     if not events:
         return "-"
@@ -53,8 +74,11 @@ def run() -> None:
         car_entry.state.pu.fuel_kg = args.fuel
     if args.compound is not None:
         compound = TyreCompound[str(args.compound).upper()]
+        tyre_temp_c = _game_send_out_tyre_temp_c(compound)
         for tyre in car_entry.state.tyres.values():
             tyre.compound = compound
+            tyre.surface_temp_c = tyre_temp_c
+            tyre.core_temp_c = tyre_temp_c
 
     if is_tyre_debug_enabled():
         reset_tyre_debug_log()
