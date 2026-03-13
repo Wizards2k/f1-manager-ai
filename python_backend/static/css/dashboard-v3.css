@@ -501,8 +501,9 @@ timeline-toggle-btn:hover {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    overflow: hidden;
-    height: 265px;
+    overflow: visible;
+    min-height: 265px;
+    height: auto;
     flex-shrink: 0;
 }
 
