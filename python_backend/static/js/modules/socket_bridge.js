@@ -15,6 +15,18 @@ export class SocketBridge {
         this.socket.on('race_update', (data) => this.handleRaceUpdate(data));
         this.socket.on('event_feed', (events) => this.handleEventFeed(events));
         this.socket.on('connect_error', (err) => console.error('Socket connection error:', err));
+        this.socket.on('tyre_inventory_update', (payload) => this.handleTyreInventoryUpdate(payload));
+    }
+
+    handleTyreInventoryUpdate(payload = {}) {
+        const driverId = payload.driver_id || payload.car_id || null;
+        const inventory = payload.inventory || null;
+        if (!driverId || !inventory || !this.playerGarage?.primeTyreInventory) {
+            return;
+        }
+        this.playerGarage.primeTyreInventory(driverId, inventory);
+        this.playerGarage.render();
+        this.playerGarage.updateDataChips?.();
     }
 
     handleRaceUpdate(data = {}) {

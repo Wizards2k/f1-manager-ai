@@ -208,6 +208,21 @@ export class PlayerGarageV3 {
         return sets.filter(tyreSet => !['intermediate', 'wet'].includes(String(tyreSet?.compound || '').toLowerCase()));
     }
 
+    static computeLiveTyreCondition(car) {
+        if (!car || !car.tyre_states) {
+            return null;
+        }
+        const wearSamples = Object.values(car.tyre_states)
+            .map(state => (state && typeof state.wear_pct === 'number') ? Number(state.wear_pct) : null)
+            .filter(val => val != null);
+        if (!wearSamples.length) {
+            return null;
+        }
+        const avgWearPct = wearSamples.reduce((sum, val) => sum + val, 0) / wearSamples.length;
+        const condition = 100 - avgWearPct;
+        return Math.max(0, Math.min(100, Math.round(condition)));
+    }
+
     sortTyreSets(sets = []) {
         return [...sets].sort((a, b) => {
             const availabilityDelta = Number(b?.is_available ?? false) - Number(a?.is_available ?? false);
@@ -235,6 +250,7 @@ export class PlayerGarageV3 {
             || sets.find(tyreSet => tyreSet.is_available !== false)
             || sets[0];
         const selectedSetId = car.player_config?.tyre_set_id || preferredAvailableSet?.set_id || null;
+        const liveTyreCondition = PlayerGarageV3.computeLiveTyreCondition(car);
         const grouped = sets.reduce((acc, tyreSet) => {
             const key = tyreSet.compound || 'other';
             if (!acc[key]) acc[key] = [];
@@ -245,8 +261,9 @@ export class PlayerGarageV3 {
         const options = Object.entries(grouped).map(([compound, compoundSets]) => {
             const optionRows = compoundSets.map(tyreSet => {
                 const selected = selectedSetId ? tyreSet.set_id === selectedSetId : false;
+                const displayCondition = (selected && liveTyreCondition != null) ? `${liveTyreCondition}%` : this.getTyreSetConditionLabel(tyreSet);
                 const statusSuffix = tyreSet.is_available === false ? ' · unavailable' : tyreSet.is_q3_reserve ? ' · Q3' : '';
-                return `<option value="${tyreSet.set_id}" data-compound="${tyreSet.compound}" ${selected ? 'selected' : ''} ${!isBox || tyreSet.is_available === false ? 'disabled' : ''}>${tyreSet.set_id} · ${this.getTyreSetConditionLabel(tyreSet)}${statusSuffix}</option>`;
+                return `<option value="${tyreSet.set_id}" data-compound="${tyreSet.compound}" ${selected ? 'selected' : ''} ${!isBox || tyreSet.is_available === false ? 'disabled' : ''}>${tyreSet.set_id} · ${displayCondition}${statusSuffix}</option>`;
             }).join('');
             return `<optgroup label="${this.formatTyreCompoundLabel(compound)}">${optionRows}</optgroup>`;
         }).join('');
@@ -296,10 +313,7 @@ export class PlayerGarageV3 {
             || sets.find(tyreSet => tyreSet.compound === activeCompound && tyreSet.is_available !== false)?.set_id
             || sets.find(tyreSet => tyreSet.compound === activeCompound)?.set_id
             || null;
-        const carState = this.getCarState(car);
-        const isBox = carState === 'BOX';
-        const liveTyreWear = typeof car.tire_wear === 'number' ? Math.max(0, Math.min(1, car.tire_wear)) : null;
-        const liveTyreCondition = liveTyreWear == null ? null : Math.round((1 - liveTyreWear) * 100);
+        const liveTyreCondition = PlayerGarageV3.computeLiveTyreCondition(car);
 
         const grouped = sets.reduce((acc, tyreSet) => {
             const key = tyreSet.compound || 'other';
@@ -314,7 +328,7 @@ export class PlayerGarageV3 {
                 <div class="dock-tyre-set-list">
                     ${compoundSets.map(tyreSet => {
                         const isCurrentSet = tyreSet.set_id === fallbackSelectedSetId;
-                        const displayCondition = !isBox && isCurrentSet && liveTyreCondition != null
+                        const displayCondition = (isCurrentSet && liveTyreCondition != null)
                             ? liveTyreCondition
                             : (typeof tyreSet?.condition === 'number' ? Math.round(tyreSet.condition) : null);
                         const conditionLabel = displayCondition == null ? '--%' : `${displayCondition}%`;
@@ -1560,7 +1574,8 @@ export class PlayerGarageV3 {
         const ersMode = car?.player_config?.ers_mode ?? car?.ers_mode ?? 'STANDARD';
         const maxStint = car.max_stint_laps ?? stintTarget;
         const tireWear = Math.max(0, Math.min(1, car.tire_wear ?? 0));
-        const tireHealthPct = Math.round((1 - tireWear) * 100);
+        const liveTyreCondition = PlayerGarageV3.computeLiveTyreCondition(car);
+        const tireHealthPct = liveTyreCondition != null ? liveTyreCondition : Math.round((1 - tireWear) * 100);
         const currentState = this.getCarState(car);
         const lapInfo = typeof car.total_laps === 'number' && car.total_laps > 0 ? `- Lap ${car.total_laps}` : '';
         const stateDisplay = this.getStateDisplay(currentState);

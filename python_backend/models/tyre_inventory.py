@@ -32,6 +32,11 @@ class TyreSet:
     laps_completed: int = 0
     is_available: bool = True
     is_q3_reserve: bool = False
+    # Graining/blistering state (reset when set becomes available)
+    graining_level: float = 0.0
+    blistering_level: float = 0.0
+    graining_time_acc_s: float = 0.0
+    blistering_time_acc_s: float = 0.0
 
     def apply_usage(self, laps: int, wear_factor: float = 1.0) -> None:
         """Apply wear to the set after a session run."""
@@ -48,6 +53,13 @@ class TyreSet:
         if self.condition <= 0.0:
             self.is_available = False
 
+    def reset_graining_blistering(self) -> None:
+        """Reset graining/blistering accumulators and levels."""
+        self.graining_level = 0.0
+        self.blistering_level = 0.0
+        self.graining_time_acc_s = 0.0
+        self.blistering_time_acc_s = 0.0
+
     def to_dict(self) -> Dict[str, object]:
         return {
             "set_id": self.set_id,
@@ -57,6 +69,10 @@ class TyreSet:
             "laps_completed": self.laps_completed,
             "is_available": self.is_available,
             "is_q3_reserve": self.is_q3_reserve,
+            "graining_level": round(self.graining_level, 3),
+            "blistering_level": round(self.blistering_level, 3),
+            "graining_time_acc_s": round(self.graining_time_acc_s, 1),
+            "blistering_time_acc_s": round(self.blistering_time_acc_s, 1),
         }
 
     @staticmethod
@@ -69,6 +85,10 @@ class TyreSet:
             laps_completed=int(payload.get("laps_completed", 0)),
             is_available=bool(payload.get("is_available", True)),
             is_q3_reserve=bool(payload.get("is_q3_reserve", False)),
+            graining_level=float(payload.get("graining_level", 0.0)),
+            blistering_level=float(payload.get("blistering_level", 0.0)),
+            graining_time_acc_s=float(payload.get("graining_time_acc_s", 0.0)),
+            blistering_time_acc_s=float(payload.get("blistering_time_acc_s", 0.0)),
         )
 
 

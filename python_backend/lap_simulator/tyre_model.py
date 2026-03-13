@@ -724,10 +724,24 @@ def _update_single_tyre(
         ))
 
     # Graining: temporal trigger (spec §8 — accumulate time below window)
+    window_min_core = params.temp_window_core_c[0]
+    window_max_core = params.temp_window_core_c[2]
     if tyre.surface_temp_c < window_min_surface and aero.understeer_level > 0.15:
         tyre.graining_time_acc_s += dt_s
     else:
         tyre.graining_time_acc_s = max(0.0, tyre.graining_time_acc_s - dt_s * 0.5)
+
+    # In-track cleaning: if tyre stays in optimal window, reduce graining
+    window_tolerance = 2.0  # ±2°C from optimal window
+    in_optimal_window = (
+        window_min_surface - window_tolerance <= tyre.surface_temp_c <= window_max_surface + window_tolerance
+        and window_min_core - window_tolerance <= tyre.core_temp_c <= window_max_core + window_tolerance
+    )
+    if in_optimal_window and tyre.graining_level > 0.0:
+        # Clean graining when in optimal window for 60+ seconds
+        tyre.graining_time_acc_s = max(0.0, tyre.graining_time_acc_s - dt_s * 2.0)  # Faster decay
+        if tyre.graining_time_acc_s <= 0.0:
+            tyre.graining_level = max(0.0, tyre.graining_level - dt_s * 0.1)  # Gradual cleaning
 
     if tyre.graining_time_acc_s >= params.graining_time_threshold_s:
         tyre.graining_level += 0.02 * (tyre.graining_time_acc_s / params.graining_time_threshold_s)
@@ -745,7 +759,6 @@ def _update_single_tyre(
         tyre.flatspot_severity = clamp(tyre.flatspot_severity, 0.0, 1.0)
 
     # Blistering: temporal trigger (spec §8 — accumulate time above window)
-    window_max_core = params.temp_window_core_c[2]
     is_overheated = (
         tyre.surface_temp_c > window_max_surface + 3
         or tyre.core_temp_c > window_max_core + 3
@@ -754,6 +767,13 @@ def _update_single_tyre(
         tyre.blistering_time_acc_s += dt_s
     else:
         tyre.blistering_time_acc_s = max(0.0, tyre.blistering_time_acc_s - dt_s * 0.5)
+
+    # In-track cleaning: if tyre stays in optimal window, reduce blistering
+    if in_optimal_window and tyre.blistering_level > 0.0:
+        # Clean blistering when in optimal window for 60+ seconds
+        tyre.blistering_time_acc_s = max(0.0, tyre.blistering_time_acc_s - dt_s * 2.0)  # Faster decay
+        if tyre.blistering_time_acc_s <= 0.0:
+            tyre.blistering_level = max(0.0, tyre.blistering_level - dt_s * 0.05)  # Gradual cleaning
 
     if tyre.blistering_time_acc_s >= params.blistering_time_threshold_s:
         tyre.blistering_level += 0.015 * (tyre.blistering_time_acc_s / params.blistering_time_threshold_s)

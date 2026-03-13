@@ -131,6 +131,10 @@ class TyreInventoryService:
             raise ValueError(f"Tyre set {set_id} not found for driver {driver_id}")
 
         tyre_set.is_available = bool(available)
+        # Reset graining/blistering accumulators when set becomes available again
+        if available:
+            tyre_set.reset_graining_blistering()
+            tyre_set.condition = max(tyre_set.condition, 40.0)  # Ensure minimum usable condition
         self._persist_inventory(inventory)
         return tyre_set
 
@@ -214,6 +218,7 @@ class TyreInventoryService:
         set_id: str,
         laps: int,
         wear_factor: float = 1.0,
+        final_condition_pct: Optional[float] = None,
     ) -> TyreSet:
         """Apply stint usage and make the set available again for future runs."""
 
@@ -223,8 +228,11 @@ class TyreInventoryService:
             raise ValueError(f"Tyre set {set_id} not found for driver {driver_id}")
 
         tyre_set.apply_usage(laps=laps, wear_factor=wear_factor)
+        if final_condition_pct is not None:
+            tyre_set.condition = max(0.0, min(100.0, float(final_condition_pct)))
         if tyre_set.condition >= 40.0:
             tyre_set.is_available = True
+            tyre_set.reset_graining_blistering()  # Reset when set becomes available
         else:
             tyre_set.is_available = False
         self._persist_inventory(inventory)

@@ -637,6 +637,57 @@ class SessionBridge:
         # ── FASE 4: STATE COMMIT ──
         self._sync_phases()
 
+    def _emit_driver_tyre_inventory(self, driver_id: str, overrides: Optional[Dict[str, Any]] = None) -> None:
+        """Push the up-to-date tyre inventory for a specific driver to the UI."""
+        if not driver_id or not self.circuit_id:
+            return
+        try:
+            inventory = self.tyre_inventory_service.get_inventory(driver_id, self.circuit_id)
+        except Exception as exc:
+            logger.warning("tyre inventory: failed to load inventory for driver %s: %s", driver_id, exc)
+            return
+
+        inventory_dict = inventory.to_dict()
+        if overrides:
+            override_set_id = overrides.get("set_id")
+            if override_set_id:
+                for tyre in inventory_dict.get("sets", []):
+                    if tyre.get("set_id") == override_set_id:
+                        for key, value in overrides.items():
+                            if key == "set_id":
+                                continue
+                            tyre[key] = value
+                        break
+
+        payload = {
+            "driver_id": driver_id,
+            "circuit_id": self.circuit_id,
+            "inventory": inventory_dict,
+        }
+        self._queue_event_feed(
+            event_type="tyre_inventory_update",
+            car_id=driver_id,
+            payload=payload,
+            ui_targets=["socket", "tyre_panel", "garage"],
+        )
+
+    def _compute_live_tyre_condition_pct(self, race_car) -> Optional[float]:
+        if not race_car:
+            return None
+        tyre_states = getattr(race_car, "tyre_states", {}) or {}
+        wear_samples: List[float] = []
+        for state in tyre_states.values():
+            wear = state.get("wear_pct") if isinstance(state, dict) else None
+            if wear is not None:
+                wear_samples.append(float(wear))
+        if wear_samples:
+            avg_wear_pct = sum(wear_samples) / len(wear_samples)
+            return max(0.0, min(100.0, 100.0 - avg_wear_pct))
+        live_ratio = getattr(race_car, "tire_wear", None)
+        if isinstance(live_ratio, (int, float)):
+            return max(0.0, min(100.0, 100.0 - (float(live_ratio) * 100.0)))
+        return None
+
     # ------------------------------------------------------------------
     # FASE 2: Move cars
     # ------------------------------------------------------------------
@@ -1007,6 +1058,18 @@ class SessionBridge:
             "%s lap %d: %.1fs (sections: %d)",
             car_id, ts.lap_number - 1, lap_time, len(self.sections),
         )
+
+        if race_car and getattr(race_car, "is_player_controlled", False):
+            tyre_set_id = race_car.player_config.get('tyre_set_id') if hasattr(race_car, 'player_config') else None
+            live_condition = self._compute_live_tyre_condition_pct(race_car)
+            if tyre_set_id and live_condition is not None:
+                self._emit_driver_tyre_inventory(
+                    str(car_id),
+                    overrides={
+                        "set_id": str(tyre_set_id),
+                        "condition": round(live_condition, 2),
+                    },
+                )
 
     def _compute_sector_times(self, section_results: List[SectionResult]) -> List[float]:
         """Split section dt_s into 3 sectors using circuit sector_markers_m."""
@@ -1641,6 +1704,8 @@ class SessionBridge:
                 pit_work_duration_s=30.0,
             )
 
+        final_condition_pct: Optional[float] = self._compute_live_tyre_condition_pct(race_car)
+
         if race_car and self.circuit_id:
             tyre_set_id = race_car.player_config.get('tyre_set_id') if hasattr(race_car, 'player_config') else None
             if tyre_set_id:
@@ -1656,6 +1721,7 @@ class SessionBridge:
                         circuit_id=self.circuit_id,
                         set_id=str(tyre_set_id),
                         laps=laps_done,
+                        final_condition_pct=final_condition_pct,
                     )
                     updated_inventory = self.tyre_inventory_service.get_inventory(str(car_id), self.circuit_id)
                     updated_set = updated_inventory.find_set(str(tyre_set_id))
@@ -1676,6 +1742,13 @@ class SessionBridge:
                         laps_completed_before=before_laps,
                         laps_completed_after=updated_set.laps_completed if updated_set else None,
                     )
+                    overrides = None
+                    if final_condition_pct is not None:
+                        overrides = {
+                            "set_id": str(tyre_set_id),
+                            "condition": round(final_condition_pct, 2),
+                        }
+                    self._emit_driver_tyre_inventory(str(car_id), overrides=overrides)
                 except Exception as exc:
                     log_debug_event(
                         'ai_tyre_stint_update_failed',
