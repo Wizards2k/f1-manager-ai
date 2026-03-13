@@ -11,6 +11,8 @@ from typing import Any, Dict
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_DIR = Path(__file__).resolve().parent
 python_backend = REPO_ROOT / "python_backend"
+if str(REPO_ROOT) not in sys.path:
+    sys.path.append(str(REPO_ROOT))
 if str(python_backend) not in sys.path:
     sys.path.append(str(python_backend))
 if str(SCRIPT_DIR) not in sys.path:
@@ -19,7 +21,7 @@ if str(SCRIPT_DIR) not in sys.path:
 from lap_simulator.config_loader import load_circuit_config  # type: ignore  # noqa: E402
 from lap_simulator.data_types import TyreCompound  # type: ignore  # noqa: E402
 from lap_simulator.lap_simulator import LapSimulator  # type: ignore  # noqa: E402
-from utils.tyre_debug_logger import is_tyre_debug_enabled, reset_tyre_debug_log  # type: ignore  # noqa: E402
+from python_backend.utils.tyre_debug_logger import is_tyre_debug_enabled, reset_tyre_debug_log  # type: ignore  # noqa: E402
 
 from entry_loader import load_scenario  # type: ignore  # noqa: E402
 

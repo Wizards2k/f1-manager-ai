@@ -7,17 +7,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
-_FLAG = os.getenv("TYRE_DEBUG", "0").lower() in {"1", "true", "yes", "on"}
 LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
 LOG_FILE = LOG_DIR / "tyre_heat_debug.jsonl"
 
 
 def is_tyre_debug_enabled() -> bool:
-    return _FLAG
+    return os.getenv("TYRE_DEBUG", "0").lower() in {"1", "true", "yes", "on"}
 
 
 def reset_tyre_debug_log() -> None:
-    if not _FLAG:
+    if not is_tyre_debug_enabled():
         return
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -39,7 +38,7 @@ def _convert(value: Any) -> Any:
 
 
 def log_tyre_debug(entry: Dict[str, Any]) -> None:
-    if not _FLAG:
+    if not is_tyre_debug_enabled():
         return
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)

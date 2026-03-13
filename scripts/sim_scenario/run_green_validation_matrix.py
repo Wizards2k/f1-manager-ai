@@ -83,43 +83,83 @@ def _analyze_window(rows: List[Dict[str, Any]], compound: str, windows: Dict[str
     surface_low, _, surface_high = compound_cfg["temp_window_surface_c"]
     core_low, _, core_high = compound_cfg["temp_window_core_c"]
 
-    surface_values = [float(r["surface_temp_after"]) for r in rows]
-    core_values = [float(r["core_temp_after"]) for r in rows]
-
-    surface_violations = [
-        r for r in rows
-        if float(r["surface_temp_after"]) < surface_low or float(r["surface_temp_after"]) > surface_high
-    ]
-    core_violations = [
-        r for r in rows
-        if float(r["core_temp_after"]) < core_low or float(r["core_temp_after"]) > core_high
-    ]
-
     def first_violation(items: List[Dict[str, Any]], field: str, low: float, high: float) -> Dict[str, Any] | None:
         if not items:
             return None
         item = items[0]
         value = float(item[field])
         return {
-            "lap": int(item["lap_number"]),
-            "section": item["section_id"],
-            "wheel": item["wheel"],
+            "lap": int(item.get("lap_number", 0)),
+            "section": item.get("section_id"),
+            "wheel": item.get("wheel"),
             "value": round(value, 2),
             "delta_low": round(value - low, 2),
             "delta_high": round(value - high, 2),
         }
 
+    wheel_rows: Dict[str, List[Dict[str, Any]]] = {}
+    for row in rows:
+        wheel = str(row.get("wheel", ""))
+        if not wheel or wheel == "allocator":
+            continue
+        wheel_rows.setdefault(wheel, []).append(row)
+
+    wheel_summaries: Dict[str, Dict[str, Any]] = {}
+    all_surface_values: List[float] = []
+    all_core_values: List[float] = []
+    surface_ok = True
+    core_ok = True
+
+    for wheel, wheel_specific_rows in sorted(wheel_rows.items()):
+        surface_values = [float(r["surface_temp_after"]) for r in wheel_specific_rows]
+        core_values = [float(r["core_temp_after"]) for r in wheel_specific_rows]
+        all_surface_values.extend(surface_values)
+        all_core_values.extend(core_values)
+
+        surface_violations = [
+            r for r in wheel_specific_rows
+            if float(r["surface_temp_after"]) < surface_low or float(r["surface_temp_after"]) > surface_high
+        ]
+        core_violations = [
+            r for r in wheel_specific_rows
+            if float(r["core_temp_after"]) < core_low or float(r["core_temp_after"]) > core_high
+        ]
+
+        wheel_summary = {
+            "surface_min_c": round(min(surface_values), 2),
+            "surface_max_c": round(max(surface_values), 2),
+            "core_min_c": round(min(core_values), 2),
+            "core_max_c": round(max(core_values), 2),
+            "surface_ok": not surface_violations,
+            "core_ok": not core_violations,
+            "surface_first_violation": first_violation(surface_violations, "surface_temp_after", surface_low, surface_high),
+            "core_first_violation": first_violation(core_violations, "core_temp_after", core_low, core_high),
+        }
+        wheel_summaries[wheel] = wheel_summary
+        surface_ok = surface_ok and wheel_summary["surface_ok"]
+        core_ok = core_ok and wheel_summary["core_ok"]
+
+    if not all_surface_values or not all_core_values:
+        raise SystemExit("Tyre debug log missing per-wheel data")
+
     return {
         "surface_window_c": [surface_low, surface_high],
         "core_window_c": [core_low, core_high],
-        "surface_min_c": round(min(surface_values), 2),
-        "surface_max_c": round(max(surface_values), 2),
-        "core_min_c": round(min(core_values), 2),
-        "core_max_c": round(max(core_values), 2),
-        "surface_ok": not surface_violations,
-        "core_ok": not core_violations,
-        "surface_first_violation": first_violation(surface_violations, "surface_temp_after", surface_low, surface_high),
-        "core_first_violation": first_violation(core_violations, "core_temp_after", core_low, core_high),
+        "surface_min_c": round(min(all_surface_values), 2),
+        "surface_max_c": round(max(all_surface_values), 2),
+        "core_min_c": round(min(all_core_values), 2),
+        "core_max_c": round(max(all_core_values), 2),
+        "surface_ok": surface_ok,
+        "core_ok": core_ok,
+        "surface_first_violation": next(
+            (summary["surface_first_violation"] for summary in wheel_summaries.values() if summary["surface_first_violation"] is not None),
+            None,
+        ),
+        "core_first_violation": next(
+            (summary["core_first_violation"] for summary in wheel_summaries.values() if summary["core_first_violation"] is not None),
+            None,
+        ),
+        "wheels": wheel_summaries,
     }
 
 
@@ -194,6 +234,7 @@ def main() -> None:
                     "core_max_c": analysis["core_max_c"],
                     "surface_first_violation": analysis["surface_first_violation"],
                     "core_first_violation": analysis["core_first_violation"],
+                    "wheels": analysis["wheels"],
                     "event_counts": result["event_counts"],
                     "output_json": result["output_json"],
                 }

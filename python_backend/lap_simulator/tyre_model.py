@@ -32,7 +32,14 @@ from .data_types import (
     gaussian,
 )
 from .setup_penalty_v2 import is_setup_within_window
-from utils.tyre_debug_logger import is_tyre_debug_enabled, log_tyre_debug
+try:
+    from python_backend.utils.tyre_debug_logger import is_tyre_debug_enabled, log_tyre_debug
+except Exception:
+    def is_tyre_debug_enabled() -> bool:
+        return False
+
+    def log_tyre_debug(payload: Dict[str, Any]) -> None:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +50,116 @@ FRONT_WHEELS = {WheelPosition.LF, WheelPosition.RF}
 REAR_WHEELS = {WheelPosition.LR, WheelPosition.RR}
 STRAIGHT_KINDS = {SectionKind.STRAIGHT, SectionKind.MEDIUM_STRAIGHT}
 
-_TYRE_DEBUG_ENABLED = is_tyre_debug_enabled()
+_ASYM_INTENSITY_MIN = 0.10
+_ASYM_INTENSITY_FULL = 0.35
+_ASYM_BIAS_MAX_FRONT = 0.16
+_ASYM_BIAS_MAX_REAR = 0.14
+_ASYM_MIXED_DIRECTION_CAP = 0.30
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _compute_asymmetric_gate(section: SectionContext) -> float:
+    if section.kind not in CORNER_KINDS:
+        return 0.0
+    intensity = clamp(getattr(section, "corner_intensity", 0.0) or 0.0, 0.0, 1.0)
+    if intensity <= _ASYM_INTENSITY_MIN:
+        return 0.0
+    if intensity >= _ASYM_INTENSITY_FULL:
+        gate = 1.0
+    else:
+        gate = (intensity - _ASYM_INTENSITY_MIN) / max(_ASYM_INTENSITY_FULL - _ASYM_INTENSITY_MIN, 1e-6)
+    if getattr(section, "is_mixed_direction", False):
+        gate *= _ASYM_MIXED_DIRECTION_CAP
+    return clamp(gate, 0.0, 1.0)
+
+
+def _get_lateral_biases(section: SectionContext) -> Tuple[float, float]:
+    gate = _compute_asymmetric_gate(section)
+    direction = (getattr(section, "curve_direction", "straight") or "straight").lower()
+    if gate <= 0.0 or direction not in {"left", "right"}:
+        return 0.0, 0.0
+    dir_sign = -1.0 if direction == "left" else 1.0
+    return dir_sign * _ASYM_BIAS_MAX_FRONT * gate, dir_sign * _ASYM_BIAS_MAX_REAR * gate
+
+
+def _redistribute_axle_temperature_delta(
+    left_tyre: TyreState,
+    right_tyre: TyreState,
+    before_left: Tuple[float, float],
+    before_right: Tuple[float, float],
+    bias: float,
+) -> None:
+    left_surface_before, left_core_before = before_left
+    right_surface_before, right_core_before = before_right
+
+    delta_surface_left = left_tyre.surface_temp_c - left_surface_before
+    delta_surface_right = right_tyre.surface_temp_c - right_surface_before
+    delta_core_left = left_tyre.core_temp_c - left_core_before
+    delta_core_right = right_tyre.core_temp_c - right_core_before
+
+    total_surface_delta = delta_surface_left + delta_surface_right
+    total_core_delta = delta_core_left + delta_core_right
+
+    left_share = clamp(0.5 + bias, 0.0, 1.0)
+    right_share = 1.0 - left_share
+
+    left_tyre.surface_temp_c = left_surface_before + total_surface_delta * left_share
+    right_tyre.surface_temp_c = right_surface_before + total_surface_delta * right_share
+    left_tyre.core_temp_c = left_core_before + total_core_delta * left_share
+    right_tyre.core_temp_c = right_core_before + total_core_delta * right_share
+
+
+def _refresh_tyre_effective_grip(
+    tyre: TyreState,
+    params: TyreCompoundParams,
+    section: SectionContext,
+    aero_setup: AeroSetup | None = None,
+) -> None:
+    thermal_factor_surface = gaussian(
+        tyre.surface_temp_c,
+        params.temp_opt_surface,
+        params.gaussian_sigma_surface_c,
+    )
+    thermal_factor_core = gaussian(
+        tyre.core_temp_c,
+        params.temp_opt_core,
+        params.gaussian_sigma_core_c,
+    )
+    thermal_factor = 0.6 * thermal_factor_surface + 0.4 * thermal_factor_core
+    thermal_factor = clamp(thermal_factor, 0.82, 1.1)
+    wear_factor = max(0.5, 1.0 - tyre.wear_pct / 100.0)
+    heat_cycle_factor = max(0.85, 1.0 - tyre.heat_cycles * params.heat_cycle_grip_penalty)
+    slip_factor = 1.0
+    if section.kind in CORNER_KINDS:
+        slip_factor = 1.0 + (params.slip_sensitivity - 1.0) * 0.1
+
+    setup_bonus = 1.0
+    is_front = tyre.wheel_pos in FRONT_WHEELS
+    if aero_setup is not None:
+        if is_front:
+            susp = aero_setup.suspension_front
+            rh_dev = abs(aero_setup.ride_height_front_mm - aero_setup.ride_height_optimal_front_mm)
+            antiroll = aero_setup.antiroll_front_rigidity
+        else:
+            susp = aero_setup.suspension_rear
+            rh_dev = abs(aero_setup.ride_height_rear_mm - aero_setup.ride_height_optimal_rear_mm)
+            antiroll = aero_setup.antiroll_rear_rigidity
+        susp_bonus = (susp.efficiency - 0.8) * 0.15
+        rh_penalty = rh_dev * 0.001
+        antiroll_penalty = abs(antiroll - 0.5) * 0.02
+        setup_bonus = clamp(1.0 + susp_bonus - rh_penalty - antiroll_penalty, 0.92, 1.05)
+
+    tyre.effective_grip = (
+        params.base_grip
+        * thermal_factor
+        * wear_factor
+        * heat_cycle_factor
+        * slip_factor
+        * setup_bonus
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -460,7 +576,7 @@ def _update_single_tyre(
     tyre.surface_temp_c = clamp(tyre.surface_temp_c, env.air_temp_c - 5.0, 200.0)
     tyre.core_temp_c = clamp(tyre.core_temp_c, env.air_temp_c - 5.0, 180.0)
 
-    if _TYRE_DEBUG_ENABLED and debug_ctx:
+    if is_tyre_debug_enabled() and debug_ctx:
         log_tyre_debug({
             **debug_ctx,
             "wheel": tyre.wheel_pos.name,
@@ -679,7 +795,7 @@ def update_tyres(
     """
     all_events: List[SectionEvent] = []
     debug_ctx_base: Optional[Dict[str, Any]] = None
-    if _TYRE_DEBUG_ENABLED:
+    if is_tyre_debug_enabled():
         brakes = getattr(car_state, "brakes", None)
         debug_ctx_base = {
             "car_id": getattr(car_state, "car_id", "car"),
@@ -695,10 +811,17 @@ def update_tyres(
             "brake_temp_rear_c": getattr(brakes, "temp_rear_c", None),
         }
 
+    tyre_temps_before: Dict[WheelPosition, Tuple[float, float]] = {
+        wp: (tyre.surface_temp_c, tyre.core_temp_c)
+        for wp, tyre in car_state.tyres.items()
+    }
+    tyre_params_by_wp: Dict[WheelPosition, TyreCompoundParams] = {}
+
     for wp, tyre in car_state.tyres.items():
         params = config.tyre_params.get(tyre.compound)
         if params is None:
             params = config.tyre_params.get(TyreCompound.C3, TyreCompoundParams(compound=TyreCompound.C3))
+        tyre_params_by_wp[wp] = params
         debug_ctx = None
         if debug_ctx_base is not None:
             debug_ctx = {
@@ -726,6 +849,51 @@ def update_tyres(
             debug_ctx,
         )
         all_events.extend(evts)
+
+    front_bias, rear_bias = _get_lateral_biases(section)
+    left_front = car_state.tyres.get(WheelPosition.LF)
+    right_front = car_state.tyres.get(WheelPosition.RF)
+    left_rear = car_state.tyres.get(WheelPosition.LR)
+    right_rear = car_state.tyres.get(WheelPosition.RR)
+
+    if left_front is not None and right_front is not None and front_bias != 0.0:
+        _redistribute_axle_temperature_delta(
+            left_front,
+            right_front,
+            tyre_temps_before[WheelPosition.LF],
+            tyre_temps_before[WheelPosition.RF],
+            front_bias,
+        )
+    if left_rear is not None and right_rear is not None and rear_bias != 0.0:
+        _redistribute_axle_temperature_delta(
+            left_rear,
+            right_rear,
+            tyre_temps_before[WheelPosition.LR],
+            tyre_temps_before[WheelPosition.RR],
+            rear_bias,
+        )
+
+    for wp, tyre in car_state.tyres.items():
+        params = tyre_params_by_wp.get(wp)
+        if params is None:
+            continue
+        _refresh_tyre_effective_grip(
+            tyre,
+            params,
+            section,
+            aero_setup,
+        )
+
+    if is_tyre_debug_enabled() and debug_ctx_base:
+        log_tyre_debug({
+            **debug_ctx_base,
+            "wheel": "allocator",
+            "curve_direction": getattr(section, "curve_direction", "straight"),
+            "corner_intensity": getattr(section, "corner_intensity", 0.0),
+            "is_mixed_direction": getattr(section, "is_mixed_direction", False),
+            "front_bias": front_bias,
+            "rear_bias": rear_bias,
+        })
 
     # Average grip per axis
     front_grips = [
