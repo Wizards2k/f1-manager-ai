@@ -45,6 +45,7 @@ build/
 *.ff1pkl
 fastf1_http_cache.sqlite
 **/.fastf1_cache/
+python_backend/.fastf1_cache/
 **/tmp_fastf1_cache/
 **/tmp_fastf1_out/
 **/data/fastf1_cache/
