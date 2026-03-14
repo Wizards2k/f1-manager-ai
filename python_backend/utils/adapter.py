@@ -214,14 +214,73 @@ def _build_sim_state(car_id: str, car) -> SimCarState:
     state.tyres = {
         wp: TyreState(wheel_pos=wp, compound=sim_compound) for wp in WheelPosition
     }
+
+    tyre_set = getattr(car, "current_tyre_set", None)
+    snapshot = {}
+    if tyre_set is not None:
+        try:
+            snapshot = tyre_set.get_runtime_snapshot()
+        except Exception:
+            snapshot = {}
+    else:
+        snapshot = getattr(car, "tyre_states", {}) or {}
+
     temps = getattr(car, "tire_temps", {}) or {}
-    wear = getattr(car, "tire_wear", None)
+    condition_pct = None
+    laps_completed = None
+    heat_cycles = None
+
+    if tyre_set is not None:
+        condition_pct = float(getattr(tyre_set, "condition", 100.0))
+        laps_completed = getattr(tyre_set, "laps_completed", None)
+        heat_cycles = getattr(tyre_set, "heat_cycles", None)
+    else:
+        condition_pct = getattr(car, "current_tyre_condition_pct", None)
+        laps_completed = getattr(car, "current_tyre_laps_completed", None)
+        heat_cycles = getattr(car, "current_tyre_heat_cycles", None)
+
+    wear_pct_override = None
+    if condition_pct is not None:
+        try:
+            wear_pct_override = max(0.0, min(100.0, 100.0 - float(condition_pct)))
+        except (TypeError, ValueError):
+            wear_pct_override = None
+
     for wp, tyre in state.tyres.items():
         key = wp.name.lower()
-        if key in temps:
+        wheel_snapshot = snapshot.get(key, {}) if isinstance(snapshot, dict) else {}
+        surface_temp = wheel_snapshot.get("surface_temp")
+        core_temp = wheel_snapshot.get("core_temp")
+        wear_pct = wheel_snapshot.get("wear_pct")
+        wheel_heat_cycles = wheel_snapshot.get("heat_cycles")
+        wheel_age_laps = wheel_snapshot.get("age_laps")
+
+        if surface_temp is not None:
+            tyre.surface_temp_c = float(surface_temp)
+        elif key in temps:
             tyre.surface_temp_c = temps[key]
-        if wear is not None:
-            tyre.wear_pct = max(0.0, min(1.0, wear)) * 100.0
+
+        if core_temp is not None:
+            tyre.core_temp_c = float(core_temp)
+
+        if wear_pct is not None:
+            tyre.wear_pct = max(0.0, min(100.0, float(wear_pct)))
+        elif wear_pct_override is not None:
+            tyre.wear_pct = wear_pct_override
+
+        age_source = wheel_age_laps if wheel_age_laps is not None else laps_completed
+        if age_source is not None:
+            try:
+                tyre.age_laps = max(0, int(age_source))
+            except (TypeError, ValueError):
+                pass
+
+        heat_source = wheel_heat_cycles if wheel_heat_cycles is not None else heat_cycles
+        if heat_source is not None:
+            try:
+                tyre.heat_cycles = max(0, int(heat_source))
+            except (TypeError, ValueError):
+                pass
 
     # Power Unit
     team = getattr(car, "team", None)

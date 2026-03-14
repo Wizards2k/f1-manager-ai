@@ -138,6 +138,41 @@ export class PlayerGarageV3 {
         this.bindEvents();
     }
 
+    computeRuntimeCondition(tyreSet) {
+        const runtime = tyreSet?.runtime;
+        if (!runtime || typeof runtime !== 'object') return null;
+        const wearSamples = Object.values(runtime)
+            .map((state) => (state && typeof state.wear_pct === 'number') ? Number(state.wear_pct) : null)
+            .filter((val) => val != null && !Number.isNaN(val));
+        if (!wearSamples.length) return null;
+        const avgWear = wearSamples.reduce((sum, value) => sum + value, 0) / wearSamples.length;
+        const condition = 100 - avgWear;
+        return Math.max(0, Math.min(100, Math.round(condition)));
+    }
+
+    buildTyreRuntimeChips(tyreSet) {
+        const runtime = tyreSet?.runtime;
+        if (!runtime || typeof runtime !== 'object') {
+            return '';
+        }
+        const wheelOrder = ['fl', 'fr', 'rl', 'rr'];
+        const chips = wheelOrder.map((key) => {
+            const state = runtime[key] || {};
+            const wearPct = (typeof state.wear_pct === 'number') ? Number(state.wear_pct) : null;
+            const condition = wearPct == null ? '--' : Math.max(0, Math.min(100, Math.round(100 - wearPct)));
+            const surface = (typeof state.surface_temp === 'number') ? `${Math.round(state.surface_temp)}°C` : '--';
+            const core = (typeof state.core_temp === 'number') ? `${Math.round(state.core_temp)}°C` : '--';
+            const title = `Surface ${surface} · Core ${core}`;
+            return `
+                <span class="dock-tyre-chip" data-wheel="${key.toUpperCase()}" title="${title}">
+                    <strong>${key.toUpperCase()}</strong>
+                    <span>${condition}%</span>
+                </span>
+            `;
+        }).join('');
+        return `<div class="dock-tyre-runtime">${chips}</div>`;
+    }
+
     async loadTyreInventory(driverId) {
         try {
             const circuitId = this.getResolvedCircuitId();
@@ -186,7 +221,10 @@ export class PlayerGarageV3 {
     }
 
     getTyreSetConditionLabel(tyreSet) {
-        const condition = typeof tyreSet?.condition === 'number' ? Math.round(tyreSet.condition) : null;
+        const runtimeCondition = this.computeRuntimeCondition(tyreSet);
+        const condition = runtimeCondition != null
+            ? runtimeCondition
+            : (typeof tyreSet?.condition === 'number' ? Math.round(tyreSet.condition) : null);
         return condition == null ? '--%' : `${condition}%`;
     }
 
@@ -261,7 +299,10 @@ export class PlayerGarageV3 {
         const options = Object.entries(grouped).map(([compound, compoundSets]) => {
             const optionRows = compoundSets.map(tyreSet => {
                 const selected = selectedSetId ? tyreSet.set_id === selectedSetId : false;
-                const displayCondition = (selected && liveTyreCondition != null) ? `${liveTyreCondition}%` : this.getTyreSetConditionLabel(tyreSet);
+                const runtimeCondition = this.computeRuntimeCondition(tyreSet);
+                const displayCondition = (selected && liveTyreCondition != null)
+                    ? `${liveTyreCondition}%`
+                    : (runtimeCondition != null ? `${runtimeCondition}%` : this.getTyreSetConditionLabel(tyreSet));
                 const statusSuffix = tyreSet.is_available === false ? ' · unavailable' : tyreSet.is_q3_reserve ? ' · Q3' : '';
                 return `<option value="${tyreSet.set_id}" data-compound="${tyreSet.compound}" ${selected ? 'selected' : ''} ${!isBox || tyreSet.is_available === false ? 'disabled' : ''}>${tyreSet.set_id} · ${displayCondition}${statusSuffix}</option>`;
             }).join('');
@@ -328,10 +369,14 @@ export class PlayerGarageV3 {
                 <div class="dock-tyre-set-list">
                     ${compoundSets.map(tyreSet => {
                         const isCurrentSet = tyreSet.set_id === fallbackSelectedSetId;
+                        const runtimeCondition = this.computeRuntimeCondition(tyreSet);
                         const displayCondition = (isCurrentSet && liveTyreCondition != null)
                             ? liveTyreCondition
-                            : (typeof tyreSet?.condition === 'number' ? Math.round(tyreSet.condition) : null);
+                            : (runtimeCondition != null
+                                ? runtimeCondition
+                                : (typeof tyreSet?.condition === 'number' ? Math.round(tyreSet.condition) : null));
                         const conditionLabel = displayCondition == null ? '--%' : `${displayCondition}%`;
+                        const runtimeChips = this.buildTyreRuntimeChips(tyreSet);
                         return `
                             <div class="dock-tyre-set ${tyreSet.is_available === false ? 'is-unavailable' : ''} ${tyreSet.set_id === fallbackSelectedSetId ? 'is-selected' : ''}">
                                 <div class="dock-tyre-set-main">
@@ -343,6 +388,7 @@ export class PlayerGarageV3 {
                                     <span>${this.formatTyreCompoundLabel(tyreSet.compound)}</span>
                                     <span>${tyreSet.laps_completed || 0} laps</span>
                                 </div>
+                                ${runtimeChips}
                             </div>
                         `;
                     }).join('')}
@@ -3422,7 +3468,6 @@ export class PlayerGarageV3 {
             delete allowedPayload.tyre_set_id;
             delete allowedPayload.fuel_percent;
             delete allowedPayload.stint_target_laps;
-            delete allowedPayload.ice_mode;
         }
         if (Object.keys(allowedPayload).length === 0) {
             this.setStatus('No configurable fields available right now.', 'error');

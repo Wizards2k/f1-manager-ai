@@ -150,6 +150,8 @@ class CarTrackState:
     current_sector: int = 0                 # 0=S1, 1=S2, 2=S3
     sector_dt_acc: float = 0.0             # accumulated dt_s in current sector
     setup_data_complete: bool = False       # AI: has enough setup info → head back in
+    tyre_set_id: Optional[str] = None
+    tyre_set: Optional['TyreSet'] = None
 
 
 # Lap phases that should yield under blue flag during practice/quali when a HOT LAP approaches
@@ -569,7 +571,7 @@ class SessionBridge:
             return [compound for compound in wet_order if compound != preferred]
         return [compound for compound in dry_order if compound != preferred]
 
-    def _reserve_ai_tyre_set(self, car_id: str, run_plan) -> Optional[tuple[str, str]]:
+    def _reserve_ai_tyre_set(self, car_id: str, run_plan) -> Optional['TyreSet']:
         if not self.circuit_id:
             return None
         race_car = self.race_cars_map.get(str(car_id))
@@ -602,7 +604,7 @@ class SessionBridge:
             is_q3_reserve=tyre_set.is_q3_reserve,
             fallback_used=tyre_set.compound != compound_label,
         )
-        return tyre_set.set_id, tyre_set.compound
+        return tyre_set
 
     # ------------------------------------------------------------------
     # Tick — the main loop (spec §2.1)
@@ -683,6 +685,12 @@ class SessionBridge:
         if wear_samples:
             avg_wear_pct = sum(wear_samples) / len(wear_samples)
             return max(0.0, min(100.0, 100.0 - avg_wear_pct))
+        current_pct = getattr(race_car, "current_tyre_condition_pct", None)
+        if isinstance(current_pct, (int, float)):
+            try:
+                return max(0.0, min(100.0, float(current_pct)))
+            except (TypeError, ValueError):
+                pass
         live_ratio = getattr(race_car, "tire_wear", None)
         if isinstance(live_ratio, (int, float)):
             return max(0.0, min(100.0, 100.0 - (float(live_ratio) * 100.0)))
@@ -1117,6 +1125,15 @@ class SessionBridge:
             for wp in WheelPosition
         ) / 4.0
         race_car.tire_wear = total_wear / 100.0
+        race_car.current_tyre_condition_pct = max(0.0, min(100.0, 100.0 - total_wear))
+        race_car.current_tyre_heat_cycles = max(
+            race_car.current_tyre_heat_cycles,
+            max((tyre_state.heat_cycles for tyre_state in entry.state.tyres.values()), default=0)
+        )
+        race_car.current_tyre_laps_completed = max(
+            race_car.current_tyre_laps_completed,
+            max((getattr(tyre_state, "age_laps", 0) for tyre_state in entry.state.tyres.values()), default=0)
+        )
 
         # Tyre temps (surface + core)
         temps = {}
@@ -1411,7 +1428,8 @@ class SessionBridge:
             return False
 
         # Relaxed check for player: allow during YELLOW, only block on RED
-        if css.phase not in (CarPhase.IN_GARAGE,):
+        allowed_phases = (CarPhase.IN_GARAGE, CarPhase.PIT_WORK)
+        if css.phase not in allowed_phases:
             logger.warning(
                 "player_send_out: car %s phase=%s (need IN_GARAGE)",
                 car_id, css.phase,
@@ -1425,6 +1443,56 @@ class SessionBridge:
             logger.warning("player_send_out: RED flag active")
             return False
 
+        # Resolve tyre set from inventory if possible, auto-reserving if needed
+        active_tyre_set = None
+        tyre_set_id = None
+        inventory = None
+        try:
+            tyre_set_id = str(car.player_config.get('tyre_set_id') or '').strip()
+            if self.circuit_id:
+                inventory = self.tyre_inventory_service.get_inventory(car_id, self.circuit_id)
+                if tyre_set_id:
+                    active_tyre_set = inventory.find_set(tyre_set_id)
+        except Exception as exc:
+            logger.warning("player_send_out: failed to resolve tyre set %s for car %s: %s", tyre_set_id, car_id, exc)
+
+        if (active_tyre_set is None or not active_tyre_set.is_available) and self.circuit_id:
+            try:
+                reserved = self.tyre_inventory_service.reserve_best_available_set(
+                    driver_id=car_id,
+                    circuit_id=self.circuit_id,
+                    compound=compound,
+                    preferred_set_id=tyre_set_id or None,
+                    minimum_condition=40.0,
+                )
+                active_tyre_set = reserved
+                car.player_config['tyre_set_id'] = reserved.set_id
+                car.player_config['tyre_compound'] = reserved.compound
+                compound = reserved.compound
+                self._emit_driver_tyre_inventory(car_id)
+                logger.info(
+                    "player_send_out: auto-reserved tyre set %s (%s) for car %s",
+                    reserved.set_id,
+                    reserved.compound,
+                    car_id,
+                )
+            except ValueError as exc:
+                logger.warning(
+                    "player_send_out: unable to auto-reserve tyres for car %s (compound=%s): %s",
+                    car_id,
+                    compound,
+                    exc,
+                )
+
+        if active_tyre_set is None:
+            logger.warning(
+                "player_send_out: no valid tyre set found for car %s, compound %s",
+                car_id,
+                compound,
+            )
+        else:
+            car.apply_tyre_set(active_tyre_set, preserve_temps=True)
+            compound = car.player_config.get('tyre_compound', compound)
         sim_compound = game_compound_to_sim(compound)
         fuel_kg = 110.0 * (fuel_percent / 100.0)
 
@@ -1443,6 +1511,35 @@ class SessionBridge:
         entry = racecar_to_car_entry(car)
         entry.car_id = car_id
         entry.state.car_id = car_id
+        # Prime race_car telemetry with the same tyre snapshot the simulator is about to use.
+        try:
+            from lap_simulator.data_types import WheelPosition
+            temps = {}
+            core_temps = {}
+            tyre_states = {}
+            for wp in WheelPosition:
+                tyre_state = entry.state.tyres.get(wp)
+                if tyre_state is None:
+                    continue
+                key = wp.name.lower()
+                temps[key] = tyre_state.surface_temp_c
+                core_temps[key] = tyre_state.core_temp_c
+                tyre_states[key] = {
+                    "wear_pct": tyre_state.wear_pct,
+                    "graining": tyre_state.graining_level > 0.1,
+                    "blistering": tyre_state.blistering_level > 0.1,
+                    "surface_temp": tyre_state.surface_temp_c,
+                    "core_temp": tyre_state.core_temp_c,
+                    "heat_cycles": tyre_state.heat_cycles,
+                    "age_laps": tyre_state.age_laps,
+                }
+            car.tire_temps = temps
+            car.tire_core_temps = core_temps
+            car.tyre_states = tyre_states
+            if active_tyre_set:
+                active_tyre_set.update_runtime_snapshot(tyre_states)
+        except Exception:
+            pass
 
         # Preserve PU state from previous stint if it exists
         prev_track_state = self._track_states.get(car_id)
@@ -1459,9 +1556,13 @@ class SessionBridge:
             entry.state.pu.ers_energy_mj = prev_pu.ers_energy_mj
 
         self._track_states[car_id] = CarTrackState(
-            car_id=car_id, car_entry=entry,
-            laps_planned=stint_laps, is_player=True,
+            car_id=car_id,
+            car_entry=entry,
+            laps_planned=stint_laps,
+            is_player=True,
             pit_exit_delay_s=2.0,  # player gets short delay
+            tyre_set_id=(active_tyre_set.set_id if active_tyre_set else (tyre_set_id or None)),
+            tyre_set=active_tyre_set,
         )
         return True
 
@@ -1615,15 +1716,19 @@ class SessionBridge:
                     sr.dispatched = True
                     continue
 
-                reserved_set_id = reserved_tyre[0] if reserved_tyre else None
-                reserved_compound = reserved_tyre[1] if reserved_tyre else self._resolve_program_compound_label(run_plan)
+                reserved_set = reserved_tyre
+                if reserved_set is None:
+                    logger.warning("AI dispatch: no tyre set returned for %s", car_id)
+                    sr.dispatched = True
+                    continue
+
+                reserved_set_id = reserved_set.set_id
+                reserved_compound = reserved_set.compound
 
                 # Sync RaceCar/current_tire so frontend badges mirror actual compound
                 try:
                     game_compound = GameTireCompound(reserved_compound)
-                    race_car.set_tire_compound(game_compound)
-                    race_car.player_config['tyre_compound'] = reserved_compound
-                    race_car.player_config['tyre_set_id'] = reserved_set_id
+                    race_car.apply_tyre_set(reserved_set, compound=game_compound, preserve_temps=True)
                 except Exception as exc:
                     logger.warning("AI dispatch: failed to sync tyre compound for %s: %s", car_id, exc)
 
@@ -1637,11 +1742,15 @@ class SessionBridge:
                     sr.dispatched = True
                     # Small pit exit delay (pitlane traversal)
                     pit_exit = random.uniform(2.0, 5.0)
-                    self._track_states[car_id] = CarTrackState(
-                        car_id=car_id, car_entry=car_entry,
+                    car_state = CarTrackState(
+                        car_id=car_id,
+                        car_entry=car_entry,
                         laps_planned=run_plan.laps_planned,
                         pit_exit_delay_s=pit_exit,
+                        tyre_set_id=reserved_set_id,
+                        tyre_set=reserved_set,
                     )
+                    self._track_states[car_id] = car_state
                     self._emit_run_started_event(
                         car_id,
                         program=run_plan.program.value,
@@ -1707,47 +1816,54 @@ class SessionBridge:
         final_condition_pct: Optional[float] = self._compute_live_tyre_condition_pct(race_car)
 
         if race_car and self.circuit_id:
-            tyre_set_id = race_car.player_config.get('tyre_set_id') if hasattr(race_car, 'player_config') else None
-            if tyre_set_id:
+            tyre_set_id = None
+            active_set = getattr(ts, 'tyre_set', None)
+            if active_set:
+                tyre_set_id = active_set.set_id
+            elif hasattr(race_car, 'current_tyre_set') and race_car.current_tyre_set:
+                active_set = race_car.current_tyre_set
+                tyre_set_id = active_set.set_id
+            elif hasattr(race_car, 'player_config'):
+                tyre_set_id = race_car.player_config.get('tyre_set_id')
+
+            if active_set:
                 try:
-                    previous_set_id = tyre_set_id
+                    active_set.sync_from_sim_state(ts.car_entry.state.tyres)
+                    active_set.laps_completed += max(0, int(laps_done))
+                    active_set.heat_cycles += 1
+                    if final_condition_pct is not None:
+                        active_set.condition = max(0.0, min(100.0, float(final_condition_pct)))
+                    active_set.is_available = active_set.condition >= 40.0
+                    if active_set.is_available:
+                        active_set.reset_graining_blistering()
                     inventory = self.tyre_inventory_service.get_inventory(str(car_id), self.circuit_id)
-                    current_set = inventory.find_set(str(tyre_set_id))
-                    before_condition = round(current_set.condition, 2) if current_set else None
-                    before_heat_cycles = current_set.heat_cycles if current_set else None
-                    before_laps = current_set.laps_completed if current_set else None
-                    self.tyre_inventory_service.complete_stint(
-                        driver_id=str(car_id),
-                        circuit_id=self.circuit_id,
-                        set_id=str(tyre_set_id),
-                        laps=laps_done,
-                        final_condition_pct=final_condition_pct,
-                    )
-                    updated_inventory = self.tyre_inventory_service.get_inventory(str(car_id), self.circuit_id)
-                    updated_set = updated_inventory.find_set(str(tyre_set_id))
+                    inventory_set = inventory.find_set(active_set.set_id)
+                    if inventory_set is not active_set:
+                        # Replace reference inside inventory with latest state
+                        for idx, inv_set in enumerate(inventory.sets):
+                            if inv_set.set_id == active_set.set_id:
+                                inventory.sets[idx] = active_set
+                                break
                     log_debug_event(
                         'ai_tyre_stint_completed',
                         car_id=str(car_id),
                         circuit_id=self.circuit_id,
                         tyre_set_id=str(tyre_set_id),
-                        reused=bool(previous_set_id and str(previous_set_id) == str(tyre_set_id) and (before_heat_cycles or 0) > 0),
                         tyre_compound=getattr(race_car.current_tire, 'value', None),
                         laps_done=laps_done,
                         best_lap_s=round(best_lap, 3) if best_lap else 0.0,
                         km_driven=round(km_driven, 3),
-                        condition_before=before_condition,
-                        condition_after=round(updated_set.condition, 2) if updated_set else None,
-                        heat_cycles_before=before_heat_cycles,
-                        heat_cycles_after=updated_set.heat_cycles if updated_set else None,
-                        laps_completed_before=before_laps,
-                        laps_completed_after=updated_set.laps_completed if updated_set else None,
+                        condition_after=round(active_set.condition, 2),
+                        heat_cycles_after=active_set.heat_cycles,
+                        laps_completed_after=active_set.laps_completed,
                     )
-                    overrides = None
-                    if final_condition_pct is not None:
-                        overrides = {
-                            "set_id": str(tyre_set_id),
-                            "condition": round(final_condition_pct, 2),
-                        }
+                    overrides = {
+                        "set_id": str(active_set.set_id),
+                        "condition": round(active_set.condition, 2),
+                        "heat_cycles": active_set.heat_cycles,
+                        "laps_completed": active_set.laps_completed,
+                        "runtime": active_set.get_runtime_snapshot(),
+                    }
                     self._emit_driver_tyre_inventory(str(car_id), overrides=overrides)
                 except Exception as exc:
                     log_debug_event(

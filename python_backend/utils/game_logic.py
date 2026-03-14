@@ -112,8 +112,8 @@ def start_session_for_circuit():
                 logging.getLogger(__name__).info("V2 engine: Initializing SessionBridge for circuit %s", circuit_id)
                 from services.tyre_inventory_service import TyreInventoryService
                 from utils.session_bridge import SessionBridge
-                from utils.session_telemetry_store import SessionTelemetryStore
                 TyreInventoryService().reset_inventories_for_circuit(circuit_id)
+                from utils.session_telemetry_store import SessionTelemetryStore
                 session_telemetry_store = SessionTelemetryStore(circuit_id=circuit_id)
                 session_bridge = SessionBridge()
                 session_bridge.telemetry_store = session_telemetry_store

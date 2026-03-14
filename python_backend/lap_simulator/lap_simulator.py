@@ -45,6 +45,8 @@ if DEBUG_PENALTIES:
         logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
     logger.info("[PEN] DEBUG_PENALTIES attivo in LapSimulator")
+else:
+    logger.setLevel(logging.WARNING)
 
 
 def _parse_penalty_log_filter() -> set:

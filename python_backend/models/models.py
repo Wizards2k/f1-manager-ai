@@ -3,7 +3,7 @@ import time
 import random
 import math
 from enum import Enum, auto
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 try:
     import config
@@ -11,6 +11,9 @@ except ImportError:  # pragma: no cover - fallback per contesti standalone
     config = None
 
 from debug_log import log_debug_event
+
+if TYPE_CHECKING:  # pragma: no cover
+    from models.tyre_inventory import TyreSet
 
 print("MODELS: Caricate classi base (senza logica posizione)")
 
@@ -436,6 +439,12 @@ class RaceCar:
             'rl': sum(self.tire_temp_window) / 2,
             'rr': sum(self.tire_temp_window) / 2,
         }
+        self.current_tyre_condition_pct: float = 100.0
+        self.current_tyre_heat_cycles: int = 0
+        self.current_tyre_laps_completed: int = 0
+        self.current_tyre_laps_at_install: int = 0
+        self.current_tyre_set: Optional['TyreSet'] = None
+        self.tyre_states: Dict[str, Dict[str, Any]] = {}
 
         # Player control & configurazioni
         self.is_player_controlled = False
@@ -485,6 +494,8 @@ class RaceCar:
         self.current_gomma = Gomma(compound, percentuale_vita=percentuale_vita)
         self.tire_age = max(0, int(laps_completed or 0))
         self.tire_wear = max(0.0, min(1.0, 1.0 - float(percentuale_vita)))
+        self.current_tyre_condition_pct = max(0.0, min(100.0, float(percentuale_vita) * 100.0))
+        self.current_tyre_laps_completed = max(0, int(laps_completed or 0))
         self.tire_temp_window = self.get_tire_temp_window(compound)
         if previous_temps is not None:
             self.tire_temps = previous_temps
@@ -539,6 +550,7 @@ class RaceCar:
                 adjusted_degradation = base_degradation * pace_factor
                 self.current_gomma.aggiorna_degrado(adjusted_degradation)
                 self.tire_wear = 1.0 - self.current_gomma.percentuale_vita
+                self.current_tyre_condition_pct = max(0.0, min(100.0, self.current_gomma.percentuale_vita * 100.0))
             else:
                 # Mantieni logica semplice per intermedie/wet
                 wear_increment = 0.04 if self.current_tire == TireCompound.INTERMEDIATE else 0.02
@@ -641,6 +653,58 @@ class RaceCar:
             update_session_bests(self)
 
         self._persist_lap_debug(lap_type, realistic_lap_time)
+
+    @staticmethod
+    def _resolve_game_compound(compound_label: Optional[str]) -> TireCompound:
+        if not compound_label:
+            return TireCompound.MEDIUM
+        label = str(compound_label).strip().upper()
+        try:
+            return TireCompound[label]
+        except KeyError:
+            return TireCompound.MEDIUM
+
+    def apply_tyre_set(
+        self,
+        tyre_set: 'TyreSet',
+        *,
+        compound: Optional[TireCompound] = None,
+        preserve_temps: bool = False,
+    ) -> None:
+        """Attach a TyreSet object to this car and sync runtime telemetry."""
+
+        if tyre_set is None:
+            self.current_tyre_set = None
+            return
+
+        tyre_set.is_available = False
+        self.current_tyre_set = tyre_set
+        resolved_compound = compound or self._resolve_game_compound(tyre_set.compound)
+        tyre_life = max(0.0, min(1.0, tyre_set.condition / 100.0))
+        self.set_tire_compound(
+            resolved_compound,
+            percentuale_vita=tyre_life,
+            laps_completed=tyre_set.laps_completed,
+            preserve_temps=preserve_temps,
+        )
+        self.current_tyre_condition_pct = tyre_set.condition
+        self.current_tyre_heat_cycles = tyre_set.heat_cycles
+        self.current_tyre_laps_completed = tyre_set.laps_completed
+        self.current_tyre_laps_at_install = tyre_set.laps_completed
+
+        snapshot = tyre_set.get_runtime_snapshot()
+        if snapshot:
+            self.tyre_states = snapshot
+            # Update tyre temps if snapshot contains richer data
+            temps = {}
+            for wheel, state in snapshot.items():
+                temps[wheel] = state.get('surface_temp', self.tire_temps.get(wheel, sum(self.tire_temp_window) / 2))
+            if temps:
+                self.tire_temps.update(temps)
+
+        if hasattr(self, 'player_config') and isinstance(self.player_config, dict):
+            self.player_config['tyre_set_id'] = tyre_set.set_id
+            self.player_config['tyre_compound'] = tyre_set.compound
 
     @property
     def setup_feedback_ready(self):

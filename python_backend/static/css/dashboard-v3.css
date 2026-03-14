@@ -3940,3 +3940,30 @@ font-weight: 500;
         grid-template-columns: 1fr;
     }
 }
+
+
+.dock-tyre-runtime {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.dock-tyre-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.dock-tyre-chip strong {
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.95);
+}
+

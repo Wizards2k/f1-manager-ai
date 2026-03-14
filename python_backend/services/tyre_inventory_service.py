@@ -35,14 +35,8 @@ class TyreInventoryService:
             self._store_cache = {}
         return self._store_cache
 
-    def _save_store(self) -> None:
-        if self._store_cache is None:
-            return
-        self._store_path.parent.mkdir(parents=True, exist_ok=True)
-        self._store_path.write_text(
-            json.dumps(self._store_cache, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
+    def _save_store(self) -> None:  # legacy no-op (json is seed-only)
+        return
 
     def _inventory_key(self, driver_id: str, circuit_id: str) -> str:
         return f"{driver_id}:{circuit_id}"
@@ -58,10 +52,9 @@ class TyreInventoryService:
             raise ValueError(f"Circuit {circuit_id} is missing tyre_allocation data")
         return allocation
 
-    def _persist_inventory(self, inventory: DriverTyreInventory) -> None:
-        store = self._load_store()
-        store[self._inventory_key(inventory.driver_id, inventory.circuit_id)] = inventory.to_dict()
-        self._save_store()
+    def _persist_inventory(self, _inventory: DriverTyreInventory) -> None:
+        # Runtime inventories live in memory only; persistence intentionally disabled.
+        return
 
     def reset_inventories_for_circuit(self, circuit_id: str) -> None:
         """Drop persisted/cache inventories for a circuit so a new session starts fresh."""
@@ -74,9 +67,10 @@ class TyreInventoryService:
         keys_to_remove = [key for key in list(store.keys()) if key.endswith(f":{circuit_key}")]
         for key in keys_to_remove:
             store.pop(key, None)
+        # drop runtime cache
+        cache_keys = [key for key in list(self._inventory_cache.keys()) if key.endswith(f":{circuit_key}")]
+        for key in cache_keys:
             self._inventory_cache.pop(key, None)
-        if keys_to_remove:
-            self._save_store()
 
     # ------------------------------------------------------------------
     # Public API
@@ -93,7 +87,6 @@ class TyreInventoryService:
             allocation = self._load_telemetry_allocation(circuit_id)
             inventory = DriverTyreInventory.create(driver_id, circuit_id, allocation)
             store[key] = inventory.to_dict()
-            self._save_store()
 
         self._inventory_cache[key] = inventory
         return inventory
@@ -112,7 +105,6 @@ class TyreInventoryService:
             raise ValueError(f"Tyre set {set_id} not found for driver {driver_id}")
 
         tyre_set.apply_usage(laps=laps, wear_factor=wear_factor)
-        self._persist_inventory(inventory)
         return tyre_set
 
     def mark_availability(
@@ -135,7 +127,6 @@ class TyreInventoryService:
         if available:
             tyre_set.reset_graining_blistering()
             tyre_set.condition = max(tyre_set.condition, 40.0)  # Ensure minimum usable condition
-        self._persist_inventory(inventory)
         return tyre_set
 
     def reserve_best_available_set(
@@ -173,7 +164,6 @@ class TyreInventoryService:
         )
         tyre_set = candidates[0]
         tyre_set.is_available = False
-        self._persist_inventory(inventory)
         return tyre_set
 
     def reserve_best_available_set_with_fallback(
@@ -227,7 +217,8 @@ class TyreInventoryService:
         if tyre_set is None:
             raise ValueError(f"Tyre set {set_id} not found for driver {driver_id}")
 
-        tyre_set.apply_usage(laps=laps, wear_factor=wear_factor)
+        tyre_set.laps_completed += max(0, int(laps))
+        tyre_set.heat_cycles += 1
         if final_condition_pct is not None:
             tyre_set.condition = max(0.0, min(100.0, float(final_condition_pct)))
         if tyre_set.condition >= 40.0:
@@ -235,5 +226,4 @@ class TyreInventoryService:
             tyre_set.reset_graining_blistering()  # Reset when set becomes available
         else:
             tyre_set.is_available = False
-        self._persist_inventory(inventory)
         return tyre_set

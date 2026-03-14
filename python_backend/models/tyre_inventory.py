@@ -4,6 +4,67 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+TYRE_WHEEL_KEYS = ("fl", "fr", "rl", "rr")
+
+
+def _clamp_pct(value: float) -> float:
+    return max(0.0, min(100.0, float(value)))
+
+
+@dataclass
+class TyreRuntimeSnapshot:
+    """Live snapshot of per-wheel state for a tyre set."""
+
+    tyre_states: Dict[str, Dict[str, float]] = field(default_factory=dict)
+
+    def ensure_defaults(self, condition_pct: float) -> None:
+        if self.tyre_states:
+            return
+        wear_pct = _clamp_pct(100.0 - float(condition_pct))
+        for key in TYRE_WHEEL_KEYS:
+            self.tyre_states[key] = {
+                "wear_pct": wear_pct,
+                "surface_temp": 60.0,
+                "core_temp": 55.0,
+                "graining": False,
+                "blistering": False,
+                "heat_cycles": 0,
+                "age_laps": 0,
+            }
+
+    def snapshot(self, condition_pct: float) -> Dict[str, Dict[str, float]]:
+        self.ensure_defaults(condition_pct)
+        return {key: dict(values) for key, values in self.tyre_states.items()}
+
+    def update_from_sim_tyres(self, tyres) -> Optional[float]:
+        try:
+            from lap_simulator.data_types import WheelPosition
+        except ImportError:
+            WheelPosition = None
+
+        wear_samples: List[float] = []
+        if WheelPosition is None:
+            return None
+
+        for wp in WheelPosition:
+            tyre = tyres.get(wp) if hasattr(tyres, "get") else None
+            if tyre is None:
+                continue
+            key = wp.name.lower()
+            self.tyre_states[key] = {
+                "wear_pct": float(getattr(tyre, "wear_pct", 0.0)),
+                "surface_temp": float(getattr(tyre, "surface_temp_c", 0.0)),
+                "core_temp": float(getattr(tyre, "core_temp_c", 0.0)),
+                "graining": bool(getattr(tyre, "graining_level", 0.0) > 0.1),
+                "blistering": bool(getattr(tyre, "blistering_level", 0.0) > 0.1),
+                "heat_cycles": int(getattr(tyre, "heat_cycles", 0)),
+                "age_laps": int(getattr(tyre, "age_laps", 0)),
+            }
+            wear_samples.append(float(getattr(tyre, "wear_pct", 0.0)))
+        if wear_samples:
+            return sum(wear_samples) / len(wear_samples)
+        return None
+
 
 COMPOUND_LABELS = {
     "soft": "S",
@@ -37,6 +98,7 @@ class TyreSet:
     blistering_level: float = 0.0
     graining_time_acc_s: float = 0.0
     blistering_time_acc_s: float = 0.0
+    runtime: TyreRuntimeSnapshot = field(default_factory=TyreRuntimeSnapshot)
 
     def apply_usage(self, laps: int, wear_factor: float = 1.0) -> None:
         """Apply wear to the set after a session run."""
@@ -73,7 +135,33 @@ class TyreSet:
             "blistering_level": round(self.blistering_level, 3),
             "graining_time_acc_s": round(self.graining_time_acc_s, 1),
             "blistering_time_acc_s": round(self.blistering_time_acc_s, 1),
+            "runtime": self.get_runtime_snapshot(),
         }
+
+    def get_runtime_snapshot(self) -> Dict[str, Dict[str, float]]:
+        return {
+            key: dict(values)
+            for key, values in self.runtime.snapshot(self.condition).items()
+        }
+
+    def update_runtime_snapshot(self, tyre_states: Dict[str, Dict[str, float]]) -> None:
+        self.runtime.tyre_states = {
+            key: {
+                "wear_pct": float(state.get("wear_pct", 0.0)),
+                "surface_temp": float(state.get("surface_temp", 0.0)),
+                "core_temp": float(state.get("core_temp", 0.0)),
+                "graining": bool(state.get("graining", False)),
+                "blistering": bool(state.get("blistering", False)),
+                "heat_cycles": int(state.get("heat_cycles", 0)),
+                "age_laps": int(state.get("age_laps", 0)),
+            }
+            for key, state in (tyre_states or {}).items()
+        }
+
+    def sync_from_sim_state(self, tyres) -> None:
+        avg_wear = self.runtime.update_from_sim_tyres(tyres)
+        if avg_wear is not None:
+            self.condition = max(0.0, 100.0 - float(avg_wear))
 
     @staticmethod
     def from_dict(payload: Dict[str, object]) -> "TyreSet":
@@ -89,6 +177,7 @@ class TyreSet:
             blistering_level=float(payload.get("blistering_level", 0.0)),
             graining_time_acc_s=float(payload.get("graining_time_acc_s", 0.0)),
             blistering_time_acc_s=float(payload.get("blistering_time_acc_s", 0.0)),
+            runtime=TyreRuntimeSnapshot(tyre_states=payload.get("runtime", {})),
         )
 
 

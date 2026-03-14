@@ -827,6 +827,7 @@ def register_routes(app):
 
         selected_set_id = str(config.get('tyre_set_id') or '').strip() or None
         selected_set = None
+        circuit_id = None
         if selected_set_id:
             try:
                 import config as app_config
@@ -835,17 +836,44 @@ def register_routes(app):
                 if circuit_id:
                     inventory = tyre_inventory_service.get_inventory(str(driver_number), circuit_id)
                     selected_set = inventory.find_set(selected_set_id)
+                    if selected_set:
+                        tyre_inventory_service.mark_availability(
+                            str(driver_number),
+                            circuit_id,
+                            selected_set.set_id,
+                            available=False,
+                        )
             except (ValueError, FileNotFoundError):
                 selected_set = None
 
-        tyre_life = (selected_set.condition / 100.0) if selected_set else 1.0
-        tyre_laps_completed = selected_set.laps_completed if selected_set else 0
-        car.set_tire_compound(
-            compound,
-            percentuale_vita=tyre_life,
-            laps_completed=tyre_laps_completed,
-            preserve_temps=False,
-        )
+        if selected_set:
+            try:
+                car.apply_tyre_set(selected_set, compound=compound, preserve_temps=False)
+            except Exception:
+                # Fallback to scalar fields if apply_tyre_set fails for any reason
+                tyre_life = max(0.0, min(1.0, selected_set.condition / 100.0))
+                car.set_tire_compound(
+                    compound,
+                    percentuale_vita=tyre_life,
+                    laps_completed=selected_set.laps_completed,
+                    preserve_temps=False,
+                )
+                car.current_tyre_condition_pct = float(selected_set.condition)
+                car.current_tyre_heat_cycles = int(selected_set.heat_cycles)
+                car.current_tyre_laps_completed = int(selected_set.laps_completed)
+        else:
+            tyre_life = 1.0
+            tyre_laps_completed = 0
+            car.set_tire_compound(
+                compound,
+                percentuale_vita=tyre_life,
+                laps_completed=tyre_laps_completed,
+                preserve_temps=False,
+            )
+            car.current_tyre_condition_pct = tyre_life * 100.0
+            car.current_tyre_heat_cycles = 0
+            car.current_tyre_laps_completed = 0
+
         car.fuel_percent = fuel_percent
         car.pace_level = config.get('pace_level', car.pace_level)
         car.ice_mode = config.get('ice_mode', car.ice_mode)
