@@ -63,6 +63,13 @@ def run() -> None:
     parser.add_argument("--compound", help="Override tyre compound for all four wheels (e.g. C1, C3, C5)")
     parser.add_argument("--config-year", type=int, default=2025, help="Telemetry/config season to load")
     parser.add_argument(
+        "--alternate-push",
+        action="store_true",
+        help="Run alternating push laps (defaults to 8 laps with push_low/push_high pattern)",
+    )
+    parser.add_argument("--push-low", type=float, default=5.0, help="Push level for the first lap in alternating mode")
+    parser.add_argument("--push-high", type=float, default=10.0, help="Push level for the second lap in alternating mode")
+    parser.add_argument(
         "--output-json",
         help="Optional path to dump LapResult summary as JSON (for later analysis)",
     )
@@ -89,16 +96,39 @@ def run() -> None:
     sim = LapSimulator(config, env)
     sim.register_car(car_entry)
 
-    results = sim.run_laps(max(1, args.laps))
-    laps = results[car_entry.car_id]
+    lap_records = []  # List[Dict[str, Any]] storing lap + push metadata
+
+    if args.alternate_push:
+        total_laps = args.laps if args.laps and args.laps > 1 else 8
+        push_pattern = [args.push_low, args.push_high]
+        for lap_idx in range(total_laps):
+            current_push = push_pattern[lap_idx % len(push_pattern)]
+            car_entry.push_level = current_push
+            lap_result = sim.run_laps(1)[car_entry.car_id][-1]
+            lap_records.append({
+                "lap": lap_result,
+                "push": current_push,
+            })
+    else:
+        results = sim.run_laps(max(1, args.laps))
+        laps = results[car_entry.car_id]
+        lap_records.extend({"lap": lap, "push": car_entry.push_level} for lap in laps)
+
+    laps = [record["lap"] for record in lap_records]
 
     print("=" * 80)
     print(f"Scenario: {meta.get('name', snapshot_path.name)} | Car: {car_entry.car_id}")
-    print(f"Circuit: {config.circuit_name} ({args.circuit}) | Laps: {len(laps)} | Push: {car_entry.push_level}")
+    if args.alternate_push:
+        push_info = f"alternate {args.push_low}/{args.push_high}"
+    else:
+        push_info = f"{car_entry.push_level}"
+    print(f"Circuit: {config.circuit_name} ({args.circuit}) | Laps: {len(laps)} | Push: {push_info}")
     print("=" * 80)
-    for idx, lap in enumerate(laps, start=1):
+    for idx, record in enumerate(lap_records, start=1):
+        lap = record["lap"]
+        push_used = record["push"]
         sectors = ", ".join(f"{s:.3f}" for s in lap.sector_times_s)
-        print(f"Lap {idx:02d}: {lap.lap_time_s:.3f}s | Sectors [{sectors}]")
+        print(f"Lap {idx:02d}: {lap.lap_time_s:.3f}s | Push {push_used:.1f} | Sectors [{sectors}]")
         print(
             f"  Fuel {lap.fuel_kg:.2f} kg | ERS {lap.ers_energy_mj:.2f} MJ | Avg tyre T {lap.avg_tyre_temp_surface_c:.1f} °C | Avg wear {lap.avg_tyre_wear_pct:.1f}%"
         )
@@ -131,8 +161,9 @@ def run() -> None:
                     "fuel_kg": lap.fuel_kg,
                     "ers_energy_mj": lap.ers_energy_mj,
                     "events": [evt.event_type for evt in lap.events],
+                    "push_level": record.get("push"),
                 }
-                for lap in laps
+                for record, lap in zip(lap_records, laps)
             ],
         }
         out_path = Path(args.output_json)

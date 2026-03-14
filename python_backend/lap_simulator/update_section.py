@@ -627,6 +627,12 @@ def update_section(
                 
             compound_penalty = config.tyre_compound_deltas.get(current_compound, 0.0)
             compound_delta_section = compound_penalty * section_weight
+
+            has_surface_damage = any(
+                getattr(tyre, "graining_level", 0.0) > 0.3
+                or getattr(tyre, "blistering_level", 0.0) > 0.3
+                for tyre in car_state.tyres.values()
+            )
             
             # 2. Wear penalty
             wear_coeff = config.tyre_wear_coeffs.get(current_compound, 0.12)
@@ -652,7 +658,8 @@ def update_section(
                 if surface_temp < optimal_range[0]:
                     temp_penalty = (optimal_range[0] - surface_temp) * 0.0005
                 elif surface_temp > optimal_range[2]:
-                    temp_penalty = (surface_temp - optimal_range[2]) * 0.001
+                    coeff = 0.001 if has_surface_damage else 0.0005
+                    temp_penalty = (surface_temp - optimal_range[2]) * coeff
             
             # Total tyre penalty for this curve section
             tyre_delta_s = compound_delta_section + wear_penalty + temp_penalty
