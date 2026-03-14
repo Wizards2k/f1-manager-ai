@@ -762,7 +762,8 @@ def update_section(
             config=config
         )
     
-    dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s + push_delta_s + engine_delta_s + brake_delta_s, 0.01)
+    base_dt_s = dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s + engine_delta_s + brake_delta_s
+    dt_s = max(base_dt_s + push_delta_s, 0.01)
     v_effective = (section.length_m / dt_s) * 3.6
 
     car_state.v_current_ms = v
