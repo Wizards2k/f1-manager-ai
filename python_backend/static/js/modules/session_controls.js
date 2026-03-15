@@ -1,14 +1,16 @@
 export class SessionControls {
-    constructor({ pauseButton, speedButtons, speedIndicator, selectCircuitButton } = {}) {
+    constructor({ pauseButton, speedButtons, speedIndicator, selectCircuitButton, onSpeedMultiplierChange } = {}) {
         this.pauseButton = pauseButton;
         this.speedButtons = Array.from(speedButtons || []);
         this.speedIndicator = speedIndicator;
         this.selectCircuitButton = selectCircuitButton || document.getElementById('select-circuit-btn');
         this.currentSpeed = 1;
         this.isPaused = false;
+        this.onSpeedMultiplierChange = typeof onSpeedMultiplierChange === 'function' ? onSpeedMultiplierChange : null;
         this.bindEvents();
         this.updateSpeedIndicator(this.currentSpeed);
         this.updatePauseButton(this.isPaused);
+        this._applySpeedMultiplier(this.currentSpeed);
     }
 
     bindEvents() {
@@ -78,6 +80,7 @@ export class SessionControls {
             await response.json();
             this.currentSpeed = speed;
             this.updateSpeedIndicator(speed);
+            this._applySpeedMultiplier(speed);
         } catch (error) {
             console.error('Network error setting speed:', error);
         }
@@ -91,6 +94,7 @@ export class SessionControls {
         if (typeof gameSpeed === 'number' && !Number.isNaN(gameSpeed) && gameSpeed !== this.currentSpeed) {
             this.currentSpeed = gameSpeed;
             this.updateSpeedIndicator(this.currentSpeed);
+            this._applySpeedMultiplier(this.currentSpeed);
         }
     }
 
@@ -114,6 +118,12 @@ export class SessionControls {
             console.error('Error resetting session:', error);
         } finally {
             window.location.href = '/';
+        }
+    }
+
+    _applySpeedMultiplier(speed) {
+        if (this.onSpeedMultiplierChange) {
+            this.onSpeedMultiplierChange(speed);
         }
     }
 }

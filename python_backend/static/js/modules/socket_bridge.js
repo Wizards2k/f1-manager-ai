@@ -77,6 +77,10 @@ export class SocketBridge {
                 game_speed: data.game_speed
             });
         }
+
+        if (typeof data.is_paused === 'boolean' && this.mapModule?.setPaused) {
+            this.mapModule.setPaused(data.is_paused);
+        }
     }
 
     async bootstrap() {

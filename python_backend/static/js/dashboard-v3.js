@@ -1,16 +1,20 @@
 import { AppState } from './modules/app_state.js';
-import { MapModuleV3 } from './modules/map_module_v3.js';
+import { MapModuleV3, DEFAULT_VISUAL_SPEED_MULT } from './modules/map_module_v3.js';
 import { TimingPanelV3 } from './modules/timing_panel_v3.js';
 import { PlayerGarageV3 } from './modules/player_garage_v3.js';
 import { SessionControls } from './modules/session_controls.js';
 import { SocketBridge } from './modules/socket_bridge.js';
 import { TimelinePanelV3 } from './modules/timeline_panel_v3.js';
 
-(function initDashboardV3() {
+(async function initDashboardV3() {
     const appState = new AppState();
 
     const mapModule = new MapModuleV3(appState);
-    mapModule.loadCircuitGeometry().catch(err => console.error('[MapV3] Circuit load failed', err));
+    try {
+        await mapModule.loadCircuitGeometry();
+    } catch (err) {
+        console.error('[MapV3] Circuit load failed', err);
+    }
 
     const timingPanel = new TimingPanelV3({
         state: appState,
@@ -21,7 +25,8 @@ import { TimelinePanelV3 } from './modules/timeline_panel_v3.js';
     const sessionControls = new SessionControls({
         pauseButton: document.getElementById('pause-btn'),
         speedButtons: document.querySelectorAll('.speed-btn'),
-        speedIndicator: document.getElementById('current-speed')
+        speedIndicator: document.getElementById('current-speed'),
+        onSpeedMultiplierChange: (mult) => mapModule.setSpeedMultiplier(mult * DEFAULT_VISUAL_SPEED_MULT),
     });
 
     const playerGarage = new PlayerGarageV3(appState, {
