@@ -1,16 +1,22 @@
 export class SessionControls {
-    constructor({ pauseButton, speedButtons, speedIndicator, selectCircuitButton, onSpeedMultiplierChange } = {}) {
+    constructor({ pauseButton, speedButtons, speedIndicator, selectCircuitButton } = {}) {
         this.pauseButton = pauseButton;
         this.speedButtons = Array.from(speedButtons || []);
         this.speedIndicator = speedIndicator;
         this.selectCircuitButton = selectCircuitButton || document.getElementById('select-circuit-btn');
         this.currentSpeed = 1;
         this.isPaused = false;
-        this.onSpeedMultiplierChange = typeof onSpeedMultiplierChange === 'function' ? onSpeedMultiplierChange : null;
+        this.onSpeedChange = null;
+        this.uiToServerSpeed = { 1: 1.0, 2: 5.0, 4: 15.0, 6: 30.0 };
+        this.serverToUiSpeed = {
+            1.0: 1,
+            5.0: 2,
+            15.0: 4,
+            30.0: 6,
+        };
         this.bindEvents();
         this.updateSpeedIndicator(this.currentSpeed);
         this.updatePauseButton(this.isPaused);
-        this._applySpeedMultiplier(this.currentSpeed);
     }
 
     bindEvents() {
@@ -19,8 +25,8 @@ export class SessionControls {
         }
         this.speedButtons.forEach(btn => {
             btn.addEventListener('click', () => {
-                const speed = parseFloat(btn.dataset.speed);
-                this.changeSpeed(speed);
+                const uiSpeed = parseFloat(btn.dataset.speed);
+                this.changeSpeed(uiSpeed);
             });
         });
         if (this.selectCircuitButton) {
@@ -67,20 +73,21 @@ export class SessionControls {
         }
     }
 
-    async changeSpeed(speed) {
+    async changeSpeed(uiSpeed) {
         try {
+            this.uiToServerSpeed[uiSpeed] ?? uiSpeed;
             const response = await fetch('/api/set_speed', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ speed })
+                body: JSON.stringify({ speed: uiSpeed })
             });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             await response.json();
-            this.currentSpeed = speed;
-            this.updateSpeedIndicator(speed);
-            this._applySpeedMultiplier(speed);
+            this.currentSpeed = uiSpeed;
+            this.updateSpeedIndicator(uiSpeed);
+            this._emitSpeedChange(uiSpeed);
         } catch (error) {
             console.error('Network error setting speed:', error);
         }
@@ -91,10 +98,13 @@ export class SessionControls {
             this.isPaused = isPaused;
             this.updatePauseButton(this.isPaused);
         }
-        if (typeof gameSpeed === 'number' && !Number.isNaN(gameSpeed) && gameSpeed !== this.currentSpeed) {
-            this.currentSpeed = gameSpeed;
-            this.updateSpeedIndicator(this.currentSpeed);
-            this._applySpeedMultiplier(this.currentSpeed);
+        if (typeof gameSpeed === 'number' && !Number.isNaN(gameSpeed)) {
+            const uiSpeed = this.serverToUiSpeed[gameSpeed] ?? this.currentSpeed;
+            if (uiSpeed !== this.currentSpeed) {
+                this.currentSpeed = uiSpeed;
+                this.updateSpeedIndicator(this.currentSpeed);
+                this._emitSpeedChange(this.currentSpeed);
+            }
         }
     }
 
@@ -121,9 +131,9 @@ export class SessionControls {
         }
     }
 
-    _applySpeedMultiplier(speed) {
-        if (this.onSpeedMultiplierChange) {
-            this.onSpeedMultiplierChange(speed);
+    _emitSpeedChange(speed) {
+        if (typeof this.onSpeedChange === 'function') {
+            this.onSpeedChange(speed);
         }
     }
 }

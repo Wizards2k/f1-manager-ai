@@ -168,7 +168,7 @@ def register_routes(app):
 
         circuit_data = config.set_current_circuit(circuit_id)
         start_session_for_circuit()
-        circuit_logger.info(
+        circuit_logger.debug(
             "GET /api/circuit/%s from %s (new circuit=%s)",
             circuit_id,
             request.remote_addr,
@@ -189,7 +189,7 @@ def register_routes(app):
 
             circuit_data = config.set_current_circuit(circuit_id)
             start_session_for_circuit()
-            circuit_logger.info(
+            circuit_logger.debug(
                 "POST /api/load_circuit from %s (new circuit=%s)",
                 request.remote_addr,
                 getattr(config, 'current_circuit', None),

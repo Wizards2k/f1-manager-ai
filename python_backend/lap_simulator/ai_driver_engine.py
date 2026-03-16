@@ -677,7 +677,7 @@ class AIDriverEngine:
         self.events = []
         self.elapsed_s = 0.0
 
-        logger.info(
+        logger.debug(
             "AI %s/%s: planned %d runs for %s",
             self.team_config.team_id,
             self.driver_config.driver_id,

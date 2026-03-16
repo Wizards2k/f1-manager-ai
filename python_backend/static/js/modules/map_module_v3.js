@@ -3,8 +3,6 @@
  * Map size controlled purely by CSS Grid
  */
 
-export const DEFAULT_VISUAL_SPEED_MULT = 4;
-
 export class MapModuleV3 {
     constructor(state = null) {
         this.state = state;
@@ -17,18 +15,23 @@ export class MapModuleV3 {
 
         this.mapContainer = document.getElementById('circuit-map');
         this.carMarkers = new Map();
-        this.carDrivers = new Map();
+        this.carStates = new Map();
         this.circuitLine = null;
         this.lastBounds = null;
         this.rotationAngle = 0;
         this.centerPoint = null;
-        this.trackSamples = [];
-        this.trackLengthMeters = 0;
-        this.visualDriverEnabled = params.get('visual_driver') !== '0';
+        this.baseMinSpeed = 300; // ~576 km/h visual minimum
+        this.baseMaxSpeed = 360; // ~1296 km/h visual maximum
+        this.baseSpeedScale = 12; // visual exaggeration factor
+        this.speedMultiplier = 1;
+        this.MIN_SPEED_MPS = this.baseMinSpeed;
+        this.MAX_SPEED_MPS = this.baseMaxSpeed;
+        this.SNAP_DISTANCE_M = 0.5;
+        this.MIN_QUEUE_DELTA_M = 1.5;
+        this.POSITION_SMOOTHING = 0.35;
+        this.MAX_QUEUE_LENGTH = 8;
         this._animationFrameId = null;
-        this._lastAnimationTs = null;
-        this.isPaused = false;
-        this.speedMultiplier = DEFAULT_VISUAL_SPEED_MULT;
+        this._lastFrameTs = performance.now();
 
         this.map = L.map('circuit-map', {
             crs: L.CRS.Simple,
@@ -51,22 +54,8 @@ export class MapModuleV3 {
         // V3: NO resize listeners, NO ResizeObserver
         // Map fills container via CSS only
 
-        if (this.visualDriverEnabled) {
-            this._startVisualLoop();
-        }
-    }
-
-    syncClock(timestamp) {
-        if (!Number.isFinite(timestamp)) {
-            return;
-        }
-        this.lastStepTs = timestamp;
-        if (!Number.isFinite(this.lastServerTs)) {
-            this.lastServerTs = timestamp;
-        }
-        if (!Number.isFinite(this.prevServerTs)) {
-            this.prevServerTs = timestamp;
-        }
+        this.setVisualSpeedMultiplier(1);
+        this._animationFrameId = requestAnimationFrame(this._animateMarkers.bind(this));
     }
 
     // Helper to project GPS to local meters (approximate equirectangular)
@@ -137,21 +126,6 @@ export class MapModuleV3 {
             lat: (minLat + maxLat) / 2
         };
 
-MapModuleV3.prototype.setSpeedMultiplier = function(multiplier) {
-    if (!this.visualDriverEnabled) {
-        return;
-    }
-    const value = Number(multiplier);
-    const sanitized = Number.isFinite(value)
-        ? Math.max(0.25, Math.min(value, DEFAULT_VISUAL_SPEED_MULT * 8))
-        : DEFAULT_VISUAL_SPEED_MULT;
-    if (sanitized === this.speedMultiplier) {
-        return;
-    }
-    this.speedMultiplier = sanitized;
-    this.carDrivers.forEach(driver => driver?.setSpeedMultiplier?.(sanitized));
-};
-
         // 2. Convert to local Cartesian coordinates (meters)
         const localPoints = geometry.coordinates.map(coord => 
             this.gpsToMeters(coord[0], coord[1], this.centerPoint.lon, this.centerPoint.lat)
@@ -189,7 +163,6 @@ MapModuleV3.prototype.setSpeedMultiplier = function(multiplier) {
         const rotatedPoints = localPoints.map(p => this.rotatePoint(p[0], p[1], this.rotationAngle));
 
         // Leaflet expects [y, x] for its LatLng representation even in CRS.Simple
-        this._buildTrackSamples(rotatedPoints);
         const leafletCoords = rotatedPoints.map(p => [p[1], p[0]]);
 
         // White circuit line
@@ -234,43 +207,69 @@ MapModuleV3.prototype.setSpeedMultiplier = function(multiplier) {
 
     updateCarMarker(car) {
         if (car.state === 'BOX' || car.is_on_track === false || !this.centerPoint) {
-            const marker = this.carMarkers.get(car.driver_number);
-            if (marker) {
-                this.map.removeLayer(marker);
-                this.carMarkers.delete(car.driver_number);
+            this._removeMarkerState(car.driver_number);
+            return;
+        }
+
+        const [localX, localY] = this.gpsToMeters(
+            car.position[0],
+            car.position[1],
+            this.centerPoint.lon,
+            this.centerPoint.lat
+        );
+        const [rotX, rotY] = this.rotatePoint(localX, localY, this.rotationAngle);
+
+        let state = this.carStates.get(car.driver_number);
+        const now = performance.now();
+
+        if (!state) {
+            let marker = this.carMarkers.get(car.driver_number);
+            if (!marker) {
+                marker = this.createCarMarker(car);
+                marker.addTo(this.map);
+                this.carMarkers.set(car.driver_number, marker);
             }
-            this.carDrivers.delete(car.driver_number);
+            state = {
+                marker,
+                displayX: rotX,
+                displayY: rotY,
+                targetX: rotX,
+                targetY: rotY,
+                prevSampleX: rotX,
+                prevSampleY: rotY,
+                prevSampleTs: now,
+                serverSpeed: this.MIN_SPEED_MPS,
+                positionQueue: [],
+                currentTarget: null,
+            };
+            marker.setLatLng([rotY, rotX]);
+            this.carStates.set(car.driver_number, state);
             return;
         }
 
-        if (!this.visualDriverEnabled || !this.trackSamples.length) {
-            this._updateMarkerDirect(car);
-            return;
+        const dt = Math.max((now - state.prevSampleTs) / 1000, 0.001);
+        const dist = Math.hypot(rotX - state.prevSampleX, rotY - state.prevSampleY);
+        const serverSpeed = dist / dt;
+        if (Number.isFinite(serverSpeed) && serverSpeed > 0.1) {
+            state.serverSpeed = serverSpeed;
         }
+        state.prevSampleX = rotX;
+        state.prevSampleY = rotY;
+        state.prevSampleTs = now;
+        state.targetX = rotX;
+        state.targetY = rotY;
 
-        const driver = this._ensureDriver(car);
-        if (!driver) {
-            return;
-        }
-        let projectedDistance = this._getTrackDistanceFromCar(car);
-        if (!Number.isFinite(projectedDistance)) {
-            projectedDistance = this._projectCarDistance(car);
-        }
-        if (!Number.isFinite(projectedDistance)) {
-            return;
-        }
-        driver.ingestServerSample({
-            projectedDistance,
-            timestamp: performance.now(),
-            lapCount: car.total_laps || 0,
-            raw: car,
-        });
+        this._enqueuePosition(state, rotX, rotY);
     }
 
     removeAllCarMarkers() {
-        this.carMarkers.forEach(marker => this.map.removeLayer(marker));
+        this.carStates.forEach(state => {
+            if (state.marker) {
+                this.map.removeLayer(state.marker);
+            }
+        });
+        this.carStates.clear();
         this.carMarkers.clear();
-        this.carDrivers.clear();
     }
 
     fitBoundsWithPadding(bounds) {
@@ -301,319 +300,92 @@ MapModuleV3.prototype.setSpeedMultiplier = function(multiplier) {
     // V3: NO invalidateSize calls
 }
 
-// ----------------------------
-// Visual driver implementation
-// ----------------------------
+MapModuleV3.prototype._animateMarkers = function(timestamp) {
+    const dt = Math.min(0.2, Math.max((timestamp - this._lastFrameTs) / 1000, 0.016));
+    this._lastFrameTs = timestamp;
 
-MapModuleV3.prototype._buildTrackSamples = function(rotatedPoints) {
-    if (!rotatedPoints || !rotatedPoints.length) {
-        this.trackSamples = [];
-        this.trackLengthMeters = 0;
-        return;
-    }
-
-    const samples = [];
-    let cumulative = 0;
-    for (let i = 0; i < rotatedPoints.length; i += 1) {
-        if (i > 0) {
-            const prev = rotatedPoints[i - 1];
-            const curr = rotatedPoints[i];
-            cumulative += Math.hypot(curr[0] - prev[0], curr[1] - prev[1]);
-        }
-        samples.push({
-            distance: cumulative,
-            rotX: rotatedPoints[i][0],
-            rotY: rotatedPoints[i][1],
-        });
-    }
-    // close loop
-    if (rotatedPoints.length > 1) {
-        const first = rotatedPoints[0];
-        const last = rotatedPoints[rotatedPoints.length - 1];
-        cumulative += Math.hypot(first[0] - last[0], first[1] - last[1]);
-        samples.push({
-            distance: cumulative,
-            rotX: first[0],
-            rotY: first[1],
-        });
-    }
-
-    this.trackSamples = samples;
-    this.trackLengthMeters = cumulative;
-};
-
-MapModuleV3.prototype._startVisualLoop = function() {
-    if (this._animationFrameId) {
-        cancelAnimationFrame(this._animationFrameId);
-    }
-    const loop = (ts) => {
-        if (this.visualDriverEnabled) {
-            this._stepVisualDrivers(ts || performance.now());
-            this._animationFrameId = requestAnimationFrame(loop);
-        }
-    };
-    this._animationFrameId = requestAnimationFrame(loop);
-};
-
-MapModuleV3.prototype._stepVisualDrivers = function(timestamp) {
-    if (this.isPaused) {
-        return;
-    }
-    this.carDrivers.forEach((driver, carId) => {
-        const point = driver.step(timestamp);
-        if (!point) {
-            return;
-        }
-        this._setMarkerPosition(carId, [point.rotY, point.rotX], driver.rawCar);
-    });
-};
-
-MapModuleV3.prototype.setPaused = function(paused) {
-    if (!this.visualDriverEnabled) {
-        return;
-    }
-    const newState = Boolean(paused);
-    if (newState === this.isPaused) {
-        return;
-    }
-    this.isPaused = newState;
-    if (!newState) {
-        const now = performance.now();
-        this.carDrivers.forEach(driver => driver?.syncClock(now));
-    }
-};
-
-MapModuleV3.prototype._updateMarkerDirect = function(car) {
-    const [localX, localY] = this.gpsToMeters(
-        car.position[0],
-        car.position[1],
-        this.centerPoint.lon,
-        this.centerPoint.lat
-    );
-    const [rotX, rotY] = this.rotatePoint(localX, localY, this.rotationAngle);
-    this._setMarkerPosition(car.driver_number, [rotY, rotX], car);
-};
-
-MapModuleV3.prototype._setMarkerPosition = function(carId, latLng, car) {
-    let marker = this.carMarkers.get(carId);
-    if (!marker) {
-        marker = this.createCarMarker(car);
-        marker.addTo(this.map);
-        this.carMarkers.set(carId, marker);
-    }
-    marker.setLatLng(latLng);
-};
-
-MapModuleV3.prototype._ensureDriver = function(car) {
-    let driver = this.carDrivers.get(car.driver_number);
-    if (driver) {
-        driver.rawCar = car;
-        driver.setSpeedMultiplier?.(this.speedMultiplier);
-        return driver;
-    }
-    if (!this.trackLengthMeters || !this.trackSamples.length) {
-        return null;
-    }
-    driver = new VisualCarDriver(car, {
-        track: this.trackSamples,
-        trackLength: this.trackLengthMeters,
-        getPointAtDistance: (distance) => this._getPointAtTrackDistance(distance),
-        getBaselineSpeed: (distance) => this._getBaselineSpeed(distance),
-        speedMultiplier: this.speedMultiplier,
-        maxMultiplier: DEFAULT_VISUAL_SPEED_MULT * 8,
-    });
-    this.carDrivers.set(car.driver_number, driver);
-    return driver;
-};
-
-MapModuleV3.prototype._projectCarDistance = function(car) {
-    const [localX, localY] = this.gpsToMeters(
-        car.position[0],
-        car.position[1],
-        this.centerPoint.lon,
-        this.centerPoint.lat
-    );
-    const [rotX, rotY] = this.rotatePoint(localX, localY, this.rotationAngle);
-    let closest = null;
-    let bestDist = Infinity;
-    for (let i = 0; i < this.trackSamples.length; i += 1) {
-        const sample = this.trackSamples[i];
-        const dist = Math.hypot(sample.rotX - rotX, sample.rotY - rotY);
-        if (dist < bestDist) {
-            bestDist = dist;
-            closest = sample;
-        }
-    }
-    return closest ? closest.distance : null;
-};
-
-MapModuleV3.prototype._getTrackDistanceFromCar = function(car) {
-    if (!car) {
-        return null;
-    }
-    const lapDistance = Number(car.distance_traveled_m ?? car.distance_traveled ?? null);
-    if (Number.isFinite(lapDistance) && this.trackLengthMeters > 0) {
-        return lapDistance;
-    }
-    return null;
-};
-
-MapModuleV3.prototype._getPointAtTrackDistance = function(distance) {
-    if (!this.trackSamples.length) {
-        return null;
-    }
-    let normalized = distance;
-    const total = this.trackLengthMeters || 1;
-    normalized = ((normalized % total) + total) % total;
-    for (let i = 1; i < this.trackSamples.length; i += 1) {
-        const prev = this.trackSamples[i - 1];
-        const next = this.trackSamples[i];
-        if (normalized <= next.distance) {
-            const span = Math.max(next.distance - prev.distance, 1e-6);
-            const t = (normalized - prev.distance) / span;
-            return {
-                rotX: prev.rotX + (next.rotX - prev.rotX) * t,
-                rotY: prev.rotY + (next.rotY - prev.rotY) * t,
-            };
-        }
-    }
-    const first = this.trackSamples[0];
-    return { rotX: first.rotX, rotY: first.rotY };
-};
-
-MapModuleV3.prototype._getBaselineSpeed = function(distance) {
-    // baseline 75 m/s (~270 km/h), modulated by simple sine to avoid flat speed
-    const base = 75;
-    const variance = Math.sin((distance / (this.trackLengthMeters || 1)) * Math.PI * 2) * 10;
-    return Math.max(40, base + variance);
-};
-
-class VisualCarDriver {
-    constructor(car, options) {
-        this.rawCar = car;
-        this.trackLength = Math.max(options.trackLength || 0, 1);
-        this.getPointAtDistance = options.getPointAtDistance;
-        this.getBaselineSpeed = options.getBaselineSpeed;
-        this.displayDistance = 0;
-        this.displaySpeed = 70; // m/s ~250 km/h
-        this.serverAbsDistance = null;
-        this.lastServerAbsDistance = null;
-        this.prevServerTs = null;
-        this.lastServerTs = null;
-        this.lastStepTs = performance.now();
-        this.maxMultiplier = Math.max(0.25, options.maxMultiplier || (DEFAULT_VISUAL_SPEED_MULT * 8));
-        this.baseMaxSpeed = 110;
-        this.config = {
-            maxSpeed: this.baseMaxSpeed,
-            minSpeed: 25,  // 90 km/h
-            correctionGain: 0.12,
-        };
-        this.speedMultiplier = this._sanitizeMultiplier(options.speedMultiplier || 1);
-        this.config.maxSpeed = this.baseMaxSpeed * this.speedMultiplier;
-    }
-
-    _sanitizeMultiplier(value) {
-        const numeric = Number(value);
-        if (!Number.isFinite(numeric)) {
-            return 1;
-        }
-        return Math.max(0.25, Math.min(numeric, this.maxMultiplier));
-    }
-
-    setSpeedMultiplier(multiplier) {
-        const sanitized = this._sanitizeMultiplier(multiplier);
-        if (sanitized === this.speedMultiplier) {
-            return;
-        }
-        this.speedMultiplier = sanitized;
-        this.config.maxSpeed = this.baseMaxSpeed * this.speedMultiplier;
-    }
-
-    ingestServerSample(sample) {
-        if (!Number.isFinite(sample.projectedDistance)) {
-            return;
-        }
-        const projectedDistance = sample.projectedDistance;
-        const timestamp = sample.timestamp || performance.now();
-
-        if (this.serverAbsDistance == null) {
-            this.serverAbsDistance = projectedDistance;
-            this.displayDistance = projectedDistance;
-            this.displaySpeed = this.getBaselineSpeed(projectedDistance);
-            this.lastServerAbsDistance = this.serverAbsDistance;
-            this.prevServerTs = timestamp;
-            this.lastServerTs = timestamp;
-            this.lastStepTs = timestamp;
+    this.carStates.forEach((state, carId) => {
+        if (!state.marker) {
             return;
         }
 
-        const prevWrapped = this.serverAbsDistance % this.trackLength;
-        const half = this.trackLength / 2;
-        let adjusted = projectedDistance;
-        if ((adjusted - prevWrapped) > half) {
-            adjusted -= this.trackLength;
-        } else if ((adjusted - prevWrapped) < -half) {
-            adjusted += this.trackLength;
+        if (!state.currentTarget && state.positionQueue?.length) {
+            state.currentTarget = state.positionQueue.shift();
         }
 
-        this.lastServerAbsDistance = this.serverAbsDistance;
-        this.serverAbsDistance += adjusted - prevWrapped;
-        this.prevServerTs = this.lastServerTs;
-        this.lastServerTs = timestamp;
-    }
+        const targetX = state.currentTarget?.x ?? state.targetX;
+        const targetY = state.currentTarget?.y ?? state.targetY;
 
-    step(timestamp) {
-        if (this.serverAbsDistance == null) {
-            return null;
-        }
+        const dx = targetX - state.displayX;
+        const dy = targetY - state.displayY;
+        const dist = Math.hypot(dx, dy);
 
-        if (!Number.isFinite(this.lastStepTs)) {
-            this.lastStepTs = timestamp;
-        }
-
-        const dtSeconds = Math.max(0.001, Math.min((timestamp - this.lastStepTs) / 1000, 0.2));
-        this.lastStepTs = timestamp;
-
-        const baselineSpeed = this.getBaselineSpeed(this.displayDistance) * this.speedMultiplier;
-        const serverSpeed = this._estimateServerSpeed();
-        const desiredSpeed = Math.max(baselineSpeed, serverSpeed);
-
-        const speedApproach = desiredSpeed - this.displaySpeed;
-        this.displaySpeed += speedApproach * 0.2;
-        this.displaySpeed = Math.min(this.config.maxSpeed, Math.max(this.config.minSpeed, this.displaySpeed));
-
-        const error = this.serverAbsDistance - this.displayDistance;
-        if (error >= 0) {
-            const correction = Math.min(error, 60) * this.config.correctionGain;
-            this.displayDistance += this.displaySpeed * dtSeconds + correction;
+        if (dist <= this.SNAP_DISTANCE_M) {
+            state.displayX = targetX;
+            state.displayY = targetY;
+            if (state.currentTarget) {
+                state.currentTarget = null;
+            }
         } else {
-            const slowDown = Math.min(Math.abs(error), 60) * 0.05;
-            this.displaySpeed = Math.max(this.config.minSpeed, this.displaySpeed - slowDown);
-            this.displayDistance += this.displaySpeed * dtSeconds;
+            const serverComponent = (state.serverSpeed || this.baseMinSpeed) * this.baseSpeedScale * this.speedMultiplier;
+            const desiredSpeed = this._clampSpeed(serverComponent);
+            const step = desiredSpeed * dt;
+            const ratio = Math.min(1, step / dist);
+            state.displayX += dx * ratio;
+            state.displayY += dy * ratio;
         }
 
-        return this.getPointAtDistance(this.displayDistance);
+        state.marker.setLatLng([state.displayY, state.displayX]);
+    });
+
+    this._animationFrameId = requestAnimationFrame(this._animateMarkers.bind(this));
+};
+
+MapModuleV3.prototype._clampSpeed = function(speed) {
+    if (!Number.isFinite(speed) || speed <= 0) {
+        return this.MIN_SPEED_MPS;
+    }
+    return Math.min(this.MAX_SPEED_MPS, Math.max(this.MIN_SPEED_MPS, speed));
+};
+
+MapModuleV3.prototype._removeMarkerState = function(carId) {
+    const state = this.carStates.get(carId);
+    if (state?.marker) {
+        this.map.removeLayer(state.marker);
+        this.carMarkers.delete(carId);
+    }
+    this.carStates.delete(carId);
+};
+
+MapModuleV3.prototype._enqueuePosition = function(state, x, y) {
+    if (!state.positionQueue) {
+        state.positionQueue = [];
+    }
+    const lastQueued = state.positionQueue[state.positionQueue.length - 1] || state.currentTarget;
+    if (lastQueued) {
+        const delta = Math.hypot(x - lastQueued.x, y - lastQueued.y);
+        if (delta < this.MIN_QUEUE_DELTA_M) {
+            const blended = {
+                x: lastQueued.x + (x - lastQueued.x) * this.POSITION_SMOOTHING,
+                y: lastQueued.y + (y - lastQueued.y) * this.POSITION_SMOOTHING,
+            };
+            state.positionQueue[state.positionQueue.length - 1] = blended;
+            return;
+        }
     }
 
-    _estimateServerSpeed() {
-        if (
-            !Number.isFinite(this.lastServerAbsDistance) ||
-            !Number.isFinite(this.serverAbsDistance) ||
-            !Number.isFinite(this.lastServerTs) ||
-            !Number.isFinite(this.prevServerTs) ||
-            this.lastServerTs <= this.prevServerTs
-        ) {
-            return 0;
-        }
-        const delta = this.serverAbsDistance - this.lastServerAbsDistance;
-        const dtSeconds = (this.lastServerTs - this.prevServerTs) / 1000;
-        if (dtSeconds <= 0.05 || dtSeconds > 2) {
-            return 0;
-        }
-        const rawSpeed = delta / dtSeconds;
-        if (!Number.isFinite(rawSpeed) || rawSpeed <= 0) {
-            return 0;
-        }
-        return Math.min(this.config.maxSpeed, Math.max(this.config.minSpeed, rawSpeed));
+    state.positionQueue.push({ x, y });
+    if (state.positionQueue.length > this.MAX_QUEUE_LENGTH) {
+        state.positionQueue.shift();
     }
-}
+};
+
+MapModuleV3.prototype.setVisualSpeedMultiplier = function(multiplier) {
+    const numeric = Number(multiplier);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+        return;
+    }
+    this.speedMultiplier = numeric;
+    this.MIN_SPEED_MPS = this.baseMinSpeed * numeric;
+    this.MAX_SPEED_MPS = this.baseMaxSpeed * numeric;
+};

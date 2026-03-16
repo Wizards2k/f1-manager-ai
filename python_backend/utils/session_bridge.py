@@ -488,7 +488,7 @@ class SessionBridge:
                     )
                     ai_ss.initialize(seed=hash(car_id) & 0xFFFFFFFF)
                     self._ai_setup_states[car_id] = ai_ss
-                    logger.info(
+                    logger.debug(
                         "AI %s setup baseline: score=%.2f, threshold=%.2f (sim_q=%d, ric=%d, perf=%d)",
                         car_id, ai_ss.setup_score, ai_ss.threshold,
                         sim_q, ric_ass, perf,
@@ -532,12 +532,12 @@ class SessionBridge:
         # Generate randomized team session plans
         self._team_plans = _build_team_plans(self.ai_engines, self._ai_teams_cars)
         total_scheduled = sum(len(p.scheduled_runs) for p in self._team_plans.values())
-        logger.info("Generated %d team plans with %d scheduled runs", len(self._team_plans), total_scheduled)
+        logger.debug("Generated %d team plans with %d scheduled runs", len(self._team_plans), total_scheduled)
         for tn, plan in self._team_plans.items():
             for sr in plan.scheduled_runs:
                 logger.debug("  %s car %s: planned at %.0fs", tn, sr.car_id, sr.planned_start_s)
 
-        logger.info(
+        logger.debug(
             "SessionBridge v2 initialized: %s on %s (%d cars, %d AI, %d sections)",
             session_type, circuit_id, len(race_cars),
             len(self.ai_engines), len(self.sections),

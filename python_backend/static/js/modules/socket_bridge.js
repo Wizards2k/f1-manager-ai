@@ -7,6 +7,15 @@ export class SocketBridge {
         this.sessionControls = sessionControls;
         this.timelinePanel = timelinePanel;
         this.socket = io();
+        this.lastTimingTraceAt = 0;
+        if (this.sessionControls) {
+            this.sessionControls.onSpeedChange = (uiSpeed) => {
+                const numeric = Number(uiSpeed);
+                if (this.mapModule?.setVisualSpeedMultiplier && Number.isFinite(numeric)) {
+                    this.mapModule.setVisualSpeedMultiplier(numeric);
+                }
+            };
+        }
         this.registerHandlers();
         this.bootstrap();
     }
@@ -76,10 +85,6 @@ export class SocketBridge {
                 is_paused: data.is_paused,
                 game_speed: data.game_speed
             });
-        }
-
-        if (typeof data.is_paused === 'boolean' && this.mapModule?.setPaused) {
-            this.mapModule.setPaused(data.is_paused);
         }
     }
 
