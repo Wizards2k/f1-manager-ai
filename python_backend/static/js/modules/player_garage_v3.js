@@ -135,7 +135,37 @@ export class PlayerGarageV3 {
         this.telemetryCache = new Map();
         this.telemetryCircuitMarkerCache = new Map();
         this.telemetryViewState = null;
+        this.liveDeployCache = new Map();
         this.bindEvents();
+    }
+
+    normalizeIceMode(mode) {
+        if (!mode) return 'PRACTICE';
+        const key = String(mode).trim().replace(/\s+/g, '_').toUpperCase();
+        const canonical = new Set(['SAFETY_CAR', 'PRACTICE', 'RACE', 'QUALIFY']);
+        if (canonical.has(key)) return key;
+        const aliases = {
+            SAVE: 'SAFETY_CAR',
+            STANDARD: 'RACE',
+            PUSH: 'RACE',
+            QUALY: 'QUALIFY',
+            QUALIFYING: 'QUALIFY',
+        };
+        return aliases[key] || 'PRACTICE';
+    }
+
+    normalizeErsMode(mode) {
+        if (!mode) return 'STANDARD';
+        const key = String(mode).trim().replace(/\s+/g, '_').toUpperCase();
+        const canonical = new Set(this.ersOptions);
+        if (canonical.has(key)) return key;
+        const aliases = {
+            HARVEST: 'RECHARGE',
+            NEUTRAL: 'STANDARD',
+            DEPLOY: 'QUALIFY',
+            ATTACK: 'OVERTAKE',
+        };
+        return aliases[key] || 'STANDARD';
     }
 
     computeRuntimeCondition(tyreSet) {
@@ -1235,6 +1265,40 @@ export class PlayerGarageV3 {
         return { deploy, harvest, mguhDirect, mguhHarvest, hasData, hasTrace };
     }
 
+    resolveLiveLapDeploy(puStats, driverNumber = null) {
+        if (!puStats) return 0;
+        const trace = puStats.energy_trace || [];
+        const fallbackDeploy = typeof puStats.lap_deploy_mj === 'number' ? puStats.lap_deploy_mj : 0;
+        const fallbackHarvest = typeof puStats.lap_harvest_mj === 'number' ? puStats.lap_harvest_mj : 0;
+        const fallbackMguhDirect = typeof puStats.lap_mguh_direct_mj === 'number' ? puStats.lap_mguh_direct_mj : 0;
+        const fallbackMguhHarvest = typeof puStats.lap_mguh_harvest_mj === 'number' ? puStats.lap_mguh_harvest_mj : 0;
+        const totals = this.computeLapTotals(trace, fallbackDeploy, fallbackHarvest, fallbackMguhDirect, fallbackMguhHarvest);
+        const lapId = Number.isFinite(puStats.lap_id_current) ? puStats.lap_id_current : null;
+        const cacheKey = driverNumber ?? puStats.driver_number ?? null;
+
+        let deployValue = totals.deploy;
+        const hasTraceData = totals.hasData || totals.hasTrace;
+
+        if (!hasTraceData) {
+            if (cacheKey != null && this.liveDeployCache.has(cacheKey)) {
+                const cached = this.liveDeployCache.get(cacheKey);
+                if (cached && cached.lapId === lapId) {
+                    deployValue = cached.value;
+                } else {
+                    deployValue = 0;
+                }
+            } else {
+                deployValue = 0;
+            }
+        }
+
+        if (cacheKey != null) {
+            this.liveDeployCache.set(cacheKey, { lapId, value: deployValue });
+        }
+
+        return deployValue;
+    }
+
     setStatus(message, tone = 'info', autoHideMs = 4000) {
         if (!this.statusMsg) return;
         const baseClass = 'garage-status-line';
@@ -1616,8 +1680,10 @@ export class PlayerGarageV3 {
         const fuelPercent = car.player_config?.fuel_percent ?? car.fuel_percent ?? 100;
         const stintTarget = car.player_config?.stint_target_laps ?? car.stint_target_laps ?? 5;
         const paceLevel = car.player_config?.pace_level ?? car.pace_level ?? 5;
-        const iceMode = car.player_config?.ice_mode ?? car.ice_mode ?? 'PRACTICE';
-        const ersMode = car?.player_config?.ers_mode ?? car?.ers_mode ?? 'STANDARD';
+        const iceModeRaw = car.player_config?.ice_mode ?? car.ice_mode ?? 'PRACTICE';
+        const ersModeRaw = car?.player_config?.ers_mode ?? car?.ers_mode ?? 'STANDARD';
+        const iceMode = this.normalizeIceMode(iceModeRaw);
+        const ersMode = this.normalizeErsMode(ersModeRaw);
         const maxStint = car.max_stint_laps ?? stintTarget;
         const tireWear = Math.max(0, Math.min(1, car.tire_wear ?? 0));
         const liveTyreCondition = PlayerGarageV3.computeLiveTyreCondition(car);
@@ -1649,14 +1715,31 @@ export class PlayerGarageV3 {
         const puStats = car.pu_stats || {};
         const socMj = puStats.soc_mj || 0;
         const socPct = puStats.soc_pct || 0;
-        const lapDeploy = puStats.lap_deploy_mj || 0;
-        const deployLimit = puStats.deploy_limit_mj || 4.0;
+        const lapDeploy = this.resolveLiveLapDeploy(puStats, car.driver_number);
+        const deployLimit = puStats.deploy_mj_per_lap ?? puStats.deploy_limit_mj ?? 4.0;
         const lapHarvest = puStats.lap_harvest_mj || 0;
-        const lapMguhDirect = puStats.mguh_direct_used_mj || 0;
-        const lapMguhEs = puStats.mguh_es_used_mj || 0;
+        const lapMguhDirect = puStats.lap_mguh_direct_mj || 0;
+        const lapMguhEs = puStats.lap_mguh_harvest_mj || 0;
+        const mguhDirectRemaining = puStats.mguh_direct_remaining_mj || 0;
+        const mguhDirectTotal = puStats.mguh_direct_total_mj || (puStats.mguh_direct_config_total_mj || 0);
+        const capacityMj = puStats.capacity_mj || 4.0;
         const socClass = socPct < 30 ? 'pu-critical' : socPct < 60 ? 'pu-low' : 'pu-ok';
         const tabPilota = this.buildTabPilota(car, { tyreChoice, fuelPercent, stintTarget, maxStint, paceLevel, iceMode, ersMode, tireHealthPct, isBox, brakeChipPreview });
-        const tabMotore = this.buildTabMotore(car, { socMj, socPct, lapDeploy, deployLimit, lapHarvest, lapMguhDirect, lapMguhEs, socClass, iceMode, ersMode });
+        const tabMotore = this.buildTabMotore(car, {
+            socMj,
+            socPct,
+            lapDeploy,
+            deployLimit,
+            lapHarvest,
+            lapMguhDirect,
+            lapMguhEs,
+            mguhDirectRemaining,
+            mguhDirectTotal,
+            capacityMj,
+            socClass,
+            iceMode,
+            ersMode,
+        });
         const tabTyres = this.buildTabTyres(car, { tireHealthPct });
         return `
             <div class="car-card-v3" data-driver="${car.driver_number}" data-state="${currentState}">
@@ -1772,15 +1855,43 @@ export class PlayerGarageV3 {
         `;
     }
 
-    buildTabMotore(car, { socMj, socPct, lapDeploy, deployLimit, lapHarvest, lapMguhDirect, lapMguhEs, socClass, iceMode, ersMode }) {
+    buildTabMotore(car, {
+        socMj,
+        socPct,
+        lapDeploy,
+        deployLimit,
+        lapHarvest,
+        lapMguhDirect,
+        lapMguhEs,
+        mguhDirectRemaining,
+        mguhDirectTotal,
+        capacityMj,
+        socClass,
+        iceMode,
+        ersMode,
+    }) {
         const deployPct = deployLimit > 0 ? Math.min((lapDeploy / deployLimit) * 100, 100) : 0;
+        const safeSocPct = Math.min(Math.max(socPct, 0), 100);
+        const mguhDirectPct = mguhDirectTotal > 1e-4
+            ? Math.min(Math.max((mguhDirectRemaining / mguhDirectTotal) * 100, 0), 100)
+            : 0;
+        const mguhDirectLabel = mguhDirectTotal > 1e-4
+            ? `${mguhDirectRemaining.toFixed(2)} / ${mguhDirectTotal.toFixed(2)} MJ`
+            : `${mguhDirectRemaining.toFixed(2)} MJ`;
         return `
             <div class="dock-ers-meter">
                 <div class="dock-ers-header">
                     <span class="dock-lbl">Batteria SOC</span>
                     <span class="dock-val ${socClass}">${socMj.toFixed(1)} MJ (${Math.round(socPct)}%)</span>
                 </div>
-                <div class="pu-bar-track-v3"><div class="pu-bar-fill-v3" style="width:${socPct}%"></div></div>
+                <div class="pu-bar-track-v3">
+                    <div class="pu-bar-layer pu-bar-layer--mguh" style="width:${mguhDirectPct}%" title="MGU-H Direct reserve"></div>
+                    <div class="pu-bar-layer pu-bar-layer--soc" style="width:${safeSocPct}%" title="Battery SOC"></div>
+                </div>
+                <div class="dock-ers-legend">
+                    <span class="legend-item legend-mguh">MGU-H Direct <strong>${mguhDirectLabel}</strong></span>
+                    <span class="legend-item legend-soc">Battery <strong>${socMj.toFixed(1)} / ${capacityMj.toFixed(1)} MJ</strong></span>
+                </div>
                 <div class="dock-ers-stats">
                     <span>Deploy: ${lapDeploy.toFixed(1)} / ${deployLimit.toFixed(1)} MJ</span>
                     <span>Harvest: ${lapHarvest.toFixed(1)} MJ</span>
@@ -1788,22 +1899,22 @@ export class PlayerGarageV3 {
             </div>
             <div class="dock-row-2">
                 <div class="dock-field">
+                    <label>ICE Map</label>
+                    <select class="select-compact-v3" data-field="ice_mode">
+                        ${this.iceOptions.map(option => `<option value="${option.value}" ${option.value === iceMode ? 'selected' : ''}>${option.label}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="dock-field">
                     <label>ERS Map</label>
                     <select class="select-compact-v3" data-field="ers_mode">
                         ${this.ersOptions.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
                     </select>
                 </div>
-                <div class="dock-field">
-                    <label>ICE Map</label>
-                    <select class="select-compact-v3" data-field="ice_mode">
-                        ${this.iceOptions.map(mode => `<option value="${mode}" ${mode === iceMode ? 'selected' : ''}>${mode}</option>`).join('')}
-                    </select>
-                </div>
             </div>
             <div class="dock-row-3">
                 <div class="dock-field">
-                    <label>ERS Deploy Rate</label>
-                    <span class="dock-val">${deployLimit.toFixed(1)} MJ/lap</span>
+                    <label>Battery Deploy</label>
+                    <span class="dock-val">${lapDeploy.toFixed(2)} MJ</span>
                 </div>
                 <div class="dock-field">
                     <label>MGU-H Direct</label>
@@ -1822,7 +1933,6 @@ export class PlayerGarageV3 {
         const tyreStates = car.tyre_states || {};
         const rawWindow = car.tire_temp_window;
         const tempWindow = PlayerGarageV3.extractTempWindow(rawWindow);
-        const inventoryPanel = this.buildTyreInventoryPanel(car);
         
         const fl = tyreTemps.fl ?? null;
         const fr = tyreTemps.fr ?? null;
@@ -1843,7 +1953,6 @@ export class PlayerGarageV3 {
         
         const brakeFront = car.brake_thermal?.front ?? null;
         const brakeRear = car.brake_thermal?.rear ?? null;
-        
         const aeroBalance = car.aero_balance != null ? `${(car.aero_balance * 100).toFixed(0)}%` : '--';
         const dragIndex = car.drag_index != null ? car.drag_index.toFixed(2) : '--';
         const coolingMargin = car.cooling_margin != null ? `${car.cooling_margin > 0 ? '+' : ''}${car.cooling_margin.toFixed(2)}` : '--';
@@ -1893,16 +2002,16 @@ export class PlayerGarageV3 {
                     <span class="dock-val" style="color:#ddd;">${fmt(brakeRear)}</span>
                 </div>
             </div>
-            <div class="dock-row-3">
-                <div class="dock-field">
+            <div class="dock-row-3 dock-row-compact">
+                <div class="dock-field dock-field--compact">
                     <label>Aero Bal.</label>
                     <span class="dock-val">${aeroBalance}</span>
                 </div>
-                <div class="dock-field">
+                <div class="dock-field dock-field--compact">
                     <label>Drag</label>
                     <span class="dock-val">${dragIndex}</span>
                 </div>
-                <div class="dock-field">
+                <div class="dock-field dock-field--compact">
                     <label>Cooling</label>
                     <span class="dock-val">${coolingMargin}</span>
                 </div>
@@ -1911,9 +2020,6 @@ export class PlayerGarageV3 {
                 <span class="dock-flag ${grainingWarn ? 'flag-warn' : 'flag-ok'}">Grain ${grainingDisplay}</span>
                 <span class="dock-flag ${blisteringWarn ? 'flag-warn' : 'flag-ok'}">Blister ${blisteringDisplay}</span>
                 <span class="dock-flag flag-info">Health ${tireHealthPct}%</span>
-            </div>
-            <div class="dock-tyre-inventory-panel">
-                ${inventoryPanel}
             </div>
         `;
     }
@@ -1976,11 +2082,17 @@ export class PlayerGarageV3 {
     buildPUInlineBar(car) {
         const puStats = car.pu_stats || {};
         const socMj = puStats.soc_mj ?? 0;
-        const socPct = puStats.soc_pct ?? 0;
+        const socPctRaw = puStats.soc_pct ?? 0;
         const lapDeploy = puStats.lap_deploy_mj ?? 0;
-        const deployLimit = puStats.deploy_mj_per_lap ?? 4.0;
+        const deployLimit = puStats.deploy_mj_per_lap ?? puStats.deploy_limit_mj ?? 4.0;
         const deployPct = deployLimit > 0 ? Math.min((lapDeploy / deployLimit) * 100, 100) : 0;
-        const socClass = socPct >= 60 ? 'pu-soc-good' : socPct >= 30 ? 'pu-soc-warn' : 'pu-soc-low';
+        const socClass = socPctRaw >= 60 ? 'pu-soc-good' : socPctRaw >= 30 ? 'pu-soc-warn' : 'pu-soc-low';
+        const socPct = Math.min(Math.max(socPctRaw, 0), 100);
+        const mguhDirectRemaining = puStats.mguh_direct_remaining_mj ?? 0;
+        const mguhDirectTotal = puStats.mguh_direct_total_mj ?? puStats.mguh_direct_config_total_mj ?? 0;
+        const mguhDirectPct = mguhDirectTotal > 1e-4
+            ? Math.min(Math.max((mguhDirectRemaining / mguhDirectTotal) * 100, 0), 100)
+            : 0;
         
         return `
             <div class="pu-inline-bar-v3">
@@ -1995,7 +2107,12 @@ export class PlayerGarageV3 {
                 <div class="pu-budget-bar-v3">
                     <span class="pu-label-v3">Lap Budget</span>
                     <div class="pu-bar-track-v3">
-                        <div class="pu-bar-fill-v3" style="width:${deployPct}%"></div>
+                        <div class="pu-bar-layer pu-bar-layer--mguh" style="width:${mguhDirectPct}%" title="MGU-H Direct reserve"></div>
+                        <div class="pu-bar-layer pu-bar-layer--soc" style="width:${socPct}%" title="Battery SOC"></div>
+                    </div>
+                    <div class="dock-ers-legend compact">
+                        <span class="legend-item legend-mguh">MGU-H ${mguhDirectRemaining.toFixed(2)} MJ</span>
+                        <span class="legend-item legend-soc">SOC ${Math.round(socPct)}%</span>
                     </div>
                 </div>
                 <button class="pu-details-btn-v3" data-action="pu-details">⚡ Details</button>
@@ -3232,18 +3349,93 @@ export class PlayerGarageV3 {
             const puStats = car.pu_stats || {};
             const socMj = puStats.soc_mj || 0;
             const socPct = puStats.soc_pct || 0;
-            const lapDeploy = puStats.lap_deploy_mj || 0;
+            const lapDeploy = this.resolveLiveLapDeploy(puStats, car.driver_number);
             const deployLimit = puStats.deploy_limit_mj || 4.0;
             const lapHarvest = puStats.lap_harvest_mj || 0;
             const lapMguhDirect = puStats.lap_mguh_direct_mj || 0;
-            const lapMguhEs = puStats.mguh_es_used_mj || 0;
+            const lapMguhEs = puStats.lap_mguh_harvest_mj || 0;
+            const mguhDirectRemaining = puStats.mguh_direct_remaining_mj || 0;
+            const mguhDirectTotal = puStats.mguh_direct_total_mj || (puStats.mguh_direct_config_total_mj || 0);
+            const capacityMj = puStats.capacity_mj || 4.0;
+
+            if (window?.DEBUG_PU_DEPLOY_UI && car.is_player_controlled) {
+                const trace = Array.isArray(puStats.energy_trace) ? puStats.energy_trace : [];
+                const lastTrace = trace.length ? trace[trace.length - 1] : null;
+                console.log('[Garage][PU]', {
+                    driver: car.driver_number,
+                    lap_id: puStats.lap_id_current ?? null,
+                    deploy_mj: lapDeploy,
+                    trace_len: trace.length,
+                    last_section: lastTrace?.section_id ?? null,
+                    last_section_deploy: lastTrace?.deploy_mj ?? null,
+                });
+            }
             const socClass = socPct < 30 ? 'pu-critical' : socPct < 60 ? 'pu-low' : 'pu-ok';
-            const iceMode = car.player_config?.ice_mode || car.ice_mode || 'PRACTICE';
-            const ersMode = car.player_config?.ers_mode || car.ers_mode || 'Neutral';
-            
+            const iceMode = this.normalizeIceMode(car.player_config?.ice_mode || car.ice_mode || 'PRACTICE');
+            const ersMode = this.normalizeErsMode(car.player_config?.ers_mode || car.ers_mode || 'STANDARD');
+
             const motoreTab = cardEl.querySelector('.dock-tab-pane[data-tab="motore"]');
             if (motoreTab) {
-                motoreTab.innerHTML = this.buildTabMotore(car, { socMj, socPct, lapDeploy, deployLimit, lapHarvest, lapMguhDirect, lapMguhEs, socClass, iceMode, ersMode });
+                const activeEl = document.activeElement;
+                const isRuntimeFocused = activeEl
+                    && motoreTab.contains(activeEl)
+                    && activeEl.dataset?.field
+                    && this.RUNTIME_FIELDS.has(activeEl.dataset.field);
+                if (!isRuntimeFocused) {
+                    motoreTab.innerHTML = this.buildTabMotore(car, {
+                        socMj,
+                        socPct,
+                        lapDeploy,
+                        deployLimit,
+                        lapHarvest,
+                        lapMguhDirect,
+                        lapMguhEs,
+                        mguhDirectRemaining,
+                        mguhDirectTotal,
+                        capacityMj,
+                        socClass,
+                        iceMode,
+                        ersMode,
+                    });
+                } else {
+                    const socVal = motoreTab.querySelector('.dock-ers-header .dock-val');
+                    if (socVal) socVal.textContent = `${socMj.toFixed(1)} MJ (${Math.round(socPct)}%)`;
+                    const safeSocPct = Math.min(Math.max(socPct, 0), 100);
+                    const mguhPct = mguhDirectTotal > 1e-4
+                        ? Math.min(Math.max((mguhDirectRemaining / mguhDirectTotal) * 100, 0), 100)
+                        : 0;
+                    const mguhLayer = motoreTab.querySelector('.pu-bar-layer--mguh');
+                    if (mguhLayer) mguhLayer.style.width = `${mguhPct}%`;
+                    const socLayer = motoreTab.querySelector('.pu-bar-layer--soc');
+                    if (socLayer) socLayer.style.width = `${safeSocPct}%`;
+                    const deployLabel = motoreTab.querySelector('.dock-ers-stats span:first-child');
+                    if (deployLabel) deployLabel.textContent = `Deploy: ${lapDeploy.toFixed(1)} / ${deployLimit.toFixed(1)} MJ`;
+                    const harvestLabel = motoreTab.querySelector('.dock-ers-stats span:last-child');
+                    if (harvestLabel) harvestLabel.textContent = `Harvest: ${lapHarvest.toFixed(1)} MJ`;
+                    const legendMguh = motoreTab.querySelector('.legend-item.legend-mguh strong');
+                    if (legendMguh) {
+                        const mguhLabel = mguhDirectTotal > 1e-4
+                            ? `${mguhDirectRemaining.toFixed(2)} / ${mguhDirectTotal.toFixed(2)} MJ`
+                            : `${mguhDirectRemaining.toFixed(2)} MJ`;
+                        legendMguh.textContent = mguhLabel;
+                    }
+                    const legendSoc = motoreTab.querySelector('.legend-item.legend-soc strong');
+                    if (legendSoc) legendSoc.textContent = `${socMj.toFixed(1)} / ${capacityMj.toFixed(1)} MJ`;
+                    const batteryDeployField = motoreTab.querySelector('.dock-row-3 .dock-field:first-child .dock-val');
+                    if (batteryDeployField) batteryDeployField.textContent = `${lapDeploy.toFixed(2)} MJ`;
+                    const mguhDirectField = motoreTab.querySelector('.dock-row-3 .dock-field:nth-child(2) .dock-val');
+                    if (mguhDirectField) mguhDirectField.textContent = `${lapMguhDirect.toFixed(2)} MJ`;
+                    const mguhEsField = motoreTab.querySelector('.dock-row-3 .dock-field:nth-child(3) .dock-val');
+                    if (mguhEsField) mguhEsField.textContent = `${lapMguhEs.toFixed(2)} MJ`;
+                }
+            }
+
+            const pilotaTab = cardEl.querySelector('.dock-tab-pane[data-tab="pilota"]');
+            if (pilotaTab) {
+                const iceSelect = pilotaTab.querySelector('select[data-field="ice_mode"]');
+                if (iceSelect) iceSelect.value = iceMode;
+                const ersSelect = pilotaTab.querySelector('select[data-field="ers_mode"]');
+                if (ersSelect) ersSelect.value = ersMode;
             }
 
             // 4. Update minor elements in Pilota tab
@@ -3488,7 +3680,14 @@ export class PlayerGarageV3 {
             }
             this.applyLocalPlayerUpdates(driverNumber, allowedPayload);
             if (!options.skipRender) {
-                this.render(true);
+                if (runtimeOnly) {
+                    const carData = this.state.getPlayerCar(driverNumber);
+                    if (carData) {
+                        this.updateContinuousData([carData]);
+                    }
+                } else {
+                    this.render(true);
+                }
             }
             return true;
         } catch (err) {
@@ -3675,7 +3874,8 @@ export class PlayerGarageV3 {
             return;
         }
 
-        this.sendPlayerConfig(resolvedDriverNumber, payload, state);
+        const isRuntimeField = this.RUNTIME_FIELDS.has(field);
+        this.sendPlayerConfig(resolvedDriverNumber, payload, state, { suppressStatus: isRuntimeField, skipRender: isRuntimeField });
     }
 
     handleTelemetryChipSelection(target) {
