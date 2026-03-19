@@ -63,6 +63,7 @@ from utils.adapter import (
     sim_compound_to_game,
 )
 from utils.microsector_logger import log_microsector
+from utils.pu_telemetry_logger import log_pu_section
 from utils.driver_feedback import (
     get_driver_feedback,
     should_trigger_feedback,
@@ -839,8 +840,8 @@ class SessionBridge:
                             tyre_wear_vals.append(tyre.wear_pct)
                         if getattr(tyre, 'surface_temp_c', None) is not None:
                             tyre_temp_vals.append(tyre.surface_temp_c)
-
                     pu_state = getattr(entry.state, 'pu', None)
+                    pu_telemetry = self._format_pu_telemetry(pu_state)
                     log_microsector({
                         'car_id': entry.car_id,
                         'lap': ts.lap_number,
@@ -887,6 +888,11 @@ class SessionBridge:
                     })
                 except Exception:
                     logger.debug('microsector logging failed for %s', entry.car_id, exc_info=True)
+
+                try:
+                    self._log_pu_section_usage(entry, ts, section)
+                except Exception:
+                    logger.debug('pu telemetry logging failed for %s', entry.car_id, exc_info=True)
 
                 ts.lap_section_results.append(result)
 
@@ -1236,14 +1242,8 @@ class SessionBridge:
         bucket_exit_total = pu_state.bucket_exit_total_mj if pu_state.bucket_exit_total_mj > 1e-6 else (bucket_cfg["exit"] or 0.0)
         deploy_budget_total = pu_state.deploy_budget_total_mj if pu_state.deploy_budget_total_mj > 1e-6 else (deploy_budget_cfg or deploy_limit)
         defense_reserve_available = pu_state.defense_reserve_available_mj if pu_state.defense_reserve_available_mj > 1e-6 else (defense_reserve_cfg or 0.0)
-        mguh_primary_total = pu_state.mguh_primary_total_mj if pu_state.mguh_primary_total_mj > 1e-6 else (mguh_bucket_cfg["primary"] or 0.0)
-        mguh_secondary_total = pu_state.mguh_secondary_total_mj if pu_state.mguh_secondary_total_mj > 1e-6 else (mguh_bucket_cfg["secondary"] or 0.0)
-        mguh_exit_total = pu_state.mguh_exit_total_mj if pu_state.mguh_exit_total_mj > 1e-6 else (mguh_bucket_cfg["exit"] or 0.0)
-        mguh_direct_total = mguh_primary_total + mguh_secondary_total + mguh_exit_total
-        mguh_primary_used = pu_state.mguh_primary_used_mj
-        mguh_secondary_used = pu_state.mguh_secondary_used_mj
-        mguh_exit_used = pu_state.mguh_exit_used_mj
-        mguh_direct_used = mguh_primary_used + mguh_secondary_used + mguh_exit_used
+        mguh_direct_total = pu_state.mguh_direct_total_mj if pu_state.mguh_direct_total_mj > 1e-6 else (mguh_direct_cfg_total or 0.0)
+        mguh_direct_used = pu_state.mguh_direct_used_mj
 
         return {
             "map": active_map,
@@ -1289,18 +1289,9 @@ class SessionBridge:
             "defense_reserve_available_mj": round(defense_reserve_available, 4),
             "soc_floor_dynamic_pct": round(getattr(pu_state, "soc_floor_dynamic_pct", 0.0), 4),
             "soc_target_pct": round(getattr(pu_state, "soc_target_pct", 0.0), 4),
-            "mguh_primary_total_mj": round(mguh_primary_total, 4),
-            "mguh_secondary_total_mj": round(mguh_secondary_total, 4),
-            "mguh_exit_total_mj": round(mguh_exit_total, 4),
-            "mguh_primary_used_mj": round(mguh_primary_used, 4),
-            "mguh_secondary_used_mj": round(mguh_secondary_used, 4),
-            "mguh_exit_used_mj": round(mguh_exit_used, 4),
             "mguh_direct_total_mj": round(mguh_direct_total, 4),
             "mguh_direct_used_mj": round(mguh_direct_used, 4),
             "mguh_direct_remaining_mj": round(max(mguh_direct_total - mguh_direct_used, 0.0), 4),
-            "mguh_primary_config_mj": None if mguh_bucket_cfg["primary"] is None else round(mguh_bucket_cfg["primary"], 4),
-            "mguh_secondary_config_mj": None if mguh_bucket_cfg["secondary"] is None else round(mguh_bucket_cfg["secondary"], 4),
-            "mguh_exit_config_mj": None if mguh_bucket_cfg["exit"] is None else round(mguh_bucket_cfg["exit"], 4),
             "mguh_direct_config_total_mj": None if mguh_direct_cfg_total is None else round(mguh_direct_cfg_total, 4),
             "last_priority_score": round(pu_state.last_priority_score, 3),
             "last_bucket_key": pu_state.last_bucket_key,
@@ -1310,6 +1301,78 @@ class SessionBridge:
             "last_defense_mode": bool(pu_state.last_defense_mode),
             "last_recharge_mode": bool(pu_state.last_recharge_mode),
         }
+
+    def _log_pu_section_usage(self, entry, ts: CarTrackState, section: SectionContext) -> None:
+        if not self.circuit_config:
+            return
+        pu_state = getattr(entry.state, 'pu', None)
+        if not pu_state:
+            return
+        if not pu_state.energy_trace:
+            return
+        trace_entry = pu_state.energy_trace[-1]
+
+        budget = self.circuit_config.ers_budget or {}
+        capacity = budget.get("battery_capacity_mj", 4.0) or 4.0
+        maps_budget = budget.get("maps", {})
+        active_map_name = pu_state.active_map.value if pu_state.active_map else "STANDARD"
+        map_budget = maps_budget.get(active_map_name, {})
+
+        deploy_budget_cfg = map_budget.get("deploy_mj_per_lap")
+        harvest_budget_cfg = map_budget.get("harvest_mj_per_lap")
+        mguh_direct_cfg_total = map_budget.get("mguh_direct_mj_per_lap")
+
+        bucket_primary_total = pu_state.bucket_primary_total_mj
+        bucket_secondary_total = pu_state.bucket_secondary_total_mj
+        bucket_exit_total = pu_state.bucket_exit_total_mj
+        bucket_primary_used = pu_state.bucket_primary_used_mj
+        bucket_secondary_used = pu_state.bucket_secondary_used_mj
+        bucket_exit_used = pu_state.bucket_exit_used_mj
+
+        mguh_direct_total = pu_state.mguh_direct_total_mj
+        mguh_direct_used = pu_state.mguh_direct_used_mj
+
+        payload = {
+            "car_id": entry.car_id,
+            "driver": getattr(entry, "driver_name", None),
+            "lap": ts.lap_number,
+            "lap_id": pu_state.lap_id_current,
+            "section_id": trace_entry.get("section_id"),
+            "section_index": ts.current_section_idx,
+            "section_kind": section.kind.name,
+            "section_length_m": section.length_m,
+            "deploy_mj": trace_entry.get("deploy_mj"),
+            "harvest_mj": trace_entry.get("harvest_mj"),
+            "mguh_direct_mj": trace_entry.get("mguh_direct_mj"),
+            "mguh_es_mj": trace_entry.get("mguh_es_mj"),
+            "battery_soc_mj": pu_state.ers_energy_mj,
+            "battery_soc_pct": (pu_state.ers_energy_mj / capacity) * 100.0 if capacity > 1e-6 else 0.0,
+            "lap_deploy_mj": pu_state.lap_deploy_mj,
+            "lap_harvest_mj": pu_state.lap_harvest_mj,
+            "lap_mguh_direct_mj": pu_state.lap_mguh_direct_mj,
+            "lap_mguh_es_mj": pu_state.lap_mguh_harvest_mj,
+            "deploy_budget_mj": deploy_budget_cfg,
+            "harvest_budget_mj": harvest_budget_cfg,
+            "mguh_direct_budget_mj": mguh_direct_cfg,
+            "deploy_budget_total_mj": pu_state.deploy_budget_total_mj,
+            "bucket_primary_total_mj": bucket_primary_total,
+            "bucket_secondary_total_mj": bucket_secondary_total,
+            "bucket_exit_total_mj": bucket_exit_total,
+            "bucket_primary_used_mj": bucket_primary_used,
+            "bucket_secondary_used_mj": bucket_secondary_used,
+            "bucket_exit_used_mj": bucket_exit_used,
+            "mguh_direct_total_mj": mguh_direct_total,
+            "mguh_direct_used_mj": mguh_direct_used,
+            "mguh_direct_remaining_mj": max(mguh_direct_total - mguh_direct_used, 0.0),
+            "bucket_key": pu_state.last_bucket_key,
+            "last_bucket_allocated_mj": pu_state.last_bucket_allocated_mj,
+            "last_priority_score": pu_state.last_priority_score,
+            "ers_mode": getattr(entry.state, 'ers_mode', None),
+            "engine_map": active_map_name,
+            "warnings": list(pu_state.runtime_warnings or []),
+        }
+
+        log_pu_section(payload)
 
     def _build_brake_diagnostics(self, section: SectionContext) -> Dict[str, Any]:
         if not self.circuit_config:
