@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+from datetime import datetime
+from pathlib import Path
 from .data_types import (
     AeroForces,
     CarState,
@@ -340,6 +343,29 @@ def generate_output(
     # --- Critical events ---
     # Decrement section count after processing
     _decrement_section_count(pu_state, bucket_key)
+    
+    # Log PU telemetry if enabled
+    try:
+        from utils.pu_telemetry_logger import log_pu_section
+        if os.getenv("DEBUG_PU_TELEMETRY", "0").lower() in {"1", "true", "yes", "on"}:
+            payload = {
+                "timestamp": datetime.now().isoformat(),
+                "section_id": section.section_id,
+                "section_kind": section.kind.name,
+                "map": pu_state.active_map.value if pu_state.active_map else "UNKNOWN",
+                "ice_power_kw": round(pu_state.ice_power_kw, 2),
+                "ers_output_kw": round(pu_state.ers_output_kw, 2),
+                "ers_energy_mj": round(pu_state.ers_energy_mj, 3),
+                "fuel_kg": round(pu_state.fuel_kg, 2),
+                "ice_temp_c": round(pu_state.ice_temp_c, 1),
+                "ers_temp_c": round(pu_state.ers_temp_c, 1),
+                "ice_derating": pu_state.ice_derating,
+                "ers_derating": pu_state.ers_derating,
+                "warnings": list(pu_state.runtime_warnings or []),
+            }
+            log_pu_section(payload)
+    except Exception:
+        pass  # Silently fail if logger not available
     
     if pu_state.ice_temp_c > rel.ice_temp_critical_c:
         events.append(SectionEvent(
