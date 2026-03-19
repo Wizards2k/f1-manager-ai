@@ -92,7 +92,7 @@ def generate_output(
     )
 
     map_budget = _map_budget(config, pu_state.active_map)
-    _ensure_bucket_budget(pu_state, map_params, map_budget, config)
+    _initialize_bucket_budget(pu_state, map_params, map_budget, config, config.sections)
 
     # --- ICE power ---
     ice_wear_factor = 1.0 - pu_state.ice_wear_pct * 0.002
@@ -338,6 +338,9 @@ def generate_output(
     # (positive = headroom, negative = overheating risk)
 
     # --- Critical events ---
+    # Decrement section count after processing
+    _decrement_section_count(pu_state, bucket_key)
+    
     if pu_state.ice_temp_c > rel.ice_temp_critical_c:
         events.append(SectionEvent(
             event_type="ice_critical",
@@ -452,11 +455,12 @@ def _estimate_mguh_lap_energy(
     return clamp((base_kw * avg_section_factor * lap_time) / 1000.0, 0.0, 12.0)
 
 
-def _ensure_bucket_budget(
+def _initialize_bucket_budget(
     pu_state: PUState,
     map_params: EngineMapParams,
-    map_budget: Dict[str, float],
+    map_budget: Dict[str, Any],
     config: CircuitConfig,
+    sections: List[SectionContext],
 ) -> None:
     if pu_state.bucket_budget_initialized:
         return
@@ -486,6 +490,18 @@ def _ensure_bucket_budget(
     pu_state.bucket_exit_total_mj = available * exit_share
     pu_state.defense_reserve_available_mj = defense_reserve
     pu_state.deploy_budget_total_mj = deploy_total
+
+    # Conta settori per tipo nel giro
+    primary_count = sum(1 for s in sections if _resolve_bucket(s) == "primary")
+    secondary_count = sum(1 for s in sections if _resolve_bucket(s) == "secondary")
+    exit_count = sum(1 for s in sections if _resolve_bucket(s) == "exit")
+    
+    pu_state.primary_sections_count = primary_count
+    pu_state.secondary_sections_count = secondary_count
+    pu_state.exit_sections_count = exit_count
+    pu_state.primary_sections_remaining = primary_count
+    pu_state.secondary_sections_remaining = secondary_count
+    pu_state.exit_sections_remaining = exit_count
 
     # MGU-H direct drive budget per lap (single global budget)
     mguh_lap_total = _estimate_mguh_lap_energy(map_params, config)
@@ -547,6 +563,17 @@ def _apply_bucket_allocation(
         setattr(pu_state, used_attr, used + requested_mj)
         return requested_mj
 
+    # Calcola cap per settore dinamico
+    remaining_sections = _get_remaining_sections(pu_state, bucket_key)
+    if remaining_sections <= 0:
+        cap_per_section = 0.0
+    else:
+        total_attr, used_attr = _bucket_attrs(bucket_key)
+        total = getattr(pu_state, total_attr, 0.0)
+        used = getattr(pu_state, used_attr, 0.0)
+        remaining_bucket = max(total - used, 0.0)
+        cap_per_section = remaining_bucket / remaining_sections
+
     allocated = 0.0
     remaining_request = requested_mj
     defense_used = 0.0
@@ -559,7 +586,9 @@ def _apply_bucket_allocation(
         remaining_request -= defense_take
         defense_used = defense_take
 
-    consumed = _consume_bucket(pu_state, bucket_key, remaining_request)
+    # Usa bucket con cap per settore
+    bucket_available = min(remaining_request, cap_per_section)
+    consumed = _consume_bucket(pu_state, bucket_key, bucket_available)
     allocated += consumed
     remaining_request -= consumed
 
@@ -567,7 +596,17 @@ def _apply_bucket_allocation(
         for alt in ("primary", "secondary", "exit"):
             if remaining_request <= 1e-5 or alt == bucket_key:
                 continue
-            extra = _consume_bucket(pu_state, alt, remaining_request)
+            # Calcola cap anche per bucket alternativi
+            alt_remaining = _get_remaining_sections(pu_state, alt)
+            if alt_remaining <= 0:
+                continue
+            alt_total_attr, alt_used_attr = _bucket_attrs(alt)
+            alt_total = getattr(pu_state, alt_total_attr, 0.0)
+            alt_used = getattr(pu_state, alt_used_attr, 0.0)
+            alt_remaining_bucket = max(alt_total - alt_used, 0.0)
+            alt_cap = alt_remaining_bucket / alt_remaining
+            alt_available = min(remaining_request, alt_cap)
+            extra = _consume_bucket(pu_state, alt, alt_available)
             allocated += extra
             remaining_request -= extra
 
@@ -591,6 +630,26 @@ def _consume_bucket(pu_state: PUState, bucket_key: str, amount: float) -> float:
     if take > 0.0:
         setattr(pu_state, used_attr, used + take)
     return take
+
+
+def _get_remaining_sections(pu_state: PUState, bucket_key: str) -> int:
+    """Get remaining sections count for bucket type."""
+    if bucket_key == "primary":
+        return pu_state.primary_sections_remaining
+    elif bucket_key == "secondary":
+        return pu_state.secondary_sections_remaining
+    else:
+        return pu_state.exit_sections_remaining
+
+
+def _decrement_section_count(pu_state: PUState, bucket_key: str) -> None:
+    """Decrement remaining sections count after processing a section."""
+    if bucket_key == "primary":
+        pu_state.primary_sections_remaining = max(pu_state.primary_sections_remaining - 1, 0)
+    elif bucket_key == "secondary":
+        pu_state.secondary_sections_remaining = max(pu_state.secondary_sections_remaining - 1, 0)
+    else:
+        pu_state.exit_sections_remaining = max(pu_state.exit_sections_remaining - 1, 0)
 
 
 def _bucket_attrs(bucket_key: str) -> Tuple[str, str]:

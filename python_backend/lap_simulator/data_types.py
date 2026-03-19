@@ -310,6 +310,14 @@ class PUState:
     bucket_primary_used_mj: float = 0.0
     bucket_secondary_used_mj: float = 0.0
     bucket_exit_used_mj: float = 0.0
+    # Conteggio settori per tipo nel giro corrente
+    primary_sections_count: int = 0
+    secondary_sections_count: int = 0
+    exit_sections_count: int = 0
+    # Settori rimanenti per tipo
+    primary_sections_remaining: int = 0
+    secondary_sections_remaining: int = 0
+    exit_sections_remaining: int = 0
     defense_reserve_available_mj: float = 0.0
     deploy_budget_total_mj: float = 0.0
     mguh_direct_total_mj: float = 0.0

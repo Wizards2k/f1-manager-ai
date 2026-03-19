@@ -303,6 +303,14 @@ class LapSimulator:
         pu_state.mguh_direct_total_mj = 0.0
         pu_state.mguh_direct_used_mj = 0.0
         pu_state.bucket_budget_initialized = False
+        
+        # Reset conteggio settori per nuovo giro
+        pu_state.primary_sections_count = 0
+        pu_state.secondary_sections_count = 0
+        pu_state.exit_sections_count = 0
+        pu_state.primary_sections_remaining = 0
+        pu_state.secondary_sections_remaining = 0
+        pu_state.exit_sections_remaining = 0
 
         section_results: List[SectionResult] = []
         all_events: List[SectionEvent] = []
