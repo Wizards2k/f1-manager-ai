@@ -693,10 +693,10 @@ def update_section(
     section_kind = getattr(section.kind, "name", str(section.kind))
     straight_kind = section.kind in STRAIGHT_KINDS
 
-    if logger.isEnabledFor(logging.INFO):
+    if logger.isEnabledFor(logging.DEBUG):
         map_penalties = config.engine_map_penalties or DEFAULT_ENGINE_MAP_PENALTIES
         preview_map_penalty = map_penalties.get(engine_map, 0.0) if engine_map else 0.0
-        logger.info(
+        logger.debug(
             "[PEN] engine_input sec=%s kind=%s straight=%s enabled=%s team_code=%s map=%s coeff=%.6f ref_cv=%.1f map_penalty=%.4f",
             section.section_id,
             section_kind,
@@ -721,7 +721,7 @@ def update_section(
         if logger.isEnabledFor(logging.INFO):
             cv_delta = team_cv - config.engine_reference_cv
             cv_penalty = cv_delta * config.engine_penalty_coeff if straight_kind else 0.0
-            logger.info(
+            logger.debug(
                 "[PEN] engine_result sec=%s team=%s map=%s straight=%s cv=%.1f cv_delta=%.1f cv_penalty=%.4f engine_s=%.4f",
                 section.section_id,
                 team_code,
@@ -949,7 +949,7 @@ def update_section(
         drag_penalty_s=setup_penalty_result.drag_penalty_s,
         drag_bonus_s=setup_penalty_result.drag_bonus_s,
     )
-    logger.info(
+    logger.debug(
         "[PEN] sec=%s push=%.1f fuel=%.4f tyre=%.4f push_s=%.4f engine_s=%.4f",
         section.section_id,
         push_level,
