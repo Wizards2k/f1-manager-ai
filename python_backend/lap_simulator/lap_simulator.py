@@ -37,6 +37,11 @@ DEBUG_PENALTIES = os.getenv("DEBUG_PENALTIES", "0").lower() in {"1", "true", "ye
 if DEBUG_PENALTIES:
     _penalty_log_path = Path("logs/penalties.log")
     _penalty_log_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Reset file on startup
+    with _penalty_log_path.open("w", encoding="utf-8") as fh:
+        fh.write("")  # Create empty file
+    
     if not any(getattr(h, "_penalty_debug", False) for h in logger.handlers):
         handler = logging.FileHandler(_penalty_log_path)
         handler.setLevel(logging.DEBUG)
