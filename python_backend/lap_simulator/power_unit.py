@@ -347,9 +347,15 @@ def generate_output(
     # Log PU telemetry if enabled
     try:
         from utils.pu_telemetry_logger import log_pu_section
+        from lap_simulator.lap_simulator import _TARGET_PENALTY_DRIVER_IDS
         if os.getenv("DEBUG_PU_TELEMETRY", "0").lower() in {"1", "true", "yes", "on"}:
             # Get car_id from context or use default
             car_id = "16"  # Default for testing
+            
+            # Filter by PENALTY_LOG_DRIVER_IDS
+            if str(car_id) not in _TARGET_PENALTY_DRIVER_IDS:
+                return
+                
             payload = {
                 "car_id": car_id,
                 "timestamp": datetime.now().isoformat(),

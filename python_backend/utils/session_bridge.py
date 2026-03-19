@@ -1311,6 +1311,12 @@ class SessionBridge:
     def _log_pu_section_usage(self, entry, ts: CarTrackState, section: SectionContext) -> None:
         if not self.circuit_config:
             return
+        
+        # Filter by PENALTY_LOG_DRIVER_IDS
+        from lap_simulator.lap_simulator import _TARGET_PENALTY_DRIVER_IDS
+        if str(entry.car_id) not in _TARGET_PENALTY_DRIVER_IDS:
+            return
+            
         pu_state = getattr(entry.state, 'pu', None)
         if not pu_state:
             return
