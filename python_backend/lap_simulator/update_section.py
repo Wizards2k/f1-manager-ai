@@ -128,15 +128,18 @@ def update_section(
     driver_id : str             – Driver identifier for penalty RNG
     lap_number : int            – Lap number for penalty RNG
     """
-    logger.debug(
-        "[PEN] start sec=%s push=%.2f map=%s ers=%s tyres=%s car=%s",
-        section.section_id,
-        push_level,
-        getattr(getattr(car_state.pu, "active_map", None), "value", None),
-        getattr(car_state, "ers_mode", None),
-        {wp.name: car_state.tyres[wp].compound.name for wp in WheelPosition if wp in car_state.tyres},
-        getattr(car_state, "car_id", "unknown"),
-    )
+    from lap_simulator.lap_simulator import _should_log_penalties
+    
+    if _should_log_penalties(getattr(car_state, "car_id", "unknown")):
+        logger.debug(
+            "[PEN] start sec=%s push=%.2f map=%s ers=%s tyres=%s car=%s",
+            section.section_id,
+            push_level,
+            getattr(getattr(car_state.pu, "active_map", None), "value", None),
+            getattr(car_state, "ers_mode", None),
+            {wp.name: car_state.tyres[wp].compound.name for wp in WheelPosition if wp in car_state.tyres},
+            getattr(car_state, "car_id", "unknown"),
+        )
     all_events: List[SectionEvent] = []
 
     # Get penalty cache if enabled
@@ -694,7 +697,9 @@ def update_section(
     section_kind = getattr(section.kind, "name", str(section.kind))
     straight_kind = section.kind in STRAIGHT_KINDS
 
-    if logger.isEnabledFor(logging.DEBUG):
+    from lap_simulator.lap_simulator import _should_log_penalties
+    
+    if logger.isEnabledFor(logging.DEBUG) and _should_log_penalties(getattr(car_state, "car_id", "unknown")):
         map_penalties = config.engine_map_penalties or DEFAULT_ENGINE_MAP_PENALTIES
         preview_map_penalty = map_penalties.get(engine_map, 0.0) if engine_map else 0.0
         logger.debug(
@@ -720,7 +725,9 @@ def update_section(
             config=config
         )
 
-        if logger.isEnabledFor(logging.INFO):
+        from lap_simulator.lap_simulator import _should_log_penalties
+        
+        if logger.isEnabledFor(logging.INFO) and _should_log_penalties(getattr(car_state, "car_id", "unknown")):
             cv_delta = team_cv - config.engine_reference_cv
             cv_penalty = cv_delta * config.engine_penalty_coeff if straight_kind else 0.0
             logger.debug(
@@ -952,14 +959,17 @@ def update_section(
         drag_penalty_s=setup_penalty_result.drag_penalty_s,
         drag_bonus_s=setup_penalty_result.drag_bonus_s,
     )
-    logger.debug(
-        "[PEN] sec=%s push=%.1f fuel=%.4f tyre=%.4f push_s=%.4f engine_s=%.4f car=%s",
-        section.section_id,
-        push_level,
-        fuel_delta_s,
-        tyre_delta_s,
-        push_delta_s,
-        engine_delta_s,
-        getattr(car_state, "car_id", "unknown"),
-    )
+    from lap_simulator.lap_simulator import _should_log_penalties
+    
+    if logger.isEnabledFor(logging.DEBUG) and _should_log_penalties(getattr(car_state, "car_id", "unknown")):
+        logger.debug(
+            "[PEN] sec=%s push=%.1f fuel=%.4f tyre=%.4f push_s=%.4f engine_s=%.4f car=%s",
+            section.section_id,
+            push_level,
+            fuel_delta_s,
+            tyre_delta_s,
+            push_delta_s,
+            engine_delta_s,
+            getattr(car_state, "car_id", "unknown"),
+        )
     return result
