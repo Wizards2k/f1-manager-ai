@@ -96,6 +96,13 @@ def log_pu_section(entry: Dict[str, Any]) -> None:
         return
 
     _LOG_DIR.mkdir(parents=True, exist_ok=True)
+    
+    # Reset file on each startup
+    if not hasattr(log_pu_section, "_initialized"):
+        with _LOG_FILE.open("w", encoding="utf-8") as fh:
+            fh.write("")  # Create empty file
+        log_pu_section._initialized = True
+    
     payload = _convert(entry)
     timestamp = datetime.utcnow()
     line = _build_line(payload, timestamp)

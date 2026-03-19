@@ -129,12 +129,13 @@ def update_section(
     lap_number : int            – Lap number for penalty RNG
     """
     logger.debug(
-        "[PEN] start sec=%s push=%.2f map=%s ers=%s tyres=%s",
+        "[PEN] start sec=%s push=%.2f map=%s ers=%s tyres=%s car=%s",
         section.section_id,
         push_level,
         getattr(getattr(car_state.pu, "active_map", None), "value", None),
         getattr(car_state, "ers_mode", None),
         {wp.name: car_state.tyres[wp].compound.name for wp in WheelPosition if wp in car_state.tyres},
+        getattr(car_state, "car_id", "unknown"),
     )
     all_events: List[SectionEvent] = []
 
@@ -697,7 +698,7 @@ def update_section(
         map_penalties = config.engine_map_penalties or DEFAULT_ENGINE_MAP_PENALTIES
         preview_map_penalty = map_penalties.get(engine_map, 0.0) if engine_map else 0.0
         logger.debug(
-            "[PEN] engine_input sec=%s kind=%s straight=%s enabled=%s team_code=%s map=%s coeff=%.6f ref_cv=%.1f map_penalty=%.4f",
+            "[PEN] engine_input sec=%s kind=%s straight=%s enabled=%s team_code=%s map=%s coeff=%.6f ref_cv=%.1f map_penalty=%.4f car=%s",
             section.section_id,
             section_kind,
             straight_kind,
@@ -707,6 +708,7 @@ def update_section(
             config.engine_penalty_coeff,
             config.engine_reference_cv,
             preview_map_penalty,
+            getattr(car_state, "car_id", "unknown"),
         )
 
     if engine_penalty_enabled and team_code:
@@ -722,7 +724,7 @@ def update_section(
             cv_delta = team_cv - config.engine_reference_cv
             cv_penalty = cv_delta * config.engine_penalty_coeff if straight_kind else 0.0
             logger.debug(
-                "[PEN] engine_result sec=%s team=%s map=%s straight=%s cv=%.1f cv_delta=%.1f cv_penalty=%.4f engine_s=%.4f",
+                "[PEN] engine_result sec=%s team=%s map=%s straight=%s cv=%.1f cv_delta=%.1f cv_penalty=%.4f engine_s=%.4f car=%s",
                 section.section_id,
                 team_code,
                 getattr(engine_map, "value", engine_map),
@@ -731,6 +733,7 @@ def update_section(
                 cv_delta,
                 cv_penalty,
                 engine_delta_s,
+                getattr(car_state, "car_id", "unknown"),
             )
     elif logger.isEnabledFor(logging.INFO):
         reason = "disabled"
@@ -950,12 +953,13 @@ def update_section(
         drag_bonus_s=setup_penalty_result.drag_bonus_s,
     )
     logger.debug(
-        "[PEN] sec=%s push=%.1f fuel=%.4f tyre=%.4f push_s=%.4f engine_s=%.4f",
+        "[PEN] sec=%s push=%.1f fuel=%.4f tyre=%.4f push_s=%.4f engine_s=%.4f car=%s",
         section.section_id,
         push_level,
         fuel_delta_s,
         tyre_delta_s,
         push_delta_s,
         engine_delta_s,
+        getattr(car_state, "car_id", "unknown"),
     )
     return result

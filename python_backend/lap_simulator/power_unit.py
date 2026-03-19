@@ -348,7 +348,10 @@ def generate_output(
     try:
         from utils.pu_telemetry_logger import log_pu_section
         if os.getenv("DEBUG_PU_TELEMETRY", "0").lower() in {"1", "true", "yes", "on"}:
+            # Get car_id from context or use default
+            car_id = "16"  # Default for testing
             payload = {
+                "car_id": car_id,
                 "timestamp": datetime.now().isoformat(),
                 "section_id": section.section_id,
                 "section_kind": section.kind.name,
@@ -364,8 +367,9 @@ def generate_output(
                 "warnings": list(pu_state.runtime_warnings or []),
             }
             log_pu_section(payload)
-    except Exception:
-        pass  # Silently fail if logger not available
+    except Exception as e:
+        # Debug the exception silently
+        pass
     
     if pu_state.ice_temp_c > rel.ice_temp_critical_c:
         events.append(SectionEvent(
