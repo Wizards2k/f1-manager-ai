@@ -75,6 +75,8 @@ from models.models import TireCompound as GameTireCompound
 from debug_log import log_debug_event
 
 logger = logging.getLogger(__name__)
+if os.getenv("DEBUG_PU_TELEMETRY", "0").lower() in {"1", "true", "yes", "on"}:
+    logger.setLevel(logging.DEBUG)
 
 
 def _chip_color(percent: float) -> str:
@@ -1216,9 +1218,7 @@ class SessionBridge:
         exit_pct_cfg = map_budget.get("bucket_exit_pct")
         defense_reserve_cfg = map_budget.get("defense_reserve_mj")
         deploy_budget_cfg = map_budget.get("deploy_mj_per_lap")
-        mguh_direct_cfg_total = map_budget.get("mguh_direct_mj_per_lap")
         bucket_cfg = {"primary": None, "secondary": None, "exit": None}
-        mguh_bucket_cfg = {"primary": None, "secondary": None, "exit": None}
         pct_sum = max(
             (primary_pct_cfg or 0.0) + (secondary_pct_cfg or 0.0) + (exit_pct_cfg or 0.0),
             1e-6,
@@ -1230,20 +1230,12 @@ class SessionBridge:
                 "secondary": available_cfg * ((secondary_pct_cfg or 0.0) / pct_sum),
                 "exit": available_cfg * ((exit_pct_cfg or 0.0) / pct_sum),
             }
-        if mguh_direct_cfg_total is not None and (primary_pct_cfg or secondary_pct_cfg or exit_pct_cfg):
-            mguh_bucket_cfg = {
-                "primary": mguh_direct_cfg_total * ((primary_pct_cfg or 0.0) / pct_sum),
-                "secondary": mguh_direct_cfg_total * ((secondary_pct_cfg or 0.0) / pct_sum),
-                "exit": mguh_direct_cfg_total * ((exit_pct_cfg or 0.0) / pct_sum),
-            }
 
         bucket_primary_total = pu_state.bucket_primary_total_mj if pu_state.bucket_primary_total_mj > 1e-6 else (bucket_cfg["primary"] or 0.0)
         bucket_secondary_total = pu_state.bucket_secondary_total_mj if pu_state.bucket_secondary_total_mj > 1e-6 else (bucket_cfg["secondary"] or 0.0)
         bucket_exit_total = pu_state.bucket_exit_total_mj if pu_state.bucket_exit_total_mj > 1e-6 else (bucket_cfg["exit"] or 0.0)
         deploy_budget_total = pu_state.deploy_budget_total_mj if pu_state.deploy_budget_total_mj > 1e-6 else (deploy_budget_cfg or deploy_limit)
         defense_reserve_available = pu_state.defense_reserve_available_mj if pu_state.defense_reserve_available_mj > 1e-6 else (defense_reserve_cfg or 0.0)
-        mguh_direct_total = pu_state.mguh_direct_total_mj if pu_state.mguh_direct_total_mj > 1e-6 else (mguh_direct_cfg_total or 0.0)
-        mguh_direct_used = pu_state.mguh_direct_used_mj
 
         return {
             "map": active_map,
@@ -1289,10 +1281,6 @@ class SessionBridge:
             "defense_reserve_available_mj": round(defense_reserve_available, 4),
             "soc_floor_dynamic_pct": round(getattr(pu_state, "soc_floor_dynamic_pct", 0.0), 4),
             "soc_target_pct": round(getattr(pu_state, "soc_target_pct", 0.0), 4),
-            "mguh_direct_total_mj": round(mguh_direct_total, 4),
-            "mguh_direct_used_mj": round(mguh_direct_used, 4),
-            "mguh_direct_remaining_mj": round(max(mguh_direct_total - mguh_direct_used, 0.0), 4),
-            "mguh_direct_config_total_mj": None if mguh_direct_cfg_total is None else round(mguh_direct_cfg_total, 4),
             "primary_sections_count": pu_state.primary_sections_count,
             "secondary_sections_count": pu_state.secondary_sections_count,
             "exit_sections_count": pu_state.exit_sections_count,
@@ -1308,21 +1296,32 @@ class SessionBridge:
             "last_recharge_mode": bool(pu_state.last_recharge_mode),
         }
 
+    def _format_pu_telemetry(self, pu_state) -> Dict[str, Any]:
+        """Format PU telemetry data for microsector logging."""
+        if not pu_state:
+            return {}
+        return {
+            "ers_energy_mj": round(pu_state.ers_energy_mj, 4),
+            "lap_deploy_mj": round(getattr(pu_state, 'lap_deploy_mj', 0.0), 4),
+            "lap_harvest_mj": round(getattr(pu_state, 'lap_harvest_mj', 0.0), 4),
+            "lap_mguh_direct_mj": round(getattr(pu_state, 'lap_mguh_direct_mj', 0.0), 4),
+            "lap_mguh_harvest_mj": round(getattr(pu_state, 'lap_mguh_harvest_mj', 0.0), 4),
+            "soc_pct": round(pu_state.ers_energy_mj / 4.0 * 100, 2) if pu_state.ers_energy_mj is not None else 0.0,
+        }
+
     def _log_pu_section_usage(self, entry, ts: CarTrackState, section: SectionContext) -> None:
         if not self.circuit_config:
             return
-        
+
         # Filter by PENALTY_LOG_DRIVER_IDS
         from lap_simulator.lap_simulator import _TARGET_PENALTY_DRIVER_IDS
         if str(entry.car_id) not in _TARGET_PENALTY_DRIVER_IDS:
             return
-            
+        
         pu_state = getattr(entry.state, 'pu', None)
         if not pu_state:
             return
-        if not pu_state.energy_trace:
-            return
-        trace_entry = pu_state.energy_trace[-1]
+        trace_entry = (pu_state.energy_trace or [{}])[-1] or {}
 
         budget = self.circuit_config.ers_budget or {}
         capacity = budget.get("battery_capacity_mj", 4.0) or 4.0
@@ -1332,7 +1331,6 @@ class SessionBridge:
 
         deploy_budget_cfg = map_budget.get("deploy_mj_per_lap")
         harvest_budget_cfg = map_budget.get("harvest_mj_per_lap")
-        mguh_direct_cfg_total = map_budget.get("mguh_direct_mj_per_lap")
 
         bucket_primary_total = pu_state.bucket_primary_total_mj
         bucket_secondary_total = pu_state.bucket_secondary_total_mj
@@ -1341,8 +1339,23 @@ class SessionBridge:
         bucket_secondary_used = pu_state.bucket_secondary_used_mj
         bucket_exit_used = pu_state.bucket_exit_used_mj
 
-        mguh_direct_total = pu_state.mguh_direct_total_mj
-        mguh_direct_used = pu_state.mguh_direct_used_mj
+        bucket_key = pu_state.last_bucket_key or "primary"
+        bucket_totals = {
+            "primary": bucket_primary_total,
+            "secondary": bucket_secondary_total,
+            "exit": bucket_exit_total,
+        }
+        bucket_used_map = {
+            "primary": bucket_primary_used,
+            "secondary": bucket_secondary_used,
+            "exit": bucket_exit_used,
+        }
+        bucket_budget_total = bucket_totals.get(bucket_key, 0.0)
+        bucket_budget_used = bucket_used_map.get(bucket_key, 0.0)
+        bucket_budget_remaining = max(bucket_budget_total - bucket_budget_used, 0.0)
+        bucket_section_cap = getattr(pu_state, "last_bucket_cap_mj", 0.0)
+        bucket_section_es = trace_entry.get("deploy_mj") if trace_entry else None
+        bucket_section_dir = trace_entry.get("mguh_direct_mj") if trace_entry else None
 
         payload = {
             "car_id": entry.car_id,
@@ -1365,7 +1378,6 @@ class SessionBridge:
             "lap_mguh_es_mj": pu_state.lap_mguh_harvest_mj,
             "deploy_budget_mj": deploy_budget_cfg,
             "harvest_budget_mj": harvest_budget_cfg,
-            "mguh_direct_budget_mj": mguh_direct_cfg,
             "deploy_budget_total_mj": pu_state.deploy_budget_total_mj,
             "bucket_primary_total_mj": bucket_primary_total,
             "bucket_secondary_total_mj": bucket_secondary_total,
@@ -1373,9 +1385,11 @@ class SessionBridge:
             "bucket_primary_used_mj": bucket_primary_used,
             "bucket_secondary_used_mj": bucket_secondary_used,
             "bucket_exit_used_mj": bucket_exit_used,
-            "mguh_direct_total_mj": mguh_direct_total,
-            "mguh_direct_used_mj": mguh_direct_used,
-            "mguh_direct_remaining_mj": max(mguh_direct_total - mguh_direct_used, 0.0),
+            "bucket_budget_total_mj": bucket_budget_total,
+            "bucket_budget_remaining_mj": bucket_budget_remaining,
+            "bucket_section_cap_mj": bucket_section_cap,
+            "bucket_section_es_mj": bucket_section_es,
+            "bucket_section_dir_mj": bucket_section_dir,
             "primary_sections_count": pu_state.primary_sections_count,
             "secondary_sections_count": pu_state.secondary_sections_count,
             "exit_sections_count": pu_state.exit_sections_count,

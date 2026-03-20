@@ -528,7 +528,7 @@ export class PlayerGarageV3 {
         }
     }
 
-    buildLapUsageChipRow({ mapName, iceMode, ersMode, deployLimit, harvestLimit, deployPerLap, harvestPerLap, mguhDirectBudget, current, previous, hasPrevTrace, hasPrevWarnings, hasPrevLap }) {
+    buildLapUsageChipRow({ mapName, iceMode, ersMode, deployLimit, harvestLimit, deployPerLap, harvestPerLap, current, previous, hasPrevTrace, hasPrevWarnings, hasPrevLap }) {
         const chips = [];
         if (current) {
             chips.push(this.buildLapUsageChip({
@@ -543,7 +543,6 @@ export class PlayerGarageV3 {
                 deployLimit,
                 harvestLimit,
                 mapName,
-                mguhDirectBudget,
                 iceMode,
                 ersMode,
             }));
@@ -568,7 +567,6 @@ export class PlayerGarageV3 {
                 deployLimit,
                 harvestLimit,
                 mapName,
-                mguhDirectBudget,
                 iceMode,
                 ersMode,
             }));
@@ -589,14 +587,14 @@ export class PlayerGarageV3 {
         return `${pct.toFixed(digits)}%`;
     }
 
-    resolveBudgetValue(runtimeValue, configValue, fallback = 0) {
+    resolveRuntimeBudgetValue(runtimeValue, secondaryRuntimeValue = null) {
         if (typeof runtimeValue === 'number' && !Number.isNaN(runtimeValue) && runtimeValue > 1e-5) {
             return runtimeValue;
         }
-        if (typeof configValue === 'number' && !Number.isNaN(configValue)) {
-            return configValue;
+        if (typeof secondaryRuntimeValue === 'number' && !Number.isNaN(secondaryRuntimeValue) && secondaryRuntimeValue > 1e-5) {
+            return secondaryRuntimeValue;
         }
-        return fallback;
+        return null;
     }
 
     buildErsBucketCard(entry) {
@@ -678,8 +676,7 @@ export class PlayerGarageV3 {
     }
 
     buildErsEditorDefaults(puStats = {}) {
-        const deployLimit = puStats.deploy_limit_mj || 4.0;
-        const deployBudget = this.resolveBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap, deployLimit);
+        const deployBudget = this.resolveRuntimeBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap);
         const pctFromStats = (key) => {
             const statKey = `bucket_${key}_pct`;
             const direct = puStats[statKey];
@@ -751,8 +748,7 @@ export class PlayerGarageV3 {
         const panel = this.overlayContainer.querySelector('section[data-panel="ers-map"]');
         if (!panel) return;
         const formatMJ = (value) => (typeof value === 'number' && !Number.isNaN(value) ? `${value.toFixed(2)} MJ` : '-- MJ');
-        const deployLimit = puStats.deploy_limit_mj || 4.0;
-        const deployBudget = this.resolveBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap, deployLimit);
+        const deployBudget = this.resolveRuntimeBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap);
         const socTarget = typeof puStats.soc_target_pct === 'number' && puStats.soc_target_pct > 0
             ? Math.round(puStats.soc_target_pct * 100)
             : (typeof puStats.target_soc_end_lap === 'number' ? Math.round(puStats.target_soc_end_lap * 100) : '--');
@@ -891,11 +887,12 @@ export class PlayerGarageV3 {
 
         const mapName = puStats.map || 'STANDARD';
         const lapDeploy = typeof puStats.lap_deploy_mj === 'number' ? puStats.lap_deploy_mj : 0;
-        const deployLimit = puStats.deploy_limit_mj || 4.0;
-        const deployBudget = this.resolveBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap, deployLimit);
-        const defenseReserve = this.resolveBudgetValue(puStats.defense_reserve_available_mj, puStats.defense_reserve_mj_config, 0);
+        const deployBudget = this.resolveRuntimeBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap);
+        const defenseReserve = this.resolveRuntimeBudgetValue(puStats.defense_reserve_available_mj, puStats.defense_reserve_mj_config);
         const lastAllocation = typeof puStats.last_bucket_allocated_mj === 'number' ? puStats.last_bucket_allocated_mj : 0;
-        const defenseReservePct = deployBudget > 1e-6 ? `${Math.round((defenseReserve / deployBudget) * 100)}%` : '--';
+        const defenseReservePct = typeof deployBudget === 'number' && deployBudget > 1e-6 && typeof defenseReserve === 'number'
+            ? `${Math.round((defenseReserve / deployBudget) * 100)}%`
+            : '--';
         const socFloor = typeof puStats.soc_floor_dynamic_pct === 'number' && puStats.soc_floor_dynamic_pct > 0 ? Math.round(puStats.soc_floor_dynamic_pct * 100) : '--';
         const socTarget = typeof puStats.soc_target_pct === 'number' && puStats.soc_target_pct > 0
             ? Math.round(puStats.soc_target_pct * 100)
@@ -1014,30 +1011,21 @@ export class PlayerGarageV3 {
         const deployPctLabel = deployBudget ? formatTargetPct(deployRatio, deployBudget) : (deploy ? '—' : '0%');
         const harvestPctLabel = harvestBudget ? formatTargetPct(harvestRatio, harvestBudget) : (harvest ? '—' : '0%');
         const mguhValue = typeof mguhDirect === 'number' ? mguhDirect : 0;
-        const hasMguhBudget = typeof mguhDirectBudget === 'number' && mguhDirectBudget > 1e-4;
-        const mguhRatio = hasMguhBudget ? Math.min(mguhValue / mguhDirectBudget, 1) : 0;
-        const showMguh = hasMguhBudget;
-        const mguhPctLabel = showMguh ? formatTargetPct(mguhRatio, mguhDirectBudget) : '';
-        const mguhText = `${mguhValue.toFixed(2)} MJ`;
         const mguhHarvestValue = typeof mguhHarvest === 'number' ? mguhHarvest : 0;
-        const hasHarvestBudget = harvestBudget > 1e-5;
-        const mguhHarvestRatio = hasHarvestBudget ? Math.min(mguhHarvestValue / harvestBudget, 1) : 0;
-        const showMguhHarvest = hasHarvestBudget && mguhHarvestValue > 1e-4;
-        const mguhHarvestPctLabel = showMguhHarvest ? formatTargetPct(mguhHarvestRatio, harvestBudget) : '';
+        const mguhTotal = mguhValue + mguhHarvestValue;
+        const mguhText = `${mguhValue.toFixed(2)} MJ`;
         const mguhHarvestText = `${mguhHarvestValue.toFixed(2)} MJ`;
-        const combinedDeployRatio = deployRatio + (showMguh ? mguhRatio : 0);
-        const combinedScale = combinedDeployRatio > 1 ? (1 / combinedDeployRatio) : 1;
-        const deployCombinedPct = deployRatio * combinedScale * 100;
-        const mguhCombinedPct = showMguh ? mguhRatio * combinedScale * 100 : 0;
-        const combinedHarvestRatio = harvestRatio + (showMguhHarvest ? mguhHarvestRatio : 0);
-        const harvestScale = combinedHarvestRatio > 1 ? (1 / combinedHarvestRatio) : 1;
-        const harvestCombinedPct = harvestRatio * harvestScale * 100;
-        const mguhHarvestCombinedPct = showMguhHarvest ? mguhHarvestRatio * harvestScale * 100 : 0;
-        const mguhLegend = showMguh
-            ? `<div class="pu-chip-submetric">MGU-H Direct ${mguhText} <span class="pu-chip-percent">${mguhPctLabel}</span></div>`
+        const deployCombinedPct = deployRatio * 100;
+        const harvestCombinedPct = harvestRatio * 100;
+        const mguhLegend = mguhTotal > 1e-4
+            ? `
+                <div class="pu-chip-submetric">MGU-H Total ${mguhTotal.toFixed(2)} MJ</div>
+                <div class="pu-chip-submetric">MGU-H Direct ${mguhText}</div>
+                <div class="pu-chip-submetric">MGU-H → ES ${mguhHarvestText}</div>
+            `
             : '';
-        const mguhHarvestLegend = showMguhHarvest
-            ? `<div class="pu-chip-submetric">MGU-H → ES ${mguhHarvestText} <span class="pu-chip-percent">${mguhHarvestPctLabel}</span></div>`
+        const mguhHarvestLegend = mguhHarvestValue > 1e-4
+            ? `<div class="pu-chip-submetric">MGU-H → ES ${mguhHarvestText}</div>`
             : '';
         return `
             <div class="pu-lap-chip-v3">
@@ -1051,7 +1039,6 @@ export class PlayerGarageV3 {
                         <div class="pu-chip-metric-value">${deployText} <span class="pu-chip-percent">${deployPctLabel}</span></div>
                         <div class="pu-chip-progress combined">
                             <div class="pu-chip-progress-bar deploy" style="width:${deployCombinedPct}%"></div>
-                            ${showMguh ? `<div class="pu-chip-progress-bar mguh" style="width:${mguhCombinedPct}%; left:${deployCombinedPct}%"></div>` : ''}
                         </div>
                         ${mguhLegend}
                     </div>
@@ -1060,7 +1047,6 @@ export class PlayerGarageV3 {
                         <div class="pu-chip-metric-value">${harvestText} <span class="pu-chip-percent">${harvestPctLabel}</span></div>
                         <div class="pu-chip-progress combined harvest">
                             <div class="pu-chip-progress-bar harvest" style="width:${harvestCombinedPct}%"></div>
-                            ${showMguhHarvest ? `<div class="pu-chip-progress-bar mguh-harvest" style="width:${mguhHarvestCombinedPct}%; left:${harvestCombinedPct}%"></div>` : ''}
                         </div>
                         ${mguhHarvestLegend}
                     </div>
@@ -1720,8 +1706,7 @@ export class PlayerGarageV3 {
         const lapHarvest = puStats.lap_harvest_mj || 0;
         const lapMguhDirect = puStats.lap_mguh_direct_mj || 0;
         const lapMguhEs = puStats.lap_mguh_harvest_mj || 0;
-        const mguhDirectRemaining = puStats.mguh_direct_remaining_mj || 0;
-        const mguhDirectTotal = puStats.mguh_direct_total_mj || (puStats.mguh_direct_config_total_mj || 0);
+        const mguhTotal = lapMguhDirect + lapMguhEs;
         const capacityMj = puStats.capacity_mj || 4.0;
         const socClass = socPct < 30 ? 'pu-critical' : socPct < 60 ? 'pu-low' : 'pu-ok';
         const tabPilota = this.buildTabPilota(car, { tyreChoice, fuelPercent, stintTarget, maxStint, paceLevel, iceMode, ersMode, tireHealthPct, isBox, brakeChipPreview });
@@ -1733,8 +1718,7 @@ export class PlayerGarageV3 {
             lapHarvest,
             lapMguhDirect,
             lapMguhEs,
-            mguhDirectRemaining,
-            mguhDirectTotal,
+            mguhTotal,
             capacityMj,
             socClass,
             iceMode,
@@ -1863,8 +1847,7 @@ export class PlayerGarageV3 {
         lapHarvest,
         lapMguhDirect,
         lapMguhEs,
-        mguhDirectRemaining,
-        mguhDirectTotal,
+        mguhTotal,
         capacityMj,
         socClass,
         iceMode,
@@ -1872,12 +1855,6 @@ export class PlayerGarageV3 {
     }) {
         const deployPct = deployLimit > 0 ? Math.min((lapDeploy / deployLimit) * 100, 100) : 0;
         const safeSocPct = Math.min(Math.max(socPct, 0), 100);
-        const mguhDirectPct = mguhDirectTotal > 1e-4
-            ? Math.min(Math.max((mguhDirectRemaining / mguhDirectTotal) * 100, 0), 100)
-            : 0;
-        const mguhDirectLabel = mguhDirectTotal > 1e-4
-            ? `${mguhDirectRemaining.toFixed(2)} / ${mguhDirectTotal.toFixed(2)} MJ`
-            : `${mguhDirectRemaining.toFixed(2)} MJ`;
         return `
             <div class="dock-ers-meter">
                 <div class="dock-ers-header">
@@ -1885,11 +1862,10 @@ export class PlayerGarageV3 {
                     <span class="dock-val ${socClass}">${socMj.toFixed(1)} MJ (${Math.round(socPct)}%)</span>
                 </div>
                 <div class="pu-bar-track-v3">
-                    <div class="pu-bar-layer pu-bar-layer--mguh" style="width:${mguhDirectPct}%" title="MGU-H Direct reserve"></div>
                     <div class="pu-bar-layer pu-bar-layer--soc" style="width:${safeSocPct}%" title="Battery SOC"></div>
                 </div>
                 <div class="dock-ers-legend">
-                    <span class="legend-item legend-mguh">MGU-H Direct <strong>${mguhDirectLabel}</strong></span>
+                    <span class="legend-item legend-mguh">MGU-H <strong>${mguhTotal.toFixed(2)} MJ</strong></span>
                     <span class="legend-item legend-soc">Battery <strong>${socMj.toFixed(1)} / ${capacityMj.toFixed(1)} MJ</strong></span>
                 </div>
                 <div class="dock-ers-stats">
@@ -2085,15 +2061,11 @@ export class PlayerGarageV3 {
         const socPctRaw = puStats.soc_pct ?? 0;
         const lapDeploy = puStats.lap_deploy_mj ?? 0;
         const deployLimit = puStats.deploy_mj_per_lap ?? puStats.deploy_limit_mj ?? 4.0;
-        const deployPct = deployLimit > 0 ? Math.min((lapDeploy / deployLimit) * 100, 100) : 0;
         const socClass = socPctRaw >= 60 ? 'pu-soc-good' : socPctRaw >= 30 ? 'pu-soc-warn' : 'pu-soc-low';
         const socPct = Math.min(Math.max(socPctRaw, 0), 100);
-        const mguhDirectRemaining = puStats.mguh_direct_remaining_mj ?? 0;
-        const mguhDirectTotal = puStats.mguh_direct_total_mj ?? puStats.mguh_direct_config_total_mj ?? 0;
-        const mguhDirectPct = mguhDirectTotal > 1e-4
-            ? Math.min(Math.max((mguhDirectRemaining / mguhDirectTotal) * 100, 0), 100)
-            : 0;
-        
+        const lapMguhDirect = puStats.lap_mguh_direct_mj ?? 0;
+        const lapMguhEs = puStats.lap_mguh_harvest_mj ?? 0;
+        const mguhTotal = lapMguhDirect + lapMguhEs;
         return `
             <div class="pu-inline-bar-v3">
                 <div class="pu-metric-v3">
@@ -2104,15 +2076,157 @@ export class PlayerGarageV3 {
                     <span class="pu-label-v3">Deploy</span>
                     <span class="pu-value-v3">${lapDeploy.toFixed(1)} / ${deployLimit.toFixed(1)} MJ</span>
                 </div>
+                <div class="pu-metric-v3">
+                    <span class="pu-label-v3">MGU-H</span>
+                    <span class="pu-value-v3">${mguhTotal.toFixed(1)} MJ</span>
+                </div>
+            </div>
+        `;
+        }
+
+        async buildPUModal(car) {
+            if (!this.overlayContainer) return;
+            if (!this.getTyreInventory(car.driver_number)) {
+                const inventory = await this.loadTyreInventory(car.driver_number);
+                if (inventory) {
+                    this.primeTyreInventory(car.driver_number, inventory);
+                }
+            }
+            const puStats = car.pu_stats || {};
+            const brakeDiag = car.brake_diagnostics || {};
+            const driverName = car.driver_name || `Driver #${car.driver_number}`;
+            const carState = this.getCarState(car);
+            const isBox = carState === 'BOX';
+            this.overlayContainer.style.zIndex = '1500';
+            const socMj = puStats.soc_mj ?? 0;
+            const socPct = puStats.soc_pct ?? 0;
+            const capacityMj = puStats.capacity_mj ?? 4.0;
+            const deployLimit = puStats.deploy_limit_mj ?? 4.0;
+            const harvestLimit = puStats.harvest_limit_mj ?? 2.0;
+            const lapDeploy = puStats.lap_deploy_mj ?? 0;
+            const lapHarvest = puStats.lap_harvest_mj ?? 0;
+            const deployPerLap = puStats.deploy_mj_per_lap ?? 4.0;
+            const harvestPerLap = puStats.harvest_mj_per_lap ?? 2.0;
+            const lapMguhDirectPrev = puStats.lap_mguh_direct_prev_mj ?? null;
+            const lapMguhHarvestPrev = puStats.lap_mguh_harvest_prev_mj ?? null;
+            const lapMguhDirectCurrent = puStats.lap_mguh_direct_mj ?? 0;
+            const lapMguhHarvestCurrent = puStats.lap_mguh_harvest_mj ?? 0;
+            const lapMguhDirect = lapMguhDirectPrev != null ? lapMguhDirectPrev : lapMguhDirectCurrent;
+            const lapMguhHarvest = lapMguhHarvestPrev != null ? lapMguhHarvestPrev : lapMguhHarvestCurrent;
+            const deployPct = deployPerLap > 0 ? Math.min((lapDeploy / deployPerLap) * 100, 100) : 0;
+            const harvestPct = harvestPerLap > 0 ? Math.min((lapHarvest / harvestPerLap) * 100, 100) : 0;
+            const energyBalance = lapHarvest - lapDeploy;
+            const warnings = puStats.warnings_runtime || [];
+            const warningsActive = warnings.length > 0;
+            const regenClampActive = !!puStats.regen_clamp_active;
+            const warningsPrev = puStats.warnings_runtime_prev || [];
+            const trace = puStats.energy_trace || [];
+            const tracePrev = puStats.energy_trace_prev || [];
+            const lapDeployPrev = puStats.lap_deploy_prev_mj ?? null;
+            const lapHarvestPrev = puStats.lap_harvest_prev_mj ?? null;
+            const lapIdCurrent = puStats.lap_id_current ?? null;
+            const lapIdPrev = puStats.lap_id_prev ?? null;
+            const mapName = puStats.map || 'STANDARD';
+            const socClass = socPct >= 60 ? 'pu-soc-good' : socPct >= 30 ? 'pu-soc-warn' : 'pu-soc-low';
+            
+            const { currentLapIndex, previousLapIndex, completedLapCount } = this.resolveLapIndexes({
+                car,
+                lapIdCurrent,
+                lapIdPrev,
+            });
+
+            const currentTotals = this.computeLapTotals(trace, lapDeploy, lapHarvest, lapMguhDirectCurrent, lapMguhHarvestCurrent);
+            const previousTotals = this.computeLapTotals(tracePrev, lapDeployPrev, lapHarvestPrev, lapMguhDirectPrev, lapMguhHarvestPrev);
+
+            const hasPrevWarnings = Array.isArray(warningsPrev) && warningsPrev.length > 0;
+            const hasPrevLap = previousLapIndex !== null || (completedLapCount !== null && completedLapCount > 0);
+
+            const iceModeDisplay = car.player_config?.ice_mode || car.ice_mode || puStats.ice_map || 'RACE';
+            const ersModeDisplay = car.player_config?.ers_mode || car.ers_mode || puStats.ers_mode || mapName;
+
+            const lapChipRow = this.buildLapUsageChipRow({
+                mapName,
+                iceMode: iceModeDisplay,
+                ersMode: ersModeDisplay,
+                deployLimit,
+                harvestLimit,
+                deployPerLap,
+                harvestPerLap,
+                current: currentTotals.hasData ? {
+                    lapIndex: currentLapIndex,
+                    deploy: currentTotals.deploy,
+                    harvest: currentTotals.harvest,
+                    mguhDirect: currentTotals.mguhDirect,
+                    mguhHarvest: currentTotals.mguhHarvest,
+                } : null,
+                previous: (previousLapIndex !== null || previousTotals.hasData || previousTotals.hasTrace) ? {
+                    lapIndex: previousLapIndex,
+                    deploy: previousTotals.deploy,
+                    harvest: previousTotals.harvest,
+                    mguhDirect: previousTotals.mguhDirect,
+                    mguhHarvest: previousTotals.mguhHarvest,
+                } : null,
+                hasPrevTrace: previousTotals.hasTrace,
+                hasPrevWarnings,
+                hasPrevLap,
+            });
+
+            const traceRows = this.buildPUTableRows(trace, tracePrev, currentLapIndex, previousLapIndex);
+            
+            const brakeTile = this.buildBrakeRegenTile(puStats, brakeDiag, regenClampActive);
+
+            const puStatsPanel = `
+                <div class="pu-stats-grid-v3" style="margin-bottom: 12px;">
+                    <div class="pu-stats-metrics-grid">
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">Battery SOC</div>
+                            <div class="pu-stat-value-v3 ${socClass}" style="font-size: 18px; margin: 3px 0;">${socMj.toFixed(1)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">${Math.round(socPct)}% charge</div>
+                        </div>
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">Battery Capacity</div>
+                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${capacityMj.toFixed(1)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Total</div>
+                        </div>
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">Deploy Limit</div>
+                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${deployLimit.toFixed(1)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Per lap</div>
+                        </div>
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">Harvest Limit</div>
+                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${harvestLimit.toFixed(1)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Per lap</div>
+                        </div>
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">MGU-H Direct Drive</div>
+                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${lapMguhDirect.toFixed(2)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Last lap</div>
+                        </div>
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">MGU-H → ES</div>
+                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${lapMguhHarvest.toFixed(2)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Last lap</div>
+                        </div>
+                    </div>
+                    ${brakeTile}
+                </div>
+                ${lapChipRow}
+                <div class="pu-trace-container-v3" style="max-height: 280px; overflow-y: auto;">
+                    <table class="pu-trace-table-v3">
+                        <thead>
+                            <tr><th>Lap</th><th>Section</th><th>Deploy</th><th>Harvest</th><th>Hydraulic</th><th>Regen Ratio</th><th>MGU-H Direct Drive</th><th>MGU-H → ES</th></tr>
+                        </thead>
+                        <tbody>
+                            ${traceRows || '<tr><td colspan="8" style="text-align:center;color:#888;">No trace data</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
                 <div class="pu-budget-bar-v3">
                     <span class="pu-label-v3">Lap Budget</span>
                     <div class="pu-bar-track-v3">
-                        <div class="pu-bar-layer pu-bar-layer--mguh" style="width:${mguhDirectPct}%" title="MGU-H Direct reserve"></div>
-                        <div class="pu-bar-layer pu-bar-layer--soc" style="width:${socPct}%" title="Battery SOC"></div>
+                        <div class="pu-bar-fill-v3" style="width:${deployPct}%"></div>
                     </div>
-                    <div class="dock-ers-legend compact">
-                        <span class="legend-item legend-mguh">MGU-H ${mguhDirectRemaining.toFixed(2)} MJ</span>
-                        <span class="legend-item legend-soc">SOC ${Math.round(socPct)}%</span>
                     </div>
                 </div>
                 <button class="pu-details-btn-v3" data-action="pu-details">⚡ Details</button>
@@ -2149,12 +2263,6 @@ export class PlayerGarageV3 {
         const lapMguhHarvestCurrent = puStats.lap_mguh_harvest_mj ?? 0;
         const lapMguhDirect = lapMguhDirectPrev != null ? lapMguhDirectPrev : lapMguhDirectCurrent;
         const lapMguhHarvest = lapMguhHarvestPrev != null ? lapMguhHarvestPrev : lapMguhHarvestCurrent;
-        const mguhDirectBudget = this.resolveBudgetValue(puStats.mguh_direct_total_mj, puStats.mguh_direct_config_total_mj, 0);
-        const deployPct = deployPerLap > 0 ? Math.min((lapDeploy / deployPerLap) * 100, 100) : 0;
-        const harvestPct = harvestPerLap > 0 ? Math.min((lapHarvest / harvestPerLap) * 100, 100) : 0;
-        const energyBalance = lapHarvest - lapDeploy;
-        const warnings = puStats.warnings_runtime || [];
-        const warningsActive = warnings.length > 0;
         const regenClampActive = !!puStats.regen_clamp_active;
         const warningsPrev = puStats.warnings_runtime_prev || [];
         const trace = puStats.energy_trace || [];
@@ -2165,6 +2273,7 @@ export class PlayerGarageV3 {
         const lapIdPrev = puStats.lap_id_prev ?? null;
         const mapName = puStats.map || 'STANDARD';
         const socClass = socPct >= 60 ? 'pu-soc-good' : socPct >= 30 ? 'pu-soc-warn' : 'pu-soc-low';
+        const deployPct = deployPerLap > 0 ? Math.min((lapDeploy / deployPerLap) * 100, 100) : 0;
         
         const { currentLapIndex, previousLapIndex, completedLapCount } = this.resolveLapIndexes({
             car,
@@ -2189,7 +2298,6 @@ export class PlayerGarageV3 {
             harvestLimit,
             deployPerLap,
             harvestPerLap,
-            mguhDirectBudget,
             current: currentTotals.hasData ? {
                 lapIndex: currentLapIndex,
                 deploy: currentTotals.deploy,
@@ -3354,8 +3462,7 @@ export class PlayerGarageV3 {
             const lapHarvest = puStats.lap_harvest_mj || 0;
             const lapMguhDirect = puStats.lap_mguh_direct_mj || 0;
             const lapMguhEs = puStats.lap_mguh_harvest_mj || 0;
-            const mguhDirectRemaining = puStats.mguh_direct_remaining_mj || 0;
-            const mguhDirectTotal = puStats.mguh_direct_total_mj || (puStats.mguh_direct_config_total_mj || 0);
+            const mguhTotal = lapMguhDirect + lapMguhEs;
             const capacityMj = puStats.capacity_mj || 4.0;
 
             if (window?.DEBUG_PU_DEPLOY_UI && car.is_player_controlled) {
@@ -3390,8 +3497,7 @@ export class PlayerGarageV3 {
                         lapHarvest,
                         lapMguhDirect,
                         lapMguhEs,
-                        mguhDirectRemaining,
-                        mguhDirectTotal,
+                        mguhTotal,
                         capacityMj,
                         socClass,
                         iceMode,
@@ -3401,11 +3507,6 @@ export class PlayerGarageV3 {
                     const socVal = motoreTab.querySelector('.dock-ers-header .dock-val');
                     if (socVal) socVal.textContent = `${socMj.toFixed(1)} MJ (${Math.round(socPct)}%)`;
                     const safeSocPct = Math.min(Math.max(socPct, 0), 100);
-                    const mguhPct = mguhDirectTotal > 1e-4
-                        ? Math.min(Math.max((mguhDirectRemaining / mguhDirectTotal) * 100, 0), 100)
-                        : 0;
-                    const mguhLayer = motoreTab.querySelector('.pu-bar-layer--mguh');
-                    if (mguhLayer) mguhLayer.style.width = `${mguhPct}%`;
                     const socLayer = motoreTab.querySelector('.pu-bar-layer--soc');
                     if (socLayer) socLayer.style.width = `${safeSocPct}%`;
                     const deployLabel = motoreTab.querySelector('.dock-ers-stats span:first-child');
@@ -3414,10 +3515,7 @@ export class PlayerGarageV3 {
                     if (harvestLabel) harvestLabel.textContent = `Harvest: ${lapHarvest.toFixed(1)} MJ`;
                     const legendMguh = motoreTab.querySelector('.legend-item.legend-mguh strong');
                     if (legendMguh) {
-                        const mguhLabel = mguhDirectTotal > 1e-4
-                            ? `${mguhDirectRemaining.toFixed(2)} / ${mguhDirectTotal.toFixed(2)} MJ`
-                            : `${mguhDirectRemaining.toFixed(2)} MJ`;
-                        legendMguh.textContent = mguhLabel;
+                        legendMguh.textContent = `${mguhTotal.toFixed(2)} MJ`;
                     }
                     const legendSoc = motoreTab.querySelector('.legend-item.legend-soc strong');
                     if (legendSoc) legendSoc.textContent = `${socMj.toFixed(1)} / ${capacityMj.toFixed(1)} MJ`;

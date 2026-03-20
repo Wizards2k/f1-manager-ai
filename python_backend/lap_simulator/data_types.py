@@ -320,13 +320,12 @@ class PUState:
     exit_sections_remaining: int = 0
     defense_reserve_available_mj: float = 0.0
     deploy_budget_total_mj: float = 0.0
-    mguh_direct_total_mj: float = 0.0
-    mguh_direct_used_mj: float = 0.0
     bucket_budget_initialized: bool = False
     last_priority_score: float = 0.0
     last_bucket_key: str = "primary"
     last_bucket_allocated_mj: float = 0.0
     last_defense_used_mj: float = 0.0
+    last_bucket_cap_mj: float = 0.0
     last_push_mode: bool = False
     last_defense_mode: bool = False
     last_recharge_mode: bool = False

@@ -152,7 +152,11 @@
         "harvest_mj_per_lap": 0.593,
         "target_soc_end_lap": 0.05,
         "deploy_ratio": 1.0,
-        "harvest_ratio": 0.296
+        "harvest_ratio": 0.296,
+        "bucket_primary_pct": 0.65,
+        "bucket_secondary_pct": 0.25,
+        "bucket_exit_pct": 0.1,
+        "defense_reserve_mj": 0.0
       },
       "SAFETY_CAR": {
         "deploy_mj_per_lap": 0.5,
@@ -160,21 +164,57 @@
         "target_soc_end_lap": 0.98,
         "deploy_ratio": 0.125,
         "harvest_ratio": 1.0
+      },
+      "RECHARGE": {
+        "deploy_mj_per_lap": 0.5,
+        "harvest_mj_per_lap": 2.0,
+        "target_soc_end_lap": 0.98,
+        "bucket_primary_pct": 0.15,
+        "bucket_secondary_pct": 0.25,
+        "bucket_exit_pct": 0.6,
+        "defense_reserve_mj": 0.1
+      },
+      "STANDARD": {
+        "deploy_mj_per_lap": 3.922,
+        "harvest_mj_per_lap": 0.926,
+        "target_soc_end_lap": 0.05,
+        "bucket_primary_pct": 0.55,
+        "bucket_secondary_pct": 0.3,
+        "bucket_exit_pct": 0.15,
+        "defense_reserve_mj": 0.25
+      },
+      "OVERTAKE": {
+        "deploy_mj_per_lap": 4.0,
+        "harvest_mj_per_lap": 0.593,
+        "target_soc_end_lap": 0.05,
+        "bucket_primary_pct": 0.7,
+        "bucket_secondary_pct": 0.2,
+        "bucket_exit_pct": 0.1,
+        "defense_reserve_mj": 0.1
+      },
+      "DEFENCE": {
+        "deploy_mj_per_lap": 3.922,
+        "harvest_mj_per_lap": 0.926,
+        "target_soc_end_lap": 0.05,
+        "bucket_primary_pct": 0.35,
+        "bucket_secondary_pct": 0.4,
+        "bucket_exit_pct": 0.25,
+        "defense_reserve_mj": 0.4
       }
     },
     "warnings": [
       "RACE: deploy at 98% of MGU-K limit",
-      "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+      "RACE: SOC target very low (0.05) – plan recharge lap",
       "QUALIFY: deploy at 100% of MGU-K limit",
       "QUALIFY: harvest insufficient vs deploy (ratio 0.30)",
-      "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+      "QUALIFY: SOC target very low (0.05) – plan recharge lap"
     ]
   },
   "soc_warnings": [
     "RACE: deploy at 98% of MGU-K limit",
-    "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+    "RACE: SOC target very low (0.05) – plan recharge lap",
     "QUALIFY: deploy at 100% of MGU-K limit",
     "QUALIFY: harvest insufficient vs deploy (ratio 0.30)",
-    "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+    "QUALIFY: SOC target very low (0.05) – plan recharge lap"
   ]
 }

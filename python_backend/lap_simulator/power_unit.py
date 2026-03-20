@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
@@ -140,15 +141,9 @@ def generate_output(
     mguh_power_kw = _estimate_mguh_power_kw(map_params, section, aero_forces, config)
     dt_safe = max(dt_estimate_s, 0.01)
     mguh_energy_available_mj = (mguh_power_kw * dt_safe) / 1000.0
-    direct_bias, es_bias = _resolve_mguh_bias(map_params, pu_state, map_budget)
     mguh_lap_total = _estimate_mguh_lap_energy(map_params, config)
-    mguh_es_budget_total = map_budget.get("mguh_es_mj", mguh_lap_total * es_bias)
-    mguh_direct_remaining_mj = max(pu_state.mguh_direct_total_mj - pu_state.mguh_direct_used_mj, 0.0)
+    mguh_es_budget_total = map_budget.get("mguh_es_mj", mguh_lap_total)
     mguh_es_remaining_mj = max(mguh_es_budget_total - pu_state.lap_mguh_harvest_mj, 0.0)
-    mguh_direct_share_mj = mguh_energy_available_mj * direct_bias
-    mguh_es_share_mj = mguh_energy_available_mj * es_bias
-    mguh_direct_capacity_mj = min(mguh_direct_share_mj, mguh_direct_remaining_mj)
-    mguh_es_capacity_mj = min(mguh_es_share_mj, mguh_es_remaining_mj)
 
     # ERS derating from temperature
     ers_derating_factor = 1.0
@@ -170,8 +165,11 @@ def generate_output(
     harvest_budget = map_budget.get("harvest_mj_per_lap")
     deploy_remaining = None
 
-    ers_energy_requested_mj = (ers_output_raw * dt_safe) / 1000.0
-    direct_request_mj = min(ers_energy_requested_mj, mguh_direct_capacity_mj)
+    bucket_section_cap_mj = _compute_bucket_section_cap(pu_state, bucket_key)
+
+    ers_energy_requested_raw_mj = (ers_output_raw * dt_safe) / 1000.0
+    ers_energy_requested_mj = min(ers_energy_requested_raw_mj, bucket_section_cap_mj)
+    direct_request_mj = min(ers_energy_requested_mj, mguh_energy_available_mj)
     mguh_direct_section_mj = _allocate_mguh_direct(pu_state, direct_request_mj)
     battery_energy_needed_mj = max(ers_energy_requested_mj - mguh_direct_section_mj, 0.0)
 
@@ -204,7 +202,7 @@ def generate_output(
         # Battery depleted before satisfying demand
         if pu_state.ers_energy_mj <= 1e-5:
             pu_state.runtime_warnings.append("battery_empty")
-    if mguh_direct_capacity_mj > 1e-5 and mguh_direct_section_mj >= mguh_direct_capacity_mj - 1e-5 and ers_energy_requested_mj > mguh_direct_capacity_mj:
+    if bucket_section_cap_mj > 1e-5 and mguh_direct_section_mj >= bucket_section_cap_mj - 1e-5 and ers_energy_requested_raw_mj > bucket_section_cap_mj:
         pu_state.runtime_warnings.append("mguh_clip")
 
     battery_output_kw = (battery_energy_allocated_mj * 1000.0) / dt_safe
@@ -283,7 +281,6 @@ def generate_output(
     regen_clamped_soc = False
     soc_headroom = max(ERS_MAX_ENERGY_MJ - soc_after_deploy, 0.0)
     if soc_headroom < ers_recovery_mj:
-        ers_recovery_mj = soc_headroom
         regen_clamped_soc = True
 
     if regen_clamped_soc:
@@ -293,9 +290,8 @@ def generate_output(
     soc_after_regen = clamp(soc_after_deploy + ers_recovery_mj, 0.0, ERS_MAX_ENERGY_MJ)
 
     mguh_remaining_mj = max(mguh_energy_available_mj - mguh_direct_section_mj, 0.0)
-    mguh_harvest_potential_mj = min(mguh_es_capacity_mj, mguh_remaining_mj)
-    mguh_es_headroom = max(ERS_MAX_ENERGY_MJ - soc_after_regen, 0.0)
-    mguh_es_used_mj = min(mguh_harvest_potential_mj, mguh_es_headroom)
+    mguh_harvest_potential_mj = min(mguh_remaining_mj, mguh_es_remaining_mj)
+    mguh_es_used_mj = mguh_harvest_potential_mj
 
     pu_state.ers_energy_mj = clamp(soc_after_regen + mguh_es_used_mj, 0.0, ERS_MAX_ENERGY_MJ)
     pu_state.lap_deploy_mj += battery_energy_used_mj
@@ -303,17 +299,16 @@ def generate_output(
     pu_state.lap_mguh_direct_mj += mguh_direct_energy_mj
     pu_state.lap_mguh_harvest_mj += mguh_es_used_mj
     regen_vs_hydraulic = hydraulic_mj / max(ers_recovery_mj, 0.001)
-    pu_state.energy_trace.append(
-        {
-            "section_id": section.section_id,
-            "deploy_mj": round(battery_energy_used_mj, 4),
-            "harvest_mj": round(ers_recovery_mj, 4),
-            "hydraulic_mj": round(hydraulic_mj, 4),
-            "regen_vs_hydraulic": round(regen_vs_hydraulic, 3),
-            "mguh_direct_mj": round(mguh_direct_energy_mj, 4),
-            "mguh_es_mj": round(mguh_es_used_mj, 4),
-        }
-    )
+    trace_entry = {
+        "section_id": section.section_id,
+        "deploy_mj": round(battery_energy_used_mj, 4),
+        "harvest_mj": round(ers_recovery_mj, 4),
+        "hydraulic_mj": round(hydraulic_mj, 4),
+        "regen_vs_hydraulic": round(regen_vs_hydraulic, 3),
+        "mguh_direct_mj": round(mguh_direct_energy_mj, 4),
+        "mguh_es_mj": round(mguh_es_used_mj, 4),
+    }
+    pu_state.energy_trace.append(trace_entry)
 
     # --- Fuel burn ---
     fuel_burn_rate = FUEL_BASE_BURN_KG_PER_S * ice_power_pct * fuel_mix_mult
@@ -344,38 +339,7 @@ def generate_output(
     # Decrement section count after processing
     _decrement_section_count(pu_state, bucket_key)
     
-    # Log PU telemetry if enabled
-    try:
-        from utils.pu_telemetry_logger import log_pu_section
-        from lap_simulator.lap_simulator import _TARGET_PENALTY_DRIVER_IDS
-        if os.getenv("DEBUG_PU_TELEMETRY", "0").lower() in {"1", "true", "yes", "on"}:
-            # Get car_id from context or use default
-            car_id = "16"  # Default for testing
-            
-            # Filter by PENALTY_LOG_DRIVER_IDS
-            if str(car_id) not in _TARGET_PENALTY_DRIVER_IDS:
-                return
-                
-            payload = {
-                "car_id": car_id,
-                "timestamp": datetime.now().isoformat(),
-                "section_id": section.section_id,
-                "section_kind": section.kind.name,
-                "map": pu_state.active_map.value if pu_state.active_map else "UNKNOWN",
-                "ice_power_kw": round(pu_state.ice_power_kw, 2),
-                "ers_output_kw": round(pu_state.ers_output_kw, 2),
-                "ers_energy_mj": round(pu_state.ers_energy_mj, 3),
-                "fuel_kg": round(pu_state.fuel_kg, 2),
-                "ice_temp_c": round(pu_state.ice_temp_c, 1),
-                "ers_temp_c": round(pu_state.ers_temp_c, 1),
-                "ice_derating": pu_state.ice_derating,
-                "ers_derating": pu_state.ers_derating,
-                "warnings": list(pu_state.runtime_warnings or []),
-            }
-            log_pu_section(payload)
-    except Exception as e:
-        # Debug the exception silently
-        pass
+    # Telemetry logging is handled by SessionBridge only.
     
     if pu_state.ice_temp_c > rel.ice_temp_critical_c:
         events.append(SectionEvent(
@@ -539,15 +503,6 @@ def _initialize_bucket_budget(
     pu_state.secondary_sections_remaining = secondary_count
     pu_state.exit_sections_remaining = exit_count
 
-    # MGU-H direct drive budget per lap (single global budget)
-    mguh_lap_total = _estimate_mguh_lap_energy(map_params, config)
-    mguh_direct_total = map_budget.get("mguh_direct_mj_per_lap")
-    if mguh_direct_total is None:
-        mguh_direct_total = mguh_lap_total * clamp(map_params.mguh_direct_ratio or 0.3, 0.05, 0.95)
-    mguh_direct_total = max(mguh_direct_total, 0.0)
-
-    pu_state.mguh_direct_total_mj = mguh_direct_total
-    pu_state.mguh_direct_used_mj = 0.0
     pu_state.bucket_budget_initialized = True
 
 
@@ -613,6 +568,7 @@ def _apply_bucket_allocation(
     allocated = 0.0
     remaining_request = requested_mj
     defense_used = 0.0
+    pu_state.last_bucket_cap_mj = cap_per_section
 
     # Defense buffer
     if intent.ers_defense_mode and pu_state.defense_reserve_available_mj > 1e-6:
@@ -628,25 +584,8 @@ def _apply_bucket_allocation(
     allocated += consumed
     remaining_request -= consumed
 
-    if remaining_request > 1e-5 and intent.ers_push_mode:
-        for alt in ("primary", "secondary", "exit"):
-            if remaining_request <= 1e-5 or alt == bucket_key:
-                continue
-            # Calcola cap anche per bucket alternativi
-            alt_remaining = _get_remaining_sections(pu_state, alt)
-            if alt_remaining <= 0:
-                continue
-            alt_total_attr, alt_used_attr = _bucket_attrs(alt)
-            alt_total = getattr(pu_state, alt_total_attr, 0.0)
-            alt_used = getattr(pu_state, alt_used_attr, 0.0)
-            alt_remaining_bucket = max(alt_total - alt_used, 0.0)
-            alt_cap = alt_remaining_bucket / alt_remaining
-            alt_available = min(remaining_request, alt_cap)
-            extra = _consume_bucket(pu_state, alt, alt_available)
-            allocated += extra
-            remaining_request -= extra
-
     if remaining_request > 1e-5:
+        pu_state.runtime_warnings.append(f"bucket_cap_hit:{bucket_key}")
         pu_state.runtime_warnings.append(f"bucket_exhausted:{bucket_key}")
 
     pu_state.last_bucket_allocated_mj = allocated
@@ -678,6 +617,17 @@ def _get_remaining_sections(pu_state: PUState, bucket_key: str) -> int:
         return pu_state.exit_sections_remaining
 
 
+def _compute_bucket_section_cap(pu_state: PUState, bucket_key: str) -> float:
+    remaining_sections = _get_remaining_sections(pu_state, bucket_key)
+    if remaining_sections <= 0:
+        return 0.0
+    total_attr, used_attr = _bucket_attrs(bucket_key)
+    total = getattr(pu_state, total_attr, 0.0)
+    used = getattr(pu_state, used_attr, 0.0)
+    remaining_bucket = max(total - used, 0.0)
+    return remaining_bucket / remaining_sections
+
+
 def _decrement_section_count(pu_state: PUState, bucket_key: str) -> None:
     """Decrement remaining sections count after processing a section."""
     if bucket_key == "primary":
@@ -700,17 +650,7 @@ def _allocate_mguh_direct(
     pu_state: PUState,
     requested_mj: float,
 ) -> float:
-    if requested_mj <= 1e-6:
-        return 0.0
-
-    remaining_budget = max(pu_state.mguh_direct_total_mj - pu_state.mguh_direct_used_mj, 0.0)
-    allocated = min(requested_mj, remaining_budget)
-    pu_state.mguh_direct_used_mj += allocated
-
-    if allocated < requested_mj - 1e-5:
-        pu_state.runtime_warnings.append("mguh_direct_exhausted")
-
-    return allocated
+    return max(requested_mj, 0.0)
 
 
 def _consume_mguh_bucket(pu_state: PUState, bucket_key: str, amount: float) -> float:

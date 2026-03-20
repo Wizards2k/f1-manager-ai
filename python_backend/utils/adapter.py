@@ -1,13 +1,10 @@
-"""
-Adapter – bidirectional mapping between game models (RaceCar) and
-LapSimulator models (CarEntry, LapResult).
-
-Fase C: Race Engine Integration
-"""
+# ---------------------------------------------------------------------------
+# Adapter – bidirectional mapping between game models (RaceCar) and simulator
+# ---------------------------------------------------------------------------
 from __future__ import annotations
 
 import logging
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from models.models import RaceCar
@@ -32,6 +29,32 @@ except ImportError:  # pragma: no cover - optional during tests
     config = None
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# ERS mode normalization helpers
+# ---------------------------------------------------------------------------
+
+ERS_MODE_CANONICAL = {
+    "RECHARGE": "RECHARGE",
+    "HARVEST": "HARVEST",
+    "SAFETY_CAR": "SAFETY_CAR",
+    "STANDARD": "STANDARD",
+    "NEUTRAL": "NEUTRAL",
+    "OVERTAKE": "OVERTAKE",
+    "ATTACK": "ATTACK",
+    "QUALIFY": "QUALIFY",
+    "DEFENCE": "DEFENCE",
+    "DEFENSE": "DEFENCE",
+    "DEPLOY": "DEPLOY",
+}
+
+
+def normalize_ers_mode(mode: Optional[str]) -> Optional[str]:
+    if not mode:
+        return None
+    return ERS_MODE_CANONICAL.get(str(mode).strip().upper())
+
 
 
 # ---------------------------------------------------------------------------
@@ -291,7 +314,9 @@ def _build_sim_state(car_id: str, car) -> SimCarState:
         fuel_load = power_unit.fuel_capacity_kg * (fuel_pct / 100.0)
         pu_state = power_unit.create_state(fuel_kg=fuel_load, map_name=map_name)
         state.pu = pu_state
-    state.ers_mode = getattr(car, "ers_mode", state.ers_mode)
+    ers_mode = normalize_ers_mode(getattr(car, "ers_mode", None))
+    if ers_mode:
+        state.ers_mode = ers_mode
 
     return state
 

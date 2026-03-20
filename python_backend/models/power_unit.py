@@ -155,8 +155,4 @@ class PowerUnit:
         state.bucket_exit_total_mj = ers_map.deploy_budget_mj * ers_map.bucket_exit_pct
         state.defense_reserve_available_mj = ers_map.defense_reserve_mj
 
-        # MGU-H coupling baseline (valorizzato al primo giro utile)
-        state.mguh_direct_total_mj = 0.0
-        state.mguh_direct_used_mj = 0.0
-
         return state, map_params

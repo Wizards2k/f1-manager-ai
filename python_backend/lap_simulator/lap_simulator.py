@@ -32,26 +32,7 @@ from utils.microsector_logger import (
 
 PENALTY_LOGGER_NAME = "lap_simulator.penalties"
 logger = logging.getLogger(PENALTY_LOGGER_NAME)
-# Disabled by default; enable explicitly for penalty investigations
-DEBUG_PENALTIES = os.getenv("DEBUG_PENALTIES", "0").lower() in {"1", "true", "yes", "on"}
-if DEBUG_PENALTIES:
-    _penalty_log_path = Path("logs/penalties.log")
-    _penalty_log_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Reset file on startup
-    with _penalty_log_path.open("w", encoding="utf-8") as fh:
-        fh.write("")  # Create empty file
-    
-    if not any(getattr(h, "_penalty_debug", False) for h in logger.handlers):
-        handler = logging.FileHandler(_penalty_log_path)
-        handler.setLevel(logging.DEBUG)
-        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
-        handler._penalty_debug = True
-        logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
-    logger.info("[PEN] DEBUG_PENALTIES attivo in LapSimulator")
-else:
-    logger.setLevel(logging.WARNING)
+logger.setLevel(logging.WARNING)
 
 
 def _parse_penalty_log_filter() -> set:
@@ -305,8 +286,6 @@ class LapSimulator:
         pu_state.bucket_primary_total_mj = 0.0
         pu_state.bucket_secondary_total_mj = 0.0
         pu_state.bucket_exit_total_mj = 0.0
-        pu_state.mguh_direct_total_mj = 0.0
-        pu_state.mguh_direct_used_mj = 0.0
         pu_state.bucket_budget_initialized = False
         
         # Reset conteggio settori per nuovo giro
