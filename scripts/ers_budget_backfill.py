@@ -17,6 +17,7 @@ MODE_SPECS = {
             "deploy_mj_per_lap": 0.45,
             "harvest_mj_per_lap": 2.0,
             "target_soc_end_lap": 0.95,
+            "mguh_direct_ratio": 0.45,
         },
         "bucket_primary_pct": 0.15,
         "bucket_secondary_pct": 0.25,
@@ -29,6 +30,7 @@ MODE_SPECS = {
             "deploy_mj_per_lap": 3.6,
             "harvest_mj_per_lap": 1.0,
             "target_soc_end_lap": 0.35,
+            "mguh_direct_ratio": 0.45,
         },
         "bucket_primary_pct": 0.55,
         "bucket_secondary_pct": 0.30,
@@ -41,6 +43,7 @@ MODE_SPECS = {
             "deploy_mj_per_lap": 4.0,
             "harvest_mj_per_lap": 0.6,
             "target_soc_end_lap": 0.20,
+            "mguh_direct_ratio": 0.45,
         },
         "bucket_primary_pct": 0.70,
         "bucket_secondary_pct": 0.20,
@@ -53,6 +56,7 @@ MODE_SPECS = {
             "deploy_mj_per_lap": 3.1,
             "harvest_mj_per_lap": 1.2,
             "target_soc_end_lap": 0.55,
+            "mguh_direct_ratio": 0.45,
         },
         "bucket_primary_pct": 0.35,
         "bucket_secondary_pct": 0.40,
@@ -85,11 +89,14 @@ def _ensure_mode_entry(maps: dict, mode: str, spec: dict) -> bool:
         changed = True
 
     defaults = spec.get("defaults", {})
-    for field in ("deploy_mj_per_lap", "harvest_mj_per_lap", "target_soc_end_lap"):
+    for field in ("deploy_mj_per_lap", "harvest_mj_per_lap", "target_soc_end_lap", "mguh_direct_ratio"):
         if entry.get(field) is None:
-            value = source.get(field)
-            if value is None:
-                value = defaults.get(field)
+            if field == "mguh_direct_ratio":
+                value = defaults.get(field, 0.45)
+            else:
+                value = source.get(field)
+                if value is None:
+                    value = defaults.get(field)
             if value is not None:
                 entry[field] = _round_if_number(value)
                 changed = True

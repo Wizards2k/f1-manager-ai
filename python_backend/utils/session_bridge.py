@@ -1216,8 +1216,13 @@ class SessionBridge:
         primary_pct_cfg = map_budget.get("bucket_primary_pct")
         secondary_pct_cfg = map_budget.get("bucket_secondary_pct")
         exit_pct_cfg = map_budget.get("bucket_exit_pct")
-        defense_reserve_cfg = map_budget.get("defense_reserve_mj")
         deploy_budget_cfg = map_budget.get("deploy_mj_per_lap")
+        harvest_budget_cfg = map_budget.get("harvest_mj_per_lap")
+        defense_reserve_cfg = map_budget.get("defense_reserve_mj")
+        mguh_direct_ratio = map_budget.get("mguh_direct_ratio")
+        if mguh_direct_ratio is None:
+            mguh_direct_ratio = 0.45
+        mguh_es_ratio = max(1.0 - float(mguh_direct_ratio), 0.0)
         bucket_cfg = {"primary": None, "secondary": None, "exit": None}
         pct_sum = max(
             (primary_pct_cfg or 0.0) + (secondary_pct_cfg or 0.0) + (exit_pct_cfg or 0.0),
@@ -1247,6 +1252,8 @@ class SessionBridge:
             "deploy_mj_per_lap": map_budget.get("deploy_mj_per_lap"),
             "harvest_mj_per_lap": map_budget.get("harvest_mj_per_lap"),
             "target_soc_end_lap": map_budget.get("target_soc_end_lap"),
+            "mguh_direct_ratio": round(float(mguh_direct_ratio), 3),
+            "mguh_es_ratio": round(mguh_es_ratio, 3),
             "deploy_ratio": map_budget.get("deploy_ratio"),
             "harvest_ratio": map_budget.get("harvest_ratio"),
             "bucket_primary_pct": primary_pct_cfg,
@@ -1260,8 +1267,11 @@ class SessionBridge:
             "warnings_runtime": runtime_warnings,
             "warnings_runtime_prev": runtime_warnings_prev,
             "lap_deploy_mj": round(entry.state.pu.lap_deploy_mj, 3),
+            "deploy_ES": round(entry.state.pu.lap_deploy_mj, 3),
             "lap_harvest_mj": round(entry.state.pu.lap_harvest_mj, 3),
+            "mguh_dir": round(entry.state.pu.lap_mguh_direct_mj, 3),
             "lap_mguh_direct_mj": round(entry.state.pu.lap_mguh_direct_mj, 3),
+            "mguh_es": round(entry.state.pu.lap_mguh_harvest_mj, 3),
             "lap_mguh_harvest_mj": round(entry.state.pu.lap_mguh_harvest_mj, 3),
             "lap_deploy_prev_mj": round(entry.state.pu.lap_deploy_prev_mj, 3),
             "lap_harvest_prev_mj": round(entry.state.pu.lap_harvest_prev_mj, 3),
@@ -1303,8 +1313,11 @@ class SessionBridge:
         return {
             "ers_energy_mj": round(pu_state.ers_energy_mj, 4),
             "lap_deploy_mj": round(getattr(pu_state, 'lap_deploy_mj', 0.0), 4),
+            "deploy_ES": round(getattr(pu_state, 'lap_deploy_mj', 0.0), 4),
             "lap_harvest_mj": round(getattr(pu_state, 'lap_harvest_mj', 0.0), 4),
+            "mguh_dir": round(getattr(pu_state, 'lap_mguh_direct_mj', 0.0), 4),
             "lap_mguh_direct_mj": round(getattr(pu_state, 'lap_mguh_direct_mj', 0.0), 4),
+            "mguh_es": round(getattr(pu_state, 'lap_mguh_harvest_mj', 0.0), 4),
             "lap_mguh_harvest_mj": round(getattr(pu_state, 'lap_mguh_harvest_mj', 0.0), 4),
             "soc_pct": round(pu_state.ers_energy_mj / 4.0 * 100, 2) if pu_state.ers_energy_mj is not None else 0.0,
         }
@@ -1331,6 +1344,10 @@ class SessionBridge:
 
         deploy_budget_cfg = map_budget.get("deploy_mj_per_lap")
         harvest_budget_cfg = map_budget.get("harvest_mj_per_lap")
+        mguh_direct_ratio = map_budget.get("mguh_direct_ratio")
+        if mguh_direct_ratio is None:
+            mguh_direct_ratio = 0.45
+        mguh_es_ratio = max(1.0 - float(mguh_direct_ratio), 0.0)
 
         bucket_primary_total = pu_state.bucket_primary_total_mj
         bucket_secondary_total = pu_state.bucket_secondary_total_mj
@@ -1365,6 +1382,7 @@ class SessionBridge:
             "section_id": trace_entry.get("section_id"),
             "section_index": ts.current_section_idx,
             "section_kind": section.kind.name,
+            "bucket_type": bucket_key,
             "section_length_m": section.length_m,
             "deploy_mj": trace_entry.get("deploy_mj"),
             "harvest_mj": trace_entry.get("harvest_mj"),
@@ -1378,6 +1396,8 @@ class SessionBridge:
             "lap_mguh_es_mj": pu_state.lap_mguh_harvest_mj,
             "deploy_budget_mj": deploy_budget_cfg,
             "harvest_budget_mj": harvest_budget_cfg,
+            "mguh_direct_ratio": round(float(mguh_direct_ratio), 3),
+            "mguh_es_ratio": round(mguh_es_ratio, 3),
             "deploy_budget_total_mj": pu_state.deploy_budget_total_mj,
             "bucket_primary_total_mj": bucket_primary_total,
             "bucket_secondary_total_mj": bucket_secondary_total,

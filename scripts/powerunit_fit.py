@@ -60,6 +60,8 @@ MAP_MGUH_POWER_SCALE = {
     "RECHARGE": 0.8,
 }
 
+MGUH_DIRECT_RATIO_BASELINE = 0.45
+
 MGUH_PROFILES = [
     {
         "name": "high_speed_spec",
@@ -248,12 +250,6 @@ def adjust_map(
     harvest_value = clamp(harvest_base * harvest_factor * harvest_dynamic, 0.3, MGUK_HARVEST_LIMIT_MJ)
     updated["harvest_mj_per_lap"] = round(harvest_value, 3)
 
-    profile_direct = mguh_profile.get("direct_bias", 0.5)
-    mguh_base = base.get("mguh_direct_ratio", profile_direct)
-    offset = MAP_MGUH_DIRECT_OFFSETS.get(map_name.upper(), 0.0)
-    mguh_adj = profile_direct + offset + 0.15 * (drs_ratio - 0.4)
-    updated["mguh_direct_ratio"] = round(clamp(mguh_adj, 0.05, 0.9), 3)
-
     total_mj = mguh_profile.get("total_mj", 4.5)
     power_scale = MAP_MGUH_POWER_SCALE.get(map_name.upper(), 1.0)
     lap_time = max(lap_time_s, 60.0)
@@ -316,12 +312,14 @@ def build_ers_budget(calibrated_maps: Dict[str, Any]) -> Dict[str, Any]:
         deploy = params.get("deploy_mj_per_lap", 0.0)
         harvest = params.get("harvest_mj_per_lap", 0.0)
         target_soc = params.get("target_soc_end_lap", 0.6)
+        mguh_direct_ratio = params.get("mguh_direct_ratio", MGUH_DIRECT_RATIO_BASELINE)
         deploy_ratio = deploy / MGUK_DEPLOY_LIMIT_MJ if MGUK_DEPLOY_LIMIT_MJ else 0.0
         harvest_ratio = harvest / MGUK_HARVEST_LIMIT_MJ if MGUK_HARVEST_LIMIT_MJ else 0.0
         summary[name] = {
             "deploy_mj_per_lap": deploy,
             "harvest_mj_per_lap": harvest,
             "target_soc_end_lap": target_soc,
+            "mguh_direct_ratio": round(clamp(mguh_direct_ratio, 0.0, 1.0), 3),
             "deploy_ratio": round(deploy_ratio, 3),
             "harvest_ratio": round(harvest_ratio, 3),
         }
@@ -411,13 +409,13 @@ def write_report(payload: Dict[str, Any], circuit_id: str, report_dir: Path) -> 
         f"- deploy_limit_mj: {ers_budget.get('deploy_limit_mj', 'n/a')}",
         f"- harvest_limit_mj: {ers_budget.get('harvest_limit_mj', 'n/a')}",
         "",
-        "| Map | Deploy (MJ) | Harvest (MJ) | Target SOC | Deploy ratio | Harvest ratio |",
-        "|-----|-------------|--------------|------------|--------------|---------------|",
+        "| Map | Deploy (MJ) | Harvest (MJ) | Target SOC | MGU-H direct | Deploy ratio | Harvest ratio |",
+        "|-----|-------------|--------------|------------|--------------|--------------|---------------|",
     ]
     for name, summary in budget_maps.items():
         lines.append(
             f"| {name} | {summary['deploy_mj_per_lap']} | {summary['harvest_mj_per_lap']} | "
-            f"{summary['target_soc_end_lap']} | {summary['deploy_ratio']} | {summary['harvest_ratio']} |"
+            f"{summary['target_soc_end_lap']} | {summary.get('mguh_direct_ratio', 'n/a')} | {summary['deploy_ratio']} | {summary['harvest_ratio']} |"
         )
     lines.append("")
     warnings = payload.get("soc_warnings", [])

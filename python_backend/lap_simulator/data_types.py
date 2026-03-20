@@ -274,6 +274,7 @@ class PUReliabilityParams:
 class PUState:
     """Mutable power unit state (per car)."""
     active_map: EngineMapName = EngineMapName.RACE
+    ers_mode: str = "STANDARD"
     # ICE
     ice_temp_c: float = 95.0
     ice_wear_pct: float = 0.0

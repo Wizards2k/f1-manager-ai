@@ -597,6 +597,16 @@ export class PlayerGarageV3 {
         return null;
     }
 
+    resolveNumericStat(primaryValue, fallbackValue = null, defaultValue = 0) {
+        if (typeof primaryValue === 'number' && !Number.isNaN(primaryValue)) {
+            return primaryValue;
+        }
+        if (typeof fallbackValue === 'number' && !Number.isNaN(fallbackValue)) {
+            return fallbackValue;
+        }
+        return defaultValue;
+    }
+
     buildErsBucketCard(entry) {
         const target = typeof entry.targetTotal === 'number' ? entry.targetTotal : 0;
         const used = typeof entry.used === 'number' ? entry.used : 0;
@@ -1254,10 +1264,10 @@ export class PlayerGarageV3 {
     resolveLiveLapDeploy(puStats, driverNumber = null) {
         if (!puStats) return 0;
         const trace = puStats.energy_trace || [];
-        const fallbackDeploy = typeof puStats.lap_deploy_mj === 'number' ? puStats.lap_deploy_mj : 0;
-        const fallbackHarvest = typeof puStats.lap_harvest_mj === 'number' ? puStats.lap_harvest_mj : 0;
-        const fallbackMguhDirect = typeof puStats.lap_mguh_direct_mj === 'number' ? puStats.lap_mguh_direct_mj : 0;
-        const fallbackMguhHarvest = typeof puStats.lap_mguh_harvest_mj === 'number' ? puStats.lap_mguh_harvest_mj : 0;
+        const fallbackDeploy = this.resolveNumericStat(puStats.deploy_ES, puStats.lap_deploy_mj, 0);
+        const fallbackHarvest = this.resolveNumericStat(puStats.lap_harvest_mj, 0, 0);
+        const fallbackMguhDirect = this.resolveNumericStat(puStats.mguh_dir, puStats.lap_mguh_direct_mj, 0);
+        const fallbackMguhHarvest = this.resolveNumericStat(puStats.mguh_es, puStats.lap_mguh_harvest_mj, 0);
         const totals = this.computeLapTotals(trace, fallbackDeploy, fallbackHarvest, fallbackMguhDirect, fallbackMguhHarvest);
         const lapId = Number.isFinite(puStats.lap_id_current) ? puStats.lap_id_current : null;
         const cacheKey = driverNumber ?? puStats.driver_number ?? null;
@@ -1700,24 +1710,26 @@ export class PlayerGarageV3 {
         const sendLabel = 'Send Out';
         const puStats = car.pu_stats || {};
         const socMj = puStats.soc_mj || 0;
-        const socPct = puStats.soc_pct || 0;
         const lapDeploy = this.resolveLiveLapDeploy(puStats, car.driver_number);
+        const deployES = this.resolveNumericStat(puStats.deploy_ES, puStats.lap_deploy_mj, lapDeploy);
         const deployLimit = puStats.deploy_mj_per_lap ?? puStats.deploy_limit_mj ?? 4.0;
         const lapHarvest = puStats.lap_harvest_mj || 0;
-        const lapMguhDirect = puStats.lap_mguh_direct_mj || 0;
-        const lapMguhEs = puStats.lap_mguh_harvest_mj || 0;
-        const mguhTotal = lapMguhDirect + lapMguhEs;
+        const mguhDir = this.resolveNumericStat(puStats.mguh_dir, puStats.lap_mguh_direct_mj, 0);
+        const mguhEs = this.resolveNumericStat(puStats.mguh_es, puStats.lap_mguh_harvest_mj, 0);
+        const mguhTotal = mguhDir + mguhEs;
         const capacityMj = puStats.capacity_mj || 4.0;
-        const socClass = socPct < 30 ? 'pu-critical' : socPct < 60 ? 'pu-low' : 'pu-ok';
+        const socReferenceMj = 4.0;
+        const displaySocPct = Math.min(Math.max((socMj / socReferenceMj) * 100, 0), 100);
+        const socClass = displaySocPct < 30 ? 'pu-critical' : displaySocPct < 60 ? 'pu-low' : 'pu-ok';
         const tabPilota = this.buildTabPilota(car, { tyreChoice, fuelPercent, stintTarget, maxStint, paceLevel, iceMode, ersMode, tireHealthPct, isBox, brakeChipPreview });
         const tabMotore = this.buildTabMotore(car, {
             socMj,
-            socPct,
-            lapDeploy,
+            socPct: displaySocPct,
+            deployES,
             deployLimit,
             lapHarvest,
-            lapMguhDirect,
-            lapMguhEs,
+            mguhDir,
+            mguhEs,
             mguhTotal,
             capacityMj,
             socClass,
@@ -1842,34 +1854,32 @@ export class PlayerGarageV3 {
     buildTabMotore(car, {
         socMj,
         socPct,
-        lapDeploy,
+        deployES,
         deployLimit,
         lapHarvest,
-        lapMguhDirect,
-        lapMguhEs,
+        mguhDir,
+        mguhEs,
         mguhTotal,
         capacityMj,
         socClass,
         iceMode,
         ersMode,
     }) {
-        const deployPct = deployLimit > 0 ? Math.min((lapDeploy / deployLimit) * 100, 100) : 0;
-        const safeSocPct = Math.min(Math.max(socPct, 0), 100);
+        const socReferenceMj = 4.0;
+        const safeSocPct = Math.min(Math.max((socMj / socReferenceMj) * 100, 0), 100);
+        const safeDirectPct = Math.min(Math.max((mguhDir / socReferenceMj) * 100, 0), 100);
         return `
             <div class="dock-ers-meter">
                 <div class="dock-ers-header">
                     <span class="dock-lbl">Batteria SOC</span>
-                    <span class="dock-val ${socClass}">${socMj.toFixed(1)} MJ (${Math.round(socPct)}%)</span>
+                    <span class="dock-val ${socClass}">${socMj.toFixed(1)} MJ (${Math.round(safeSocPct)}%)</span>
                 </div>
                 <div class="pu-bar-track-v3">
                     <div class="pu-bar-layer pu-bar-layer--soc" style="width:${safeSocPct}%" title="Battery SOC"></div>
-                </div>
-                <div class="dock-ers-legend">
-                    <span class="legend-item legend-mguh">MGU-H <strong>${mguhTotal.toFixed(2)} MJ</strong></span>
-                    <span class="legend-item legend-soc">Battery <strong>${socMj.toFixed(1)} / ${capacityMj.toFixed(1)} MJ</strong></span>
+                    <div class="pu-bar-layer pu-bar-layer--dir" style="width:${safeDirectPct}%" title="MGU-H DIRECT"></div>
                 </div>
                 <div class="dock-ers-stats">
-                    <span>Deploy: ${lapDeploy.toFixed(1)} / ${deployLimit.toFixed(1)} MJ</span>
+                    <span>Deploy: ${deployES.toFixed(1)} / ${deployLimit.toFixed(1)} MJ</span>
                     <span>Harvest: ${lapHarvest.toFixed(1)} MJ</span>
                 </div>
             </div>
@@ -1890,15 +1900,15 @@ export class PlayerGarageV3 {
             <div class="dock-row-3">
                 <div class="dock-field">
                     <label>Battery Deploy</label>
-                    <span class="dock-val">${lapDeploy.toFixed(2)} MJ</span>
+                    <span class="dock-val" data-pu-field="deploy_es">${deployES.toFixed(2)} MJ</span>
                 </div>
                 <div class="dock-field">
                     <label>MGU-H Direct</label>
-                    <span class="dock-val">${lapMguhDirect.toFixed(2)} MJ</span>
+                    <span class="dock-val" data-pu-field="mguh_dir">${mguhDir.toFixed(2)} MJ</span>
                 </div>
                 <div class="dock-field">
                     <label>MGU-H ES</label>
-                    <span class="dock-val">${lapMguhEs.toFixed(2)} MJ</span>
+                    <span class="dock-val" data-pu-field="mguh_es">${mguhEs.toFixed(2)} MJ</span>
                 </div>
             </div>
         `;
@@ -3456,14 +3466,18 @@ export class PlayerGarageV3 {
             // 3. Motore Tab
             const puStats = car.pu_stats || {};
             const socMj = puStats.soc_mj || 0;
-            const socPct = puStats.soc_pct || 0;
             const lapDeploy = this.resolveLiveLapDeploy(puStats, car.driver_number);
+            const deployES = this.resolveNumericStat(puStats.deploy_ES, puStats.lap_deploy_mj, lapDeploy);
             const deployLimit = puStats.deploy_limit_mj || 4.0;
             const lapHarvest = puStats.lap_harvest_mj || 0;
-            const lapMguhDirect = puStats.lap_mguh_direct_mj || 0;
-            const lapMguhEs = puStats.lap_mguh_harvest_mj || 0;
-            const mguhTotal = lapMguhDirect + lapMguhEs;
+            const mguhDir = this.resolveNumericStat(puStats.mguh_dir, puStats.lap_mguh_direct_mj, 0);
+            const mguhEs = this.resolveNumericStat(puStats.mguh_es, puStats.lap_mguh_harvest_mj, 0);
+            const mguhTotal = mguhDir + mguhEs;
             const capacityMj = puStats.capacity_mj || 4.0;
+            const socReferenceMj = 4.0;
+            const displaySocPct = Math.min(Math.max((socMj / socReferenceMj) * 100, 0), 100);
+            const directPct = Math.min(Math.max((mguhDir / socReferenceMj) * 100, 0), 100);
+            const socClass = displaySocPct < 30 ? 'pu-critical' : displaySocPct < 60 ? 'pu-low' : 'pu-ok';
 
             if (window?.DEBUG_PU_DEPLOY_UI && car.is_player_controlled) {
                 const trace = Array.isArray(puStats.energy_trace) ? puStats.energy_trace : [];
@@ -3477,7 +3491,6 @@ export class PlayerGarageV3 {
                     last_section_deploy: lastTrace?.deploy_mj ?? null,
                 });
             }
-            const socClass = socPct < 30 ? 'pu-critical' : socPct < 60 ? 'pu-low' : 'pu-ok';
             const iceMode = this.normalizeIceMode(car.player_config?.ice_mode || car.ice_mode || 'PRACTICE');
             const ersMode = this.normalizeErsMode(car.player_config?.ers_mode || car.ers_mode || 'STANDARD');
 
@@ -3491,12 +3504,12 @@ export class PlayerGarageV3 {
                 if (!isRuntimeFocused) {
                     motoreTab.innerHTML = this.buildTabMotore(car, {
                         socMj,
-                        socPct,
-                        lapDeploy,
+                        socPct: displaySocPct,
+                        deployES,
                         deployLimit,
                         lapHarvest,
-                        lapMguhDirect,
-                        lapMguhEs,
+                        mguhDir,
+                        mguhEs,
                         mguhTotal,
                         capacityMj,
                         socClass,
@@ -3505,26 +3518,22 @@ export class PlayerGarageV3 {
                     });
                 } else {
                     const socVal = motoreTab.querySelector('.dock-ers-header .dock-val');
-                    if (socVal) socVal.textContent = `${socMj.toFixed(1)} MJ (${Math.round(socPct)}%)`;
-                    const safeSocPct = Math.min(Math.max(socPct, 0), 100);
+                    if (socVal) socVal.textContent = `${socMj.toFixed(1)} MJ (${Math.round(displaySocPct)}%)`;
+                    const safeSocPct = displaySocPct;
                     const socLayer = motoreTab.querySelector('.pu-bar-layer--soc');
                     if (socLayer) socLayer.style.width = `${safeSocPct}%`;
+                    const directLayer = motoreTab.querySelector('.pu-bar-layer--dir');
+                    if (directLayer) directLayer.style.width = `${directPct}%`;
                     const deployLabel = motoreTab.querySelector('.dock-ers-stats span:first-child');
-                    if (deployLabel) deployLabel.textContent = `Deploy: ${lapDeploy.toFixed(1)} / ${deployLimit.toFixed(1)} MJ`;
+                    if (deployLabel) deployLabel.textContent = `Deploy: ${deployES.toFixed(1)} / ${deployLimit.toFixed(1)} MJ`;
                     const harvestLabel = motoreTab.querySelector('.dock-ers-stats span:last-child');
                     if (harvestLabel) harvestLabel.textContent = `Harvest: ${lapHarvest.toFixed(1)} MJ`;
-                    const legendMguh = motoreTab.querySelector('.legend-item.legend-mguh strong');
-                    if (legendMguh) {
-                        legendMguh.textContent = `${mguhTotal.toFixed(2)} MJ`;
-                    }
-                    const legendSoc = motoreTab.querySelector('.legend-item.legend-soc strong');
-                    if (legendSoc) legendSoc.textContent = `${socMj.toFixed(1)} / ${capacityMj.toFixed(1)} MJ`;
-                    const batteryDeployField = motoreTab.querySelector('.dock-row-3 .dock-field:first-child .dock-val');
-                    if (batteryDeployField) batteryDeployField.textContent = `${lapDeploy.toFixed(2)} MJ`;
-                    const mguhDirectField = motoreTab.querySelector('.dock-row-3 .dock-field:nth-child(2) .dock-val');
-                    if (mguhDirectField) mguhDirectField.textContent = `${lapMguhDirect.toFixed(2)} MJ`;
-                    const mguhEsField = motoreTab.querySelector('.dock-row-3 .dock-field:nth-child(3) .dock-val');
-                    if (mguhEsField) mguhEsField.textContent = `${lapMguhEs.toFixed(2)} MJ`;
+                    const batteryDeployField = motoreTab.querySelector('[data-pu-field="deploy_es"]');
+                    if (batteryDeployField) batteryDeployField.textContent = `${deployES.toFixed(2)} MJ`;
+                    const mguhDirectField = motoreTab.querySelector('[data-pu-field="mguh_dir"]');
+                    if (mguhDirectField) mguhDirectField.textContent = `${mguhDir.toFixed(2)} MJ`;
+                    const mguhEsField = motoreTab.querySelector('[data-pu-field="mguh_es"]');
+                    if (mguhEsField) mguhEsField.textContent = `${mguhEs.toFixed(2)} MJ`;
                 }
             }
 

@@ -6,10 +6,11 @@ from types import SimpleNamespace
 import pytest
 
 TESTS_DIR = Path(__file__).resolve().parent
-PYTHON_BACKEND_ROOT = TESTS_DIR.parent
-REPO_ROOT = PYTHON_BACKEND_ROOT.parent
+PROJECT_ROOT = TESTS_DIR.parent
+PYTHON_BACKEND_ROOT = PROJECT_ROOT / "python_backend"
+REPO_ROOT = PROJECT_ROOT
 
-for path in (PYTHON_BACKEND_ROOT, REPO_ROOT):
+for path in (PROJECT_ROOT, PYTHON_BACKEND_ROOT):
     path_str = str(path)
     if path_str not in sys.path:
         sys.path.insert(0, path_str)
@@ -27,7 +28,7 @@ from lap_simulator.data_types import (
     SectionContext,
     SectionKind,
 )
-from lap_simulator.power_unit import generate_output, ERS_MAX_ENERGY_MJ
+from lap_simulator.power_unit import generate_output, ERS_MAX_ENERGY_MJ, _resolve_mguh_bias
 from models import RaceCar
 from utils.session_bridge import SessionBridge
 
@@ -130,6 +131,73 @@ def test_power_unit_clamps_when_deploy_budget_exhausted():
     assert pu_state.lap_deploy_mj <= 0.0501
     assert pu_state.energy_trace[-1]["deploy_mj"] == pytest.approx(0.0, abs=1e-4)
     assert pu_state.ers_output_kw == pytest.approx(0.0, abs=1e-3)
+
+
+def test_mguh_bias_uses_ers_budget_and_baseline_fallback():
+    map_params = EngineMapParams(
+        name=EngineMapName.RACE,
+        torque_ramp=1.0,
+        cooling_share=0.5,
+        ers_output_kw=120.0,
+        mguh_direct_ratio=0.9,
+    )
+    pu_state = PUState(active_map=EngineMapName.RACE, ers_energy_mj=ERS_MAX_ENERGY_MJ)
+
+    direct, es = _resolve_mguh_bias(map_params, pu_state, {"mguh_direct_ratio": 0.45})
+    assert direct == pytest.approx(0.45)
+    assert es == pytest.approx(0.55)
+
+    direct_zero, es_zero = _resolve_mguh_bias(map_params, pu_state, {"mguh_direct_ratio": 0.0})
+    assert direct_zero == pytest.approx(0.0)
+    assert es_zero == pytest.approx(1.0)
+
+    direct_default, es_default = _resolve_mguh_bias(map_params, pu_state, {})
+    assert direct_default == pytest.approx(0.45)
+    assert es_default == pytest.approx(0.55)
+
+
+def test_mguh_energy_reroutes_to_direct_when_ers_is_full():
+    config = CircuitConfig(
+        pu_maps={
+            EngineMapName.RACE: EngineMapParams(
+                name=EngineMapName.RACE,
+                torque_ramp=1.0,
+                cooling_share=0.5,
+                ers_output_kw=0.0,
+                mguh_direct_ratio=0.0,
+                mguh_power_kw=90.0,
+            )
+        },
+        pu_reliability=PUReliabilityParams(),
+        ers_budget={
+            "maps": {
+                "RACE": {
+                    "mguh_direct_ratio": 0.0,
+                    "mguh_es_mj": 0.0,
+                }
+            }
+        },
+    )
+    section = SectionContext(
+        section_id="sec_mguh_direct",
+        name="MGU-H Direct",
+        kind=SectionKind.STRAIGHT,
+        length_m=220.0,
+        v_base_kph=320.0,
+        braking_energy_mj=0.0,
+    )
+    env = EnvContext()
+    driver = DriverIntent(ers_deploy_request=False)
+    aero = SimpleNamespace(cooling_capacity=1.0, kerb_severity=0.0, bump_penalty=0.0)
+    pu_state = PUState(active_map=EngineMapName.RACE, ers_energy_mj=ERS_MAX_ENERGY_MJ)
+
+    generate_output(pu_state, driver, aero, section, env, config, dt_estimate_s=1.0)
+
+    trace = pu_state.energy_trace[-1]
+    assert trace["mguh_direct_mj"] > 0.0
+    assert trace["mguh_es_mj"] == pytest.approx(0.0)
+    assert trace["deploy_mj"] == pytest.approx(0.0)
+    assert pu_state.ers_output_kw > 0.0
 
 
 def test_brake_migration_respects_hydraulic_ratio():
@@ -313,6 +381,9 @@ def test_session_bridge_three_laps_per_circuit(circuit_id):
                 assert stats.get("harvest_mj_per_lap") == pytest.approx(harvest)
             if target_soc is not None:
                 assert stats.get("target_soc_end_lap") == pytest.approx(target_soc)
+            map_enum = EngineMapName[map_name]
+            expected_direct_ratio = map_budget.get("mguh_direct_ratio", 0.45)
+            assert config.pu_maps[map_enum].mguh_direct_ratio == pytest.approx(expected_direct_ratio)
             lap_deploy = stats.get("lap_deploy_mj")
             lap_harvest = stats.get("lap_harvest_mj")
             if lap_deploy is not None:

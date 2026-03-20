@@ -24,6 +24,7 @@ class ERSMap:
     bucket_secondary_pct: float  # 1–120 (%)
     bucket_exit_pct: float  # 1–120 (%)
     defense_reserve_mj: float = 0.0
+    mguh_direct_ratio: float = 0.45
 
 
 # ---------------------------------------------------------------------------
@@ -107,15 +108,6 @@ class PowerUnit:
         state.fuel_kg = fuel_kg if fuel_kg is not None else self.fuel_capacity_kg
         state.ers_energy_mj = getattr(self.battery, "capacity_mj", state.ers_energy_mj)
         state.fuel_burn_rate_kg_per_s = self.base_burn_kg_per_s
-
-        ers_map = self._resolve_ers_map(map_name)
-        if ers_map:
-            deploy_budget = ers_map.deploy_budget_mj
-            state.deploy_budget_total_mj = deploy_budget
-            state.bucket_primary_total_mj = deploy_budget * (ers_map.bucket_primary_pct / 100.0)
-            state.bucket_secondary_total_mj = deploy_budget * (ers_map.bucket_secondary_pct / 100.0)
-            state.bucket_exit_total_mj = deploy_budget * (ers_map.bucket_exit_pct / 100.0)
-            state.defense_reserve_available_mj = ers_map.defense_reserve_mj
 
         return state
 

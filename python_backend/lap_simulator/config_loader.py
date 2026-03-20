@@ -272,8 +272,12 @@ _LEGACY_PRIORITY = {
 }
 
 
-def _parse_pu_maps(data: Dict[str, Any]) -> Dict[EngineMapName, EngineMapParams]:
+def _parse_pu_maps(
+    data: Dict[str, Any],
+    ers_budget_maps: Optional[Dict[str, Any]] = None,
+) -> Dict[EngineMapName, EngineMapParams]:
     maps_raw = data.get("maps", {})
+    ers_budget_maps = ers_budget_maps or {}
     result: Dict[EngineMapName, EngineMapParams] = {}
     priority: Dict[EngineMapName, int] = {}
 
@@ -303,6 +307,10 @@ def _parse_pu_maps(data: Dict[str, Any]) -> Dict[EngineMapName, EngineMapParams]
             continue
 
         priority[mn] = new_prio
+        budget_map = ers_budget_maps.get(mn.value, {}) if isinstance(ers_budget_maps, dict) else {}
+        mguh_direct_ratio = budget_map.get("mguh_direct_ratio")
+        if mguh_direct_ratio is None:
+            mguh_direct_ratio = 0.45
         result[mn] = EngineMapParams(
             name=mn,
             power_pct_min=pct_min,
@@ -313,7 +321,7 @@ def _parse_pu_maps(data: Dict[str, Any]) -> Dict[EngineMapName, EngineMapParams]
             deployment_style=vals.get("deployment_style", "balanced"),
             cooling_share=vals.get("cooling_share", 0.50),
             ers_output_kw=vals.get("ers_output_kw", 120),
-            mguh_direct_ratio=vals.get("mguh_direct_ratio", 0.0),
+            mguh_direct_ratio=mguh_direct_ratio,
             mguh_power_kw=vals.get("mguh_power_kw", vals.get("ers_output_kw", 120) * 0.65),
             bucket_primary_pct=vals.get("bucket_primary_pct", 0.5),
             bucket_secondary_pct=vals.get("bucket_secondary_pct", 0.35),
@@ -449,9 +457,8 @@ def load_circuit_config(
     # --- PU ---
     pu_map_path = derived_dir / "pu_maps.json" if derived_dir.exists() else global_pu_maps
     pu_map_data = _load_json(pu_map_path) if pu_map_path.exists() else _load_json(global_pu_maps)
-    pu_maps = _parse_pu_maps(pu_map_data)
-
     ers_budget = pu_map_data.get("ers_budget", {})
+    pu_maps = _parse_pu_maps(pu_map_data, ers_budget_maps=ers_budget.get("maps", {}))
     regen_profile = pu_map_data.get("regen_profile", {})
     soc_warnings = pu_map_data.get("soc_warnings", [])
 

@@ -87,6 +87,8 @@ def _build_line(entry: Dict[str, Any], timestamp: datetime) -> str:
     soc_pct = _fmt_num(entry.get("battery_soc_pct"), 1, "0.0")
     lap_deploy = _fmt_num(entry.get("lap_deploy_mj"), 3)
     harvest = _fmt_num(entry.get("lap_harvest_mj"), 3)
+    mguh_direct_ratio = _fmt_num(entry.get("mguh_direct_ratio", 0.45), 3)
+    mguh_es_ratio = _fmt_num(entry.get("mguh_es_ratio", 0.55), 3)
     lap_mguh_dir = entry.get("lap_mguh_direct_mj") or 0.0
     lap_mguh_es = entry.get("lap_mguh_es_mj") or 0.0
     mguh_dir = _fmt_num(lap_mguh_dir, 3)
@@ -95,6 +97,7 @@ def _build_line(entry: Dict[str, Any], timestamp: datetime) -> str:
     batt_budget = _fmt_num(entry.get("deploy_budget_total_mj"), 3)
     def_res = _fmt_num(entry.get("defense_reserve_available_mj"), 3)
     last_bucket = entry.get("bucket_key") or "none"
+    bucket_type = entry.get("bucket_type") or last_bucket
     warnings = _fmt_warnings(entry.get("warnings"))
     section_deploy = _fmt_num(entry.get("deploy_mj"), 3)
     section_harvest = _fmt_num(entry.get("harvest_mj"), 3)
@@ -110,9 +113,10 @@ def _build_line(entry: Dict[str, Any], timestamp: datetime) -> str:
     return (
         f"{ts} INFO [PU] car={car_id} lap={lap} sec={sec} "
         f"soc={soc_mj}MJ ({soc_pct}%) deploy_ES={lap_deploy} harvest={harvest} "
+        f"mguh_bias={mguh_direct_ratio}/{mguh_es_ratio} "
         f"mguh_dir={mguh_dir} mguh_es={mguh_es} mguh_total={mguh_total} "
         f"batt_budget={batt_budget} def_res={def_res} "
-        f"Bucket_budget_Tot={bucket_budget_total} Bucket_budget_Remaing={bucket_budget_remaining} "
+        f"bucket_type={bucket_type} Bucket_budget_Tot={bucket_budget_total} Bucket_budget_Remaing={bucket_budget_remaining} "
         f"Bucket_Section_CAP={bucket_section_cap} Bucket_Section_ES={bucket_section_es} "
         f"Bucket_Section_DIR={bucket_section_dir} last_bucket={last_bucket} "
         f"warnings={warnings} section_deploy={section_deploy} section_harvest={section_harvest}"

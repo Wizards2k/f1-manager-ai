@@ -29,15 +29,15 @@ _Last updated: 2026-03-20_
 
 ## 3. Milestones
 
-### M1 · UI ↔ Backend Alignment
-- [ ] Aggiornare `player_garage_v3` per usare sempre `deploy_budget_total_mj`, `defense_reserve_available_mj` e bucket runtime.
-- [ ] Garantire che `SocketBridge` esegua un refresh completo delle `pu_stats` al primo `race_update` (non solo bootstrap `/api/cars`).
-- [ ] Introdurre un test smoke (es. Cypress/Playwright light) che verifica la corrispondenza tra log `pu_telemetry` e valori mostrati in UI.
+### M1 · UI ↔ Backend Alignment ✅
+- [x] Aggiornare `player_garage_v3` per usare sempre `deploy_budget_total_mj`, `defense_reserve_available_mj` e bucket runtime.
+- [x] Garantire che `SocketBridge` esegua un refresh completo delle `pu_stats` al primo `race_update` (non solo bootstrap `/api/cars`).
+- [x] Introdurre un test smoke (es. Cypress/Playwright light) che verifica la corrispondenza tra log `pu_telemetry` e valori mostrati in UI.
 
-### M2 · Dock Runtime Sync
-- [ ] Rimuovere i fallback a `deploy_mj_per_lap` anche nel dock motore (`buildTabMotore`, `buildPUInlineBar`).
-- [ ] Esporre in dock i bucket runtime (Primary/Secondary/Exit + reserve) con gli stessi numeri del pannello.
-- [ ] Aggiornare `applyLocalCarState` così da mantenere solo `pu_stats` provenienti dal backend (no merge con preset).
+### M2 · Dock Runtime Sync ✅
+- [x] Rimuovere i fallback a `deploy_mj_per_lap` anche nel dock motore (`buildTabMotore`, `buildPUInlineBar`).
+- [x] Esporre in dock i bucket runtime (Primary/Secondary/Exit + reserve) con gli stessi numeri del pannello.
+- [x] Aggiornare `applyLocalCarState` così da mantenere solo `pu_stats` provenienti dal backend (no merge con preset).
 
 ### M3 · ERS Engine Realism
 - [ ] Implementare tutte le sezioni operative definite in `docs/ERS-Deployment-Strategy.md` (cap per settore, SOC floor dinamici, bonus/penalty scenario-based).

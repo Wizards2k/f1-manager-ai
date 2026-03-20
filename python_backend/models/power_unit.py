@@ -78,7 +78,7 @@ class ErsMap:
     bucket_exit_pct: float = 0.15
     defense_reserve_mj: float = 0.2
     ers_output_kw: float = 120.0
-    mguh_direct_ratio: float = 0.0
+    mguh_direct_ratio: float = 0.45
     mguh_power_kw: float = 0.0
     heat_load_kw: float = 260.0
     cooling_share: float = 0.5
