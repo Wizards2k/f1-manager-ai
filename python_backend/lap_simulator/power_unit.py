@@ -35,7 +35,6 @@ PACE_FACTOR_MAX = 1.12
 
 ICE_BASE_POWER_KW = 750.0          # F1 2025 ICE ~750kW (1000hp hybrid unit)
 ICE_MAX_POWER_KW = 900.0           # cap after boosts
-ERS_MAX_KW = 160.0                 # MGU-K deploy peak (FIA limit ~160kW in 2025)
 ERS_MAX_ENERGY_MJ = 4.0            # max battery capacity
 ERS_DEPLOY_LIMIT_MJ_PER_LAP = 4.0
 ERS_RECOVERY_LIMIT_MJ_PER_LAP = 2.0
@@ -169,7 +168,7 @@ def generate_output(
     bucket_section_cap_mj = _compute_bucket_section_cap(pu_state, bucket_key)
 
     ers_energy_requested_raw_mj = (ers_output_raw * dt_safe) / 1000.0
-    ers_energy_requested_mj = min(ers_energy_requested_raw_mj, bucket_section_cap_mj)
+    ers_energy_requested_mj = bucket_section_cap_mj
     if ers_energy_requested_raw_mj > 1e-5 and bucket_section_cap_mj <= 1e-5:
         pu_state.runtime_warnings.append(f"bucket_exhausted:{bucket_key}")
     mguh_direct_section_mj = _allocate_mguh_direct(
@@ -214,17 +213,10 @@ def generate_output(
         # Battery depleted before satisfying demand
         if pu_state.ers_energy_mj <= 1e-5:
             pu_state.runtime_warnings.append("battery_empty")
-    if bucket_section_cap_mj > 1e-5 and mguh_direct_section_mj >= bucket_section_cap_mj - 1e-5 and ers_energy_requested_raw_mj > bucket_section_cap_mj:
-        pu_state.runtime_warnings.append("mguh_clip")
 
     battery_output_kw = (battery_energy_allocated_mj * 1000.0) / dt_safe
     mguh_direct_kw = (mguh_direct_section_mj * 1000.0) / dt_safe
     ers_output_pre_derate_kw = battery_output_kw + mguh_direct_kw
-    if ers_output_pre_derate_kw > ERS_MAX_KW:
-        scale = ERS_MAX_KW / ers_output_pre_derate_kw
-        battery_output_kw *= scale
-        mguh_direct_kw *= scale
-        ers_output_pre_derate_kw = ERS_MAX_KW
 
     ers_output_kw = ers_output_pre_derate_kw * ers_derating_factor
     if ers_output_pre_derate_kw > 1e-5:
@@ -468,7 +460,7 @@ def _initialize_bucket_budget(
 
     deploy_total = map_budget.get("deploy_mj_per_lap")
     if deploy_total is None:
-        deploy_total = min(map_params.ers_output_kw / ERS_MAX_KW * ERS_DEPLOY_LIMIT_MJ_PER_LAP, ERS_DEPLOY_LIMIT_MJ_PER_LAP)
+        deploy_total = ERS_DEPLOY_LIMIT_MJ_PER_LAP
     deploy_total = clamp(deploy_total, 0.0, ERS_DEPLOY_LIMIT_MJ_PER_LAP)
 
     primary_pct = map_budget.get("bucket_primary_pct", map_params.bucket_primary_pct)
@@ -540,6 +532,21 @@ def _apply_bucket_allocation(
     requested_mj: float,
     intent: DriverIntent,
 ) -> float:
+    remaining_sections = _get_remaining_sections(pu_state, bucket_key)
+    total_sections = _get_total_sections(pu_state, bucket_key)
+    total_attr, used_attr = _bucket_attrs(bucket_key)
+    total = getattr(pu_state, total_attr, 0.0)
+    used = getattr(pu_state, used_attr, 0.0)
+    remaining_bucket = max(total - used, 0.0)
+    if remaining_sections > 0:
+        cap_per_section = remaining_bucket / remaining_sections
+    elif total_sections <= 0:
+        cap_per_section = remaining_bucket
+    else:
+        cap_per_section = 0.0
+
+    pu_state.last_bucket_cap_mj = cap_per_section
+
     if requested_mj <= 1e-6:
         pu_state.last_bucket_allocated_mj = 0.0
         pu_state.last_defense_used_mj = 0.0
@@ -549,19 +556,9 @@ def _apply_bucket_allocation(
         pu_state.last_defense_used_mj = 0.0
         return 0.0
 
-    # Calcola cap per settore dinamico
-    remaining_sections = _get_remaining_sections(pu_state, bucket_key)
-    total_attr, used_attr = _bucket_attrs(bucket_key)
-    total = getattr(pu_state, total_attr, 0.0)
-    used = getattr(pu_state, used_attr, 0.0)
-    remaining_bucket = max(total - used, 0.0)
-    effective_sections = remaining_sections if remaining_sections > 0 else 1
-    cap_per_section = remaining_bucket / effective_sections
-
     allocated = 0.0
     remaining_request = requested_mj
     defense_used = 0.0
-    pu_state.last_bucket_cap_mj = cap_per_section
 
     # Defense buffer
     if intent.ers_defense_mode and pu_state.defense_reserve_available_mj > 1e-6:
@@ -572,7 +569,7 @@ def _apply_bucket_allocation(
         defense_used = defense_take
 
     # Usa bucket con cap per settore
-    bucket_available = min(remaining_request, cap_per_section)
+    bucket_available = remaining_request
     consumed = _consume_bucket(pu_state, bucket_key, bucket_available)
     allocated += consumed
     remaining_request -= consumed
@@ -612,12 +609,25 @@ def _get_remaining_sections(pu_state: PUState, bucket_key: str) -> int:
 
 def _compute_bucket_section_cap(pu_state: PUState, bucket_key: str) -> float:
     remaining_sections = _get_remaining_sections(pu_state, bucket_key)
+    total_sections = _get_total_sections(pu_state, bucket_key)
     total_attr, used_attr = _bucket_attrs(bucket_key)
     total = getattr(pu_state, total_attr, 0.0)
     used = getattr(pu_state, used_attr, 0.0)
     remaining_bucket = max(total - used, 0.0)
-    effective_sections = remaining_sections if remaining_sections > 0 else 1
-    return remaining_bucket / effective_sections
+    if remaining_sections > 0:
+        return remaining_bucket / remaining_sections
+    if total_sections <= 0:
+        return remaining_bucket
+    return 0.0
+
+
+def _get_total_sections(pu_state: PUState, bucket_key: str) -> int:
+    """Get total section count for bucket type."""
+    if bucket_key == "primary":
+        return pu_state.primary_sections_count
+    if bucket_key == "secondary":
+        return pu_state.secondary_sections_count
+    return pu_state.exit_sections_count
 
 
 def _decrement_section_count(pu_state: PUState, bucket_key: str) -> None:

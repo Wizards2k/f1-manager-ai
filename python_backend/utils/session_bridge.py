@@ -1369,10 +1369,29 @@ class SessionBridge:
         }
         bucket_budget_total = bucket_totals.get(bucket_key, 0.0)
         bucket_budget_used = bucket_used_map.get(bucket_key, 0.0)
-        bucket_budget_remaining = max(bucket_budget_total - bucket_budget_used, 0.0)
-        bucket_section_cap = getattr(pu_state, "last_bucket_cap_mj", 0.0)
-        bucket_section_es = trace_entry.get("deploy_mj") if trace_entry else None
+        bucket_budget_remaining_after = max(bucket_budget_total - bucket_budget_used, 0.0)
+        bucket_section_es = trace_entry.get("deploy_mj") if trace_entry else 0.0
         bucket_section_dir = trace_entry.get("mguh_direct_mj") if trace_entry else None
+        bucket_consumed_mj = max(
+            float(getattr(pu_state, "last_bucket_allocated_mj", 0.0) or 0.0)
+            - float(getattr(pu_state, "last_defense_used_mj", 0.0) or 0.0),
+            0.0,
+        )
+        bucket_budget_remaining = min(
+            bucket_budget_total,
+            max(bucket_budget_remaining_after + bucket_consumed_mj, 0.0),
+        )
+        bucket_sections_remaining_after = {
+            "primary": pu_state.primary_sections_remaining,
+            "secondary": pu_state.secondary_sections_remaining,
+            "exit": pu_state.exit_sections_remaining,
+        }.get(bucket_key, 0)
+        bucket_sections_remaining_at_entry = max(bucket_sections_remaining_after + 1, 1)
+        bucket_section_cap = (
+            bucket_budget_remaining / bucket_sections_remaining_at_entry
+            if bucket_budget_remaining > 1e-6
+            else getattr(pu_state, "last_bucket_cap_mj", 0.0)
+        )
 
         payload = {
             "car_id": entry.car_id,

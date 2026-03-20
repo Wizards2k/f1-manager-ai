@@ -148,6 +148,7 @@
         "deploy_mj_per_lap": 1.997,
         "harvest_mj_per_lap": 1.495,
         "target_soc_end_lap": 0.725,
+        "mguh_direct_ratio": 0.577,
         "deploy_ratio": 0.499,
         "harvest_ratio": 0.748
       },
@@ -155,6 +156,7 @@
         "deploy_mj_per_lap": 3.922,
         "harvest_mj_per_lap": 0.926,
         "target_soc_end_lap": 0.05,
+        "mguh_direct_ratio": 0.677,
         "deploy_ratio": 0.981,
         "harvest_ratio": 0.463
       },
@@ -162,6 +164,7 @@
         "deploy_mj_per_lap": 4.0,
         "harvest_mj_per_lap": 0.593,
         "target_soc_end_lap": 0.05,
+        "mguh_direct_ratio": 0.737,
         "deploy_ratio": 1.0,
         "harvest_ratio": 0.296
       },
@@ -169,6 +172,7 @@
         "deploy_mj_per_lap": 0.5,
         "harvest_mj_per_lap": 2.0,
         "target_soc_end_lap": 0.98,
+        "mguh_direct_ratio": 0.437,
         "deploy_ratio": 0.125,
         "harvest_ratio": 1.0
       }
