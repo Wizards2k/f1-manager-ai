@@ -39,11 +39,12 @@ _Last updated: 2026-03-21_
 - [x] Esporre in dock i bucket runtime (Primary/Secondary/Exit + reserve) con gli stessi numeri del pannello.
 - [x] Aggiornare `applyLocalCarState` così da mantenere solo `pu_stats` provenienti dal backend (no merge con preset).
 
-### M3 · ERS Engine Realism
-- [ ] Implementare tutte le sezioni operative definite in `docs/ERS-Deployment-Strategy.md` (cap per settore, SOC floor dinamici, bonus/penalty scenario-based).
-- [ ] Integrare la simulazione descritta in `docs/Ers-Deploy-Sim.md` per validare `bucket_section_cap`, `mguh_dir/es`, `defense reserve`.
-- [ ] Applicare il planner definito in `docs/ERS-Bucket-Planner.md` per la distribuzione delle mappe (inclusi preset Custom).
-- [ ] Validare contro i benchmark in `docs/ers_bonus_testing_reference.md` (test automatici).
+### M3 · ERS Engine Realism ✅
+- [x] Implementare tutte le sezioni operative definite in `docs/ERS-Deployment-Strategy.md` (cap per settore, SOC floor dinamici, bonus/penalty scenario-based).
+- [x] Integrare la simulazione descritta in `docs/Ers-Deploy-Sim.md` per validare `bucket_section_cap`, `mguh_dir/es`, `defense reserve`.
+- [x] Applicare il planner definito in `docs/ERS-Bucket-Planner.md` per la distribuzione delle mappe (inclusi preset Custom).
+- [x] Validare contro i benchmark in `docs/ers_bonus_testing_reference.md` (test automatici).
+- **Runtime alignment completed (2026-03-21)**: Tutti i circuiti riallineati con runtime reale e target doc.
 
 ### M4 · Circuit Config Sync ✅
 - [x] Automatizzare `scripts/ers_budget_backfill.py` + pipeline di verifica (lint) per tutti i circuiti.
