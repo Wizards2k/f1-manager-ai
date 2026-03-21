@@ -1,6 +1,6 @@
 # ERS Setup & Telemetry Roadmap
 
-_Last updated: 2026-03-20_
+_Last updated: 2026-03-21_
 
 ## 1. Scope
 - Uniformare sorgenti dati ERS tra frontend, backend e configurazioni circuito.
@@ -45,10 +45,11 @@ _Last updated: 2026-03-20_
 - [ ] Applicare il planner definito in `docs/ERS-Bucket-Planner.md` per la distribuzione delle mappe (inclusi preset Custom).
 - [ ] Validare contro i benchmark in `docs/ers_bonus_testing_reference.md` (test automatici).
 
-### M4 · Circuit Config Sync
-- [ ] Automatizzare `scripts/ers_budget_backfill.py` + pipeline di verifica (lint) per tutti i circuiti.
-- [ ] Confrontare i derived con i log reali (FastF1 / telemetrie interne) e aggiornare `config/calibration/pu/<cid>.json`.
-- [ ] Aggiungere un comando CI che rifiuti valori mancanti (assenza di `deploy_mj_per_lap`, `bucket_*_pct`).
+### M4 · Circuit Config Sync ✅
+- [x] Automatizzare `scripts/ers_budget_backfill.py` + pipeline di verifica (lint) per tutti i circuiti.
+- [x] Confrontare i derived con i log reali (FastF1 / telemetrie interne) e aggiornare `config/calibration/pu/<cid>.json`.
+- [x] Aggiungere un comando CI che rifiuti valori mancanti (assenza di `deploy_mj_per_lap`, `bucket_*_pct`).
+- **Global sweep completed (2026-03-21)**: 22 circuiti riallineati con runtime e target doc; Suzuka/Monaco validati in-game.
 
 ### M5 · ERS Map Editor
 - [ ] Progettare un pannello "ERS Map Manager" separato dal garage, con:

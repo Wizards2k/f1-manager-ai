@@ -1,7 +1,7 @@
 ---
 title: ERS Bucket Planner Specification
 status: in_progress
-last_updated: 2026-03-18
+last_updated: 2026-03-21
 authors: Gameplay/Physics
 references:
   - docs/ERS-Deployment-Strategy.md
@@ -15,11 +15,12 @@ Stabilire una strategia deterministica per distribuire l'energia ERS per giro se
 - l'energia MGU-H direct rimanga separata dal budget batteria (4 MJ FIA);
 - la UI/telemetria possano mostrare budget residui e warning coerenti.
 
-## 2. Stato attuale (implementazione 2026-03-18)
+## 2. Stato attuale (implementazione 2026-03-21)
 - Il driver model usa `section_bucket_map` e i contatori per bucket per calcolare un cap dinamico per sezione basato sull'energia residua e sulle sezioni rimanenti (`dynamic_cap = bucket_remaining / sections_left`, con spread upper/lower configurabile).
 - Ogni richiesta di deploy viene divisa tra quota batteria (`bucket_battery_request_mj`) e quota MGU-H direct. Solo la quota batteria riduce `bucket_remaining_mj`/`battery_budget_remaining_mj`, mentre l'energia MGU-H consuma gli specifici budget `mguh_*_remaining_mj`.
 - `_ensure_bucket_budget()` inizializza per giro sia i bucket batteria sia gli equivalenti MGU-H rispettando `deploy_mj_per_lap`, `defense_reserve_mj` e le percentuali mappa (`bucket_primary_pct`, ecc.).
 - `pu_telemetry.log`, `SessionBridge` e la UI mostrano i nuovi campi (`bucket_section_cap`, `bucket_sections_left`, `bucket_remaining`, `mguh_direct_remaining`).
+- **Sweep globale ERS completato (2026-03-21)**: Tutti i circuiti sono stati riallineati con il runtime reale (`session_bridge`/`update_section`) e i target di `docs/Ers-Deploy-Sim.md` mantenendo `mguh_direct_ratio = 0.45`. Suzuka e Monaco sono stati validati manualmente e confermati in-game.
 
 ## 3. Planner implementato
 ### 3.1 State per giro

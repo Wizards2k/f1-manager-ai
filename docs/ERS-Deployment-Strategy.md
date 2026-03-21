@@ -1,7 +1,7 @@
 ---
 title: ERS Deployment Strategy
 status: draft
-last_updated: 2026-02-15
+last_updated: 2026-03-21
 authors: Gameplay/Physics
 scope: Gestione energia MGU-K / MGU-H (deploy, harvest, telemetria)
 references:
@@ -45,6 +45,7 @@ Questi limiti sono documentati in `docs/EngineData2025.md` e sono già presenti 
 2. **Deploy batteria**: il DriverModel applica `ers_mode == deploy` su tutti i rettilinei, ignorando la priorità delle sezioni e il target SOC → la batteria si svuota prima della fine del giro anche in mappe neutrali.
 3. **Brake migration**: profili presenti ma torque split non ancora applicato.
 4. **Overtake/defense**: i pulsanti (K1/K2) forzano 120 kW ma non verificano la disponibilità MGU-H direct.
+5. **Runtime alignment (2026-03-21)**: Tutti i circuiti sono stati riallineati con il runtime reale (`session_bridge`/`update_section`) e i target di `docs/Ers-Deploy-Sim.md`. Il tuning globale ha mantenuto `mguh_direct_ratio = 0.45` e ha converto per tutti i circuiti. Suzuka e Monaco sono stati validati in-game.
 
 ## 5. Architettura proposta (PU Hybrid V2.1)
 ### 5.1 Energy Budget Manager (per entry)

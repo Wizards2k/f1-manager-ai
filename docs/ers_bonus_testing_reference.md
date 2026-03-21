@@ -1,6 +1,8 @@
 # ERS Bonus – Reference Test Playbook
 
-Questa nota riassume come validare rapidamente l’ERS bonus e integrare i nuovi test nella suite.
+Questa nota riassume come validare rapidamente l'ERS bonus e integrare i nuovi test nella suite.
+
+**Nota di calibrazione (2026-03-21)**: I test di riferimento ora usano i target ufficiali di `docs/Ers-Deploy-Sim.md`. Tutti i circuiti sono stati riallineati con il runtime reale (`session_bridge`/`update_section`) mantenendo `mguh_direct_ratio = 0.45`. Usa `scripts/ers_budget_backfill.py` per ritestare dopo modifiche al motore ERS.
 
 ## 1. Pytest di integrazione
 - File: `python_backend/lap_simulator/tests/test_integration_lap.py`
