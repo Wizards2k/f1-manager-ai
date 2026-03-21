@@ -22,7 +22,14 @@
     "setup_profile_key": "united_states",
     "built_at": "2026-03-05T12:41:46Z",
     "circuit_name": "United States Grand Prix",
-    "telemetry_source": "python_backend/data/circuits/us-2012_austin_Telemetry.json"
+    "telemetry_source": "python_backend/data/circuits/us-2012_austin_Telemetry.json",
+    "mguh_profile": {
+      "total_mj": 2.4,
+      "direct_mj": 1.08,
+      "es_mj": 1.32,
+      "direct_bias": 0.45,
+      "es_bias": 0.55
+    }
   },
   "maps": {
     "PRACTICE": {
@@ -56,7 +63,7 @@
       "ers_output_kw": 197.44,
       "deploy_mj_per_lap": 3.727,
       "harvest_mj_per_lap": 0.977,
-      "mguh_direct_ratio": 0.464,
+      "mguh_direct_ratio": 0.45,
       "target_soc_end_lap": 0.05,
       "torque_bias": 0.0561,
       "notes": {
@@ -69,7 +76,8 @@
         "harvest_dynamic": 0.835,
         "deploy_limit_hit": false,
         "harvest_limit_hit": false
-      }
+      },
+      "mguh_power_kw": 38.394
     },
     "QUALIFY": {
       "heat_load_kw": 326.21,
@@ -121,12 +129,13 @@
   "regen_profile": {
     "base_factor": 0.839,
     "limit_nm": 352.0,
-    "potential_mj_per_lap": 1.081,
+    "potential_mj_per_lap": 1.5,
     "regen_migration_bias": -0.258,
     "brake_energy_window": {
       "min_mj": 0.0,
       "max_mj": 2.184
-    }
+    },
+    "regen_limit_per_section": 2.0
   },
   "ers_budget": {
     "battery_capacity_mj": 5.5,
@@ -142,10 +151,11 @@
       },
       "RACE": {
         "deploy_mj_per_lap": 3.727,
-        "harvest_mj_per_lap": 0.977,
+        "harvest_mj_per_lap": 1.5,
         "target_soc_end_lap": 0.05,
         "deploy_ratio": 0.932,
-        "harvest_ratio": 0.488
+        "harvest_ratio": 0.75,
+        "mguh_direct_ratio": 0.45
       },
       "QUALIFY": {
         "deploy_mj_per_lap": 4.0,
@@ -163,16 +173,16 @@
       }
     },
     "warnings": [
-      "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+      "RACE: SOC target very low (0.05) – plan recharge lap",
       "QUALIFY: deploy at 100% of MGU-K limit",
       "QUALIFY: harvest insufficient vs deploy (ratio 0.31)",
-      "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+      "QUALIFY: SOC target very low (0.05) – plan recharge lap"
     ]
   },
   "soc_warnings": [
-    "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+    "RACE: SOC target very low (0.05) – plan recharge lap",
     "QUALIFY: deploy at 100% of MGU-K limit",
     "QUALIFY: harvest insufficient vs deploy (ratio 0.31)",
-    "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+    "QUALIFY: SOC target very low (0.05) – plan recharge lap"
   ]
 }

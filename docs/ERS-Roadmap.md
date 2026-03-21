@@ -11,6 +11,8 @@ _Last updated: 2026-03-21_
   - `docs/ers_bonus_testing_reference.md`
 - Fornire strumenti UI per gestire e verificare le mappe ERS.
 
+**Nota importante (2026-03-21)**: Il recupero MGU-K è ora controllato dal sistema ERS Bucket (`bucket_primary_pct`, `bucket_secondary_pct`, `bucket_exit_pct`) nei `pu_maps.json`. Il parametro `regen_migration_bias` nei `brake_params.json` non influisce materialmente su `lap_harvest_mj` perché il recupero è limitato dai bucket/SOC.
+
 ## 2. Current Gaps
 1. **Preset UI vs backend**
    - L'editor in `player_garage_v3` mostra ancora preset locali (es. 3.41 MJ) invece dei valori runtime (`deploy_budget_total_mj`).

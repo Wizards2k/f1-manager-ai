@@ -4,6 +4,8 @@ Questa nota riassume come validare rapidamente l'ERS bonus e integrare i nuovi t
 
 **Nota di calibrazione (2026-03-21)**: I test di riferimento ora usano i target ufficiali di `docs/Ers-Deploy-Sim.md`. Tutti i circuiti sono stati riallineati con il runtime reale (`session_bridge`/`update_section`) mantenendo `mguh_direct_ratio = 0.45`. Usa `scripts/ers_budget_backfill.py` per ritestare dopo modifiche al motore ERS.
 
+**Importante**: Il recupero MGU-K è ora controllato dal sistema ERS Bucket (`bucket_primary_pct`, `bucket_secondary_pct`, `bucket_exit_pct`) nei `pu_maps.json`. Il parametro `regen_migration_bias` non influisce materialmente su `lap_harvest_mj`.
+
 ## 1. Pytest di integrazione
 - File: `python_backend/lap_simulator/tests/test_integration_lap.py`
 - Copertura:

@@ -22,7 +22,14 @@
     "setup_profile_key": "abu_dhabi",
     "built_at": "2026-03-05T12:41:48Z",
     "circuit_name": "Abu Dhabi Grand Prix",
-    "telemetry_source": "python_backend/data/circuits/ae-2009_yas_marina_Telemetry.json"
+    "telemetry_source": "python_backend/data/circuits/ae-2009_yas_marina_Telemetry.json",
+    "mguh_profile": {
+      "total_mj": 2.5,
+      "direct_mj": 1.125,
+      "es_mj": 1.375,
+      "direct_bias": 0.45,
+      "es_bias": 0.55
+    }
   },
   "maps": {
     "PRACTICE": {
@@ -56,7 +63,10 @@
       "ers_output_kw": 186.38,
       "deploy_mj_per_lap": 3.889,
       "harvest_mj_per_lap": 0.992,
-      "mguh_direct_ratio": 0.416,
+      "mguh_direct_ratio": 0.45,
+      "bucket_primary_pct": 0.5,
+      "bucket_secondary_pct": 0.35,
+      "bucket_exit_pct": 1.0,
       "target_soc_end_lap": 0.05,
       "torque_bias": 0.0714,
       "notes": {
@@ -67,9 +77,10 @@
         "drs_ratio": 0.366,
         "deploy_dynamic": 1.059,
         "harvest_dynamic": 0.848,
-        "deploy_limit_hit": false,
+        "deploy_limit_hit": true,
         "harvest_limit_hit": false
-      }
+      },
+      "mguh_power_kw": 38.658
     },
     "QUALIFY": {
       "heat_load_kw": 322.26,
@@ -121,12 +132,13 @@
   "regen_profile": {
     "base_factor": 0.842,
     "limit_nm": 355.8,
-    "potential_mj_per_lap": 1.378,
+    "potential_mj_per_lap": 1.5,
     "regen_migration_bias": -0.253,
     "brake_energy_window": {
       "min_mj": 0.0,
       "max_mj": 2.364
-    }
+    },
+    "regen_limit_per_section": 2.0
   },
   "ers_budget": {
     "battery_capacity_mj": 5.5,
@@ -142,10 +154,11 @@
       },
       "RACE": {
         "deploy_mj_per_lap": 3.889,
-        "harvest_mj_per_lap": 0.992,
+        "harvest_mj_per_lap": 1.5,
         "target_soc_end_lap": 0.05,
         "deploy_ratio": 0.972,
-        "harvest_ratio": 0.496
+        "harvest_ratio": 0.75,
+        "mguh_direct_ratio": 0.45
       },
       "QUALIFY": {
         "deploy_mj_per_lap": 4.0,
@@ -164,17 +177,17 @@
     },
     "warnings": [
       "RACE: deploy at 97% of MGU-K limit",
-      "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+      "RACE: SOC target very low (0.05) – plan recharge lap",
       "QUALIFY: deploy at 100% of MGU-K limit",
       "QUALIFY: harvest insufficient vs deploy (ratio 0.32)",
-      "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+      "QUALIFY: SOC target very low (0.05) – plan recharge lap"
     ]
   },
   "soc_warnings": [
     "RACE: deploy at 97% of MGU-K limit",
-    "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+    "RACE: SOC target very low (0.05) – plan recharge lap",
     "QUALIFY: deploy at 100% of MGU-K limit",
     "QUALIFY: harvest insufficient vs deploy (ratio 0.32)",
-    "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+    "QUALIFY: SOC target very low (0.05) – plan recharge lap"
   ]
 }

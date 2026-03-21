@@ -1,6 +1,8 @@
 La tua osservazione tocca uno dei punti più dibattuti del regolamento tecnico F1 attuale (e che cambierà drasticamente nel 2026). Per rispondere alla tua domanda: no, non è del tutto realistico per una F1 moderna a Suzuka, ma c'è una spiegazione tecnica precisa legata all'efficienza dell'MGU-H.
 
 **Nota di calibrazione (2026-03-21)**: I valori di recupero MGU-H nella tabella sottostante sono ora usati come target ufficiali per il tuning del simulatore. Tutti i circuiti sono stati riallineati con il runtime reale (`session_bridge`/`update_section`) mantenendo `mguh_direct_ratio = 0.45`. Suzuka e Monaco sono stati validati in-game e confermati entro i range documentati.
+
+**Importante**: Il recupero MGU-K è ora controllato dal sistema ERS Bucket (`bucket_primary_pct`, `bucket_secondary_pct`, `bucket_exit_pct`) nei `pu_maps.json`. Il parametro `regen_migration_bias` non influisce materialmente su `lap_harvest_mj` perché il recupero è limitato dai bucket/SOC.
 Ecco l'analisi del perché il tuo modello attuale sta probabilmente sopravvalutando il recupero energetico:
 1. Il limite fisico dell'MGU-H
 L'MGU-H (Motor Generator Unit - Heat) recupera energia dai gas di scarico della turbina. È l'unico componente della Power Unit che non ha limiti di recupero o dispendio per regolamento.

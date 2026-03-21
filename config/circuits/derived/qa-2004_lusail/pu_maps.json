@@ -22,7 +22,14 @@
     "setup_profile_key": "qatar",
     "built_at": "2026-03-05T12:41:48Z",
     "circuit_name": "Qatar Grand Prix",
-    "telemetry_source": "python_backend/data/circuits/qa-2004_lusail_Telemetry.json"
+    "telemetry_source": "python_backend/data/circuits/qa-2004_lusail_Telemetry.json",
+    "mguh_profile": {
+      "total_mj": 3.2,
+      "direct_mj": 1.44,
+      "es_mj": 1.76,
+      "direct_bias": 0.45,
+      "es_bias": 0.55
+    }
   },
   "maps": {
     "PRACTICE": {
@@ -56,7 +63,7 @@
       "ers_output_kw": 200,
       "deploy_mj_per_lap": 4.0,
       "harvest_mj_per_lap": 0.952,
-      "mguh_direct_ratio": 0.489,
+      "mguh_direct_ratio": 0.45,
       "target_soc_end_lap": 0.05,
       "torque_bias": 0.0796,
       "notes": {
@@ -69,7 +76,8 @@
         "harvest_dynamic": 0.814,
         "deploy_limit_hit": true,
         "harvest_limit_hit": false
-      }
+      },
+      "mguh_power_kw": 48.878
     },
     "QUALIFY": {
       "heat_load_kw": 326.07,
@@ -121,12 +129,13 @@
   "regen_profile": {
     "base_factor": 0.833,
     "limit_nm": 345.5,
-    "potential_mj_per_lap": 1.247,
+    "potential_mj_per_lap": 1.0,
     "regen_migration_bias": -0.266,
     "brake_energy_window": {
       "min_mj": 0.0,
       "max_mj": 2.312
-    }
+    },
+    "regen_limit_per_section": 2.0
   },
   "ers_budget": {
     "battery_capacity_mj": 5.5,
@@ -142,10 +151,11 @@
       },
       "RACE": {
         "deploy_mj_per_lap": 4.0,
-        "harvest_mj_per_lap": 0.952,
+        "harvest_mj_per_lap": 1.0,
         "target_soc_end_lap": 0.05,
         "deploy_ratio": 1.0,
-        "harvest_ratio": 0.476
+        "harvest_ratio": 0.5,
+        "mguh_direct_ratio": 0.45
       },
       "QUALIFY": {
         "deploy_mj_per_lap": 4.0,
@@ -164,17 +174,17 @@
     },
     "warnings": [
       "RACE: deploy at 100% of MGU-K limit",
-      "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+      "RACE: SOC target very low (0.05) – plan recharge lap",
       "QUALIFY: deploy at 100% of MGU-K limit",
       "QUALIFY: harvest insufficient vs deploy (ratio 0.30)",
-      "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+      "QUALIFY: SOC target very low (0.05) – plan recharge lap"
     ]
   },
   "soc_warnings": [
     "RACE: deploy at 100% of MGU-K limit",
-    "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+    "RACE: SOC target very low (0.05) – plan recharge lap",
     "QUALIFY: deploy at 100% of MGU-K limit",
     "QUALIFY: harvest insufficient vs deploy (ratio 0.30)",
-    "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+    "QUALIFY: SOC target very low (0.05) – plan recharge lap"
   ]
 }

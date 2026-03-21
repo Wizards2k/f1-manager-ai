@@ -60,32 +60,39 @@ MAP_MGUH_POWER_SCALE = {
     "RECHARGE": 0.8,
 }
 
+def _canonical_map_name(map_name: str) -> str:
+    key = (map_name or "").upper()
+    if key == "QUALITY":
+        return "QUALY"
+    return key
+
+
 MGUH_DIRECT_RATIO_BASELINE = 0.45
 
 MGUH_PROFILES = [
     {
         "name": "high_speed_spec",
         "power_bias_min": 0.6,
-        "total_mj": 7.5,
-        "direct_mj": 4.5,
-        "es_mj": 3.0,
+        "total_mj": 3.45,
+        "direct_mj": 2.0,
+        "es_mj": 1.45,
         "notes": "Monza / Spa",
     },
     {
         "name": "balanced_spec",
         "power_bias_min": 0.4,
-        "total_mj": 5.5,
-        "direct_mj": 3.0,
-        "es_mj": 2.5,
-        "notes": "Silverstone / Barcelona",
+        "total_mj": 2.75,
+        "direct_mj": 1.238,
+        "es_mj": 1.512,
+        "notes": "Suzuka / Barcelona / Silverstone",
     },
     {
         "name": "low_speed_spec",
         "power_bias_min": 0.0,
-        "total_mj": 2.3,
-        "direct_mj": 0.5,
-        "es_mj": 1.8,
-        "notes": "Monaco / Hungaroring",
+        "total_mj": 0.9,
+        "direct_mj": 0.28,
+        "es_mj": 0.62,
+        "notes": "Monaco / Hungaroring / Singapore",
     },
 ]
 
@@ -169,20 +176,38 @@ def compute_stats(sections: List[Dict[str, Any]]) -> Dict[str, float]:
 
 
 def select_mguh_profile(stats: Dict[str, float]) -> Dict[str, Any]:
-    power_bias = stats.get("power_bias", 0.5)
-    selected = MGUH_PROFILES[-1]
-    for profile in sorted(MGUH_PROFILES, key=lambda p: p["power_bias_min"], reverse=True):
-        if power_bias >= profile.get("power_bias_min", 0.0) - 1e-6:
-            selected = profile
-            break
-    total_mj = max(selected.get("total_mj", 4.5), 0.1)
-    direct_mj = clamp(selected.get("direct_mj", total_mj * 0.6), 0.0, total_mj)
-    es_mj = clamp(selected.get("es_mj", total_mj - direct_mj), 0.0, total_mj)
-    direct_bias = clamp(direct_mj / total_mj, 0.05, 0.95)
+    power_bias = clamp(float(stats.get("power_bias", 0.5) or 0.5), 0.0, 1.0)
+    brake_density = max(float(stats.get("brake_density", 0.0) or 0.0), 0.0)
+    circuit_length_m = max(float(stats.get("circuit_length_m", 0.0) or 0.0), 0.0)
+
+    power_score = clamp((power_bias - 0.48) / 0.40, 0.0, 1.0)
+    brake_penalty = clamp((brake_density - 1.0) / 2.4, 0.0, 1.0)
+    length_score = clamp((circuit_length_m - 3000.0) / 3200.0, 0.0, 1.0)
+    track_score = clamp(0.60 * power_score + 0.24 * length_score - 0.36 * brake_penalty, 0.0, 1.0)
+
+    if track_score >= 0.70:
+        selected = MGUH_PROFILES[0]
+        selection_band = "high_speed_spec"
+    elif track_score >= 0.34:
+        selected = MGUH_PROFILES[1]
+        selection_band = "balanced_spec"
+    else:
+        selected = MGUH_PROFILES[2]
+        selection_band = "low_speed_spec"
+
+    total_mj = max(float(selected.get("total_mj", 4.5)), 0.1)
+    direct_mj = clamp(float(selected.get("direct_mj", total_mj * 0.6)), 0.0, total_mj)
+    es_mj = clamp(float(selected.get("es_mj", total_mj - direct_mj)), 0.0, total_mj)
+    direct_bias = clamp(direct_mj / total_mj if total_mj > 0 else MGUH_DIRECT_RATIO_BASELINE, 0.05, 0.95)
     es_bias = clamp(es_mj / total_mj, 0.05, 0.95)
     enriched = dict(selected)
     enriched["direct_bias"] = direct_bias
     enriched["es_bias"] = es_bias
+    enriched["track_score"] = round(track_score, 3)
+    enriched["power_score"] = round(power_score, 3)
+    enriched["brake_penalty"] = round(brake_penalty, 3)
+    enriched["length_score"] = round(length_score, 3)
+    enriched["selection_band"] = selection_band
     return enriched
 
 
@@ -216,6 +241,7 @@ def adjust_map(
     drs_ratio = stats["drs_ratio"]
     brake_density = stats["brake_density"]
     power_bias = stats["power_bias"]
+    map_key = _canonical_map_name(map_name)
 
     updated = deepcopy(base)
 
@@ -227,7 +253,7 @@ def adjust_map(
     updated["cooling_share"] = round(clamp(cooling_adj, 0.35, 0.65), 3)
 
     torque_base = base.get("torque_ramp", 0.6)
-    torque_adj = torque_base + MAP_TORQUE_OFFSETS.get(map_name, 0.0) + (power_bias - 0.5) * 0.12
+    torque_adj = torque_base + MAP_TORQUE_OFFSETS.get(map_key, 0.0) + (power_bias - 0.5) * 0.12
     updated["torque_ramp"] = round(clamp(torque_adj, 0.35, 1.0), 4)
 
     ers_base = base.get("ers_output_kw", 120)
@@ -235,7 +261,7 @@ def adjust_map(
     updated["ers_output_kw"] = round(clamp(ers_base * ers_scale, 70, 200), 2)
 
     deploy_base = base.get("deploy_mj_per_lap", 3.0)
-    deploy_factor = MAP_DEPLOY_INTENT.get(map_name, 1.0)
+    deploy_factor = MAP_DEPLOY_INTENT.get(map_key, 1.0)
     deploy_dynamic = 1.0 + 0.35 * (power_bias - 0.5) + 0.2 * (heat_mean - 1.0)
     deploy_value = clamp(
         deploy_base * deploy_factor * deploy_dynamic,
@@ -245,25 +271,27 @@ def adjust_map(
     updated["deploy_mj_per_lap"] = round(deploy_value, 3)
 
     harvest_base = base.get("harvest_mj_per_lap", 1.5)
-    harvest_factor = MAP_HARVEST_INTENT.get(map_name, 1.0)
+    harvest_factor = MAP_HARVEST_INTENT.get(map_key, 1.0)
     harvest_dynamic = 1.0 + 0.4 * clamp((brake_density / 3.5) - 1.0, -0.6, 0.8)
     harvest_value = clamp(harvest_base * harvest_factor * harvest_dynamic, 0.3, MGUK_HARVEST_LIMIT_MJ)
     updated["harvest_mj_per_lap"] = round(harvest_value, 3)
 
     total_mj = mguh_profile.get("total_mj", 4.5)
-    power_scale = MAP_MGUH_POWER_SCALE.get(map_name.upper(), 1.0)
+    power_scale = MAP_MGUH_POWER_SCALE.get(map_key, 1.0)
     lap_time = max(lap_time_s, 60.0)
     base_kw = (total_mj / lap_time) * 1000.0
-    updated["mguh_power_kw"] = round(clamp(base_kw * power_scale, 20.0, 120.0), 2)
+    updated["mguh_power_kw"] = round(clamp(base_kw * power_scale, 8.0, 100.0), 2)
+
+    updated["mguh_direct_ratio"] = round(clamp(MGUH_DIRECT_RATIO_BASELINE, 0.05, 0.95), 3)
 
     torque_bias = base.get("torque_bias", 0.0) + (power_bias - 0.5) * 0.1
     updated["torque_bias"] = round(clamp(torque_bias, -0.2, 0.2), 4)
 
     target_soc = base.get("target_soc_end_lap", 0.6)
     soc_delta = (harvest_value - deploy_value) * 0.15
-    if map_name.upper() == "QUALY":
+    if map_key == "QUALY":
         soc_delta -= 0.2
-    if map_name.upper() == "RECHARGE":
+    if map_key == "RECHARGE":
         soc_delta += 0.25
     updated["target_soc_end_lap"] = round(clamp(target_soc + soc_delta, 0.05, 0.98), 3)
 
@@ -312,14 +340,14 @@ def build_ers_budget(calibrated_maps: Dict[str, Any]) -> Dict[str, Any]:
         deploy = params.get("deploy_mj_per_lap", 0.0)
         harvest = params.get("harvest_mj_per_lap", 0.0)
         target_soc = params.get("target_soc_end_lap", 0.6)
-        mguh_direct_ratio = params.get("mguh_direct_ratio", MGUH_DIRECT_RATIO_BASELINE)
+        direct_ratio = params.get("mguh_direct_ratio", MGUH_DIRECT_RATIO_BASELINE)
         deploy_ratio = deploy / MGUK_DEPLOY_LIMIT_MJ if MGUK_DEPLOY_LIMIT_MJ else 0.0
         harvest_ratio = harvest / MGUK_HARVEST_LIMIT_MJ if MGUK_HARVEST_LIMIT_MJ else 0.0
         summary[name] = {
             "deploy_mj_per_lap": deploy,
             "harvest_mj_per_lap": harvest,
             "target_soc_end_lap": target_soc,
-            "mguh_direct_ratio": round(clamp(mguh_direct_ratio, 0.0, 1.0), 3),
+            "mguh_direct_ratio": round(clamp(direct_ratio, 0.05, 0.95), 3),
             "deploy_ratio": round(deploy_ratio, 3),
             "harvest_ratio": round(harvest_ratio, 3),
         }

@@ -21,8 +21,15 @@
     },
     "setup_profile_key": "austrian",
     "built_at": "2026-03-05T12:41:40Z",
-    "circuit_name": "Austrian Grand Prix",
-    "telemetry_source": "python_backend/data/circuits/gb-1948_silverstone_Telemetry.json"
+    "circuit_name": "British Grand Prix",
+    "telemetry_source": "python_backend/data/circuits/gb-1948_silverstone_Telemetry.json",
+    "mguh_profile": {
+      "total_mj": 3.1,
+      "direct_mj": 1.395,
+      "es_mj": 1.705,
+      "direct_bias": 0.45,
+      "es_bias": 0.55
+    }
   },
   "maps": {
     "PRACTICE": {
@@ -56,7 +63,7 @@
       "ers_output_kw": 181.74,
       "deploy_mj_per_lap": 3.84,
       "harvest_mj_per_lap": 0.929,
-      "mguh_direct_ratio": 0.407,
+      "mguh_direct_ratio": 0.45,
       "target_soc_end_lap": 0.05,
       "torque_bias": 0.0685,
       "notes": {
@@ -67,9 +74,10 @@
         "drs_ratio": 0.335,
         "deploy_dynamic": 1.046,
         "harvest_dynamic": 0.794,
-        "deploy_limit_hit": false,
+        "deploy_limit_hit": true,
         "harvest_limit_hit": false
-      }
+      },
+      "mguh_power_kw": 41.249
     },
     "QUALIFY": {
       "heat_load_kw": 315.71,
@@ -121,12 +129,13 @@
   "regen_profile": {
     "base_factor": 0.828,
     "limit_nm": 339.4,
-    "potential_mj_per_lap": 1.334,
+    "potential_mj_per_lap": 1.1,
     "regen_migration_bias": -0.274,
     "brake_energy_window": {
       "min_mj": 0.0,
       "max_mj": 1.863
-    }
+    },
+    "regen_limit_per_section": 2.0
   },
   "ers_budget": {
     "battery_capacity_mj": 5.5,
@@ -142,10 +151,11 @@
       },
       "RACE": {
         "deploy_mj_per_lap": 3.84,
-        "harvest_mj_per_lap": 0.929,
+        "harvest_mj_per_lap": 1.1,
         "target_soc_end_lap": 0.05,
         "deploy_ratio": 0.96,
-        "harvest_ratio": 0.465
+        "harvest_ratio": 0.55,
+        "mguh_direct_ratio": 0.45
       },
       "QUALIFY": {
         "deploy_mj_per_lap": 4.0,
@@ -164,17 +174,17 @@
     },
     "warnings": [
       "RACE: deploy at 96% of MGU-K limit",
-      "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+      "RACE: SOC target very low (0.05) – plan recharge lap",
       "QUALIFY: deploy at 100% of MGU-K limit",
       "QUALIFY: harvest insufficient vs deploy (ratio 0.30)",
-      "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+      "QUALIFY: SOC target very low (0.05) – plan recharge lap"
     ]
   },
   "soc_warnings": [
     "RACE: deploy at 96% of MGU-K limit",
-    "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+    "RACE: SOC target very low (0.05) – plan recharge lap",
     "QUALIFY: deploy at 100% of MGU-K limit",
     "QUALIFY: harvest insufficient vs deploy (ratio 0.30)",
-    "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+    "QUALIFY: SOC target very low (0.05) – plan recharge lap"
   ]
 }

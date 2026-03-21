@@ -18,6 +18,13 @@
       "brake_energy_p90": 2.804,
       "brake_energy_peak": 2.837,
       "circuit_length_m": 4251.0
+    },
+    "mguh_profile": {
+      "total_mj": 2.57,
+      "direct_mj": 1.156,
+      "es_mj": 1.414,
+      "direct_bias": 0.45,
+      "es_bias": 0.55
     }
   },
   "maps": {
@@ -52,7 +59,7 @@
       "ers_output_kw": 165.85,
       "deploy_mj_per_lap": 4.0,
       "harvest_mj_per_lap": 1.094,
-      "mguh_direct_ratio": 0.335,
+      "mguh_direct_ratio": 0.45,
       "target_soc_end_lap": 0.05,
       "torque_bias": 0.0786,
       "notes": {
@@ -65,7 +72,8 @@
         "harvest_dynamic": 0.935,
         "deploy_limit_hit": true,
         "harvest_limit_hit": false
-      }
+      },
+      "mguh_power_kw": 36.951
     },
     "QUALIFY": {
       "heat_load_kw": 330.45,
@@ -141,7 +149,8 @@
         "harvest_mj_per_lap": 1.094,
         "target_soc_end_lap": 0.05,
         "deploy_ratio": 1.0,
-        "harvest_ratio": 0.547
+        "harvest_ratio": 0.547,
+        "mguh_direct_ratio": 0.45
       },
       "QUALIFY": {
         "deploy_mj_per_lap": 4.0,
@@ -160,15 +169,15 @@
     },
     "warnings": [
       "RACE: deploy at 100% of MGU-K limit",
-      "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+      "RACE: SOC target very low (0.05) – plan recharge lap",
       "QUALIFY: deploy at 100% of MGU-K limit",
-      "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+      "QUALIFY: SOC target very low (0.05) – plan recharge lap"
     ]
   },
   "soc_warnings": [
     "RACE: deploy at 100% of MGU-K limit",
-    "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+    "RACE: SOC target very low (0.05) – plan recharge lap",
     "QUALIFY: deploy at 100% of MGU-K limit",
-    "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+    "QUALIFY: SOC target very low (0.05) – plan recharge lap"
   ]
 }

@@ -31,6 +31,18 @@ def _should_log_car(car_id: Any) -> bool:
     if not _DRIVER_FILTERS:
         return True
     return normalized in _DRIVER_FILTERS
+
+
+def reset_pu_telemetry_log() -> None:
+    _LOG_DIR.mkdir(parents=True, exist_ok=True)
+    with _LOG_FILE.open("w", encoding="utf-8") as fh:
+        fh.write("")
+    _SECTION_TRACKING.clear()
+    logger_fn = globals().get("log_pu_section")
+    if logger_fn is not None:
+        setattr(logger_fn, "_initialized", True)
+
+
 _SECTION_TRACKING: Dict[str, Dict[str, Set[str]]] = {}
 
 
@@ -135,15 +147,11 @@ def log_pu_section(entry: Dict[str, Any]) -> None:
     if not car_id:
         return
 
-    _LOG_DIR.mkdir(parents=True, exist_ok=True)
-    
     # Reset file on each startup
     if not hasattr(log_pu_section, "_initialized"):
-        with _LOG_FILE.open("w", encoding="utf-8") as fh:
-            fh.write("")  # Create empty file
-        _SECTION_TRACKING.clear()
+        reset_pu_telemetry_log()
         log_pu_section._initialized = True
-    
+
     # Skip duplicate section entries (per car & lap)
     section_id = entry.get("section_id") or entry.get("section") or entry.get("sec")
     lap_number = entry.get("lap") or entry.get("lap_number") or entry.get("lap_id")
@@ -170,4 +178,4 @@ def log_pu_section(entry: Dict[str, Any]) -> None:
         fh.write(line + "\n")
 
 
-__all__ = ["log_pu_section"]
+__all__ = ["log_pu_section", "reset_pu_telemetry_log"]

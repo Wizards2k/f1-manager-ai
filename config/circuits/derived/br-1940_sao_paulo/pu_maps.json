@@ -21,8 +21,15 @@
     },
     "setup_profile_key": "sao_paulo",
     "built_at": "2026-03-05T12:41:47Z",
-    "circuit_name": "S\u00e3o Paulo Grand Prix",
-    "telemetry_source": "python_backend/data/circuits/br-1940_sao_paulo_Telemetry.json"
+    "circuit_name": "São Paulo Grand Prix",
+    "telemetry_source": "python_backend/data/circuits/br-1940_sao_paulo_Telemetry.json",
+    "mguh_profile": {
+      "total_mj": 1.8,
+      "direct_mj": 0.81,
+      "es_mj": 0.99,
+      "direct_bias": 0.45,
+      "es_bias": 0.55
+    }
   },
   "maps": {
     "PRACTICE": {
@@ -56,7 +63,7 @@
       "ers_output_kw": 165.85,
       "deploy_mj_per_lap": 4.0,
       "harvest_mj_per_lap": 1.094,
-      "mguh_direct_ratio": 0.335,
+      "mguh_direct_ratio": 0.45,
       "target_soc_end_lap": 0.05,
       "torque_bias": 0.0786,
       "notes": {
@@ -69,7 +76,8 @@
         "harvest_dynamic": 0.935,
         "deploy_limit_hit": true,
         "harvest_limit_hit": false
-      }
+      },
+      "mguh_power_kw": 35.156
     },
     "QUALIFY": {
       "heat_load_kw": 330.45,
@@ -121,12 +129,13 @@
   "regen_profile": {
     "base_factor": 0.864,
     "limit_nm": 382.7,
-    "potential_mj_per_lap": 1.447,
+    "potential_mj_per_lap": 1.4,
     "regen_migration_bias": -0.218,
     "brake_energy_window": {
       "min_mj": 0.0,
       "max_mj": 2.804
-    }
+    },
+    "regen_limit_per_section": 2.0
   },
   "ers_budget": {
     "battery_capacity_mj": 5.5,
@@ -142,10 +151,11 @@
       },
       "RACE": {
         "deploy_mj_per_lap": 4.0,
-        "harvest_mj_per_lap": 1.094,
+        "harvest_mj_per_lap": 1.4,
         "target_soc_end_lap": 0.05,
         "deploy_ratio": 1.0,
-        "harvest_ratio": 0.547
+        "harvest_ratio": 0.7,
+        "mguh_direct_ratio": 0.45
       },
       "QUALIFY": {
         "deploy_mj_per_lap": 4.0,
@@ -164,15 +174,15 @@
     },
     "warnings": [
       "RACE: deploy at 100% of MGU-K limit",
-      "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+      "RACE: SOC target very low (0.05) – plan recharge lap",
       "QUALIFY: deploy at 100% of MGU-K limit",
-      "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+      "QUALIFY: SOC target very low (0.05) – plan recharge lap"
     ]
   },
   "soc_warnings": [
     "RACE: deploy at 100% of MGU-K limit",
-    "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+    "RACE: SOC target very low (0.05) – plan recharge lap",
     "QUALIFY: deploy at 100% of MGU-K limit",
-    "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+    "QUALIFY: SOC target very low (0.05) – plan recharge lap"
   ]
 }

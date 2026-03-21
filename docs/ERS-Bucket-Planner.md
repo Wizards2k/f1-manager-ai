@@ -1,6 +1,6 @@
 ---
 title: ERS Bucket Planner Specification
-status: in_progress
+status: active
 last_updated: 2026-03-21
 authors: Gameplay/Physics
 references:
@@ -21,6 +21,7 @@ Stabilire una strategia deterministica per distribuire l'energia ERS per giro se
 - `_ensure_bucket_budget()` inizializza per giro sia i bucket batteria sia gli equivalenti MGU-H rispettando `deploy_mj_per_lap`, `defense_reserve_mj` e le percentuali mappa (`bucket_primary_pct`, ecc.).
 - `pu_telemetry.log`, `SessionBridge` e la UI mostrano i nuovi campi (`bucket_section_cap`, `bucket_sections_left`, `bucket_remaining`, `mguh_direct_remaining`).
 - **Sweep globale ERS completato (2026-03-21)**: Tutti i circuiti sono stati riallineati con il runtime reale (`session_bridge`/`update_section`) e i target di `docs/Ers-Deploy-Sim.md` mantenendo `mguh_direct_ratio = 0.45`. Suzuka e Monaco sono stati validati manualmente e confermati in-game.
+- **Nota importante**: Il sistema ERS Bucket (`bucket_primary_pct`, `bucket_secondary_pct`, `bucket_exit_pct`) è ora il lever principale per calibrare il recupero MGU-K. Il parametro `regen_migration_bias` nei `brake_params.json` non influisce materialmente su `lap_harvest_mj` perché il recupero è limitato dai bucket/SOC.
 
 ## 3. Planner implementato
 ### 3.1 State per giro

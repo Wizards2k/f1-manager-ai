@@ -1,6 +1,6 @@
 ---
 title: ERS Deployment Strategy
-status: draft
+status: active
 last_updated: 2026-03-21
 authors: Gameplay/Physics
 scope: Gestione energia MGU-K / MGU-H (deploy, harvest, telemetria)
@@ -46,6 +46,7 @@ Questi limiti sono documentati in `docs/EngineData2025.md` e sono già presenti 
 3. **Brake migration**: profili presenti ma torque split non ancora applicato.
 4. **Overtake/defense**: i pulsanti (K1/K2) forzano 120 kW ma non verificano la disponibilità MGU-H direct.
 5. **Runtime alignment (2026-03-21)**: Tutti i circuiti sono stati riallineati con il runtime reale (`session_bridge`/`update_section`) e i target di `docs/Ers-Deploy-Sim.md`. Il tuning globale ha mantenuto `mguh_direct_ratio = 0.45` e ha converto per tutti i circuiti. Suzuka e Monaco sono stati validati in-game.
+6. **Nota importante**: Il recupero MGU-K è ora controllato dal sistema ERS Bucket (`bucket_primary_pct`, `bucket_secondary_pct`, `bucket_exit_pct`) nei `pu_maps.json`. Il parametro `regen_migration_bias` nei `brake_params.json` non influisce materialmente su `lap_harvest_mj` perché il recupero è limitato dai bucket/SOC.
 
 ## 5. Architettura proposta (PU Hybrid V2.1)
 ### 5.1 Energy Budget Manager (per entry)
