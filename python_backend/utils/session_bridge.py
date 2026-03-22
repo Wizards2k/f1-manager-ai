@@ -1216,6 +1216,9 @@ class SessionBridge:
         primary_pct_cfg = map_budget.get("bucket_primary_pct")
         secondary_pct_cfg = map_budget.get("bucket_secondary_pct")
         exit_pct_cfg = map_budget.get("bucket_exit_pct")
+        primary_es_deploy_pct_cfg = map_budget.get("bucket_primary_es_deploy_pct", 0.0)
+        secondary_es_deploy_pct_cfg = map_budget.get("bucket_secondary_es_deploy_pct", 0.0)
+        exit_es_deploy_pct_cfg = map_budget.get("bucket_exit_es_deploy_pct", 0.0)
         deploy_budget_cfg = map_budget.get("deploy_mj_per_lap")
         harvest_budget_cfg = map_budget.get("harvest_mj_per_lap")
         defense_reserve_cfg = map_budget.get("defense_reserve_mj")
@@ -1259,6 +1262,9 @@ class SessionBridge:
             "bucket_primary_pct": primary_pct_cfg,
             "bucket_secondary_pct": secondary_pct_cfg,
             "bucket_exit_pct": exit_pct_cfg,
+            "bucket_primary_es_deploy_pct": round(primary_es_deploy_pct_cfg, 3),
+            "bucket_secondary_es_deploy_pct": round(secondary_es_deploy_pct_cfg, 3),
+            "bucket_exit_es_deploy_pct": round(exit_es_deploy_pct_cfg, 3),
             "bucket_primary_config_mj": None if bucket_cfg["primary"] is None else round(bucket_cfg["primary"], 4),
             "bucket_secondary_config_mj": None if bucket_cfg["secondary"] is None else round(bucket_cfg["secondary"], 4),
             "bucket_exit_config_mj": None if bucket_cfg["exit"] is None else round(bucket_cfg["exit"], 4),

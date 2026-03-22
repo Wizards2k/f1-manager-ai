@@ -392,13 +392,29 @@
 
     <script>
         // Navigation function
+        function getSelectedCircuit() {
+            try {
+                return localStorage.getItem('selectedCircuit') || '';
+            } catch (error) {
+                return '';
+            }
+        }
+
+        function buildNavigationUrl(section) {
+            const baseUrl = `/${section}`;
+            if (section === 'engine') {
+                const circuitId = getSelectedCircuit();
+                return circuitId ? `${baseUrl}?circuit=${encodeURIComponent(circuitId)}` : baseUrl;
+            }
+            return baseUrl;
+        }
+
         function navigateTo(section) {
             const menuItem = event.currentTarget;
             menuItem.classList.add('loading');
-            
-            // Simulate loading
+
             setTimeout(() => {
-                window.location.href = `/${section}`;
+                window.location.href = buildNavigationUrl(section);
             }, 500);
         }
 

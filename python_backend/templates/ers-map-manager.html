@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Manager AI · ERS Map Manager</title>
+    <style>
+        :root {
+            --bg: #05060b;
+            --panel: #101522;
+            --panel-soft: #151b2c;
+            --card: #1a2136;
+            --accent: #ff2e52;
+            --accent-soft: rgba(255, 46, 82, 0.14);
+            --text: #f3f6ff;
+            --muted: #8d95b8;
+            --grid: rgba(255, 255, 255, 0.06);
+            --good: #00ff88;
+            --warn: #ffaa00;
+            --bad: #ff5252;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(255, 46, 82, 0.18), transparent 28%),
+                linear-gradient(145deg, #04050a 0%, #0b1020 55%, #04050a 100%);
+            color: var(--text);
+            font-family: 'Formula Condensed', 'Space Grotesk', system-ui, sans-serif;
+        }
+
+        a { color: inherit; text-decoration: none; }
+        button, input, select { font: inherit; }
+
+        .page-shell {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 22px 32px 32px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            padding: 14px 0 18px;
+            border-bottom: 1px solid var(--grid);
+        }
+
+        .title-group h1 {
+            margin: 0;
+            font-size: clamp(2rem, 4vw, 3.8rem);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .title-group p {
+            margin: 8px 0 0;
+            color: var(--muted);
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        .top-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .circuit-picker {
+            display: grid;
+            gap: 8px;
+            min-width: 280px;
+            padding: 12px 14px;
+            border-radius: 18px;
+            border: 1px solid var(--grid);
+            background: rgba(16, 21, 34, 0.88);
+        }
+
+        .circuit-picker label {
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-size: 0.68rem;
+        }
+
+        .circuit-picker-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .circuit-picker select {
+            flex: 1;
+            min-width: 0;
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(3, 4, 10, 0.65);
+            border-radius: 12px;
+            padding: 11px 12px;
+            outline: none;
+        }
+
+        .circuit-picker select:focus {
+            border-color: rgba(255, 46, 82, 0.75);
+            box-shadow: 0 0 0 3px rgba(255, 46, 82, 0.12);
+        }
+
+        .chip,
+        .ghost-btn,
+        .primary-btn,
+        .danger-btn,
+        .map-card,
+        .panel,
+        .field,
+        .message {
+            border: 1px solid var(--grid);
+            background: rgba(16, 21, 34, 0.88);
+            backdrop-filter: blur(12px);
+        }
+
+        .chip {
+            padding: 10px 14px;
+            border-radius: 999px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-size: 0.72rem;
+        }
+
+        .ghost-btn,
+        .primary-btn,
+        .danger-btn {
+            padding: 12px 18px;
+            border-radius: 14px;
+            color: var(--text);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+        }
+
+        .ghost-btn:hover,
+        .primary-btn:hover,
+        .danger-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .primary-btn {
+            border-color: rgba(255, 46, 82, 0.4);
+            background: rgba(255, 46, 82, 0.14);
+        }
+
+        .primary-btn:hover { background: rgba(255, 46, 82, 0.22); }
+
+        .danger-btn {
+            border-color: rgba(255, 82, 82, 0.42);
+            background: rgba(255, 82, 82, 0.14);
+        }
+
+        .danger-btn:hover { background: rgba(255, 82, 82, 0.24); }
+
+        .status-strip {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 14px;
+            align-items: center;
+            margin-top: 18px;
+            padding: 16px 18px;
+            border-radius: 20px;
+            background: var(--panel);
+            border: 1px solid var(--grid);
+        }
+
+        .status-strip strong {
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+        }
+
+        .status-strip span,
+        .status-strip a {
+            color: var(--muted);
+        }
+
+        .status-strip .item {
+            display: grid;
+            gap: 6px;
+        }
+
+        .status-strip .item strong {
+            font-size: 0.72rem;
+        }
+
+        .status-strip .item span {
+            font-size: 0.92rem;
+            color: #edf1ff;
+            word-break: break-word;
+        }
+
+        .selected-overview {
+            margin-top: 18px;
+            padding: 20px;
+            border-radius: 24px;
+            background: linear-gradient(145deg, rgba(16, 21, 34, 0.96), rgba(21, 27, 44, 0.92));
+            border: 1px solid var(--grid);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+        }
+
+        .error-banner {
+            margin-top: 16px;
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 82, 82, 0.4);
+            background: rgba(255, 82, 82, 0.12);
+            color: #ffd2d2;
+            line-height: 1.6;
+        }
+
+        .error-banner[hidden] { display: none; }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(320px, 0.38fr) minmax(0, 0.62fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .panel {
+            border-radius: 28px;
+            padding: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+        }
+
+        .sidebar {
+            display: grid;
+            gap: 18px;
+            align-content: start;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .panel-header h2,
+        .panel-header h3 {
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+        }
+
+        .panel-header p {
+            margin: 4px 0 0;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        .map-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: visible;
+            padding-right: 4px;
+        }
+
+        .map-card {
+            width: 100%;
+            border-radius: 22px;
+            padding: 18px;
+            text-align: left;
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+            color: var(--text);
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(145deg, rgba(17, 22, 35, 0.98), rgba(26, 33, 54, 0.92));
+            flex-shrink: 0;
+            min-height: 120px;
+            box-sizing: border-box;
+        }
+
+        .map-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 46, 82, 0.55);
+            background: linear-gradient(145deg, rgba(255, 46, 82, 0.12), rgba(26, 33, 54, 0.98));
+        }
+
+        .map-card.active {
+            border-color: rgba(255, 46, 82, 0.9);
+            background: linear-gradient(145deg, rgba(255, 46, 82, 0.18), rgba(21, 27, 44, 0.9));
+            box-shadow: 0 16px 32px rgba(255, 46, 82, 0.12);
+        }
+
+        .map-card::before {
+            content: '';
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 5px;
+            background: linear-gradient(180deg, rgba(255, 46, 82, 0.95), rgba(255, 46, 82, 0.2));
+            opacity: 0.85;
+        }
+
+        .map-card .title-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .map-card .name {
+            font-size: 1.15rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: #ffffff;
+            font-weight: 700;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+        }
+
+        .map-card .badge {
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #f7f8ff;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            font-size: 0.68rem;
+            white-space: nowrap;
+        }
+
+        .map-card .summary {
+            display: grid;
+            gap: 8px;
+            color: #d2d8f5;
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
+        .map-card .summary strong {
+            color: #ffffff;
+        }
+
+        .editor {
+            display: grid;
+            gap: 18px;
+            align-content: start;
+        }
+
+        .editor-hero {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: flex-start;
+        }
+
+        .editor-hero h2 {
+            margin: 0;
+            font-size: clamp(1.8rem, 3vw, 2.8rem);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .editor-hero p {
+            margin: 8px 0 0;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .hero-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .tag {
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--grid);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            font-size: 0.7rem;
+        }
+
+        .summary-bar {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .summary-chip {
+            padding: 14px 16px;
+            border-radius: 18px;
+            background: var(--panel-soft);
+            border: 1px solid var(--grid);
+        }
+
+        .summary-chip .label {
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            font-size: 0.68rem;
+        }
+
+        .summary-chip .value {
+            margin-top: 8px;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .toolbar {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 12px 16px;
+            justify-content: flex-start;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .create-frame {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 8px;
+            padding: 10px 12px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
+            flex: 0 0 250px;
+            min-width: 0;
+            width: 250px;
+        }
+
+        .create-frame .field {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 4px;
+            margin: 0;
+            padding: 0;
+            background: none;
+            border: none;
+            backdrop-filter: none;
+            min-width: 0;
+            width: 100%;
+        }
+
+        .create-frame label {
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-size: 0.65rem;
+            white-space: nowrap;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .create-frame input,
+        .create-frame select {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(0, 0, 0, 0.25);
+            color: var(--text);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            min-width: 0;
+            width: 100%;
+            max-width: none;
+            outline: none;
+        }
+
+        .create-frame input {
+            height: 32px;
+            line-height: 1.2;
+        }
+
+        .create-frame select {
+            -webkit-appearance: none;
+            appearance: none;
+            min-height: 36px;
+            line-height: 1.2;
+            font-family: 'Space Grotesk', system-ui, sans-serif;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            padding-right: 34px;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+            background-image:
+                linear-gradient(45deg, transparent 50%, rgba(255, 255, 255, 0.72) 50%),
+                linear-gradient(135deg, rgba(255, 255, 255, 0.72) 50%, transparent 50%);
+            background-position:
+                calc(100% - 16px) calc(50% - 1px),
+                calc(100% - 10px) calc(50% - 1px);
+            background-repeat: no-repeat;
+            background-size: 6px 6px, 6px 6px;
+        }
+
+        .create-frame select option {
+            background: #0b0f16;
+            color: var(--text);
+            font-family: 'Space Grotesk', system-ui, sans-serif;
+        }
+
+        .create-frame .primary-btn {
+            width: 100%;
+            justify-self: stretch;
+            align-self: start;
+            padding: 0 12px;
+            font-size: 0.7rem;
+            min-width: 0;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            justify-content: center;
+        }
+
+        .toolbar-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-left: auto;
+            flex-shrink: 0;
+            flex-wrap: nowrap;
+        }
+
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .fieldset {
+            padding: 18px;
+            border-radius: 22px;
+            background: var(--panel-soft);
+            border: 1px solid var(--grid);
+        }
+
+        .fieldset h3 {
+            margin: 0 0 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            font-size: 1rem;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .field {
+            border-radius: 16px;
+            padding: 12px 12px 10px;
+        }
+
+        .field.full {
+            grid-column: 1 / -1;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-size: 0.68rem;
+        }
+
+        .field input,
+        .field select {
+            width: 100%;
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(3, 4, 10, 0.55);
+            border-radius: 12px;
+            padding: 12px 12px;
+            outline: none;
+        }
+
+        .field input:focus,
+        .field select:focus {
+            border-color: rgba(255, 46, 82, 0.75);
+            box-shadow: 0 0 0 3px rgba(255, 46, 82, 0.12);
+        }
+
+        .field .unit {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .field-help {
+            margin: -2px 0 8px;
+            color: var(--muted);
+            font-size: 0.72rem;
+            line-height: 1.35;
+            letter-spacing: 0.03em;
+        }
+
+        .percent-control {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto auto;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .percent-step {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            color: #fff;
+            font-size: 1.4rem;
+            line-height: 1;
+            cursor: pointer;
+            transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+        }
+
+        .percent-step:hover {
+            transform: translateY(-1px);
+            background: rgba(255, 46, 82, 0.15);
+            border-color: rgba(255, 46, 82, 0.45);
+        }
+
+        .percent-range {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: transparent;
+            outline: none;
+            cursor: pointer;
+            --range-progress: 0%;
+            --range-track: rgba(255, 255, 255, 0.1);
+        }
+
+        .percent-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 0 8px rgba(255, 46, 82, 0.4);
+            margin-top: -8px;
+        }
+
+        .percent-range::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: linear-gradient(
+                to right,
+                var(--accent) 0%,
+                var(--accent) var(--range-progress),
+                var(--range-track) var(--range-progress),
+                var(--range-track) 100%
+            );
+            border-radius: 3px;
+            border: none;
+        }
+
+        .percent-range::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 0 8px rgba(255, 46, 82, 0.4);
+        }
+
+        .percent-range::-moz-range-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: linear-gradient(
+                to right,
+                var(--accent) 0%,
+                var(--accent) var(--range-progress),
+                var(--range-track) var(--range-progress),
+                var(--range-track) 100%
+            );
+            border-radius: 3px;
+        }
+
+        .percent-range::-moz-range-progress {
+            background: transparent;
+        }
+
+        .percent-value {
+            min-width: 86px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(3, 4, 10, 0.65);
+            color: #fff;
+            text-align: center;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .bucket-field-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .bucket-lock {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            color: #fff;
+            border-radius: 999px;
+            padding: 8px 12px;
+            font-size: 0.68rem;
+            line-height: 1;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+        }
+
+        .bucket-lock:hover {
+            transform: translateY(-1px);
+            border-color: rgba(255, 46, 82, 0.45);
+            background: rgba(255, 46, 82, 0.12);
+        }
+
+        .bucket-lock.active {
+            border-color: rgba(255, 46, 82, 0.75);
+            background: rgba(255, 46, 82, 0.22);
+        }
+
+        .bucket-lock:disabled {
+            cursor: not-allowed;
+            opacity: 0.65;
+            transform: none;
+        }
+
+        .helper-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+            color: var(--muted);
+            font-size: 0.72rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .footer-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: center;
+            margin-top: 24px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            font-size: 0.72rem;
+        }
+
+        .empty-state {
+            padding: 18px;
+            border-radius: 18px;
+            border: 1px dashed rgba(255, 255, 255, 0.12);
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .built-in-note {
+            color: var(--warn);
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-size: 0.72rem;
+            margin-top: 8px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 1200px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-bar {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 720px) {
+            .page-shell {
+                padding: 22px 18px 28px;
+            }
+
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .status-strip {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .panel {
+                padding: 20px;
+                border-radius: 22px;
+            }
+
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            .create-frame {
+                width: 100%;
+                flex: 1 1 auto;
+            }
+
+            .create-frame .field input,
+            .create-frame .field select {
+                min-width: 0;
+            }
+
+            .create-frame .primary-btn {
+                justify-content: center;
+            }
+
+            .toolbar-actions {
+                width: 100%;
+                flex-wrap: wrap;
+                justify-content: flex-start;
+                margin-left: 0;
+            }
+
+            .section-grid,
+            .field-grid,
+            .summary-bar {
+                grid-template-columns: 1fr;
+            }
+
+            .editor-hero {
+                flex-direction: column;
+            }
+
+            .toolbar {
+                justify-content: flex-start;
+            }
+
+            .footer-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-shell">
+        <header class="topbar">
+            <div class="title-group">
+                <div class="title-row">
+                    <h2>ERS Map Manager</h2>
+                    <span class="tag">ERS</span>
+                </div>
+                <p>Circuit-specific ERS presets and budget editing</p>
+            </div>
+            <div class="top-actions">
+                <form class="circuit-picker" id="circuit-picker-form" action="/engine/ers" method="get">
+                    <label for="circuit-select">Circuit</label>
+                    <div class="circuit-picker-row">
+                        <select id="circuit-select" name="circuit">
+                            {% if circuit_options %}
+                                {% for circuit in circuit_options %}
+                                <option value="{{ circuit.id }}" {% if circuit.id == selected_circuit_id %}selected{% endif %}>{{ circuit.label }}</option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="{{ selected_circuit_id or 'jp-1962_suzuka' }}" selected>{{ current_circuit_label }}</option>
+                            {% endif %}
+                        </select>
+                        <button type="submit" class="primary-btn">Load</button>
+                    </div>
+                </form>
+                <span class="chip">Active: {{ current_circuit_label }}</span>
+                <a class="ghost-btn" href="{{ back_url }}">← Engine Hub</a>
+            </div>
+        </header>
+
+        {% set selected = ers_catalog.selected_map %}
+
+        <section class="selected-overview">
+            <div class="editor-hero">
+                <div>
+                    <h2 id="selected-map-title">{{ selected.label if selected else 'No map selected' }}</h2>
+                    <p id="selected-map-subtitle">
+                        {% if selected %}
+                            {{ 'Built-in map' if selected.is_builtin else 'Custom map' }} ·
+                            {{ '%.2f'|format(selected.summary.deploy_mj_per_lap) }} MJ deploy ·
+                            {{ (selected.summary.bucket_sum_pct * 100)|round(1) }}% bucket sum
+                        {% else %}
+                            Pick a map from the catalog to begin editing.
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="hero-tags">
+                    <span class="tag" id="selected-map-id-tag">{{ selected.id if selected else '—' }}</span>
+                    <span class="tag" id="selected-map-builtin-tag">{{ 'Built-in' if selected and selected.is_builtin else 'Custom' }}</span>
+                </div>
+            </div>
+
+            <div class="summary-bar">
+                <div class="summary-chip"><div class="label">Deploy / Battery</div><div class="value" id="summary-deploy">{{ '%.1f'|format(selected.summary.deploy_pct_of_battery) if selected else '0.0' }}%</div></div>
+                <div class="summary-chip"><div class="label">Direct / ES</div><div class="value" id="summary-direct">{{ (selected.summary.mguh_direct_ratio * 100)|round(1) if selected else 45 }}% / {{ (selected.summary.mguh_es_ratio * 100)|round(1) if selected else 55 }}%</div></div>
+                <div class="summary-chip"><div class="label">Bucket Sum</div><div class="value" id="summary-buckets">{{ (selected.summary.bucket_sum_pct * 100)|round(1) if selected else 100 }}%</div></div>
+                <div class="summary-chip"><div class="label">SOC Floor</div><div class="value" id="summary-soc">{{ (selected.summary.target_soc_end_lap * 100)|round(1) if selected else 55 }}%</div></div>
+                <div class="summary-chip"><div class="label">Defense Reserve</div><div class="value" id="summary-defense">{{ '%.2f'|format(selected.summary.defense_reserve_mj) if selected else '0.20' }} MJ</div></div>
+            </div>
+        </section>
+
+        <section class="status-strip">
+            <div class="item">
+                <strong>Source File</strong>
+                <span>{{ ers_catalog.source_file_name or 'N/A' }}</span>
+            </div>
+            <div class="item">
+                <strong>Battery Capacity</strong>
+                <span>{{ '%.2f'|format(ers_catalog.battery_capacity_mj) }} MJ</span>
+            </div>
+            <div class="item">
+                <strong>Deploy Limit</strong>
+                <span>{{ '%.2f'|format(ers_catalog.deploy_limit_mj) }} MJ</span>
+            </div>
+            <div class="item">
+                <strong>Harvest Limit</strong>
+                <span>{{ '%.2f'|format(ers_catalog.harvest_limit_mj) }} MJ</span>
+            </div>
+            <div class="item">
+                <strong>Maps</strong>
+                <span>{{ ers_catalog.maps|length }}</span>
+            </div>
+        </section>
+
+        <div class="error-banner" id="load-error" {% if not load_error %}hidden{% endif %}>{{ load_error }}</div>
+
+        <section class="layout">
+            <aside class="panel sidebar">
+                <div class="panel-header">
+                    <div>
+                        <h2>Map Catalog</h2>
+                        <p>Select an ERS map to inspect or edit.</p>
+                    </div>
+                    <span class="tag">{{ ers_catalog.selected_map_id or 'None' }}</span>
+                </div>
+
+                <div class="map-list" id="map-list">
+                    {% if ers_catalog.maps %}
+                        {% for map in ers_catalog.maps %}
+                        <button
+                            type="button"
+                            class="map-card {% if map.id == ers_catalog.selected_map_id %}active{% endif %}"
+                            data-map-id="{{ map.id }}"
+                        >
+                            <div class="title-row">
+                                <div class="name">{{ map.label }}</div>
+                                <div class="badge">ERS · {{ 'Built-in' if map.is_builtin else 'Custom' }}</div>
+                            </div>
+                            <div class="summary">
+                                <div><strong>Deploy</strong> {{ '%.2f'|format(map.summary.deploy_mj_per_lap) }} MJ · {{ map.summary.deploy_pct_of_battery }}% battery</div>
+                                <div><strong>Target SOC</strong> {{ '%.3f'|format(map.summary.target_soc_end_lap) }}</div>
+                                <div><strong>Direct / ES</strong> {{ (map.summary.mguh_direct_ratio * 100)|round(1) }}% / {{ (map.summary.mguh_es_ratio * 100)|round(1) }}%</div>
+                                <div><strong>Bucket Sum</strong> {{ (map.summary.bucket_sum_pct * 100)|round(1) }}%</div>
+                            </div>
+                        </button>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            No ERS maps available for the selected circuit.
+                            Load a circuit first or create a new derived configuration.
+                        </div>
+                    {% endif %}
+                </div>
+            </aside>
+
+            <section class="panel editor">
+                <div class="panel-header">
+                    <div>
+                        <h2>Map Editor</h2>
+                        <p>Adjust the budget strategy and bucket distribution.</p>
+                    </div>
+                </div>
+
+                <div class="toolbar">
+                    <div class="create-frame">
+                        <div class="field">
+                            <label>New Map ID</label>
+                            <input id="create-map-id" type="text" placeholder="custom_id">
+                        </div>
+                        <div class="field">
+                            <label>Source Map</label>
+                            <select id="create-source-map">
+                                <option value="">Defaults</option>
+                                {% for map in ers_catalog.maps %}
+                                <option value="{{ map.id }}" {% if selected and map.id == selected.id %}selected{% endif %}>{{ map.label or map.id }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="button" class="primary-btn" id="create-btn">Create New Map</button>
+                    </div>
+                    <div class="toolbar-actions">
+                        <button class="ghost-btn" type="button" id="reload-btn">Reload</button>
+                        <button class="primary-btn" type="button" id="save-btn">Save Map</button>
+                        <button class="danger-btn" type="button" id="delete-btn" {% if selected and selected.is_builtin %}disabled{% endif %}>Delete Map</button>
+                    </div>
+                </div>
+
+                <div class="section-grid">
+                    <div class="fieldset">
+                        <h3>Budget & Strategy</h3>
+                        <div class="field-grid">
+                            <div class="field">
+                                <label>Total Energy</label>
+                                <div class="field-help">How much battery energy this map may spend each lap.</div>
+                                <input id="deploy-mj" type="number" min="0" max="4.00" step="0.01" value="{{ '%.2f'|format(selected.budget_data.deploy_mj_per_lap) if selected else '4.00' }}">
+                                <div class="unit">MJ per lap</div>
+                            </div>
+                            <div class="field">
+                                <label>Harvest Budget</label>
+                                <div class="field-help">How much battery energy this map may recover each lap.</div>
+                                <input id="harvest-mj" type="number" min="0" max="4.00" step="0.01" value="{{ '%.2f'|format(selected.budget_data.harvest_mj_per_lap) if selected else '1.00' }}">
+                                <div class="unit">MJ per lap</div>
+                            </div>
+                            <div class="field full">
+                                <label>Target SOC End Lap</label>
+                                <div class="percent-control" data-percent-control="target_soc_end_lap" data-step="5">
+                                    <button type="button" class="percent-step" data-percent-step="-5" aria-label="Decrease Target SOC End Lap">-</button>
+                                    <input id="target-soc-end" class="percent-range" type="range" min="0" max="100" step="0.5" value="{{ '%.3f'|format((selected.budget_data.target_soc_end_lap * 100) if selected else 55.0) }}">
+                                    <button type="button" class="percent-step" data-percent-step="5" aria-label="Increase Target SOC End Lap">+</button>
+                                    <div class="percent-value" data-percent-display="target_soc_end_lap">{{ '%.1f'|format((selected.budget_data.target_soc_end_lap * 100) if selected else 55.0) }}%</div>
+                                </div>
+                                <div class="unit" data-mj-display="target_soc_end_lap" data-mj-base="battery_capacity_mj" data-mj-label="% battery at lap end">% battery at lap end · {{ '%.2f'|format(((selected.budget_data.target_soc_end_lap if selected else 0.55) * (ers_catalog.battery_capacity_mj if ers_catalog else 4.0))) if True else '' }} MJ</div>
+                            </div>
+                            <div class="field full">
+                                <label>Direct / ES Split</label>
+                                <div class="percent-control" data-percent-control="mguh_direct_ratio" data-step="5">
+                                    <button type="button" class="percent-step" data-percent-step="-5" aria-label="Decrease Direct / ES Split">-</button>
+                                    <input id="mguh-direct-ratio" class="percent-range" type="range" min="0" max="100" step="0.5" value="{{ '%.3f'|format((selected.budget_data.mguh_direct_ratio * 100) if selected else 45.0) }}">
+                                    <button type="button" class="percent-step" data-percent-step="5" aria-label="Increase Direct / ES Split">+</button>
+                                    <div class="percent-value" data-percent-display="mguh_direct_ratio">{{ '%.1f'|format((selected.budget_data.mguh_direct_ratio * 100) if selected else 45.0) }}%</div>
+                                </div>
+                                <div class="unit" data-mj-display="mguh_direct_ratio" data-mj-base="deploy_mj_per_lap" data-mj-label="% direct path" data-mj-suffix="equiv.">% direct path · {{ '%.2f'|format(((selected.budget_data.mguh_direct_ratio if selected else 0.45) * (selected.budget_data.deploy_mj_per_lap if selected else 4.0))) if True else '' }} MJ equiv.</div>
+                            </div>
+                            <div class="field full">
+                                <label>Defense Reserve</label>
+                                <input id="defense-reserve-mj" type="number" step="0.01" value="{{ '%.2f'|format(selected.map_data.defense_reserve_mj) if selected else '0.20' }}">
+                                <div class="unit">MJ reserved for defensive use</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="fieldset">
+                        <h3>Bucket Distribution</h3>
+                        <div class="field-grid">
+                            <div class="field full">
+                                <div class="bucket-field-head">
+                                    <label>Primary Bucket</label>
+                                    <button type="button" class="bucket-lock" data-bucket-lock="bucket_primary_pct" aria-pressed="false">Lock</button>
+                                </div>
+                                <div class="percent-control" data-percent-control="bucket_primary_pct" data-step="5">
+                                    <button type="button" class="percent-step" data-percent-step="-5" aria-label="Decrease Primary Bucket">-</button>
+                                    <input id="bucket-primary-pct" class="percent-range" type="range" min="0" max="100" step="0.5" value="{{ '%.3f'|format((selected.map_data.bucket_primary_pct * 100) if selected else 50.0) }}">
+                                    <button type="button" class="percent-step" data-percent-step="5" aria-label="Increase Primary Bucket">+</button>
+                                    <div class="percent-value" data-percent-display="bucket_primary_pct">{{ '%.1f'|format((selected.map_data.bucket_primary_pct * 100) if selected else 50.0) }}%</div>
+                                </div>
+                                <div class="unit" data-mj-display="bucket_primary_pct" data-mj-base="deploy_mj_per_lap" data-mj-label="% of deploy budget">% of deploy budget · {{ '%.2f'|format(((selected.map_data.bucket_primary_pct if selected else 0.5) * (selected.budget_data.deploy_mj_per_lap if selected else 4.0))) if True else '' }} MJ</div>
+                                <div class="field full nested-field">
+                                    <label>ES Deploy</label>
+                                    <div class="percent-control" data-percent-control="bucket_primary_es_deploy_pct" data-step="5">
+                                        <button type="button" class="percent-step" data-percent-step="-5" aria-label="Decrease Primary Bucket ES Deploy">-</button>
+                                        <input id="bucket-primary-es-deploy-pct" class="percent-range" type="range" min="0" max="100" step="0.5" value="{{ '%.3f'|format(((selected.map_data.bucket_primary_es_deploy_pct if selected else 0.0)) * 100) }}">
+                                        <button type="button" class="percent-step" data-percent-step="5" aria-label="Increase Primary Bucket ES Deploy">+</button>
+                                        <div class="percent-value" data-percent-display="bucket_primary_es_deploy_pct">{{ '%.1f'|format(((selected.map_data.bucket_primary_es_deploy_pct if selected else 0.0)) * 100) }}%</div>
+                                    </div>
+                                    <div class="unit">Stored in the bucket section of the map JSON.</div>
+                                </div>
+                            </div>
+                            <div class="field full">
+                                <div class="bucket-field-head">
+                                    <label>Secondary Bucket</label>
+                                    <button type="button" class="bucket-lock" data-bucket-lock="bucket_secondary_pct" aria-pressed="false">Lock</button>
+                                </div>
+                                <div class="percent-control" data-percent-control="bucket_secondary_pct" data-step="5">
+                                    <button type="button" class="percent-step" data-percent-step="-5" aria-label="Decrease Secondary Bucket">-</button>
+                                    <input id="bucket-secondary-pct" class="percent-range" type="range" min="0" max="100" step="0.5" value="{{ '%.3f'|format((selected.map_data.bucket_secondary_pct * 100) if selected else 35.0) }}">
+                                    <button type="button" class="percent-step" data-percent-step="5" aria-label="Increase Secondary Bucket">+</button>
+                                    <div class="percent-value" data-percent-display="bucket_secondary_pct">{{ '%.1f'|format((selected.map_data.bucket_secondary_pct * 100) if selected else 35.0) }}%</div>
+                                </div>
+                                <div class="unit" data-mj-display="bucket_secondary_pct" data-mj-base="deploy_mj_per_lap" data-mj-label="% of deploy budget">% of deploy budget · {{ '%.2f'|format(((selected.map_data.bucket_secondary_pct if selected else 0.35) * (selected.budget_data.deploy_mj_per_lap if selected else 4.0))) if True else '' }} MJ</div>
+                                <div class="field full nested-field">
+                                    <label>ES Deploy</label>
+                                    <div class="percent-control" data-percent-control="bucket_secondary_es_deploy_pct" data-step="5">
+                                        <button type="button" class="percent-step" data-percent-step="-5" aria-label="Decrease Secondary Bucket ES Deploy">-</button>
+                                        <input id="bucket-secondary-es-deploy-pct" class="percent-range" type="range" min="0" max="100" step="0.5" value="{{ '%.3f'|format(((selected.map_data.bucket_secondary_es_deploy_pct if selected else 0.0)) * 100) }}">
+                                        <button type="button" class="percent-step" data-percent-step="5" aria-label="Increase Secondary Bucket ES Deploy">+</button>
+                                        <div class="percent-value" data-percent-display="bucket_secondary_es_deploy_pct">{{ '%.1f'|format(((selected.map_data.bucket_secondary_es_deploy_pct if selected else 0.0)) * 100) }}%</div>
+                                    </div>
+                                    <div class="unit">Stored in the bucket section of the map JSON.</div>
+                                </div>
+                            </div>
+                            <div class="field full">
+                                <div class="bucket-field-head">
+                                    <label>Exit Bucket</label>
+                                    <button type="button" class="bucket-lock" data-bucket-lock="bucket_exit_pct" aria-pressed="false">Lock</button>
+                                </div>
+                                <div class="percent-control" data-percent-control="bucket_exit_pct" data-step="5">
+                                    <button type="button" class="percent-step" data-percent-step="-5" aria-label="Decrease Exit Bucket">-</button>
+                                    <input id="bucket-exit-pct" class="percent-range" type="range" min="0" max="100" step="0.5" value="{{ '%.3f'|format((selected.map_data.bucket_exit_pct * 100) if selected else 15.0) }}">
+                                    <button type="button" class="percent-step" data-percent-step="5" aria-label="Increase Exit Bucket">+</button>
+                                    <div class="percent-value" data-percent-display="bucket_exit_pct">{{ '%.1f'|format((selected.map_data.bucket_exit_pct * 100) if selected else 15.0) }}%</div>
+                                </div>
+                                <div class="unit" data-mj-display="bucket_exit_pct" data-mj-base="deploy_mj_per_lap" data-mj-label="% of deploy budget">% of deploy budget · {{ '%.2f'|format(((selected.map_data.bucket_exit_pct if selected else 0.15) * (selected.budget_data.deploy_mj_per_lap if selected else 4.0))) if True else '' }} MJ</div>
+                                <div class="field full nested-field">
+                                    <label>ES Deploy</label>
+                                    <div class="percent-control" data-percent-control="bucket_exit_es_deploy_pct" data-step="5">
+                                        <button type="button" class="percent-step" data-percent-step="-5" aria-label="Decrease Exit Bucket ES Deploy">-</button>
+                                        <input id="bucket-exit-es-deploy-pct" class="percent-range" type="range" min="0" max="100" step="0.5" value="{{ '%.3f'|format(((selected.map_data.bucket_exit_es_deploy_pct if selected else 0.0)) * 100) }}">
+                                        <button type="button" class="percent-step" data-percent-step="5" aria-label="Increase Exit Bucket ES Deploy">+</button>
+                                        <div class="percent-value" data-percent-display="bucket_exit_es_deploy_pct">{{ '%.1f'|format(((selected.map_data.bucket_exit_es_deploy_pct if selected else 0.0)) * 100) }}%</div>
+                                    </div>
+                                    <div class="unit">Stored in the bucket section of the map JSON.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="helper-row">
+                            <span>Auto-normalized to 100%</span>
+                            <span>Saved as decimal ratios in JSON</span>
+                            <span>Lock one bucket to keep it fixed while the other two rebalance</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="built-in-note" id="builtin-note" {% if not (selected and selected.is_builtin) %}hidden{% endif %}>
+                    Built-in maps are protected from deletion.
+                </div>
+            </section>
+        </section>
+
+        <div class="message" id="message-box" hidden></div>
+
+        <div class="footer-row">
+            <span>Dedicated ERS editor</span>
+            <span>Source of truth: derived pu_maps.json</span>
+        </div>
+    </div>
+
+    <script type="application/json" id="ers-manager-bootstrap">{{ ers_catalog_json | safe }}</script>
+    <script type="module" src="{{ url_for('static', filename='js/modules/ers_map_manager_v1.js') }}"></script>
+</body>
+</html>

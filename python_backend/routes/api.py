@@ -20,6 +20,7 @@ from utils import (
 )
 from services.setup_engine_service import SetupEngineService
 from services.tyre_inventory_service import TyreInventoryService
+from routes.engine import register_engine_routes
 from utils.debug_log import log_debug_event
 
 
@@ -124,6 +125,8 @@ def register_routes(app):
     def quick_race():
         """Quick Race - redirects to circuit selection"""
         return render_template('circuits.html')
+
+    register_engine_routes(app)
 
     @app.route('/race')
     def index():

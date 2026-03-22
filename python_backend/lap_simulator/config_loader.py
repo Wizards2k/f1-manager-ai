@@ -458,7 +458,25 @@ def load_circuit_config(
     pu_map_path = derived_dir / "pu_maps.json" if derived_dir.exists() else global_pu_maps
     pu_map_data = _load_json(pu_map_path) if pu_map_path.exists() else _load_json(global_pu_maps)
     ers_budget = pu_map_data.get("ers_budget", {})
-    pu_maps = _parse_pu_maps(pu_map_data, ers_budget_maps=ers_budget.get("maps", {}))
+    if not isinstance(ers_budget, dict):
+        ers_budget = {}
+    ers_budget_maps = ers_budget.get("maps", {}) if isinstance(ers_budget.get("maps", {}), dict) else {}
+    maps_raw = pu_map_data.get("maps", {})
+    if isinstance(maps_raw, dict):
+        for map_id, map_payload in maps_raw.items():
+            if not isinstance(map_payload, dict):
+                continue
+            budget_entry = dict(ers_budget_maps.get(map_id, {}) or {})
+            for key in (
+                "bucket_primary_es_deploy_pct",
+                "bucket_secondary_es_deploy_pct",
+                "bucket_exit_es_deploy_pct",
+            ):
+                if key not in budget_entry and key in map_payload:
+                    budget_entry[key] = map_payload[key]
+            ers_budget_maps[map_id] = budget_entry
+    ers_budget["maps"] = ers_budget_maps
+    pu_maps = _parse_pu_maps(pu_map_data, ers_budget_maps=ers_budget_maps)
     regen_profile = pu_map_data.get("regen_profile", {})
     soc_warnings = pu_map_data.get("soc_warnings", [])
 

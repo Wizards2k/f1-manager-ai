@@ -39,13 +39,7 @@ export class PlayerGarageV3 {
             },
         };
         this.tyreOptions = [];
-        this.iceOptions = [
-            { label: 'SAFETY CAR', value: 'SAFETY_CAR' },
-            { label: 'PRACTICE', value: 'PRACTICE' },
-            { label: 'RACE', value: 'RACE' },
-            { label: 'QUALIFY', value: 'QUALIFY' },
-        ];
-        this.ersOptions = ['RECHARGE', 'STANDARD', 'OVERTAKE', 'QUALIFY', 'DEFENCE'];
+        // ICE and ERS options are loaded dynamically from circuit catalogs
         this.STATE_DISPLAY = {
             BOX: 'BOX',
             OUT_LAP: 'OUT LAP',
@@ -136,13 +130,78 @@ export class PlayerGarageV3 {
         this.telemetryCircuitMarkerCache = new Map();
         this.telemetryViewState = null;
         this.liveDeployCache = new Map();
+        this.ersCatalogCache = new Map();
+        this.iceCatalogCache = new Map();
+        this._lastRenderedCircuitId = null;
         this.bindEvents();
+        // Preload catalogs when circuit is available
+        this.preloadCatalogs();
     }
 
-    normalizeIceMode(mode) {
+    async preloadCatalogs() {
+        const circuitId = this.getResolvedCircuitId();
+        if (!circuitId) return;
+        // Preload both catalogs in parallel
+        await Promise.all([
+            this.fetchIceCatalog(circuitId).catch(() => null),
+            this.fetchErsCatalog(circuitId).catch(() => null)
+        ]);
+        // Re-render dock with loaded catalogs
+        this.render(true);
+    }
+
+    getIceOptions(iceCatalog = null) {
+        // Get available ICE maps from catalog, fallback to defaults if not loaded
+        const catalog = iceCatalog || this.getCachedIceCatalog() || null;
+        if (catalog?.maps && Array.isArray(catalog.maps) && catalog.maps.length > 0) {
+            return catalog.maps.map(m => ({ label: m.label || m.id, value: m.id }));
+        }
+        // Fallback to default ICE maps if catalog not available
+        return [
+            { label: 'SAFETY CAR', value: 'SAFETY_CAR' },
+            { label: 'PRACTICE', value: 'PRACTICE' },
+            { label: 'RACE', value: 'RACE' },
+            { label: 'QUALIFY', value: 'QUALIFY' },
+        ];
+    }
+
+    getIceCatalogCacheKey(circuitId) {
+        return `${circuitId || 'default'}:ice`;
+    }
+
+    getCachedIceCatalog(circuitId = null) {
+        const key = this.getIceCatalogCacheKey(circuitId || this.getResolvedCircuitId());
+        return this.iceCatalogCache?.get(key) || null;
+    }
+
+    async fetchIceCatalog(circuitId = null, { force = false } = {}) {
+        const resolvedCircuitId = circuitId || this.getResolvedCircuitId();
+        if (!resolvedCircuitId) return null;
+        const cacheKey = this.getIceCatalogCacheKey(resolvedCircuitId);
+        if (!force && this.iceCatalogCache?.has(cacheKey)) {
+            return this.iceCatalogCache.get(cacheKey);
+        }
+        try {
+            const url = `/api/engine/ice/catalog?circuit_id=${encodeURIComponent(resolvedCircuitId)}`;
+            const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const catalog = await response.json();
+            if (!this.iceCatalogCache) this.iceCatalogCache = new Map();
+            this.iceCatalogCache.set(cacheKey, catalog);
+            return catalog;
+        } catch (err) {
+            console.warn('[GarageV3] Failed to load ICE catalog:', err);
+            return null;
+        }
+    }
+
+    normalizeIceMode(mode, iceCatalog = null) {
         if (!mode) return 'PRACTICE';
         const key = String(mode).trim().replace(/\s+/g, '_').toUpperCase();
-        const canonical = new Set(['SAFETY_CAR', 'PRACTICE', 'RACE', 'QUALIFY']);
+        const availableOptions = this.getIceOptions(iceCatalog);
+        const canonical = new Set(availableOptions.map(o => o.value));
         if (canonical.has(key)) return key;
         const aliases = {
             SAVE: 'SAFETY_CAR',
@@ -151,13 +210,27 @@ export class PlayerGarageV3 {
             QUALY: 'QUALIFY',
             QUALIFYING: 'QUALIFY',
         };
-        return aliases[key] || 'PRACTICE';
+        const aliased = aliases[key];
+        if (aliased && canonical.has(aliased)) return aliased;
+        // Return first available option as ultimate fallback
+        return availableOptions[0]?.value || 'PRACTICE';
     }
 
-    normalizeErsMode(mode) {
+    getErsOptions(ersCatalog = null) {
+        // Get available ERS maps from catalog, fallback to defaults if not loaded
+        const catalog = ersCatalog || this.getCachedErsCatalog() || null;
+        if (catalog?.maps && Array.isArray(catalog.maps) && catalog.maps.length > 0) {
+            return catalog.maps.map(m => m.id);
+        }
+        // Fallback to default ERS maps if catalog not available
+        return ['RACE', 'QUALIFY', 'RECHARGE', 'STANDARD', 'OVERTAKE'];
+    }
+
+    normalizeErsMode(mode, ersCatalog = null) {
         if (!mode) return 'STANDARD';
         const key = String(mode).trim().replace(/\s+/g, '_').toUpperCase();
-        const canonical = new Set(this.ersOptions);
+        const availableOptions = this.getErsOptions(ersCatalog);
+        const canonical = new Set(availableOptions);
         if (canonical.has(key)) return key;
         const aliases = {
             HARVEST: 'RECHARGE',
@@ -165,7 +238,10 @@ export class PlayerGarageV3 {
             DEPLOY: 'QUALIFY',
             ATTACK: 'OVERTAKE',
         };
-        return aliases[key] || 'STANDARD';
+        const aliased = aliases[key];
+        if (aliased && canonical.has(aliased)) return aliased;
+        // Return first available option as ultimate fallback
+        return availableOptions[0] || 'STANDARD';
     }
 
     computeRuntimeCondition(tyreSet) {
@@ -607,6 +683,61 @@ export class PlayerGarageV3 {
         return defaultValue;
     }
 
+    getErsCatalogCacheKey(circuitId, selectedMapId = null) {
+        return `${circuitId || 'default'}:${selectedMapId || 'default'}`;
+    }
+
+    getCachedErsCatalog(circuitId = null, selectedMapId = null) {
+        const key = this.getErsCatalogCacheKey(circuitId || this.getResolvedCircuitId(), selectedMapId);
+        return this.ersCatalogCache.get(key) || null;
+    }
+
+    resolveErsBucketEsDeployPct(key, puStats = {}, ersCatalog = null) {
+        const selectedMap = ersCatalog?.selected_map || ersCatalog?.selectedMap || null;
+        const selectedMapData = selectedMap?.map_data || {};
+        const selectedBudgetData = selectedMap?.budget_data || {};
+        const mapKey = `bucket_${key}_es_deploy_pct`;
+        const catalogValue = this.resolveNumericStat(selectedMapData[mapKey], selectedBudgetData[mapKey], null);
+        
+        // If ES Deploy value is 0, try to use bucket distribution percentage as fallback
+        if (typeof catalogValue === 'number' && catalogValue > 0) {
+            return catalogValue;
+        }
+        
+        // Fallback to bucket distribution percentage when ES Deploy is 0
+        const bucketKey = `bucket_${key}_pct`;
+        const bucketPctValue = this.resolveNumericStat(selectedMapData[bucketKey], selectedBudgetData[bucketKey], null);
+        if (typeof bucketPctValue === 'number' && bucketPctValue > 0) {
+            return bucketPctValue;
+        }
+        
+        const runtimeValue = this.resolveNumericStat(puStats?.[mapKey], null, null);
+        return typeof runtimeValue === 'number' && !Number.isNaN(runtimeValue) ? runtimeValue : 0;
+    }
+
+    async fetchErsCatalog(circuitId = null, selectedMapId = null, { force = false } = {}) {
+        const resolvedCircuitId = circuitId || this.getResolvedCircuitId();
+        if (!resolvedCircuitId) return null;
+        const cacheKey = this.getErsCatalogCacheKey(resolvedCircuitId, selectedMapId);
+        if (!force && this.ersCatalogCache.has(cacheKey)) {
+            return this.ersCatalogCache.get(cacheKey);
+        }
+
+        try {
+            const url = `/api/engine/ers/catalog?circuit_id=${encodeURIComponent(resolvedCircuitId)}${selectedMapId ? `&selected_map_id=${encodeURIComponent(selectedMapId)}` : ''}`;
+            const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const catalog = await response.json();
+            this.ersCatalogCache.set(cacheKey, catalog);
+            return catalog;
+        } catch (err) {
+            console.warn('[GarageV3] Failed to load ERS catalog:', err);
+            return null;
+        }
+    }
+
     buildErsBucketCard(entry) {
         const target = typeof entry.targetTotal === 'number' ? entry.targetTotal : 0;
         const used = typeof entry.used === 'number' ? entry.used : 0;
@@ -637,12 +768,15 @@ export class PlayerGarageV3 {
         if (!Number.isFinite(rawValue)) return;
         const car = this.state.getPlayerCar(driverNumber);
         const puStats = car?.pu_stats || {};
+        const circuitId = this.getResolvedCircuitId();
+        const playerErsMode = car?.player_config?.ers_mode || car?.ers_mode || 'STANDARD';
+        const ersCatalog = this.getCachedErsCatalog(circuitId, playerErsMode || null);
         bucket.pct = this.clampNumber(rawValue, bucket.min, bucket.max);
         if (state.autoBalance) {
             this.normalizeErsBuckets(state, bucketKey);
             this.enforceErsTotalConstraint(state, bucketKey);
         }
-        this.syncErsBucketCards(state, puStats);
+        this.syncErsBucketCards(state, puStats, ersCatalog);
         if (forceRefresh || event.type !== 'input') {
             this.refreshErsEditorPanel(driverNumber);
         }
@@ -750,15 +884,21 @@ export class PlayerGarageV3 {
         if (!car) return;
         const puStats = car.pu_stats || {};
         const isBox = this.getCarState(car) === 'BOX';
-        ersPanel.innerHTML = this.buildErsMapPanel(car, puStats, isBox);
+        const circuitId = this.getResolvedCircuitId();
+        const playerErsMode = car?.player_config?.ers_mode || car?.ers_mode || 'STANDARD';
+        const ersCatalog = this.getCachedErsCatalog(circuitId, playerErsMode || null);
+        ersPanel.innerHTML = this.buildErsMapPanel(car, puStats, isBox, ersCatalog);
     }
 
-    syncErsBucketCards(state, puStats = {}) {
+    syncErsBucketCards(state, puStats = {}, ersCatalog = null) {
         if (!state || !this.overlayContainer) return;
         const panel = this.overlayContainer.querySelector('section[data-panel="ers-map"]');
         if (!panel) return;
         const formatMJ = (value) => (typeof value === 'number' && !Number.isNaN(value) ? `${value.toFixed(2)} MJ` : '-- MJ');
         const deployBudget = this.resolveRuntimeBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap);
+        const selectedMap = ersCatalog?.selected_map || ersCatalog?.selectedMap || null;
+        const selectedMapData = selectedMap?.map_data || {};
+        const selectedBudgetData = selectedMap?.budget_data || {};
         const socTarget = typeof puStats.soc_target_pct === 'number' && puStats.soc_target_pct > 0
             ? Math.round(puStats.soc_target_pct * 100)
             : (typeof puStats.target_soc_end_lap === 'number' ? Math.round(puStats.target_soc_end_lap * 100) : '--');
@@ -781,10 +921,21 @@ export class PlayerGarageV3 {
             const runtimeDeploy = puStats[`bucket_${key}_used_mj`] ?? 0;
             const valueRow = card.querySelectorAll('.value-row span');
             if (valueRow[0]) {
-                valueRow[0].textContent = `Target deploy: ${formatMJ(targetDeploy)}`;
+                valueRow[0].textContent = `Target: ${formatMJ(targetDeploy)}`;
             }
             if (valueRow[1]) {
-                valueRow[1].textContent = `Realtime: ${formatMJ(runtimeDeploy)}`;
+                const esDeployPct = this.resolveNumericStat(
+                    selectedMapData[`bucket_${key}_es_deploy_pct`],
+                    selectedBudgetData[`bucket_${key}_es_deploy_pct`],
+                    this.resolveNumericStat(puStats[`bucket_${key}_es_deploy_pct`], null, 0),
+                );
+                const esDeployLabel = (esDeployPct * 100).toFixed(1) + '%';
+                valueRow[1].innerHTML = `ES Deploy: <strong style="color:#4ccbff;">${esDeployLabel}</strong>`;
+            }
+            // Check for the third span in the second value-row if exists
+            const allValueRows = card.querySelectorAll('.value-row span');
+            if (allValueRows[2]) {
+                allValueRows[2].textContent = `Realtime: ${formatMJ(runtimeDeploy)}`;
             }
             const lockInput = card.querySelector('[data-ers-lock]');
             if (lockInput) {
@@ -882,7 +1033,7 @@ export class PlayerGarageV3 {
         return `${base}: ${detail}`;
     }
 
-    buildErsMapPanel(car, puStats, isBox) {
+    buildErsMapPanel(car, puStats, isBox, ersCatalog = null) {
         if (!puStats || !Object.keys(puStats).length) {
             return '<div class="ers-editor-panel-empty">No ERS telemetry available yet.</div>';
         }
@@ -895,10 +1046,22 @@ export class PlayerGarageV3 {
         const bucketState = editorState.buckets || {};
         const autoBalanceEnabled = editorState.autoBalance !== false;
 
-        const mapName = puStats.map || 'STANDARD';
-        const lapDeploy = typeof puStats.lap_deploy_mj === 'number' ? puStats.lap_deploy_mj : 0;
-        const deployBudget = this.resolveRuntimeBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap);
-        const defenseReserve = this.resolveRuntimeBudgetValue(puStats.defense_reserve_available_mj, puStats.defense_reserve_mj_config);
+        const selectedMap = ersCatalog?.selected_map || ersCatalog?.selectedMap || null;
+        const selectedMapData = selectedMap?.map_data || {};
+        const selectedBudgetData = selectedMap?.budget_data || {};
+        const playerErsMode = car?.player_config?.ers_mode || car?.ers_mode || 'STANDARD';
+        const mapName = playerErsMode || selectedMap?.id || 'STANDARD';
+        
+        // Use catalog data for budget values, fallback to runtime stats
+        const catalogDeployBudget = selectedBudgetData?.deploy_mj_per_lap;
+        const catalogHarvestMjpL = selectedBudgetData?.harvest_mj_per_lap;
+        const catalogTargetSoc = selectedBudgetData?.target_soc_end_lap;
+        const catalogDefenseReserve = selectedBudgetData?.defense_reserve_mj;
+        
+        const lapDeploy = typeof puStats.lap_deploy_mj === 'number' ? puStats.lap_deploy_mj : (catalogDeployBudget || 0);
+        const deployBudget = catalogDeployBudget || this.resolveRuntimeBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap) || 0;
+        const harvestBudget = catalogHarvestMjpL || this.resolveRuntimeBudgetValue(puStats.harvest_budget_total_mj, puStats.harvest_mj_per_lap) || 0;
+        const defenseReserve = catalogDefenseReserve || this.resolveRuntimeBudgetValue(puStats.defense_reserve_available_mj, puStats.defense_reserve_mj_config);
         const lastAllocation = typeof puStats.last_bucket_allocated_mj === 'number' ? puStats.last_bucket_allocated_mj : 0;
         const defenseReservePct = typeof deployBudget === 'number' && deployBudget > 1e-6 && typeof defenseReserve === 'number'
             ? `${Math.round((defenseReserve / deployBudget) * 100)}%`
@@ -908,7 +1071,6 @@ export class PlayerGarageV3 {
             ? Math.round(puStats.soc_target_pct * 100)
             : (typeof puStats.target_soc_end_lap === 'number' ? Math.round(puStats.target_soc_end_lap * 100) : '--');
         const totalPct = Math.round(this.sumErsBucketPct(editorState));
-        const playerErsMode = car?.player_config?.ers_mode || car?.ers_mode || 'STANDARD';
         const driverName = car?.driver_name || `Driver #${driverNumber || '—'}`;
         const autoBalanceLabel = autoBalanceEnabled ? 'Auto-balance unlocked buckets' : 'Manual balance';
 
@@ -918,6 +1080,8 @@ export class PlayerGarageV3 {
             const pctValue = this.clampNumber(bucket.pct ?? cfg.defaultPct, cfg.min, cfg.max);
             const targetDeploy = deployBudget > 0 ? (deployBudget * (pctValue / 100)) : 0;
             const runtimeDeploy = puStats[`bucket_${key}_used_mj`] ?? 0;
+            const esDeployPct = this.resolveErsBucketEsDeployPct(key, puStats, ersCatalog);
+            const esDeployLabel = (esDeployPct * 100).toFixed(1) + '%';
             const mguhRealtime = puStats[`mguh_${key}_used_mj`];
             const pillText = this.resolveBucketPillLabel(key, { socTarget, mguhRealtime });
             return `
@@ -931,7 +1095,10 @@ export class PlayerGarageV3 {
                     </div>
                     <input type="range" class="ers-bucket-slider" value="${pctValue.toFixed(0)}" min="${cfg.min}" max="${cfg.max}" data-ers-bucket="${key}" step="1">
                     <div class="value-row">
-                        <span>Target deploy: ${formatMJ(targetDeploy)}</span>
+                        <span>Target: ${formatMJ(targetDeploy)}</span>
+                        <span>ES Deploy: <strong style="color:#4ccbff;">${esDeployLabel}</strong></span>
+                    </div>
+                    <div class="value-row">
                         <span>Realtime: ${formatMJ(runtimeDeploy)}</span>
                     </div>
                     <div class="lock-row">
@@ -942,21 +1109,7 @@ export class PlayerGarageV3 {
             `;
         }).join('');
 
-        const toolbarHtml = `
-            <section class="ers-controls-tile">
-                <h3>Totals & Actions</h3>
-                <div class="ers-bucket-toolbar">
-                    <div class="ers-toolbar-summary">
-                        <strong>Total ${totalPct}%</strong>
-                        <label><input type="checkbox" data-ers-auto-balance="true" ${autoBalanceEnabled ? 'checked' : ''}>${autoBalanceLabel}</label>
-                    </div>
-                    <div class="ers-toolbar-actions">
-                        <button class="ghost-btn" type="button" data-action="ers-reset">Reset preset</button>
-                        <button class="primary-btn" type="button" disabled title="Custom saves coming soon">Save custom map</button>
-                    </div>
-                </div>
-            </section>
-        `;
+        const toolbarHtml = '';
 
         return `
             <div class="ers-editor-panel">
@@ -981,7 +1134,7 @@ export class PlayerGarageV3 {
                                 </div>
                             </div>
                             <div class="ers-note-bar">
-                                <span>Preset: ${mapName} · ${playerErsMode}</span>
+                                <span>Preset: ${selectedMap?.id || mapName}</span>
                                 <span>Total deploy ${formatMJ(deployBudget)}</span>
                                 <span>Sum must equal 100% (currently ${totalPct}%)</span>
                             </div>
@@ -992,10 +1145,10 @@ export class PlayerGarageV3 {
                         <div class="ers-bucket-header">
                             <div>
                                 <div class="sublabel">ERS MAP</div>
-                                <div class="ers-map-title">${mapName} · ${playerErsMode}</div>
+                                <div class="ers-map-title">${selectedMap?.id || mapName}</div>
                                 <div class="ers-map-subtitle">${driverName} · ${isBox ? 'In garage' : 'On track'}</div>
                             </div>
-                            <div class="ers-bucket-tabs">
+                            <div class="ers-bucket-tabs" style="display:none;">
                                 <div class="map-pill active">Preset</div>
                                 <div class="map-pill">Custom</div>
                                 <div class="map-pill">Import</div>
@@ -1678,8 +1831,12 @@ export class PlayerGarageV3 {
         const paceLevel = car.player_config?.pace_level ?? car.pace_level ?? 5;
         const iceModeRaw = car.player_config?.ice_mode ?? car.ice_mode ?? 'PRACTICE';
         const ersModeRaw = car?.player_config?.ers_mode ?? car?.ers_mode ?? 'STANDARD';
-        const iceMode = this.normalizeIceMode(iceModeRaw);
-        const ersMode = this.normalizeErsMode(ersModeRaw);
+        // Load ICE catalog for proper mode normalization
+        const circuitId = this.getResolvedCircuitId();
+        const iceCatalog = this.getCachedIceCatalog(circuitId);
+        const ersCatalog = this.getCachedErsCatalog(circuitId);
+        const iceMode = this.normalizeIceMode(iceModeRaw, iceCatalog);
+        const ersMode = this.normalizeErsMode(ersModeRaw, ersCatalog);
         const maxStint = car.max_stint_laps ?? stintTarget;
         const tireWear = Math.max(0, Math.min(1, car.tire_wear ?? 0));
         const liveTyreCondition = PlayerGarageV3.computeLiveTyreCondition(car);
@@ -1834,13 +1991,13 @@ export class PlayerGarageV3 {
                 <div class="dock-field" style="flex: 1.2;">
                     <label>ICE map</label>
                     <select class="select-compact-v3" data-field="ice_mode">
-                        ${this.iceOptions.map(option => `<option value="${option.value}" ${option.value === iceMode ? 'selected' : ''}>${option.label}</option>`).join('')}
+                        ${this.getIceOptions().map(option => `<option value="${option.value}" ${option.value === iceMode ? 'selected' : ''}>${option.label}</option>`).join('')}
                     </select>
                 </div>
                 <div class="dock-field" style="flex: 1.2;">
                     <label>ERS mode</label>
                     <select class="select-compact-v3" data-field="ers_mode">
-                        ${this.ersOptions.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                        ${this.getErsOptions().map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
                     </select>
                 </div>
                 <div class="dock-field" style="flex: 1.5;">
@@ -1887,13 +2044,13 @@ export class PlayerGarageV3 {
                 <div class="dock-field">
                     <label>ICE Map</label>
                     <select class="select-compact-v3" data-field="ice_mode">
-                        ${this.iceOptions.map(option => `<option value="${option.value}" ${option.value === iceMode ? 'selected' : ''}>${option.label}</option>`).join('')}
+                        ${this.getIceOptions().map(option => `<option value="${option.value}" ${option.value === iceMode ? 'selected' : ''}>${option.label}</option>`).join('')}
                     </select>
                 </div>
                 <div class="dock-field">
                     <label>ERS Map</label>
                     <select class="select-compact-v3" data-field="ers_mode">
-                        ${this.ersOptions.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                        ${this.getErsOptions().map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
                     </select>
                 </div>
             </div>
@@ -2253,6 +2410,13 @@ export class PlayerGarageV3 {
             }
         }
         const puStats = car.pu_stats || {};
+        const circuitId = this.getResolvedCircuitId();
+        // Load both ICE and ERS catalogs for dynamic map options
+        const playerErsMode = car?.player_config?.ers_mode || car?.ers_mode || 'STANDARD';
+        const [iceCatalog, ersCatalog] = await Promise.all([
+            this.fetchIceCatalog(circuitId, { force: true }),
+            this.fetchErsCatalog(circuitId, playerErsMode || null, { force: true })
+        ]);
         const brakeDiag = car.brake_diagnostics || {};
         const driverName = car.driver_name || `Driver #${car.driver_number}`;
         const carState = this.getCarState(car);
@@ -2393,7 +2557,7 @@ export class PlayerGarageV3 {
         const tyresPanel = this.buildTabTyres(car, { tireHealthPct });
         
         // Render ERS Panel
-        const ersPanel = this.buildErsMapPanel(car, puStats, isBox);
+        const ersPanel = this.buildErsMapPanel(car, puStats, isBox, ersCatalog);
         const telemetryPanel = await this.buildTelemetryPanel(car);
         
         this.overlayContainer.innerHTML = `
@@ -3491,8 +3655,11 @@ export class PlayerGarageV3 {
                     last_section_deploy: lastTrace?.deploy_mj ?? null,
                 });
             }
-            const iceMode = this.normalizeIceMode(car.player_config?.ice_mode || car.ice_mode || 'PRACTICE');
-            const ersMode = this.normalizeErsMode(car.player_config?.ers_mode || car.ers_mode || 'STANDARD');
+            const iceMode = this.normalizeIceMode(car.player_config?.ice_mode || car.ice_mode || 'PRACTICE', this.getCachedIceCatalog());
+            // Load ERS catalog for proper mode normalization
+            const circuitId = this.getResolvedCircuitId();
+            const ersCatalog = this.getCachedErsCatalog(circuitId);
+            const ersMode = this.normalizeErsMode(car.player_config?.ers_mode || car.ers_mode || 'STANDARD', ersCatalog);
 
             const motoreTab = cardEl.querySelector('.dock-tab-pane[data-tab="motore"]');
             if (motoreTab) {
@@ -3574,6 +3741,15 @@ export class PlayerGarageV3 {
         const cars = this.state.getPlayerCarsSorted();
         if (cars.length === 0) {
             this.cardsContainer.innerHTML = '<p style="color:#777;">Waiting for garage data...</p>';
+            return;
+        }
+
+        // Check if circuit changed and reload catalogs if needed
+        const currentCircuitId = this.getResolvedCircuitId();
+        if (currentCircuitId && currentCircuitId !== this._lastRenderedCircuitId) {
+            this._lastRenderedCircuitId = currentCircuitId;
+            // Preload catalogs and re-render once ready
+            this.preloadCatalogs();
             return;
         }
 
@@ -3748,14 +3924,14 @@ export class PlayerGarageV3 {
             return exists ? normalized : null;
         };
 
-        const normalizedIce = normalizeMode(allowedPayload.ice_mode, this.iceOptions);
+        const normalizedIce = normalizeMode(allowedPayload.ice_mode, this.getIceOptions());
         if (allowedPayload.ice_mode && !normalizedIce) {
             delete allowedPayload.ice_mode;
         } else if (normalizedIce) {
             allowedPayload.ice_mode = normalizedIce;
         }
 
-        const normalizedErs = normalizeMode(allowedPayload.ers_mode, this.ersOptions);
+        const normalizedErs = normalizeMode(allowedPayload.ers_mode, this.getErsOptions());
         if (allowedPayload.ers_mode && !normalizedErs) {
             delete allowedPayload.ers_mode;
         } else if (normalizedErs) {
