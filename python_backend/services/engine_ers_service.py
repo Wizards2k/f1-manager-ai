@@ -230,28 +230,33 @@ class EngineERSService:
         target_soc = cls._coerce_float(budget_payload.get("target_soc_end_lap", map_payload.get("target_soc_end_lap", 0.55)), 0.55)
         direct_ratio = cls._coerce_float(budget_payload.get("mguh_direct_ratio", map_payload.get("mguh_direct_ratio", 0.45)), 0.45)
 
-        # Sync ES Deploy percentages
+        # Sync ES Deploy percentages and bucket distribution from the edited map payload.
+        # The UI sends these fields in map_data, so map values must win over any stale budget values.
         for key in bucket_es_deploy_keys:
-            value = budget_payload.get(key)
+            value = map_payload.get(key)
             if value is None:
-                value = map_payload.get(key, 0.0)
+                value = budget_payload.get(key, 0.0)
             value = cls._coerce_float(value, 0.0)
             map_payload[key] = value
             budget_payload[key] = value
 
-        # Sync bucket distribution percentages and defense reserve, preferring budget values when present
+        # Sync bucket distribution percentages and defense reserve from the edited map payload.
         for key in bucket_distribution_keys:
-            value = budget_payload.get(key)
+            value = map_payload.get(key)
             if value is None:
-                value = map_payload.get(key)
+                value = budget_payload.get(key)
             if value is not None:
                 value = cls._coerce_float(value, 0.0)
                 map_payload[key] = value
                 budget_payload[key] = value
-        
+
         defense_reserve = map_payload.get("defense_reserve_mj")
+        if defense_reserve is None:
+            defense_reserve = budget_payload.get("defense_reserve_mj")
         if defense_reserve is not None:
-            budget_payload["defense_reserve_mj"] = cls._coerce_float(defense_reserve, 0.0)
+            defense_reserve = cls._coerce_float(defense_reserve, 0.0)
+            map_payload["defense_reserve_mj"] = defense_reserve
+            budget_payload["defense_reserve_mj"] = defense_reserve
 
         map_payload["deploy_mj_per_lap"] = deploy_mj
         map_payload["harvest_mj_per_lap"] = harvest_mj
