@@ -217,6 +217,17 @@ def _build_aero_setup(auto, base: Optional[AeroSetup] = None) -> AeroSetup:
 
 
 def _resolve_engine_map(car) -> EngineMapName:
+    ers_mode = normalize_ers_mode(getattr(car, "ers_mode", None))
+    if ers_mode in {"RECHARGE", "STANDARD", "RACE", "OVERTAKE", "QUALIFY", "DEFENCE"}:
+        ers_mapping = {
+            "RECHARGE": EngineMapName.SAFETY_CAR,
+            "STANDARD": EngineMapName.RACE,
+            "RACE": EngineMapName.RACE,
+            "OVERTAKE": EngineMapName.QUALIFY,
+            "QUALIFY": EngineMapName.QUALIFY,
+            "DEFENCE": EngineMapName.RACE,
+        }
+        return ers_mapping[ers_mode]
     # Game stores ICE mode as string (Save/Standard/Push) → map to EngineMapName
     mapping = {
         "save": EngineMapName.SAFETY_CAR,
@@ -315,6 +326,8 @@ def _build_sim_state(car_id: str, car) -> SimCarState:
         fuel_load = power_unit.fuel_capacity_kg * (fuel_pct / 100.0)
         pu_state = power_unit.create_state(fuel_kg=fuel_load, map_name=map_name)
         state.pu = pu_state
+    else:
+        state.pu.active_map = map_name
     ers_mode = normalize_ers_mode(getattr(car, "ers_mode", None))
     if ers_mode:
         state.ers_mode = ers_mode
