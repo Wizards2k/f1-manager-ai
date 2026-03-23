@@ -683,17 +683,101 @@ export class PlayerGarageV3 {
         return defaultValue;
     }
 
+    resolveErsTargetSocPercent(puStats = {}, selectedMapData = {}, selectedBudgetData = {}) {
+        const catalogTarget = this.resolveNumericStat(
+            selectedBudgetData?.target_soc_end_lap,
+            selectedMapData?.target_soc_end_lap,
+            null,
+        );
+        if (typeof catalogTarget === 'number' && !Number.isNaN(catalogTarget)) {
+            return catalogTarget > 1 ? catalogTarget : catalogTarget * 100;
+        }
+
+        const runtimeBudgetTarget = this.resolveNumericStat(puStats?.target_soc_end_lap, null, null);
+        if (typeof runtimeBudgetTarget === 'number' && !Number.isNaN(runtimeBudgetTarget)) {
+            return runtimeBudgetTarget > 1 ? runtimeBudgetTarget : runtimeBudgetTarget * 100;
+        }
+
+        return null;
+    }
+
+    resolveErsFloorSocPercent(puStats = {}, selectedMapData = {}, selectedBudgetData = {}) {
+        const runtimeFloor = this.resolveNumericStat(puStats?.soc_floor_dynamic_pct, null, null);
+        if (typeof runtimeFloor === 'number' && !Number.isNaN(runtimeFloor)) {
+            const runtimeFloorPct = runtimeFloor > 1 ? runtimeFloor : runtimeFloor * 100;
+            const hasRuntimeTrace = Array.isArray(puStats?.energy_trace) && puStats.energy_trace.length > 0;
+            const lapIdCurrent = Number.isFinite(puStats?.lap_id_current) ? puStats.lap_id_current : null;
+            const looksUninitialized = Math.abs(runtimeFloorPct - 50) < 0.01 && !hasRuntimeTrace && (lapIdCurrent === null || lapIdCurrent <= 0);
+            if (!looksUninitialized) {
+                return runtimeFloorPct;
+            }
+        }
+
+        return this.resolveErsTargetSocPercent(puStats, selectedMapData, selectedBudgetData);
+    }
+
     getErsCatalogCacheKey(circuitId, selectedMapId = null) {
         return `${circuitId || 'default'}:${selectedMapId || 'default'}`;
     }
 
     getCachedErsCatalog(circuitId = null, selectedMapId = null) {
-        const key = this.getErsCatalogCacheKey(circuitId || this.getResolvedCircuitId(), selectedMapId);
-        return this.ersCatalogCache.get(key) || null;
+        const resolvedCircuitId = circuitId || this.getResolvedCircuitId();
+        const specificKey = this.getErsCatalogCacheKey(resolvedCircuitId, selectedMapId);
+        const specificCatalog = this.ersCatalogCache.get(specificKey) || null;
+        if (specificCatalog || !selectedMapId) {
+            return specificCatalog;
+        }
+        const genericKey = this.getErsCatalogCacheKey(resolvedCircuitId, null);
+        return this.ersCatalogCache.get(genericKey) || null;
     }
 
-    resolveErsBucketEsDeployPct(key, puStats = {}, ersCatalog = null) {
-        const selectedMap = ersCatalog?.selected_map || ersCatalog?.selectedMap || null;
+    buildErsEditorSourceSignature(selectedMapId = null, selectedMapData = {}, selectedBudgetData = {}) {
+        const mapId = selectedMapId || 'default';
+        const mapData = selectedMapData && typeof selectedMapData === 'object' ? selectedMapData : {};
+        const budgetData = selectedBudgetData && typeof selectedBudgetData === 'object' ? selectedBudgetData : {};
+        const hasMapData = Object.keys(mapData).length > 0 ? 'map' : 'runtime';
+        const hasBudgetData = Object.keys(budgetData).length > 0 ? 'budget' : 'runtime';
+        const signatureParts = [
+            mapData.bucket_primary_pct,
+            mapData.bucket_secondary_pct,
+            mapData.bucket_exit_pct,
+            budgetData.bucket_primary_pct,
+            budgetData.bucket_secondary_pct,
+            budgetData.bucket_exit_pct,
+            budgetData.deploy_mj_per_lap,
+            budgetData.harvest_mj_per_lap,
+            budgetData.target_soc_end_lap,
+            budgetData.defense_reserve_mj,
+        ].map((value) => (typeof value === 'number' && !Number.isNaN(value) ? value.toFixed(6) : ''));
+        return `${mapId}:${hasMapData}:${hasBudgetData}:${signatureParts.join('|')}`;
+    }
+
+    resolveErsCatalogSelectedMap(ersCatalog = null, preferredMapId = null) {
+        if (!ersCatalog) return null;
+        const maps = Array.isArray(ersCatalog.maps) ? ersCatalog.maps : [];
+        const candidateIds = [];
+        if (preferredMapId) {
+            candidateIds.push(String(preferredMapId).trim());
+        }
+        const selectedMapId = ersCatalog.selected_map_id
+            || ersCatalog.selectedMapId
+            || ersCatalog.selected_map?.id
+            || ersCatalog.selectedMap?.id
+            || null;
+        if (selectedMapId) {
+            candidateIds.push(String(selectedMapId).trim());
+        }
+        for (const mapId of candidateIds) {
+            const match = maps.find((entry) => entry?.id === mapId);
+            if (match) return match;
+        }
+        if (ersCatalog.selected_map && typeof ersCatalog.selected_map === 'object') return ersCatalog.selected_map;
+        if (ersCatalog.selectedMap && typeof ersCatalog.selectedMap === 'object') return ersCatalog.selectedMap;
+        return maps.find((entry) => entry?.id) || null;
+    }
+
+    resolveErsBucketEsDeployPct(key, puStats = {}, ersCatalog = null, preferredMapId = null) {
+        const selectedMap = this.resolveErsCatalogSelectedMap(ersCatalog, preferredMapId);
         const selectedMapData = selectedMap?.map_data || {};
         const selectedBudgetData = selectedMap?.budget_data || {};
         const mapKey = `bucket_${key}_es_deploy_pct`;
@@ -776,7 +860,7 @@ export class PlayerGarageV3 {
             this.normalizeErsBuckets(state, bucketKey);
             this.enforceErsTotalConstraint(state, bucketKey);
         }
-        this.syncErsBucketCards(state, puStats, ersCatalog);
+        this.syncErsBucketCards(state, puStats, ersCatalog, playerErsMode || null);
         if (forceRefresh || event.type !== 'input') {
             this.refreshErsEditorPanel(driverNumber);
         }
@@ -809,23 +893,39 @@ export class PlayerGarageV3 {
         this.refreshErsEditorPanel(driverNumber);
     }
 
-    initializeErsEditorState(driverNumber, puStats = {}, { force = false } = {}) {
+    initializeErsEditorState(driverNumber, puStats = {}, { force = false, selectedMapId = null, selectedMapData = {}, selectedBudgetData = {} } = {}) {
         if (!driverNumber) return null;
+        const sourceMapId = selectedMapId || null;
+        const sourceSignature = this.buildErsEditorSourceSignature(sourceMapId, selectedMapData, selectedBudgetData);
         let state = this.ersEditorState.get(driverNumber);
-        if (!state || force) {
-            state = this.buildErsEditorDefaults(puStats);
+        if (!state || force || state.sourceSignature !== sourceSignature) {
+            state = this.buildErsEditorDefaults(puStats, { sourceMapId, sourceSignature, selectedMapData, selectedBudgetData });
             this.ersEditorState.set(driverNumber, state);
         }
         return state;
     }
 
-    buildErsEditorDefaults(puStats = {}) {
-        const deployBudget = this.resolveRuntimeBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap);
+    buildErsEditorDefaults(puStats = {}, { sourceMapId = null, sourceSignature = null, selectedMapData = {}, selectedBudgetData = {} } = {}) {
+        const deployBudget = this.resolveRuntimeBudgetValue(selectedBudgetData?.deploy_mj_per_lap, puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap);
+        const pctToDisplay = (value) => {
+            if (typeof value !== 'number' || Number.isNaN(value)) {
+                return null;
+            }
+            return value > 1 ? value : value * 100;
+        };
         const pctFromStats = (key) => {
             const statKey = `bucket_${key}_pct`;
-            const direct = puStats[statKey];
-            if (typeof direct === 'number' && !Number.isNaN(direct)) {
-                return direct > 1 ? direct : direct * 100;
+            const selectedBudgetValue = pctToDisplay(selectedBudgetData?.[statKey]);
+            if (selectedBudgetValue !== null) {
+                return selectedBudgetValue;
+            }
+            const selectedMapValue = pctToDisplay(selectedMapData?.[statKey]);
+            if (selectedMapValue !== null) {
+                return selectedMapValue;
+            }
+            const direct = pctToDisplay(puStats[statKey]);
+            if (direct !== null) {
+                return direct;
             }
             const bucketTotal = puStats[`bucket_${key}_total_mj`];
             if (typeof bucketTotal === 'number' && deployBudget > 1e-6) {
@@ -848,11 +948,15 @@ export class PlayerGarageV3 {
         const state = {
             buckets,
             autoBalance: true,
+            sourceMapId,
+            sourceSignature: sourceSignature || this.buildErsEditorSourceSignature(sourceMapId, selectedMapData, selectedBudgetData),
         };
         this.normalizeErsBuckets(state, null, true);
         state.initial = {
             autoBalance: state.autoBalance,
             buckets: this.cloneErsBuckets(state.buckets),
+            sourceMapId: state.sourceMapId,
+            sourceSignature: state.sourceSignature,
         };
         return state;
     }
@@ -864,15 +968,35 @@ export class PlayerGarageV3 {
         }, {});
     }
 
-    resetErsEditorState(driverNumber, puStats = {}) {
+    resetErsEditorState(driverNumber, puStats = {}, context = {}) {
         let state = this.ersEditorState.get(driverNumber);
         if (!state) {
-            state = this.initializeErsEditorState(driverNumber, puStats, { force: true });
+            state = this.initializeErsEditorState(driverNumber, puStats, { ...context, force: true });
             return state;
         }
-        const defaults = state.initial || this.buildErsEditorDefaults(puStats);
+        const contextSourceMapId = context.selectedMapId || state.sourceMapId || null;
+        const contextSourceSignature = this.buildErsEditorSourceSignature(
+            contextSourceMapId,
+            context.selectedMapData || {},
+            context.selectedBudgetData || {},
+        );
+        const defaults = state.initial && state.sourceSignature === contextSourceSignature
+            ? state.initial
+            : this.buildErsEditorDefaults(puStats, {
+                ...context,
+                sourceMapId: contextSourceMapId,
+                sourceSignature: contextSourceSignature,
+            });
         state.autoBalance = defaults.autoBalance;
         state.buckets = this.cloneErsBuckets(defaults.buckets);
+        state.sourceMapId = defaults.sourceMapId || contextSourceMapId;
+        state.sourceSignature = defaults.sourceSignature || contextSourceSignature;
+        state.initial = {
+            autoBalance: state.autoBalance,
+            buckets: this.cloneErsBuckets(state.buckets),
+            sourceMapId: state.sourceMapId,
+            sourceSignature: state.sourceSignature,
+        };
         return state;
     }
 
@@ -890,18 +1014,16 @@ export class PlayerGarageV3 {
         ersPanel.innerHTML = this.buildErsMapPanel(car, puStats, isBox, ersCatalog);
     }
 
-    syncErsBucketCards(state, puStats = {}, ersCatalog = null) {
+    syncErsBucketCards(state, puStats = {}, ersCatalog = null, preferredMapId = null) {
         if (!state || !this.overlayContainer) return;
         const panel = this.overlayContainer.querySelector('section[data-panel="ers-map"]');
         if (!panel) return;
         const formatMJ = (value) => (typeof value === 'number' && !Number.isNaN(value) ? `${value.toFixed(2)} MJ` : '-- MJ');
         const deployBudget = this.resolveRuntimeBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap);
-        const selectedMap = ersCatalog?.selected_map || ersCatalog?.selectedMap || null;
+        const selectedMap = this.resolveErsCatalogSelectedMap(ersCatalog, preferredMapId);
         const selectedMapData = selectedMap?.map_data || {};
         const selectedBudgetData = selectedMap?.budget_data || {};
-        const socTarget = typeof puStats.soc_target_pct === 'number' && puStats.soc_target_pct > 0
-            ? Math.round(puStats.soc_target_pct * 100)
-            : (typeof puStats.target_soc_end_lap === 'number' ? Math.round(puStats.target_soc_end_lap * 100) : '--');
+        const socTarget = this.resolveErsTargetSocPercent(puStats, selectedMapData, selectedBudgetData);
 
         Object.keys(this.ERS_BUCKET_SETTINGS).forEach(key => {
             const card = panel.querySelector(`.ers-bucket-card[data-bucket="${key}"]`);
@@ -1039,37 +1161,39 @@ export class PlayerGarageV3 {
         }
         const formatMJ = (value, digits = 2) => (typeof value === 'number' && !Number.isNaN(value) ? `${value.toFixed(digits)} MJ` : '-- MJ');
         const driverNumber = car?.driver_number;
-        const editorState = driverNumber ? this.initializeErsEditorState(driverNumber, puStats) : null;
+        const playerErsMode = car?.player_config?.ers_mode || car?.ers_mode || 'STANDARD';
+        const selectedMap = this.resolveErsCatalogSelectedMap(ersCatalog, playerErsMode);
+        const selectedMapData = selectedMap?.map_data || {};
+        const selectedBudgetData = selectedMap?.budget_data || {};
+        const mapName = selectedMap?.id || playerErsMode || 'STANDARD';
+        const editorState = driverNumber ? this.initializeErsEditorState(driverNumber, puStats, {
+            selectedMapId: selectedMap?.id || playerErsMode || null,
+            selectedMapData,
+            selectedBudgetData,
+        }) : null;
         if (!editorState) {
             return '<div class="ers-editor-panel-empty">ERS editor unavailable.</div>';
         }
         const bucketState = editorState.buckets || {};
         const autoBalanceEnabled = editorState.autoBalance !== false;
 
-        const selectedMap = ersCatalog?.selected_map || ersCatalog?.selectedMap || null;
-        const selectedMapData = selectedMap?.map_data || {};
-        const selectedBudgetData = selectedMap?.budget_data || {};
-        const playerErsMode = car?.player_config?.ers_mode || car?.ers_mode || 'STANDARD';
-        const mapName = playerErsMode || selectedMap?.id || 'STANDARD';
-        
         // Use catalog data for budget values, fallback to runtime stats
         const catalogDeployBudget = selectedBudgetData?.deploy_mj_per_lap;
         const catalogHarvestMjpL = selectedBudgetData?.harvest_mj_per_lap;
-        const catalogTargetSoc = selectedBudgetData?.target_soc_end_lap;
         const catalogDefenseReserve = selectedBudgetData?.defense_reserve_mj;
         
         const lapDeploy = typeof puStats.lap_deploy_mj === 'number' ? puStats.lap_deploy_mj : (catalogDeployBudget || 0);
         const deployBudget = catalogDeployBudget || this.resolveRuntimeBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap) || 0;
         const harvestBudget = catalogHarvestMjpL || this.resolveRuntimeBudgetValue(puStats.harvest_budget_total_mj, puStats.harvest_mj_per_lap) || 0;
-        const defenseReserve = catalogDefenseReserve || this.resolveRuntimeBudgetValue(puStats.defense_reserve_available_mj, puStats.defense_reserve_mj_config);
+        const defenseReserve = Number.isFinite(catalogDefenseReserve)
+            ? catalogDefenseReserve
+            : this.resolveRuntimeBudgetValue(puStats.defense_reserve_available_mj, puStats.defense_reserve_mj_config);
         const lastAllocation = typeof puStats.last_bucket_allocated_mj === 'number' ? puStats.last_bucket_allocated_mj : 0;
         const defenseReservePct = typeof deployBudget === 'number' && deployBudget > 1e-6 && typeof defenseReserve === 'number'
             ? `${Math.round((defenseReserve / deployBudget) * 100)}%`
             : '--';
-        const socFloor = typeof puStats.soc_floor_dynamic_pct === 'number' && puStats.soc_floor_dynamic_pct > 0 ? Math.round(puStats.soc_floor_dynamic_pct * 100) : '--';
-        const socTarget = typeof puStats.soc_target_pct === 'number' && puStats.soc_target_pct > 0
-            ? Math.round(puStats.soc_target_pct * 100)
-            : (typeof puStats.target_soc_end_lap === 'number' ? Math.round(puStats.target_soc_end_lap * 100) : '--');
+        const socFloor = this.resolveErsFloorSocPercent(puStats, selectedMapData, selectedBudgetData);
+        const socTarget = this.resolveErsTargetSocPercent(puStats, selectedMapData, selectedBudgetData);
         const totalPct = Math.round(this.sumErsBucketPct(editorState));
         const driverName = car?.driver_name || `Driver #${driverNumber || '—'}`;
         const autoBalanceLabel = autoBalanceEnabled ? 'Auto-balance unlocked buckets' : 'Manual balance';
@@ -1080,7 +1204,7 @@ export class PlayerGarageV3 {
             const pctValue = this.clampNumber(bucket.pct ?? cfg.defaultPct, cfg.min, cfg.max);
             const targetDeploy = deployBudget > 0 ? (deployBudget * (pctValue / 100)) : 0;
             const runtimeDeploy = puStats[`bucket_${key}_used_mj`] ?? 0;
-            const esDeployPct = this.resolveErsBucketEsDeployPct(key, puStats, ersCatalog);
+            const esDeployPct = this.resolveErsBucketEsDeployPct(key, puStats, ersCatalog, selectedMap?.id || playerErsMode || null);
             const esDeployLabel = (esDeployPct * 100).toFixed(1) + '%';
             const mguhRealtime = puStats[`mguh_${key}_used_mj`];
             const pillText = this.resolveBucketPillLabel(key, { socTarget, mguhRealtime });
@@ -1126,11 +1250,11 @@ export class PlayerGarageV3 {
                             <div class="ers-budget-row ers-metrics">
                                 <div>
                                     <div class="label">SOC floor</div>
-                                    <strong>${socFloor === '--' ? '--' : `${socFloor}%`}</strong>
+                                    <strong>${socFloor == null ? '--' : `${Math.round(socFloor)}%`}</strong>
                                 </div>
                                 <div>
                                     <div class="label">Target lap end</div>
-                                    <strong>${socTarget === '--' ? '--' : `${socTarget}%`}</strong>
+                                    <strong>${socTarget == null ? '--' : `${Math.round(socTarget)}%`}</strong>
                                 </div>
                             </div>
                             <div class="ers-note-bar">

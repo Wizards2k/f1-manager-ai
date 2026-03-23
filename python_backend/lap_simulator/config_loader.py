@@ -247,6 +247,7 @@ _LEGACY_ERS_MODE_ALIAS = {
     "NEUTRAL": "STANDARD", 
     "DEPLOY": "QUALIFY",
     "ATTACK": "OVERTAKE",
+    "RACE": "RACE",
     "DEFENSE": "DEFENCE",  # Handle US spelling
     "DEFENCE": "DEFENCE",
     "RECHARGE": "RECHARGE",

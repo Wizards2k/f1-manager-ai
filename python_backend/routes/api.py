@@ -423,6 +423,7 @@ def register_routes(app):
             'STANDARD': 'STANDARD',
             'OVERTAKE': 'OVERTAKE',
             'QUALIFY': 'QUALIFY',
+            'RACE': 'RACE',
             'DEFENCE': 'DEFENCE',
         }
         # Check canonical first
@@ -596,7 +597,7 @@ def register_routes(app):
         if 'ers_mode' in payload:
             normalized_ers = _normalize_ers_mode(payload['ers_mode'])
             if not normalized_ers:
-                valid_values = ', '.join(sorted({'RECHARGE', 'STANDARD', 'OVERTAKE', 'QUALIFY', 'DEFENCE'}))
+                valid_values = ', '.join(sorted({'RECHARGE', 'STANDARD', 'OVERTAKE', 'QUALIFY', 'RACE', 'DEFENCE'}))
                 return _error_response(f'ers_mode must be one of: {valid_values}')
             car.ers_mode = normalized_ers
             car.player_config['ers_mode'] = normalized_ers

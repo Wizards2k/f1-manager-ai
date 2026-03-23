@@ -119,8 +119,27 @@ ERS_MODE_CANONICAL = {
     "STANDARD": "STANDARD",
     "OVERTAKE": "OVERTAKE",
     "QUALIFY": "QUALIFY",
+    "RACE": "RACE",
     "DEFENCE": "DEFENCE",
 }
+
+ERS_MODE_TO_ENGINE_MAP = {
+    "RECHARGE": EngineMapName.SAFETY_CAR,
+    "STANDARD": EngineMapName.RACE,
+    "RACE": EngineMapName.RACE,
+    "OVERTAKE": EngineMapName.QUALIFY,
+    "QUALIFY": EngineMapName.QUALIFY,
+    "DEFENCE": EngineMapName.RACE,
+}
+
+
+def _resolve_engine_map_for_ers_mode(ers_mode: Optional[str]) -> Optional[EngineMapName]:
+    if not ers_mode:
+        return None
+    canonical = ERS_MODE_CANONICAL.get(str(ers_mode).strip().upper())
+    if not canonical:
+        return None
+    return ERS_MODE_TO_ENGINE_MAP.get(canonical)
 
 
 # ---------------------------------------------------------------------------
@@ -1743,6 +1762,16 @@ class SessionBridge:
             canonical = ERS_MODE_CANONICAL.get(str(ers_mode).strip().upper())
             if canonical:
                 entry.state.ers_mode = canonical
+                ers_engine_map = _resolve_engine_map_for_ers_mode(canonical)
+                if ers_engine_map:
+                    entry.state.pu.active_map = ers_engine_map
+                if self.circuit_config and getattr(self.circuit_config, "ers_budget", None):
+                    budget_maps = self.circuit_config.ers_budget.get("maps", {})
+                    if isinstance(budget_maps, dict):
+                        target_soc = budget_maps.get(canonical, {}).get("target_soc_end_lap")
+                        if isinstance(target_soc, (int, float)):
+                            entry.state.pu.soc_target_pct = float(target_soc)
+                            entry.state.pu.soc_floor_dynamic_pct = float(target_soc)
 
 
     # ------------------------------------------------------------------

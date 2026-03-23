@@ -3,8 +3,12 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
+
+
+logger = logging.getLogger(__name__)
 
 
 class EngineERSService:
@@ -228,18 +232,22 @@ class EngineERSService:
 
         # Sync ES Deploy percentages
         for key in bucket_es_deploy_keys:
-            value = map_payload.get(key)
+            value = budget_payload.get(key)
             if value is None:
-                value = budget_payload.get(key, 0.0)
+                value = map_payload.get(key, 0.0)
             value = cls._coerce_float(value, 0.0)
             map_payload[key] = value
             budget_payload[key] = value
 
-        # Sync bucket distribution percentages and defense reserve from map to budget
+        # Sync bucket distribution percentages and defense reserve, preferring budget values when present
         for key in bucket_distribution_keys:
-            value = map_payload.get(key)
+            value = budget_payload.get(key)
+            if value is None:
+                value = map_payload.get(key)
             if value is not None:
-                budget_payload[key] = cls._coerce_float(value, 0.0)
+                value = cls._coerce_float(value, 0.0)
+                map_payload[key] = value
+                budget_payload[key] = value
         
         defense_reserve = map_payload.get("defense_reserve_mj")
         if defense_reserve is not None:
@@ -461,39 +469,43 @@ class EngineERSService:
         harvest_limit = cls._coerce_float(budget_root.get("harvest_limit_mj"), 2.0)
 
         catalog: list[Dict[str, Any]] = []
-        # Use budget_maps (ers_budget.maps) as the source of truth for ERS maps
-        # This ensures we show all ERS maps including RECHARGE, STANDARD, OVERTAKE, DEFENCE
+        # ERS runtime/catalog consumers should read from `ers_budget.maps`.
+        # Fall back to top-level `maps` only if the budget branch is missing.
         ers_maps_source = budget_maps if isinstance(budget_maps, dict) and budget_maps else maps_raw
-        if isinstance(ers_maps_source, dict):
-            for order, (map_id, budget_entry) in enumerate(ers_maps_source.items()):
-                # Get the map data from top-level maps if available, otherwise use defaults
-                raw_map_entry = maps_raw.get(map_id, {}) if isinstance(maps_raw, dict) else {}
-                map_payload = cls._merge_payload(
-                    raw_map_entry,
-                    None,
-                    cls.DEFAULT_MAP_PAYLOAD,
-                )
-                cls._migrate_legacy_bucket_es_deploy(map_payload, raw_map_entry)
-                budget_payload = cls._merge_payload(
-                    budget_entry if isinstance(budget_entry, dict) else {},
-                    None,
-                    cls.DEFAULT_BUDGET_PAYLOAD,
-                )
-                cls._sync_mirrors(map_payload, budget_payload, budget_root if isinstance(budget_root, dict) else {})
-                catalog.append({
-                    "id": map_id,
-                    "label": cls._friendly_label(map_id),
-                    "order": order,
-                    "is_builtin": map_id in cls.BUILTIN_MAP_IDS,
-                    "map_data": map_payload,
-                    "budget_data": budget_payload,
-                    "summary": cls._build_summary(map_payload, budget_payload, budget_root if isinstance(budget_root, dict) else {}),
-                })
+        ordered_map_ids: list[str] = list(ers_maps_source.keys()) if isinstance(ers_maps_source, dict) else []
+
+        for order, map_id in enumerate(ordered_map_ids):
+            raw_map_entry = maps_raw.get(map_id, {}) if isinstance(maps_raw, dict) else {}
+            budget_entry = budget_maps.get(map_id, {}) if isinstance(budget_maps, dict) else {}
+            source_entry = raw_map_entry if isinstance(raw_map_entry, dict) and raw_map_entry else budget_entry
+
+            map_payload = cls._merge_payload(
+                source_entry,
+                None,
+                cls.DEFAULT_MAP_PAYLOAD,
+            )
+            cls._migrate_legacy_bucket_es_deploy(map_payload, source_entry)
+            budget_payload = cls._merge_payload(
+                budget_entry if isinstance(budget_entry, dict) else {},
+                None,
+                cls.DEFAULT_BUDGET_PAYLOAD,
+            )
+            cls._sync_mirrors(map_payload, budget_payload, budget_root if isinstance(budget_root, dict) else {})
+            catalog.append({
+                "id": map_id,
+                "label": cls._friendly_label(map_id),
+                "order": order,
+                "is_builtin": map_id in cls.BUILTIN_MAP_IDS,
+                "map_data": map_payload,
+                "budget_data": budget_payload,
+                "summary": cls._build_summary(map_payload, budget_payload, budget_root if isinstance(budget_root, dict) else {}),
+            })
 
         selected = selected_map_id if selected_map_id and any(item["id"] == selected_map_id for item in catalog) else None
         if selected is None and catalog:
             selected = catalog[0]["id"]
         selected_map = next((item for item in catalog if item["id"] == selected), None)
+
 
         errors: list[str] = []
         if not circuit_key:
