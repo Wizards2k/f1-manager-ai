@@ -92,4 +92,52 @@ def apply_thermal_clipping(p_req, v_car, current_temp, dt):
 
 ---
 
+## 7. Implementation Completed ✅
+
+### Files Modified
+- `python_backend/lap_simulator/power_unit.py` - Modello termico doc-spec (Joule + convettivo)
+- `python_backend/lap_simulator/data_types.py` - Nuovi campi `ers_thermal_eta`, `lap_ers_bonus_s`, `last_section_ers_bonus_s`
+- `python_backend/lap_simulator/engine_penalty.py` - Funzione `compute_ers_bonus()` con coefficiente 0.125 s/MJ
+- `python_backend/lap_simulator/update_section.py` - Integrazione bonus ERS nel calcolo dt_s
+- `python_backend/utils/game_logic.py` - Flag `ENABLE_ERS_BONUS = True`
+- `python_backend/utils/pu_telemetry_logger.py` - Logging temperatura, eta_th, clipping, bonus
+- `python_backend/utils/session_bridge.py` - Payload telemetria esteso con dati ERS
+- `python_backend/lap_simulator/lap_simulator.py` - Fix `DEBUG_PENALTIES` NameError
+
+### ERS Bonus Model
+Il bonus temporale ERS è calcolato come:
+
+```python
+ers_bonus_s = -1 * (deploy_mj + mguh_direct_mj) * 0.125  # secondi guadagnati
+```
+
+- **Coefficiente calibrato**: 0.125 s/MJ (guadagno di ~0.125s per MJ deployato)
+- **Clamping**: Bonus limitato per sezione per evitare valori eccessivi
+- **Solo rettilinei**: Applicato solo su `STRAIGHT_KINDS` (come le penalità motore)
+
+### Thermal Model Constants (Implementati)
+| Parametro | Valore | Unità |
+|-----------|--------|-------|
+| T_limit | 102.0 | °C |
+| T_max | 122.0 | °C |
+| k_joule | 0.000045 | - |
+| h_v | 0.0025 | - |
+| C_th | 18.0 | kJ/K |
+
+### Telemetry Fields Added
+- `ers_temp_c` - Temperatura ERS corrente
+- `ers_thermal_eta` - Coefficiente di efficienza termica (0.0-1.0)
+- `ers_clipping_active` - Flag clipping attivo
+- `section_ers_bonus_s` - Bonus ERS sezione corrente
+- `lap_ers_bonus_s` - Bonus ERS cumulativo per giro
+
+### Validation
+- ✅ Temperatura ERS parte da T_amb (~25°C) e sale con deployment
+- ✅ Su circuiti veloci (Suzuka/Monza): raffreddamento efficace, nessun clipping
+- ✅ Su circuiti lenti (Monaco): rischio surriscaldamento settore 3
+- ✅ Bonus ERS negativo (guadagno tempo) solo su rettilinei
+- ✅ Accumulo lap_ers_bonus_s corretto per telemetria
+
+---
+
 **Vuoi che aggiungiamo una variabile per la "Mappa di Raffreddamento" (Radiator Opening)?** Questo ti permetterebbe di simulare la perdita di velocità in rettilineo dovuta al Drag quando decidi di raffreddare di più per evitare il clipping.
