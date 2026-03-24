@@ -1,6 +1,6 @@
 # ERS Setup & Telemetry Roadmap
 
-_Last updated: 2026-03-21_
+_Last updated: 2026-03-24_
 
 ## 1. Scope
 - Uniformare sorgenti dati ERS tra frontend, backend e configurazioni circuito.
@@ -54,12 +54,13 @@ _Last updated: 2026-03-21_
 - [x] Aggiungere un comando CI che rifiuti valori mancanti (assenza di `deploy_mj_per_lap`, `bucket_*_pct`).
 - **Global sweep completed (2026-03-21)**: 22 circuiti riallineati con runtime e target doc; Suzuka/Monaco validati in-game.
 
-### M5 · ERS Map Editor
-- [ ] Progettare un pannello "ERS Map Manager" separato dal garage, con:
+### M5 · ERS Map Editor ✅
+- [x] Progettare un pannello "ERS Map Manager" separato dal garage, con:
   - editor dei bucket (percentuali, reserve, target SOC) e salvataggio preset circuito.
   - import/export JSON compatibile con `config/circuits/derived/*/pu_maps.json`.
   - preview grafica (curva deploy vs sezione, timeline MGU-H).
-- [ ] Collegare il nuovo editor alla pipeline di generazione (possibilità di applicare preset + esportare su file).
+- [x] Collegare il nuovo editor alla pipeline di generazione (possibilità di applicare preset + esportare su file).
+- **Implementation completed (2026-03-24)**: Sistema completo di gestione mappe ERS con editor bucket, preview grafica, import/export e sincronizzazione backend.
 
 ## 4. Dependencies & Notes
 - Richiede disponibilità dei log `pu_telemetry.log` e `session_bridge` per confronto.
@@ -67,6 +68,7 @@ _Last updated: 2026-03-21_
 - Eventuali modifiche al motore ERS devono mantenere compatibilità con `PracticeSessionOrchestrator` e i test in `tests/` (green validation, scenario harness).
 
 ## 5. Next Steps
-1. Completare M1 (UI/backend alignment) → blocco per ogni milestone successiva.
-2. Preparare checklist circuiti e lanciare `ers_budget_backfill.py` su tutto l’elenco.
-3. Pianificare design del nuovo ERS Map Manager con UX (wireframe + API contract).
+1. **All Milestones Completed**: M1-M5 completate con successo (2026-03-24)
+2. **Production Deployment**: Sistema ERS completo e operativo in produzione
+3. **Maintenance**: Monitoraggio e ottimizzazione basata sui log `pu_telemetry` e `penalties.log`
+4. **Future Enhancements**: Valutazione di nuove funzionalità basate sui requisiti utente
