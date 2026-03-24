@@ -47,6 +47,23 @@ if DEBUG_PENALTIES:
         penalty_logger.addHandler(handler)
     penalty_logger.setLevel(logging.DEBUG)
     penalty_logger.info("[PEN] DEBUG_PENALTIES attivo in LapSimulator")
+else:
+    penalty_logger.setLevel(logging.WARNING)
+
+
+def _parse_penalty_log_filter() -> set:
+    raw_value = os.getenv("PENALTY_LOG_DRIVER_IDS", "16")
+    ids = {item.strip() for item in raw_value.split(",") if item.strip()}
+    return ids
+
+
+_TARGET_PENALTY_DRIVER_IDS = _parse_penalty_log_filter()
+
+
+def _should_log_penalties(car_id: Optional[str]) -> bool:
+    if not _TARGET_PENALTY_DRIVER_IDS:
+        return True
+    return str(car_id) in _TARGET_PENALTY_DRIVER_IDS
 
 _LAP_LOG_FILE = Path("logs/lap_times_debug.log")
 _LAP_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
