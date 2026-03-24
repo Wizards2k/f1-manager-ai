@@ -116,9 +116,14 @@ ICE_MODE_TO_ENGINE_MAP = {
 
 ERS_MODE_CANONICAL = {
     "RECHARGE": "RECHARGE",
+    "HARVEST": "RECHARGE",
+    "SAFETY_CAR": "RECHARGE",
     "STANDARD": "STANDARD",
+    "NEUTRAL": "STANDARD",
     "OVERTAKE": "OVERTAKE",
+    "ATTACK": "OVERTAKE",
     "QUALIFY": "QUALIFY",
+    "DEPLOY": "QUALIFY",
     "RACE": "RACE",
     "DEFENCE": "DEFENCE",
 }
@@ -140,6 +145,12 @@ def _resolve_engine_map_for_ers_mode(ers_mode: Optional[str]) -> Optional[Engine
     if not canonical:
         return None
     return ERS_MODE_TO_ENGINE_MAP.get(canonical)
+
+
+def _normalize_ers_mode_name(ers_mode: Optional[str]) -> Optional[str]:
+    if not ers_mode:
+        return None
+    return ERS_MODE_CANONICAL.get(str(ers_mode).strip().upper())
 
 
 # ---------------------------------------------------------------------------
@@ -167,6 +178,9 @@ class CarTrackState:
     laps_planned: int = 5
     is_player: bool = False
     lap_phase: str = LapPhase.OUT_LAP       # current lap type
+    selected_active_map: EngineMapName = EngineMapName.RACE
+    selected_ers_mode: str = "STANDARD"
+    ers_recharge_forced: bool = False
     pit_exit_delay_s: float = 0.0           # stagger delay before going on track
     pit_exit_waited_s: float = 0.0          # time waited so far
     current_sector: int = 0                 # 0=S1, 1=S2, 2=S3
@@ -181,6 +195,11 @@ PRACTICE_SLOW_LAP_PHASES = {
     LapPhase.OUT_LAP,
     LapPhase.IN_LAP,
     LapPhase.SLOW_LAP,
+}
+
+FORCED_RECHARGE_LAP_PHASES = {
+    LapPhase.OUT_LAP,
+    LapPhase.IN_LAP,
 }
 
 
@@ -718,6 +737,46 @@ class SessionBridge:
             return max(0.0, min(100.0, 100.0 - (float(live_ratio) * 100.0)))
         return None
 
+    def _sync_ers_mode_state(self, ts: CarTrackState) -> None:
+        entry = ts.car_entry
+        if entry is None:
+            return
+
+        race_car = self.race_cars_map.get(ts.car_id)
+
+        selected_ers_mode = _normalize_ers_mode_name(getattr(ts, "selected_ers_mode", None))
+
+        if ts.lap_phase in FORCED_RECHARGE_LAP_PHASES:
+            if selected_ers_mode is None:
+                selected_ers_mode = _normalize_ers_mode_name(getattr(entry.state, "ers_mode", None)) or "STANDARD"
+            ts.selected_ers_mode = selected_ers_mode
+            ts.ers_recharge_forced = True
+            entry.state.ers_mode = "RECHARGE"
+            entry.state.pu.active_map = EngineMapName.SAFETY_CAR
+            if race_car is not None:
+                race_car.ers_mode = "RECHARGE"
+                if hasattr(race_car, "player_config") and isinstance(race_car.player_config, dict):
+                    race_car.player_config["ers_mode"] = "RECHARGE"
+            return
+
+        if selected_ers_mode is None:
+            selected_ers_mode = _normalize_ers_mode_name(getattr(entry.state, "ers_mode", None)) or "STANDARD"
+
+        ts.ers_recharge_forced = False
+        ts.selected_ers_mode = selected_ers_mode
+        entry.state.ers_mode = selected_ers_mode
+
+        selected_active_map = _resolve_engine_map_for_ers_mode(selected_ers_mode)
+        if selected_active_map is None:
+            selected_active_map = getattr(ts, "selected_active_map", None)
+        if selected_active_map is not None:
+            ts.selected_active_map = selected_active_map
+            entry.state.pu.active_map = selected_active_map
+        if race_car is not None:
+            race_car.ers_mode = selected_ers_mode
+            if hasattr(race_car, "player_config") and isinstance(race_car.player_config, dict):
+                race_car.player_config["ers_mode"] = selected_ers_mode
+
     # ------------------------------------------------------------------
     # FASE 2: Move cars
     # ------------------------------------------------------------------
@@ -753,7 +812,12 @@ class SessionBridge:
                 ts.pit_exit_waited_s += sim_dt
                 continue
 
+            self._advance_car_sections(car_id, ts, race_car, sim_dt, completed_runs)
+            continue
+
             section = self.sections[ts.current_section_idx]
+
+            self._sync_ers_mode_state(ts)
 
             # ── Speed factor based on lap phase ──
             if ts.lap_phase == LapPhase.OUT_LAP:
@@ -814,6 +878,8 @@ class SessionBridge:
                 if result is None:
                     logger.error("update_section returned None for %s; using fallback section result", car_id)
                     result = SectionResult(dt_s=dt_ref, v_exit_kph=speed_kph)
+
+                self._sync_ers_mode_state(ts)
 
                 # Apply out lap / in lap penalty to the recorded dt_s
                 from dataclasses import replace as _dc_replace
@@ -977,10 +1043,263 @@ class SessionBridge:
                         ts.lap_phase = LapPhase.IN_LAP
                     else:
                         ts.lap_phase = LapPhase.HOT_LAP
+                    self._sync_ers_mode_state(ts)
 
         # Complete finished runs
         for car_id in completed_runs:
             self._complete_car_run(car_id)
+
+    def _advance_car_sections(
+        self,
+        car_id: str,
+        ts: CarTrackState,
+        race_car,
+        sim_dt: float,
+        completed_runs: List[str],
+    ) -> None:
+        if not self.sections or self.circuit_config is None:
+            return
+
+        n_sections = len(self.sections)
+        circuit_m = self.circuit_config.circuit_length_m
+        remaining_dt = sim_dt
+
+        if remaining_dt <= 0:
+            return
+
+        while remaining_dt > 0:
+            section = self.sections[ts.current_section_idx]
+            self._sync_ers_mode_state(ts)
+
+            # ── Speed factor based on lap phase ──
+            if ts.lap_phase == LapPhase.OUT_LAP:
+                speed_factor = OUT_LAP_SPEED_FACTOR
+            elif ts.lap_phase == LapPhase.IN_LAP:
+                speed_factor = IN_LAP_SPEED_FACTOR
+            elif ts.lap_phase == LapPhase.SLOW_LAP:
+                speed_factor = SLOW_LAP_SPEED_FACTOR
+            else:
+                speed_factor = 1.0
+
+            # Accumulate time (slower laps take longer per section)
+            dt_ref = section.dt_ref_s if section.dt_ref_s > 0 else 3.0
+            effective_dt_ref = dt_ref / speed_factor
+            current_section_time = max(ts.section_time_acc, 0.0)
+            time_needed = max(effective_dt_ref - current_section_time, 0.0)
+            consume_dt = min(remaining_dt, time_needed)
+            current_section_time = min(current_section_time + consume_dt, effective_dt_ref)
+            ts.section_time_acc = current_section_time
+            remaining_dt -= consume_dt
+
+            # ── Interpolate position (every tick) ──
+            fraction = min(current_section_time / effective_dt_ref, 1.0)
+
+            dist_in_section = fraction * section.length_m
+            section_start_m = self._section_end_m[ts.current_section_idx] - section.length_m if ts.current_section_idx < len(self._section_end_m) else 0
+            ts.distance_in_lap = section_start_m + dist_in_section
+
+            # Speed interpolation (v_entry → v_exit) scaled by phase
+            v_entry = section.v_entry_kph if section.v_entry_kph > 0 else 200.0
+            v_exit = section.v_exit_kph if section.v_exit_kph > 0 else v_entry
+            speed_kph = (v_entry + fraction * (v_exit - v_entry)) * speed_factor
+
+            race_car.distance_traveled = ts.distance_in_lap % circuit_m
+            race_car.speed = max(speed_kph / 3.6, 1.0)
+
+            # Set RaceCar state based on lap phase
+            set_racecar_phase(race_car, ts.lap_phase)
+
+            if current_section_time < effective_dt_ref:
+                break
+
+            entry = ts.car_entry
+            try:
+                result = update_section(
+                    car_state=entry.state,
+                    aero_setup=entry.aero_setup,
+                    driver_skills=entry.driver_skills,
+                    section=section,
+                    env=self.env,
+                    config=self.circuit_config,
+                    push_level=entry.push_level,
+                    delta_aero=getattr(entry, 'delta_aero', 0.0),
+                    delta_grip=getattr(entry, 'delta_grip', 0.0),
+                    apply_baseline_delta=getattr(entry, 'apply_baseline_delta', True),
+                )
+            except Exception as e:
+                logger.error("update_section error for %s: %s", car_id, e)
+                result = None
+
+            if result is None:
+                logger.error("update_section returned None for %s; using fallback section result", car_id)
+                result = SectionResult(dt_s=dt_ref, v_exit_kph=speed_kph)
+
+            self._sync_ers_mode_state(ts)
+
+            # Apply out lap / in lap penalty to the recorded dt_s
+            from dataclasses import replace as _dc_replace
+            lap_speed_factor = 1.0
+            if ts.lap_phase == LapPhase.OUT_LAP:
+                lap_speed_factor = OUT_LAP_SPEED_FACTOR
+            elif ts.lap_phase == LapPhase.IN_LAP:
+                lap_speed_factor = IN_LAP_SPEED_FACTOR
+            elif ts.lap_phase == LapPhase.SLOW_LAP:
+                lap_speed_factor = SLOW_LAP_SPEED_FACTOR
+
+            if lap_speed_factor != 1.0:
+                scaled_points = []
+                for point in getattr(result, 'telemetry_points', []) or []:
+                    scaled_point = dict(point)
+                    if scaled_point.get('speed_kph') is not None:
+                        scaled_point['speed_kph'] = round(float(scaled_point['speed_kph']) * lap_speed_factor, 3)
+                    if scaled_point.get('dt_s') is not None:
+                        scaled_point['dt_s'] = round(float(scaled_point['dt_s']) / lap_speed_factor, 4)
+                    scaled_points.append(scaled_point)
+
+                result = _dc_replace(
+                    result,
+                    dt_s=result.dt_s / lap_speed_factor,
+                    v_exit_kph=result.v_exit_kph * lap_speed_factor,
+                    v_entry_kph=result.v_entry_kph * lap_speed_factor,
+                    v_effective_kph=result.v_effective_kph * lap_speed_factor,
+                    v_max_kph=result.v_max_kph * lap_speed_factor,
+                    telemetry_points=scaled_points,
+                )
+
+            try:
+                tyres_payload: Dict[str, Dict[str, Any]] = {}
+                tyre_wear_vals: List[float] = []
+                tyre_temp_vals: List[float] = []
+                for wp, tyre in getattr(entry.state, 'tyres', {}).items():
+                    compound = getattr(getattr(tyre, 'compound', None), 'value', None)
+                    tyres_payload[wp.name] = {
+                        'compound': compound,
+                        'wear_pct': getattr(tyre, 'wear_pct', None),
+                        'surface_temp_c': getattr(tyre, 'surface_temp_c', None),
+                        'age_laps': getattr(tyre, 'lap_age', None),
+                    }
+                    if getattr(tyre, 'wear_pct', None) is not None:
+                        tyre_wear_vals.append(tyre.wear_pct)
+                    if getattr(tyre, 'surface_temp_c', None) is not None:
+                        tyre_temp_vals.append(tyre.surface_temp_c)
+                pu_state = getattr(entry.state, 'pu', None)
+                pu_telemetry = self._format_pu_telemetry(pu_state)
+                log_microsector({
+                    'car_id': entry.car_id,
+                    'lap': ts.lap_number,
+                    'section_id': section.section_id,
+                    'section_index': ts.current_section_idx,
+                    'section_kind': section.kind.name,
+                    'section_length_m': section.length_m,
+                    'dt_s': result.dt_s,
+                    'v_entry_kph': result.v_entry_kph,
+                    'v_exit_kph': result.v_exit_kph,
+                    'v_max_kph': result.v_max_kph,
+                    'v_effective_kph': result.v_effective_kph,
+                    'penalties': {
+                        'fuel_s': result.fuel_penalty_s,
+                        'tyre_s': result.tyre_penalty_s,
+                        'push_s': result.push_penalty_s,
+                        'engine_s': result.engine_penalty_s,
+                        'brake_s': result.brake_penalty_s,
+                        'setup_s': result.setup_penalty_s,
+                        'df_curve_penalty_s': result.df_curve_penalty_s,
+                        'df_curve_bonus_s': result.df_curve_bonus_s,
+                        'drag_penalty_s': result.drag_penalty_s,
+                        'drag_bonus_s': result.drag_bonus_s,
+                        'handling_penalty': result.handling_penalty,
+                    },
+                    'push_level': entry.push_level,
+                    'delta_aero': getattr(entry, 'delta_aero', 0.0),
+                    'delta_grip': getattr(entry, 'delta_grip', 0.0),
+                    'apply_baseline_delta': getattr(entry, 'apply_baseline_delta', True),
+                    'setup_sliders': getattr(entry, 'setup_sliders', {}),
+                    'ideal_setup_sliders': getattr(entry, 'ideal_setup_sliders', {}),
+                    'tyres': tyres_payload,
+                    'tyre_avg_wear_pct': sum(tyre_wear_vals) / len(tyre_wear_vals) if tyre_wear_vals else None,
+                    'tyre_avg_temp_c': sum(tyre_temp_vals) / len(tyre_temp_vals) if tyre_temp_vals else None,
+                    'fuel_kg': getattr(pu_state, 'fuel_kg', None),
+                    'ers_energy_mj': getattr(pu_state, 'ers_energy_mj', None),
+                    'ers_mode': getattr(entry.state, 'ers_mode', None),
+                    'engine_map': getattr(getattr(pu_state, 'active_map', None), 'value', None),
+                    'overtake_window': result.overtake_window,
+                    'braking_efficiency': result.braking_efficiency,
+                    'power_kw': result.power_kw,
+                    'events': [evt.event_type for evt in result.events],
+                    'lap_phase': str(ts.lap_phase),
+                })
+            except Exception:
+                logger.debug('microsector logging failed for %s', entry.car_id, exc_info=True)
+
+            try:
+                self._log_pu_section_usage(entry, ts, section)
+            except Exception:
+                logger.debug('pu telemetry logging failed for %s', entry.car_id, exc_info=True)
+
+            ts.lap_section_results.append(result)
+
+            # Track sector time accumulation
+            ts.sector_dt_acc += result.dt_s
+
+            # Check sector crossing
+            section_end_m = self._section_end_m[ts.current_section_idx] if ts.current_section_idx < len(self._section_end_m) else 0
+            if ts.current_sector < len(self._sector_end_m) and section_end_m >= self._sector_end_m[ts.current_sector]:
+                sector_key = f"sector{ts.current_sector + 1}"
+                sector_index = ts.current_sector
+                sector_time = ts.sector_dt_acc
+                if not hasattr(race_car, 'current_lap_sectors') or race_car.current_lap_sectors is None:
+                    race_car.current_lap_sectors = {}
+                race_car.current_lap_sectors[sector_key] = sector_time
+                # Update personal best sectors live (only during HOT_LAP)
+                if ts.lap_phase == LapPhase.HOT_LAP:
+                    best = race_car.best_sectors.get(sector_key)
+                    if best is None or sector_time < best:
+                        race_car.best_sectors[sector_key] = sector_time
+                    # Update session bests immediately so frontend can show purple/green
+                    from utils.game_logic import update_session_bests
+                    update_session_bests(race_car)
+                ts.current_sector += 1
+                ts.sector_dt_acc = 0.0
+
+            # Update RaceCar with section data/telemetry
+            for ev in result.events:
+                self._update_brake_warning(race_car, ev.event_type)
+                if (
+                    ts.is_player
+                    and ts.lap_phase == LapPhase.HOT_LAP
+                    and ev.event_type in THERMAL_FEEDBACK_EVENTS
+                ):
+                    emit_thermal_feedback(race_car, ev.event_type, getattr(ev, "message", None))
+            self._apply_section_to_racecar(race_car, entry, result, section)
+
+            # Advance to next section
+            ts.current_section_idx += 1
+            entry.state.current_section_idx = ts.current_section_idx
+            ts.section_time_acc = 0.0
+
+            # ── Check lap completion ──
+            if ts.current_section_idx >= n_sections:
+                self._commit_lap(car_id, ts, race_car)
+                ts.current_section_idx = 0
+                entry.state.current_section_idx = 0
+                ts.section_time_acc = 0.0
+                ts.sector_dt_acc = 0.0
+                race_car.current_lap_sectors = {}
+
+                # Update lap phase for next lap
+                if ts.laps_done_in_run >= ts.laps_planned:
+                    completed_runs.append(car_id)
+                    break
+                elif ts.setup_data_complete and not ts.is_player:
+                    ts.lap_phase = LapPhase.IN_LAP
+                elif ts.laps_done_in_run >= ts.laps_planned - 1:
+                    ts.lap_phase = LapPhase.IN_LAP
+                else:
+                    ts.lap_phase = LapPhase.HOT_LAP
+                self._sync_ers_mode_state(ts)
+
+            if remaining_dt <= 0:
+                break
 
     # ------------------------------------------------------------------
     # Lap commit
@@ -1730,9 +2049,12 @@ class SessionBridge:
             laps_planned=stint_laps,
             is_player=True,
             pit_exit_delay_s=2.0,  # player gets short delay
+            selected_active_map=_resolve_engine_map_for_ers_mode(_normalize_ers_mode_name(getattr(entry.state, "ers_mode", None)) or "STANDARD") or entry.state.pu.active_map,
+            selected_ers_mode=_normalize_ers_mode_name(getattr(entry.state, "ers_mode", None)) or "STANDARD",
             tyre_set_id=(active_tyre_set.set_id if active_tyre_set else (tyre_set_id or None)),
             tyre_set=active_tyre_set,
         )
+        self._sync_ers_mode_state(self._track_states[car_id])
         return True
 
     def player_box_now(self, car) -> None:
@@ -1769,12 +2091,19 @@ class SessionBridge:
             if engine_map:
                 entry.state.pu.active_map = engine_map
         if ers_mode:
-            canonical = ERS_MODE_CANONICAL.get(str(ers_mode).strip().upper())
+            canonical = _normalize_ers_mode_name(ers_mode)
             if canonical:
-                entry.state.ers_mode = canonical
+                ts.selected_ers_mode = canonical
                 ers_engine_map = _resolve_engine_map_for_ers_mode(canonical)
                 if ers_engine_map:
-                    entry.state.pu.active_map = ers_engine_map
+                    ts.selected_active_map = ers_engine_map
+                if not ts.ers_recharge_forced:
+                    entry.state.ers_mode = canonical
+                    if ers_engine_map:
+                        entry.state.pu.active_map = ers_engine_map
+                else:
+                    entry.state.ers_mode = "RECHARGE"
+                    entry.state.pu.active_map = EngineMapName.SAFETY_CAR
                 if self.circuit_config and getattr(self.circuit_config, "ers_budget", None):
                     budget_maps = self.circuit_config.ers_budget.get("maps", {})
                     if isinstance(budget_maps, dict):
@@ -1782,6 +2111,8 @@ class SessionBridge:
                         if isinstance(target_soc, (int, float)):
                             entry.state.pu.soc_target_pct = float(target_soc)
                             entry.state.pu.soc_floor_dynamic_pct = float(target_soc)
+        if ers_mode or ts.ers_recharge_forced:
+            self._sync_ers_mode_state(ts)
 
 
     # ------------------------------------------------------------------
@@ -1926,10 +2257,13 @@ class SessionBridge:
                         car_entry=car_entry,
                         laps_planned=run_plan.laps_planned,
                         pit_exit_delay_s=pit_exit,
+                        selected_active_map=_resolve_engine_map_for_ers_mode(_normalize_ers_mode_name(getattr(car_entry.state, "ers_mode", None)) or "STANDARD") or car_entry.state.pu.active_map,
+                        selected_ers_mode=_normalize_ers_mode_name(getattr(car_entry.state, "ers_mode", None)) or "STANDARD",
                         tyre_set_id=reserved_set_id,
                         tyre_set=reserved_set,
                     )
                     self._track_states[car_id] = car_state
+                    self._sync_ers_mode_state(car_state)
                     self._emit_run_started_event(
                         car_id,
                         program=run_plan.program.value,
@@ -1967,6 +2301,20 @@ class SessionBridge:
         ts = self._track_states.pop(car_id, None)
         if ts is None:
             return
+
+        selected_ers_mode = _normalize_ers_mode_name(getattr(ts, "selected_ers_mode", None)) or "STANDARD"
+        restored_map = _resolve_engine_map_for_ers_mode(selected_ers_mode)
+        entry = ts.car_entry
+        if entry is not None:
+            entry.state.ers_mode = selected_ers_mode
+            if restored_map is not None:
+                entry.state.pu.active_map = restored_map
+
+        race_car = self.race_cars_map.get(car_id)
+        if race_car is not None:
+            race_car.ers_mode = selected_ers_mode
+            if hasattr(race_car, "player_config") and isinstance(race_car.player_config, dict):
+                race_car.player_config["ers_mode"] = selected_ers_mode
 
         # Clear blue flag when car returns to box
         if self.pso:
