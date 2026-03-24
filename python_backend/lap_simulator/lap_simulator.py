@@ -9,11 +9,11 @@ Reference: docs/lap-physics-spec-v0.5.md §3.3.1
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-import os
 
 from .data_types import (
     AeroSetup,
@@ -25,31 +25,28 @@ from .data_types import (
     SectionResult,
 )
 from .update_section import update_section
-from utils.microsector_logger import (
-    is_microsector_logging_enabled,
-    log_microsector,
-)
 
 PENALTY_LOGGER_NAME = "lap_simulator.penalties"
-logger = logging.getLogger(PENALTY_LOGGER_NAME)
-logger.setLevel(logging.WARNING)
-
-
-def _parse_penalty_log_filter() -> set:
-    raw_value = os.getenv("PENALTY_LOG_DRIVER_IDS", "16")
-    ids = {item.strip() for item in raw_value.split(",") if item.strip()}
-    return ids
-
-
-_TARGET_PENALTY_DRIVER_IDS = _parse_penalty_log_filter()
-
-DEBUG_PENALTIES: bool = os.getenv("DEBUG_PENALTIES", "0").lower() in {"1", "true", "yes"}
-
-
-def _should_log_penalties(car_id: Optional[str]) -> bool:
-    if not _TARGET_PENALTY_DRIVER_IDS:
-        return True
-    return str(car_id) in _TARGET_PENALTY_DRIVER_IDS
+logger = logging.getLogger(__name__)
+penalty_logger = logging.getLogger(PENALTY_LOGGER_NAME)
+# Disabled by default; enable explicitly for penalty investigations
+DEBUG_PENALTIES = os.getenv("DEBUG_PENALTIES", "0").lower() in {"1", "true", "yes", "on"}
+if DEBUG_PENALTIES:
+    _penalty_log_path = Path("logs/penalties.log")
+    _penalty_log_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Reset file on startup
+    with _penalty_log_path.open("w", encoding="utf-8") as fh:
+        fh.write("")  # Create empty file
+    
+    if not any(getattr(h, "_penalty_debug", False) for h in penalty_logger.handlers):
+        handler = logging.FileHandler(_penalty_log_path)
+        handler.setLevel(logging.DEBUG)
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+        handler._penalty_debug = True
+        penalty_logger.addHandler(handler)
+    penalty_logger.setLevel(logging.DEBUG)
+    penalty_logger.info("[PEN] DEBUG_PENALTIES attivo in LapSimulator")
 
 _LAP_LOG_FILE = Path("logs/lap_times_debug.log")
 _LAP_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -128,107 +125,15 @@ class LapSimulator:
         self.cars: Dict[str, CarEntry] = {}
         self.battle_resolver = None
         self._dirty_air_cache: Dict[str, float] = {}
-        self._microsector_logging = is_microsector_logging_enabled()
         if enable_battles:
             BR = _get_battle_resolver_class()
             self.battle_resolver = BR()
-
-    def _emit_microsector_log(
-        self,
-        *,
-        entry: CarEntry,
-        section,
-        result: SectionResult,
-        lap_number: int,
-        section_index: int,
-        airflow_penalty: float,
-        traffic_constraint: float,
-    ) -> None:
-        if not self._microsector_logging:
-            return
-
-        state = entry.state
-        tyres_payload: Dict[str, Dict[str, Any]] = {}
-        tyre_wear_vals: List[float] = []
-        tyre_temp_vals: List[float] = []
-        for wp, tyre in getattr(state, "tyres", {}).items():
-            compound = getattr(getattr(tyre, "compound", None), "value", None)
-            tyres_payload[wp.name] = {
-                "compound": compound,
-                "wear_pct": getattr(tyre, "wear_pct", None),
-                "surface_temp_c": getattr(tyre, "surface_temp_c", None),
-                "age_laps": getattr(tyre, "age_laps", None),
-            }
-            if getattr(tyre, "wear_pct", None) is not None:
-                tyre_wear_vals.append(tyre.wear_pct)
-            if getattr(tyre, "surface_temp_c", None) is not None:
-                tyre_temp_vals.append(tyre.surface_temp_c)
-
-        pu_state = getattr(state, "pu", None)
-        entry_payload = {
-            "car_id": entry.car_id,
-            "lap": lap_number,
-            "section_id": section.section_id,
-            "section_index": section_index,
-            "section_kind": section.kind.name,
-            "section_length_m": section.length_m,
-            "dt_s": result.dt_s,
-            "v_entry_kph": result.v_entry_kph,
-            "v_exit_kph": result.v_exit_kph,
-            "v_max_kph": result.v_max_kph,
-            "v_effective_kph": result.v_effective_kph,
-            "penalties": {
-                "fuel_s": result.fuel_penalty_s,
-                "tyre_s": result.tyre_penalty_s,
-                "push_s": result.push_penalty_s,
-                "engine_s": result.engine_penalty_s,
-                "brake_s": result.brake_penalty_s,
-                "setup_s": result.setup_penalty_s,
-                "df_curve_penalty_s": result.df_curve_penalty_s,
-                "df_curve_bonus_s": result.df_curve_bonus_s,
-                "drag_penalty_s": result.drag_penalty_s,
-                "drag_bonus_s": result.drag_bonus_s,
-                "handling_penalty": result.handling_penalty,
-            },
-            "push_level": entry.push_level,
-            "delta_aero": entry.delta_aero,
-            "delta_grip": entry.delta_grip,
-            "apply_baseline_delta": entry.apply_baseline_delta,
-            "setup_sliders": entry.setup_sliders,
-            "ideal_setup_sliders": entry.ideal_setup_sliders,
-            "tyres": tyres_payload,
-            "tyre_avg_wear_pct": sum(tyre_wear_vals) / len(tyre_wear_vals) if tyre_wear_vals else None,
-            "tyre_avg_temp_c": sum(tyre_temp_vals) / len(tyre_temp_vals) if tyre_temp_vals else None,
-            "fuel_kg": getattr(pu_state, "fuel_kg", None),
-            "ers_energy_mj": getattr(pu_state, "ers_energy_mj", None),
-            "ers_mode": getattr(state, "ers_mode", None),
-            "engine_map": getattr(getattr(pu_state, "active_map", None), "value", None),
-            "airflow_penalty": airflow_penalty,
-            "traffic_v_max_kph": traffic_constraint,
-            "overtake_window": result.overtake_window,
-            "braking_efficiency": result.braking_efficiency,
-            "power_kw": result.power_kw,
-            "events": [evt.event_type for evt in result.events],
-        }
-
-        try:
-            log_microsector(entry_payload)
-        except Exception:  # pragma: no cover - logging should never break sim
-            logger.debug("microsector logging failed for car %s", entry.car_id, exc_info=True)
 
     # ------------------------------------------------------------------
     # Registration
     # ------------------------------------------------------------------
 
     def register_car(self, entry: CarEntry) -> None:
-        # Imposta temperature iniziali ottimali basate su circuito e compound
-        from .tyre_model import set_optimal_initial_temperatures
-        
-        # Estrai circuit_id dalla config se disponibile
-        circuit_id = getattr(self.config, 'circuit_id', None)
-        if circuit_id:
-            set_optimal_initial_temperatures(entry.state, circuit_id, self.env)
-        
         self.cars[entry.car_id] = entry
 
     def register_cars(self, entries: List[CarEntry]) -> None:
@@ -288,15 +193,13 @@ class LapSimulator:
         pu_state.bucket_primary_total_mj = 0.0
         pu_state.bucket_secondary_total_mj = 0.0
         pu_state.bucket_exit_total_mj = 0.0
+        pu_state.mguh_primary_total_mj = 0.0
+        pu_state.mguh_secondary_total_mj = 0.0
+        pu_state.mguh_exit_total_mj = 0.0
+        pu_state.mguh_primary_used_mj = 0.0
+        pu_state.mguh_secondary_used_mj = 0.0
+        pu_state.mguh_exit_used_mj = 0.0
         pu_state.bucket_budget_initialized = False
-        
-        # Reset conteggio settori per nuovo giro
-        pu_state.primary_sections_count = 0
-        pu_state.secondary_sections_count = 0
-        pu_state.exit_sections_count = 0
-        pu_state.primary_sections_remaining = 0
-        pu_state.secondary_sections_remaining = 0
-        pu_state.exit_sections_remaining = 0
 
         section_results: List[SectionResult] = []
         all_events: List[SectionEvent] = []
@@ -320,61 +223,23 @@ class LapSimulator:
             traffic = self._compute_traffic_constraint(entry.car_id)
 
             # Physics step
-            try:
-                result = update_section(
-                    car_state=state,
-                    aero_setup=entry.aero_setup,
-                    driver_skills=entry.driver_skills,
-                    section=section,
-                    env=self.env,
-                    config=self.config,
-                    push_level=entry.push_level,
-                    airflow_penalty=airflow,
-                    traffic_v_max_kph=traffic,
-                    delta_aero=entry.delta_aero,
-                    delta_grip=entry.delta_grip,
-                    apply_baseline_delta=entry.apply_baseline_delta,
-                    is_qualifying=False,
-                    circuit_id=self.config.circuit_id,
-                    driver_id=entry.car_id,
-                    lap_number=state.lap_number,
-                    setup_sliders=entry.setup_sliders,
-                    ideal_setup_sliders=entry.ideal_setup_sliders,
-                )
-            except Exception:
-                logger.exception("update_section error for %s (section %s)", entry.car_id, section.section_id)
-                raise
-
-            if DEBUG_PENALTIES and _should_log_penalties(entry.car_id):
-                try:
-                    compound = entry.state.tyres[WheelPosition.LF].compound
-                    compound_name = compound.value if hasattr(compound, "value") else str(compound)
-                except Exception:
-                    compound_name = "unknown"
-                logger.info(
-                    "[PEN] car=%s sec=%s kind=%s push=%.1f fuel=%.4f tyre=%.4f push_s=%.4f engine_s=%.4f map=%s ers=%s compound=%s",
-                    entry.car_id,
-                    section.section_id,
-                    section.kind.name,
-                    entry.push_level,
-                    result.fuel_penalty_s,
-                    result.tyre_penalty_s,
-                    result.push_penalty_s,
-                    result.engine_penalty_s,
-                    getattr(entry.state.pu.active_map, "value", str(entry.state.pu.active_map)),
-                    getattr(entry.state, "ers_mode", ""),
-                    compound_name,
-                )
-
-            self._emit_microsector_log(
-                entry=entry,
+            result = update_section(
+                car_state=state,
+                aero_setup=entry.aero_setup,
+                driver_skills=entry.driver_skills,
                 section=section,
-                result=result,
-                lap_number=state.lap_number,
-                section_index=i,
+                env=self.env,
+                config=self.config,
+                push_level=entry.push_level,
                 airflow_penalty=airflow,
-                traffic_constraint=traffic,
+                traffic_v_max_kph=traffic,
+                delta_aero=entry.delta_aero,
+                delta_grip=entry.delta_grip,
+                setup_sliders=entry.setup_sliders if entry.setup_sliders else None,
+                ideal_setup_sliders=entry.ideal_setup_sliders if entry.ideal_setup_sliders else None,
             )
+
+            section_results.append(result)
             all_events.extend(result.events)
 
             # Sector tracking
@@ -398,7 +263,7 @@ class LapSimulator:
 
         # Increment lap age for all tyres
         for t in state.tyres.values():
-            t.age_laps += 1
+            t.lap_age += 1
 
         lap_result = LapResult(
             car_id=entry.car_id,
@@ -441,8 +306,6 @@ class LapSimulator:
         timestamp = datetime.utcnow().isoformat()
         lines: List[str] = [f"{timestamp} | Lap Results:"]
         for car_id, lr in results.items():
-            if _TARGET_PENALTY_DRIVER_IDS and car_id not in _TARGET_PENALTY_DRIVER_IDS:
-                continue
             entry = self.cars.get(car_id)
             delta_aero = entry.delta_aero if entry else 0.0
             delta_grip = entry.delta_grip if entry else 0.0
@@ -505,57 +368,23 @@ class LapSimulator:
                 airflow = self._compute_airflow_penalty(car_id)
                 traffic = self._compute_traffic_constraint(car_id)
 
-                try:
-                    result = update_section(
-                        car_state=entry.state,
-                        aero_setup=entry.aero_setup,
-                        driver_skills=entry.driver_skills,
-                        section=section,
-                        env=self.env,
-                        config=self.config,
-                        push_level=entry.push_level,
-                        airflow_penalty=airflow,
-                        traffic_v_max_kph=traffic,
-                        delta_aero=entry.delta_aero,
-                        delta_grip=entry.delta_grip,
-                        apply_baseline_delta=entry.apply_baseline_delta,
-                    )
-                except Exception:
-                    logger.exception("update_section error for %s (section %s)", car_id, section.section_id)
-                    raise
-
-                if DEBUG_PENALTIES and _should_log_penalties(car_id):
-                    try:
-                        compound = entry.state.tyres[WheelPosition.LF].compound
-                        compound_name = compound.value if hasattr(compound, "value") else str(compound)
-                    except Exception:
-                        compound_name = "unknown"
-                    logger.info(
-                        "[PEN] car=%s sec=%s kind=%s push=%.1f fuel=%.4f tyre=%.4f push_s=%.4f engine_s=%.4f map=%s ers=%s compound=%s",
-                        car_id,
-                        section.section_id,
-                        section.kind.name,
-                        entry.push_level,
-                        result.fuel_penalty_s,
-                        result.tyre_penalty_s,
-                        result.push_penalty_s,
-                        result.engine_penalty_s,
-                        getattr(entry.state.pu.active_map, "value", str(entry.state.pu.active_map)),
-                        getattr(entry.state, "ers_mode", ""),
-                        compound_name,
-                    )
-
-                self._emit_microsector_log(
-                    entry=entry,
+                result = update_section(
+                    car_state=entry.state,
+                    aero_setup=entry.aero_setup,
+                    driver_skills=entry.driver_skills,
                     section=section,
-                    result=result,
-                    lap_number=entry.state.lap_number,
-                    section_index=i,
+                    env=self.env,
+                    config=self.config,
+                    push_level=entry.push_level,
                     airflow_penalty=airflow,
-                    traffic_constraint=traffic,
+                    traffic_v_max_kph=traffic,
+                    delta_aero=entry.delta_aero,
+                    delta_grip=entry.delta_grip,
+                    apply_baseline_delta=entry.apply_baseline_delta,
                 )
-
                 section_results[car_id] = result
+                car_section_results[car_id].append(result)
+                car_events[car_id].extend(result.events)
 
             # Phase 2: BattleResolver
             # Build cars_in_section sorted by position (leader first)
@@ -616,7 +445,7 @@ class LapSimulator:
             tyre_temps = [t.surface_temp_c for t in state.tyres.values()]
 
             for t in state.tyres.values():
-                t.age_laps += 1
+                t.lap_age += 1
 
             results[cid] = LapResult(
                 car_id=cid,
