@@ -26,6 +26,9 @@ ENABLE_SETUP_PENALTIES = True     # Penalty/bonus assetto (DF/Drag trade-off)
 # Performance optimization flags
 ENABLE_PENALTY_CACHE = False      # Use pre-computed penalty cache (default: off)
 
+# ERS bonus and thermal clipping
+ENABLE_ERS_BONUS = True           # ERS energy deployment → time bonus (negative penalty)
+
 # Lock per sincronizzare accessi alle variabili globali
 state_lock = threading.Lock()
 

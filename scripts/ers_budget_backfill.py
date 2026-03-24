@@ -16,6 +16,8 @@ from typing import Any, Dict, List, Optional, Tuple
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DERIVED_DIR = REPO_ROOT / "config" / "circuits" / "derived"
 CALIBRATION_DIR = REPO_ROOT / "config" / "calibration" / "pu"
+SUZUKA_TEMPLATE_CIRCUIT_ID = "jp-1962_suzuka"
+SUZUKA_TEMPLATE_PATH = DERIVED_DIR / SUZUKA_TEMPLATE_CIRCUIT_ID / "pu_maps.json"
 
 PYTHON_BACKEND_DIR = REPO_ROOT / "python_backend"
 PYTHON_BACKEND_SCRIPTS = PYTHON_BACKEND_DIR / "scripts"
@@ -42,71 +44,9 @@ lap_simulator_runtime = importlib.import_module("lap_simulator.lap_simulator")
 if not hasattr(lap_simulator_runtime, "DEBUG_PENALTIES"):
     lap_simulator_runtime.DEBUG_PENALTIES = False
 
-MODE_SPECS = {
-    "RECHARGE": {
-        "source": "SAFETY_CAR",
-        "defaults": {
-            "deploy_mj_per_lap": 0.45,
-            "harvest_mj_per_lap": 2.0,
-            "target_soc_end_lap": 0.95,
-            "mguh_direct_ratio": 0.45,
-        },
-        "bucket_primary_pct": 0.15,
-        "bucket_secondary_pct": 0.25,
-        "bucket_exit_pct": 0.60,
-        "defense_reserve_mj": 0.10,
-    },
-    "STANDARD": {
-        "source": "RACE",
-        "defaults": {
-            "deploy_mj_per_lap": 3.6,
-            "harvest_mj_per_lap": 1.0,
-            "target_soc_end_lap": 0.35,
-            "mguh_direct_ratio": 0.45,
-        },
-        "bucket_primary_pct": 0.55,
-        "bucket_secondary_pct": 0.30,
-        "bucket_exit_pct": 0.15,
-        "defense_reserve_mj": 0.25,
-    },
-    "OVERTAKE": {
-        "source": "QUALIFY",
-        "defaults": {
-            "deploy_mj_per_lap": 4.0,
-            "harvest_mj_per_lap": 0.6,
-            "target_soc_end_lap": 0.20,
-            "mguh_direct_ratio": 0.45,
-        },
-        "bucket_primary_pct": 0.70,
-        "bucket_secondary_pct": 0.20,
-        "bucket_exit_pct": 0.10,
-        "defense_reserve_mj": 0.10,
-    },
-    "DEFENCE": {
-        "source": "RACE",
-        "defaults": {
-            "deploy_mj_per_lap": 3.1,
-            "harvest_mj_per_lap": 1.2,
-            "target_soc_end_lap": 0.55,
-            "mguh_direct_ratio": 0.45,
-        },
-        "bucket_primary_pct": 0.35,
-        "bucket_secondary_pct": 0.40,
-        "bucket_exit_pct": 0.25,
-        "defense_reserve_mj": 0.40,
-    },
-}
-
 ENGINE_MAP_ALIASES = {
     "STANDARD": "RACE",
     "QUALITY": "QUALIFY",
-}
-
-QUALIFY_BUCKETS = {
-    "bucket_primary_pct": 0.65,
-    "bucket_secondary_pct": 0.25,
-    "bucket_exit_pct": 0.10,
-    "defense_reserve_mj": 0.0,
 }
 
 
@@ -116,68 +56,36 @@ def _round_if_number(value):
     return value
 
 
-def _ensure_mode_entry(maps: dict, mode: str, spec: dict) -> bool:
-    entry = maps.get(mode)
-    source = maps.get(spec["source"], {})
-    changed = False
-    if entry is None:
-        entry = {}
-        maps[mode] = entry
-        changed = True
+def load_ers_budget_template(template_path: Path = SUZUKA_TEMPLATE_PATH) -> Dict[str, Dict[str, Any]]:
+    if not template_path.exists():
+        raise FileNotFoundError(f"Suzuka ERS template not found: {template_path}")
 
-    defaults = spec.get("defaults", {})
-    for field in ("deploy_mj_per_lap", "harvest_mj_per_lap", "target_soc_end_lap", "mguh_direct_ratio"):
-        if entry.get(field) is None:
-            if field == "mguh_direct_ratio":
-                value = defaults.get(field, 0.45)
-            else:
-                value = source.get(field)
-                if value is None:
-                    value = defaults.get(field)
-            if value is not None:
-                entry[field] = _round_if_number(value)
-                changed = True
+    data = json.loads(template_path.read_text())
+    budget = data.get("ers_budget")
+    if not isinstance(budget, dict):
+        raise ValueError(f"Suzuka ERS template {template_path} is missing an ers_budget object")
 
-    for bucket_field in ("bucket_primary_pct", "bucket_secondary_pct", "bucket_exit_pct"):
-        if entry.get(bucket_field) is None:
-            entry[bucket_field] = spec.get(bucket_field)
-            changed = True
+    template_maps = budget.get("maps")
+    if not isinstance(template_maps, dict) or not template_maps:
+        raise ValueError(f"Suzuka ERS template {template_path} has no ers_budget.maps entries")
 
-    if entry.get("defense_reserve_mj") is None and spec.get("defense_reserve_mj") is not None:
-        entry["defense_reserve_mj"] = spec["defense_reserve_mj"]
-        changed = True
-
-    return changed
+    return copy.deepcopy(template_maps)
 
 
-def _ensure_qualify_buckets(maps: dict) -> bool:
-    entry = maps.get("QUALIFY")
-    if not entry:
-        return False
-    changed = False
-    for field, default in QUALIFY_BUCKETS.items():
-        if entry.get(field) is None:
-            entry[field] = default
-            changed = True
-    return changed
-
-
-def process_file(path: Path, dry_run: bool = False) -> bool:
+def process_file(path: Path, template_maps: Dict[str, Dict[str, Any]], dry_run: bool = False) -> bool:
     data = json.loads(path.read_text())
     budget = data.get("ers_budget")
     if not isinstance(budget, dict):
         return False
-    maps = budget.setdefault("maps", {})
-    changed = False
 
-    for mode, spec in MODE_SPECS.items():
-        changed |= _ensure_mode_entry(maps, mode, spec)
+    current_maps = budget.get("maps")
+    if current_maps == template_maps:
+        return False
 
-    changed |= _ensure_qualify_buckets(maps)
-
-    if changed and not dry_run:
+    budget["maps"] = copy.deepcopy(template_maps)
+    if not dry_run:
         path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-    return changed
+    return True
 
 
 MGUH_DIRECT_RATIO_BASELINE = 0.45
@@ -919,6 +827,11 @@ def main() -> None:
         _print_energy_validation_results(results, args.push_level)
         return
 
+    try:
+        template_maps = load_ers_budget_template()
+    except (FileNotFoundError, ValueError) as exc:
+        raise SystemExit(str(exc)) from exc
+
     if args.circuit:
         candidate = DERIVED_DIR / args.circuit / "pu_maps.json"
         paths = [candidate] if candidate.exists() else []
@@ -932,7 +845,7 @@ def main() -> None:
     fitted_results: List[MguhFitResult] = []
     doc_targets = load_doc_targets(args.target_doc) if args.fit_mguh else {}
     for pu_map in paths:
-        if process_file(pu_map, dry_run=args.dry_run):
+        if process_file(pu_map, template_maps, dry_run=args.dry_run):
             updated_files.append(str(pu_map.relative_to(REPO_ROOT)))
         if args.fit_mguh:
             fitted = tune_file(

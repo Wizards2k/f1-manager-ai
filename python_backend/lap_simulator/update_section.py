@@ -35,6 +35,7 @@ from .engine_penalty import (
     DEFAULT_ENGINE_MAP_PENALTIES,
     STRAIGHT_KINDS,
     compute_engine_penalty,
+    compute_ers_bonus,
     get_engine_cv_for_team,
 )
 from .brake_penalty import compute_brake_penalty
@@ -70,6 +71,7 @@ try:
         ENABLE_BRAKE_PENALTIES,
         ENABLE_SETUP_PENALTIES,
         ENABLE_PENALTY_CACHE,
+        ENABLE_ERS_BONUS,
     )
 except ImportError:
     # Fallback if flags not available
@@ -83,6 +85,7 @@ except ImportError:
     ENABLE_BRAKE_PENALTIES = True
     ENABLE_SETUP_PENALTIES = True
     ENABLE_PENALTY_CACHE = False
+    ENABLE_ERS_BONUS = True
 
 
 # ---------------------------------------------------------------------------
@@ -764,8 +767,24 @@ def update_section(
             section=section,
             config=config
         )
-    
-    dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s + push_delta_s + engine_delta_s + brake_delta_s, 0.01)
+
+    # ERS energy bonus – negative term (faster on straights when ERS is deployed)
+    ers_bonus_s = 0.0
+    if ENABLE_ERS_BONUS and USE_NEW_PENALTY_SYSTEM:
+        _trace = (car_state.pu.energy_trace or [{}])[-1] if car_state.pu.energy_trace else {}
+        _deploy_mj = float(_trace.get("deploy_mj", 0.0) or 0.0)
+        _mguh_direct_mj = float(_trace.get("mguh_direct_mj", 0.0) or 0.0)
+        ers_bonus_s = compute_ers_bonus(
+            deploy_mj=_deploy_mj,
+            mguh_direct_mj=_mguh_direct_mj,
+            section=section,
+            ers_thermal_eta=car_state.pu.ers_thermal_eta,
+        )
+        # Accumulate per-lap ERS bonus in PUState for telemetry
+        car_state.pu.lap_ers_bonus_s += ers_bonus_s
+        car_state.pu.last_section_ers_bonus_s = ers_bonus_s
+
+    dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s + push_delta_s + engine_delta_s + brake_delta_s + ers_bonus_s, 0.01)
     v_effective = (section.length_m / dt_s) * 3.6
 
     car_state.v_current_ms = v
@@ -958,12 +977,16 @@ def update_section(
         df_curve_bonus_s=setup_penalty_result.df_curve_bonus_s,
         drag_penalty_s=setup_penalty_result.drag_penalty_s,
         drag_bonus_s=setup_penalty_result.drag_bonus_s,
+        ers_bonus_s=ers_bonus_s,
     )
     from lap_simulator.lap_simulator import _should_log_penalties
     
     if logger.isEnabledFor(logging.DEBUG) and _should_log_penalties(getattr(car_state, "car_id", "unknown")):
+        _trace_log = (car_state.pu.energy_trace or [{}])[-1] if car_state.pu.energy_trace else {}
+        _deploy_log = float(_trace_log.get("deploy_mj", 0.0) or 0.0)
+        _mguh_log = float(_trace_log.get("mguh_direct_mj", 0.0) or 0.0)
         logger.debug(
-            "[PEN] car=%s sec=%s push=%.1f fuel=%.4f tyre=%.4f push_s=%.4f engine_s=%.4f",
+            "[PEN] car=%s sec=%s push=%.1f fuel=%.4f tyre=%.4f push_s=%.4f engine_s=%.4f ers_bonus=%.4f deploy=%.4f eta_th=%.3f",
             getattr(car_state, "car_id", "unknown"),
             section.section_id,
             push_level,
@@ -971,5 +994,8 @@ def update_section(
             tyre_delta_s,
             push_delta_s,
             engine_delta_s,
+            ers_bonus_s,
+            _deploy_log + _mguh_log,
+            car_state.pu.ers_thermal_eta,
         )
     return result

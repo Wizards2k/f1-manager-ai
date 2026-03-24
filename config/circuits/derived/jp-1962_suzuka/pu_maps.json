@@ -111,7 +111,14 @@
         "harvest_dynamic": 0.791,
         "deploy_limit_hit": true,
         "harvest_limit_hit": false
-      }
+      },
+      "bucket_primary_pct": 0.7,
+      "bucket_secondary_pct": 0.225,
+      "bucket_exit_pct": 0.075,
+      "bucket_primary_es_deploy_pct": 1.0,
+      "bucket_secondary_es_deploy_pct": 1.0,
+      "bucket_exit_es_deploy_pct": 1.0,
+      "defense_reserve_mj": 0.2
     },
     "SAFETY_CAR": {
       "heat_load_kw": 218.71,
@@ -163,7 +170,11 @@
         "harvest_ratio": 0.65,
         "bucket_primary_es_deploy_pct": 0.0,
         "bucket_secondary_es_deploy_pct": 0.0,
-        "bucket_exit_es_deploy_pct": 0.0
+        "bucket_exit_es_deploy_pct": 0.0,
+        "bucket_primary_pct": 0.55,
+        "bucket_secondary_pct": 0.3,
+        "bucket_exit_pct": 0.15,
+        "defense_reserve_mj": 0.25
       },
       "QUALIFY": {
         "deploy_mj_per_lap": 4.0,
@@ -175,10 +186,10 @@
         "bucket_primary_es_deploy_pct": 1.0,
         "bucket_secondary_es_deploy_pct": 1.0,
         "bucket_exit_es_deploy_pct": 1.0,
-        "bucket_primary_pct": 0.6,
-        "bucket_secondary_pct": 0.3,
-        "bucket_exit_pct": 0.1,
-        "defense_reserve_mj": 0.0
+        "bucket_primary_pct": 0.7,
+        "bucket_secondary_pct": 0.225,
+        "bucket_exit_pct": 0.075,
+        "defense_reserve_mj": 0.2
       },
       "RECHARGE": {
         "deploy_mj_per_lap": 0.5,

@@ -166,6 +166,7 @@ def generate_output(
     deploy_remaining = None
 
     bucket_section_cap_mj = _compute_bucket_section_cap(pu_state, bucket_key)
+    bucket_es_deploy_pct = _resolve_bucket_es_deploy_pct(map_budget, bucket_key)
 
     ers_energy_requested_raw_mj = (ers_output_raw * dt_safe) / 1000.0
     ers_energy_requested_mj = bucket_section_cap_mj
@@ -181,7 +182,10 @@ def generate_output(
         mguh_es_used_mj = 0.0
     else:
         mguh_es_used_mj = min(mguh_remaining_mj, mguh_es_remaining_mj)
-    battery_energy_needed_mj = max(ers_energy_requested_mj - mguh_direct_section_mj, 0.0)
+    if bucket_es_deploy_pct > 1e-6:
+        battery_energy_needed_mj = ers_energy_requested_mj * bucket_es_deploy_pct
+    else:
+        battery_energy_needed_mj = max(ers_energy_requested_mj - mguh_direct_section_mj, 0.0)
 
     target_soc = map_budget.get("target_soc_end_lap")
     if target_soc is not None:
@@ -240,13 +244,36 @@ def generate_output(
     pu_state.ice_temp_c += delta_t_ice
     pu_state.ice_temp_c = clamp(pu_state.ice_temp_c, env.air_temp_c, 200.0)
 
-    # ERS: heat from output, cooling shared
-    heat_in_ers = ers_output_kw * dt_estimate_s / 2000.0
-    cooling_ers = aero_forces.cooling_capacity * (1.0 - map_params.cooling_share) * dt_estimate_s * 0.5
-    ers_thermal_mass = 4.0
-    delta_t_ers = (heat_in_ers - cooling_ers) / max(ers_thermal_mass, 0.1)
+    # ERS: thermal clipping model (doc-spec: ERS-ThermalClipping.md)
+    # q_gen = k_joule * P_ers^2  (Joule heating, quadratic in power)
+    # q_cool = h_v * v_car * (T_ers - T_amb)  (convective cooling, speed-dependent)
+    # C_th = 18.0 kJ/K  (thermal inertia)
+    ERS_T_LIMIT = 102.0          # clipping onset (°C)
+    ERS_T_MAX = 122.0            # full shutdown (°C)
+    ERS_K_JOULE = 0.000045       # Joule coefficient
+    ERS_H_V = 0.0025             # convective cooling coefficient
+    ERS_C_TH = 18.0              # thermal mass (kJ/K)
+    v_section_kph = clamp(section.v_base_kph or 200.0, 30.0, 370.0)
+    t_amb = clamp(env.air_temp_c, 10.0, 50.0)
+    q_gen_ers = ERS_K_JOULE * (ers_output_kw ** 2)
+    q_cool_ers = ERS_H_V * v_section_kph * max(pu_state.ers_temp_c - t_amb, 0.0)
+    delta_t_ers = ((q_gen_ers - q_cool_ers) / max(ERS_C_TH, 0.1)) * dt_estimate_s
     pu_state.ers_temp_c += delta_t_ers
-    pu_state.ers_temp_c = clamp(pu_state.ers_temp_c, env.air_temp_c, 150.0)
+    pu_state.ers_temp_c = clamp(pu_state.ers_temp_c, t_amb, 150.0)
+    # Compute thermal eta and update PUState
+    if pu_state.ers_temp_c < ERS_T_LIMIT:
+        pu_state.ers_thermal_eta = 1.0
+    elif pu_state.ers_temp_c >= ERS_T_MAX:
+        pu_state.ers_thermal_eta = 0.0
+        if "ers_thermal_shutdown" not in pu_state.runtime_warnings:
+            pu_state.runtime_warnings.append("ers_thermal_shutdown")
+    else:
+        pu_state.ers_thermal_eta = clamp(
+            1.0 - (pu_state.ers_temp_c - ERS_T_LIMIT) / (ERS_T_MAX - ERS_T_LIMIT),
+            0.0, 1.0,
+        )
+        if pu_state.ers_thermal_eta < 0.95 and "ers_thermal_clipping" not in pu_state.runtime_warnings:
+            pu_state.runtime_warnings.append("ers_thermal_clipping")
 
     # --- Battery SoC ---
     ers_consumed_mj = battery_energy_used_mj
@@ -524,6 +551,16 @@ def _resolve_bucket(section: SectionContext) -> str:
     if section.kind in SECONDARY_BUCKET_KINDS:
         return "secondary"
     return "exit"
+
+
+def _resolve_bucket_es_deploy_pct(map_budget: Dict[str, float], bucket_key: str) -> float:
+    if bucket_key == "primary":
+        key = "bucket_primary_es_deploy_pct"
+    elif bucket_key == "secondary":
+        key = "bucket_secondary_es_deploy_pct"
+    else:
+        key = "bucket_exit_es_deploy_pct"
+    return clamp(float(map_budget.get(key, 0.0) or 0.0), 0.0, 1.0)
 
 
 def _apply_bucket_allocation(

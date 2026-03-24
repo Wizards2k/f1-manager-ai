@@ -43,6 +43,8 @@ def _parse_penalty_log_filter() -> set:
 
 _TARGET_PENALTY_DRIVER_IDS = _parse_penalty_log_filter()
 
+DEBUG_PENALTIES: bool = os.getenv("DEBUG_PENALTIES", "0").lower() in {"1", "true", "yes"}
+
 
 def _should_log_penalties(car_id: Optional[str]) -> bool:
     if not _TARGET_PENALTY_DRIVER_IDS:

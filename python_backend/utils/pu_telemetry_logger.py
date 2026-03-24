@@ -116,22 +116,37 @@ def _build_line(entry: Dict[str, Any], timestamp: datetime) -> str:
     bucket_budget_total = _fmt_num(entry.get("bucket_budget_total_mj"), 3)
     bucket_budget_remaining = _fmt_num(entry.get("bucket_budget_remaining_mj"), 3)
     bucket_section_cap = _fmt_num(entry.get("bucket_section_cap_mj"), 3)
+    bucket_sections_left = _fmt_num(entry.get("bucket_sections_left"), 0, "0")
+    bucket_es_deploy_pct = _fmt_num(entry.get("bucket_es_deploy_pct"), 3)
     bucket_section_es = _fmt_num(entry.get("bucket_section_es_mj"), 3)
     bucket_section_dir = _fmt_num(entry.get("bucket_section_dir_mj"), 3)
+    engine_map = entry.get("engine_map") or "unknown"
+    ers_mode = entry.get("ers_mode") or "unknown"
+    # Thermal clipping fields
+    ers_temp = _fmt_num(entry.get("ers_temp_c"), 1, "0.0")
+    eta_th = _fmt_num(entry.get("ers_thermal_eta", 1.0), 3)
+    clipping_active = bool(entry.get("ers_clipping_active", False))
+    # ERS bonus fields
+    section_ers_bonus = _fmt_num(entry.get("section_ers_bonus_s", 0.0), 4)
+    lap_ers_bonus = _fmt_num(entry.get("lap_ers_bonus_s", 0.0), 4)
     car_id = entry.get("car_id", "")
     lap = entry.get("lap", entry.get("lap_number", 0))
     sec = _extract_section_name(entry)
     ts = timestamp.strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
     return (
         f"{ts} INFO [PU] car={car_id} lap={lap} sec={sec} "
+        f"engine_map={engine_map} ers_mode={ers_mode} "
         f"soc={soc_mj}MJ ({soc_pct}%) deploy_ES={lap_deploy} harvest={harvest} "
         f"mguh_bias={mguh_direct_ratio}/{mguh_es_ratio} "
         f"mguh_dir={mguh_dir} mguh_es={mguh_es} mguh_total={mguh_total} "
         f"batt_budget={batt_budget} def_res={def_res} "
         f"bucket_type={bucket_type} Bucket_budget_Tot={bucket_budget_total} Bucket_budget_Remaing={bucket_budget_remaining} "
-        f"Bucket_Section_CAP={bucket_section_cap} Bucket_Section_ES={bucket_section_es} "
+        f"Bucket_Section_CAP={bucket_section_cap} bucket_sections_left={bucket_sections_left} "
+        f"bucket_es_deploy_pct={bucket_es_deploy_pct} Bucket_Section_ES={bucket_section_es} "
         f"Bucket_Section_DIR={bucket_section_dir} last_bucket={last_bucket} "
-        f"warnings={warnings} section_deploy={section_deploy} section_harvest={section_harvest}"
+        f"warnings={warnings} section_deploy={section_deploy} section_harvest={section_harvest} "
+        f"ers_temp={ers_temp}°C eta_th={eta_th} clipping={clipping_active} "
+        f"section_ers_bonus={section_ers_bonus} lap_ers_bonus={lap_ers_bonus}"
     )
 
 

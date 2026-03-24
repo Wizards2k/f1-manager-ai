@@ -1397,6 +1397,7 @@ class SessionBridge:
         bucket_budget_remaining_after = max(bucket_budget_total - bucket_budget_used, 0.0)
         bucket_section_es = trace_entry.get("deploy_mj") if trace_entry else 0.0
         bucket_section_dir = trace_entry.get("mguh_direct_mj") if trace_entry else None
+        bucket_es_deploy_pct = map_budget.get(f"bucket_{bucket_key}_es_deploy_pct", 0.0)
         bucket_consumed_mj = max(
             float(getattr(pu_state, "last_bucket_allocated_mj", 0.0) or 0.0)
             - float(getattr(pu_state, "last_defense_used_mj", 0.0) or 0.0),
@@ -1452,6 +1453,8 @@ class SessionBridge:
             "bucket_budget_total_mj": bucket_budget_total,
             "bucket_budget_remaining_mj": bucket_budget_remaining,
             "bucket_section_cap_mj": bucket_section_cap,
+            "bucket_sections_left": bucket_sections_remaining_at_entry,
+            "bucket_es_deploy_pct": round(float(bucket_es_deploy_pct or 0.0), 3),
             "bucket_section_es_mj": bucket_section_es,
             "bucket_section_dir_mj": bucket_section_dir,
             "primary_sections_count": pu_state.primary_sections_count,
@@ -1466,6 +1469,13 @@ class SessionBridge:
             "ers_mode": getattr(entry.state, 'ers_mode', None),
             "engine_map": active_map_name,
             "warnings": list(pu_state.runtime_warnings or []),
+            # Thermal clipping diagnostics
+            "ers_temp_c": round(pu_state.ers_temp_c, 2),
+            "ers_thermal_eta": round(getattr(pu_state, "ers_thermal_eta", 1.0), 4),
+            "ers_clipping_active": getattr(pu_state, "ers_thermal_eta", 1.0) < 0.99,
+            # ERS bonus diagnostics
+            "section_ers_bonus_s": round(getattr(pu_state, "last_section_ers_bonus_s", 0.0), 4),
+            "lap_ers_bonus_s": round(getattr(pu_state, "lap_ers_bonus_s", 0.0), 4),
         }
 
         log_pu_section(payload)

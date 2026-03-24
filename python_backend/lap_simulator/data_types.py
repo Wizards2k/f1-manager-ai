@@ -332,6 +332,10 @@ class PUState:
     last_recharge_mode: bool = False
     soc_floor_dynamic_pct: float = 0.5
     soc_target_pct: float = 0.55
+    # ERS thermal clipping
+    ers_thermal_eta: float = 1.0         # derating factor from thermal clipping (1.0 = no clip)
+    lap_ers_bonus_s: float = 0.0         # cumulative ERS time bonus this lap (negative = faster)
+    last_section_ers_bonus_s: float = 0.0  # ERS bonus for the most recent section (negative = faster)
 
 
 # ---------------------------------------------------------------------------
@@ -585,6 +589,7 @@ class SectionResult:
     df_curve_bonus_s: float = 0.0         # DF curve bonus breakdown
     drag_penalty_s: float = 0.0           # drag penalty breakdown
     drag_bonus_s: float = 0.0             # drag bonus breakdown
+    ers_bonus_s: float = 0.0             # ERS energy deployment bonus (negative = faster)
 
 
 # ---------------------------------------------------------------------------
