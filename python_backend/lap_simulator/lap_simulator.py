@@ -40,7 +40,7 @@ if DEBUG_PENALTIES:
         fh.write("")  # Create empty file
     
     if not any(getattr(h, "_penalty_debug", False) for h in penalty_logger.handlers):
-        handler = logging.FileHandler(_penalty_log_path)
+        handler = logging.FileHandler(_penalty_log_path, mode='w', encoding='utf-8')
         handler.setLevel(logging.DEBUG)
         handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         handler._penalty_debug = True
