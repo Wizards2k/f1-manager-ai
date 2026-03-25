@@ -722,11 +722,14 @@ class RaceCar:
         *,
         reset_progress: bool = False,
         force_complete: bool = False,
+        min_runs_required: Optional[int] = None,
     ):
         """Sync AI setup data and optionally reset/complete progress."""
         if setup_snapshot:
             setup_store = self.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
             setup_store.update(setup_snapshot)
+        if min_runs_required is not None:
+            self.ai_min_runs_required = min_runs_required
         if force_complete:
             # Consider setup fully learned
             self.setup_info_points = max(self.setup_info_target, 1.0)
@@ -751,6 +754,15 @@ class RaceCar:
         self.setup_info_target = AI_SETUP_PROGRESS_TARGET
         current = max(0.0, self.setup_info_points)
         percent_before = self.setup_info_percent
+
+        # Store AI debug fields for tooltip visualization
+        self.ai_setup_score = score_after
+        self.ai_setup_threshold = score_threshold
+        self.ai_setup_complete = setup_complete
+        if hasattr(self, 'ai_total_runs'):
+            self.ai_total_runs = getattr(self, 'ai_total_runs', 0) + 1
+        else:
+            self.ai_total_runs = 1
 
         derived_percent = None
         if score_after is not None and score_threshold:

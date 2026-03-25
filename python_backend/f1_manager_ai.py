@@ -121,6 +121,16 @@ def race_simulation():
                 'cooling_margin': getattr(car, 'cooling_margin', None),
                 'tire_core_temps': getattr(car, 'tire_core_temps', {}),
                 'tyre_states': getattr(car, 'tyre_states', {}),
+                # AI debug fields for setup/tyre tooltip
+                'ai_setup_score': getattr(car, 'ai_setup_score', None),
+                'ai_setup_threshold': getattr(car, 'ai_setup_threshold', None),
+                'ai_setup_complete': getattr(car, 'ai_setup_complete', False),
+                'ai_total_runs': getattr(car, 'ai_total_runs', 0),
+                'ai_min_runs_required': getattr(car, 'ai_min_runs_required', 0),
+                'ai_tyre_set_id': getattr(car, 'ai_tyre_set_id', None),
+                'ai_tyre_condition': getattr(car, 'ai_tyre_condition', None),
+                'ai_tyre_heat_cycles': getattr(car, 'ai_tyre_heat_cycles', 0),
+                'ai_program': getattr(car, 'ai_program', None),
             })
         
         session_flag = bridge.session_flag if bridge and bridge.active else 'green'

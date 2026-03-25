@@ -2449,7 +2449,24 @@ class SessionBridge:
                 )
                 race_car.update_ai_setup_snapshot(
                     setup_snapshot=result.setup_snapshot,
+                    min_runs_required=ai_ss.min_runs_required,
                 )
+
+                # Sync AI tyre data for debug tooltip
+                ts = self._track_states.get(car_id)
+                if ts and ts.tyre_set:
+                    race_car.ai_tyre_set_id = str(ts.tyre_set.set_id)
+                    race_car.ai_tyre_condition = round(ts.tyre_set.condition, 1)
+                    race_car.ai_tyre_heat_cycles = ts.tyre_set.heat_cycles
+                # Sync current AI program
+                if engine and engine.current_run_idx > 0:
+                    idx = engine.current_run_idx - 1
+                    if idx < len(engine.session_plan.runs):
+                        race_car.ai_program = engine.session_plan.runs[idx].program.value
+                    else:
+                        race_car.ai_program = result.program
+                else:
+                    race_car.ai_program = result.program
 
                 after_points = race_car.setup_info_points
                 after_percent = race_car.setup_info_percent
