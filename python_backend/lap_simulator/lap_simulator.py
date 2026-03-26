@@ -69,6 +69,10 @@ _LAP_LOG_FILE = Path("logs/lap_times_debug.log")
 _LAP_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
 _LAP_DEBUG_ENABLED = os.getenv("LAP_DEBUG_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
 
+if _LAP_DEBUG_ENABLED:
+    print(f"DEBUG: LAP_DEBUG_ENABLED is active. Logging to { _LAP_LOG_FILE.absolute() }")
+
+
 # Lazy import to avoid circular dependency
 _BattleResolver = None
 

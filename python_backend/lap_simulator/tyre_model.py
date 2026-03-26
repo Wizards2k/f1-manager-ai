@@ -130,7 +130,9 @@ def _refresh_tyre_effective_grip(
     )
     thermal_factor = 0.6 * thermal_factor_surface + 0.4 * thermal_factor_core
     thermal_factor = clamp(thermal_factor, 0.82, 1.1)
-    wear_factor = max(0.5, 1.0 - tyre.wear_pct / 100.0)
+    # Ridurre drasticamente l'impatto fisico diretto dell'usura (dal 30% al 12%)
+    # L'usura pesa solo il 12% sul grip fisico per evitare crolli di 3s
+    wear_factor = max(0.5, 1.0 - (tyre.wear_pct / 100.0) * 0.12)
     heat_cycle_factor = max(0.85, 1.0 - tyre.heat_cycles * params.heat_cycle_grip_penalty)
     slip_factor = 1.0
     if section.kind in CORNER_KINDS:
@@ -653,7 +655,8 @@ def _update_single_tyre(
     thermal_factor = 0.6 * thermal_factor_surface + 0.4 * thermal_factor_core
     thermal_factor = clamp(thermal_factor, 0.82, 1.1)
 
-    wear_factor = max(0.5, 1.0 - tyre.wear_pct / 100.0)
+    # Ridurre l'impatto fisico diretto dell'usura (12%)
+    wear_factor = max(0.5, 1.0 - (tyre.wear_pct / 100.0) * 0.12)
 
     # Heat-cycle penalty (tyre-allocation §5)
     heat_cycle_factor = max(0.85, 1.0 - tyre.heat_cycles * params.heat_cycle_grip_penalty)

@@ -9,7 +9,9 @@ Reference: docs/lap-physics-spec-v0.5.md §3.3 (Passi 1-8)
 from __future__ import annotations
 
 from typing import Dict, List, Optional
+import os
 import logging
+from pathlib import Path
 
 from .aero_package import compute_forces
 from .brake_system import update_brakes
@@ -57,6 +59,9 @@ from .penalty_cache import get_penalty_cache
 
 PENALTY_LOGGER_NAME = "lap_simulator.penalties"
 logger = logging.getLogger(PENALTY_LOGGER_NAME)
+
+_LAP_DEBUG_ENABLED = os.getenv("LAP_DEBUG_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
+_LAP_LOG_FILE = Path("logs/lap_times_debug.log")
 
 # Import penalty system flags
 try:
@@ -271,10 +276,9 @@ def update_section(
     CLA_REF = aero_forces.df_total * 0.020
 
     # Grip meccanico: F1 2025 mu_mech ~ 1.6 (gomme Pirelli C3 nuove)
-    # Usiamo un calo lineare controllato per il grip fisico (la penalità al tempo globale gestisce il grosso del tempo sul giro)
+    # Degradato esponenzialmente con l'usura per amplificare l'effetto fisico
     grip_avg = (eff_grip_front + eff_grip_rear) / 2.0
-    # Al 100% usura (grip_avg ~ 0.5), il mu cala del 10% (0.8 + 0.1 = 0.9x1.6 = 1.44), realistico sul piano fisico.
-    mu = 1.6 * (0.8 + 0.2 * grip_avg) * (1.0 - aero_forces.handling_penalty)
+    mu = 1.6 * (grip_avg ** 2.0) * (1.0 - aero_forces.handling_penalty)
     # Identificazione del carico ottimale del circuito (per R_eff e next_v_apex)
     cid = config.circuit_id
     if "monaco" in cid:
@@ -790,6 +794,13 @@ def update_section(
 
     dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s + push_delta_s + engine_delta_s + brake_delta_s + ers_bonus_s, 0.01)
     v_effective = (section.length_m / dt_s) * 3.6
+
+    if _LAP_DEBUG_ENABLED:
+        try:
+            with _LAP_LOG_FILE.open("a", encoding="utf-8") as f:
+                f.write(f"SEC|{getattr(car_state, 'car_id', '??')}|{section.section_id}|dt={dt_s:.4f}|tyre_d={tyre_delta_s:.4f}|fuel_d={fuel_delta_s:.4f}|mu={mu:.4f}|wear={total_wear:.1f}%\n")
+        except:
+            pass
 
     car_state.v_current_ms = v
 
