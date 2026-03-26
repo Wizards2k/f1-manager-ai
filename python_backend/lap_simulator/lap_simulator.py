@@ -67,6 +67,7 @@ def _should_log_penalties(car_id: Optional[str]) -> bool:
 
 _LAP_LOG_FILE = Path("logs/lap_times_debug.log")
 _LAP_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+_LAP_DEBUG_ENABLED = os.getenv("LAP_DEBUG_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
 
 # Lazy import to avoid circular dependency
 _BattleResolver = None
@@ -312,14 +313,19 @@ class LapSimulator:
         Returns a dict of car_id → LapResult.
         """
         if self.battle_resolver and len(self.cars) > 1:
-            return self._run_lap_multi()
-        results: Dict[str, LapResult] = {}
-        for car_id, entry in self.cars.items():
-            results[car_id] = self._run_lap_single(entry)
+            results = self._run_lap_multi()
+        else:
+            results: Dict[str, LapResult] = {}
+            for car_id, entry in self.cars.items():
+                results[car_id] = self._run_lap_single(entry)
+        
         self._log_lap_times(results)
         return results
 
     def _log_lap_times(self, results: Dict[str, LapResult]) -> None:
+        if not _LAP_DEBUG_ENABLED or not results:
+            return
+            
         timestamp = datetime.utcnow().isoformat()
         lines: List[str] = [f"{timestamp} | Lap Results:"]
         for car_id, lr in results.items():

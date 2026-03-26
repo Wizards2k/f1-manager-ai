@@ -271,9 +271,10 @@ def update_section(
     CLA_REF = aero_forces.df_total * 0.020
 
     # Grip meccanico: F1 2025 mu_mech ~ 1.6 (gomme Pirelli C3 nuove)
-    # Degradato esponenzialmente con l'usura per amplificare l'effetto
+    # Usiamo un calo lineare controllato per il grip fisico (la penalità al tempo globale gestisce il grosso del tempo sul giro)
     grip_avg = (eff_grip_front + eff_grip_rear) / 2.0
-    mu = 1.6 * (grip_avg ** 2.0) * (1.0 - aero_forces.handling_penalty)
+    # Al 100% usura (grip_avg ~ 0.5), il mu cala del 10% (0.8 + 0.1 = 0.9x1.6 = 1.44), realistico sul piano fisico.
+    mu = 1.6 * (0.8 + 0.2 * grip_avg) * (1.0 - aero_forces.handling_penalty)
     # Identificazione del carico ottimale del circuito (per R_eff e next_v_apex)
     cid = config.circuit_id
     if "monaco" in cid:
@@ -635,19 +636,22 @@ def update_section(
             compound_penalty = config.tyre_compound_deltas.get(current_compound, 0.0)
             compound_delta_section = compound_penalty * section_weight
             
-            # 2. Wear penalty
+            # 2. Wear penalty (distributed per lap via section_weight)
             wear_coeff = config.tyre_wear_coeffs.get(current_compound, 0.12)
             total_wear = sum(tyre.wear_pct for tyre in car_state.tyres.values()) / 4.0
             
-            # Scale to meaningful time penalties (approx 0.05s - 0.15s per 10% wear)
-            wear_multiplier = 0.05
+            # Parametro di usura da agganciare al giro intero: 
+            # 0.5s penalty per ogni 10% di usura sul giro base.
+            lap_wear_multiplier = 0.5 
             
             if total_wear <= 50.0:
-                wear_penalty = wear_coeff * wear_multiplier * (total_wear / 10.0)
+                wear_penalty_lap = wear_coeff * lap_wear_multiplier * (total_wear / 10.0)
             else:
-                base_penalty = wear_coeff * wear_multiplier * 5.0  # Penalty at 50%
+                base_lap_penalty = wear_coeff * lap_wear_multiplier * 5.0  # Penalty base al 50%
                 excess_wear = total_wear - 50.0
-                wear_penalty = base_penalty + wear_coeff * wear_multiplier * (excess_wear / 10.0) * 4.0
+                wear_penalty_lap = base_lap_penalty + wear_coeff * lap_wear_multiplier * (excess_wear / 10.0) * 3.0
+            
+            wear_penalty = wear_penalty_lap * section_weight
             
             # 3. Temperature penalty
             temp_penalty = 0.0
