@@ -18,24 +18,15 @@ export class TimingPanelV3 {
         } else {
             console.error('[TimingPanelV3] Table element NOT found:', tableContainer);
         }
-        
-        // Removed debug timeouts
+
         
         // Esponi funzione globale per handler inline onclick
         window.showAiDebugTooltip = (chipElement) => {
-            console.debug('[TimingPanelV3] Inline click on chip:', chipElement);
             const row = chipElement.closest('.driver-row');
-            if (!row) {
-                console.error('[TimingPanelV3] No row found for chip');
-                return;
-            }
+            if (!row) return;
             const dn = row.dataset.driverNumber;
             const car = this._carDataMap.get(String(dn));
-            console.debug('[TimingPanelV3] Inline click: driver', dn, 'car:', !!car);
-            if (!car || car.is_player_controlled) {
-                console.debug('[TimingPanelV3] No AI car data or is player');
-                return;
-            }
+            if (!car || car.is_player_controlled) return;
             this._showAiDebugTooltip(car, chipElement);
         };
     }
@@ -69,7 +60,6 @@ export class TimingPanelV3 {
 
     _handleTableClick(e) {
         const chip = this._findDataChipFromEvent(e);
-        console.debug('[TimingPanelV3] Table click, chip found:', !!chip, 'target:', e.target, 'target HTML:', e.target.outerHTML);
         if (!chip) return;
 
         const row = chip.closest('.driver-row');
@@ -77,7 +67,6 @@ export class TimingPanelV3 {
 
         const dn = row.dataset.driverNumber;
         const car = this._carDataMap.get(String(dn));
-        console.debug('[TimingPanelV3] AI click: driver', dn, 'car:', !!car, 'isPlayer:', car?.is_player_controlled);
         if (!car || car.is_player_controlled) return;
 
         e.stopPropagation();
@@ -359,10 +348,8 @@ export class TimingPanelV3 {
                 <div class="state-indicator ${stateClass}">
                     ${car.state || 'BOX'}
                 </div>
-                ${car.is_ai && typeof aiDebug !== 'undefined' && aiDebug ? `<div class="data-chip data-chip-ready" data-ai="true" style="pointer-events: auto; cursor: pointer; z-index: 10;" title="AI Debug Data" onpointerdown="window.showAiDebugTooltip && window.showAiDebugTooltip(this); event.stopPropagation();">${aiDebug.setupInfoPercent}%</div>` : ''}
-                ${car.is_ai && (typeof aiDebug === 'undefined' || !aiDebug) ? `<div class="data-chip" data-ai="true" style="pointer-events: auto; cursor: pointer; z-index: 10;" title="AI Debug Data" onpointerdown="window.showAiDebugTooltip && window.showAiDebugTooltip(this); event.stopPropagation();">DATA</div>` : ''}
-                ${!car.is_ai && !car.is_player_controlled ? `<div class="data-chip ${dataChipClass}" data-ai="true" style="cursor:pointer" title="Click for AI debug info" onpointerdown="window.showAiDebugTooltip && window.showAiDebugTooltip(this); event.stopPropagation();">DATA</div>` : ''}
-                ${!car.is_ai && car.is_player_controlled ? `<div class="data-chip ${dataChipClass}" title="Player controlled">DATA</div>` : ''}
+                ${!car.is_player_controlled ? `<div class="data-chip ${dataChipClass}" data-ai="true" style="pointer-events: auto; cursor: pointer; z-index: 10;" title="AI Debug Data" onpointerdown="window.showAiDebugTooltip && window.showAiDebugTooltip(this); event.stopPropagation();">DATA</div>` : ''}
+                ${car.is_player_controlled ? `<div class="data-chip ${dataChipClass}" title="Player controlled">DATA</div>` : ''}
             </div>
         `;
     }

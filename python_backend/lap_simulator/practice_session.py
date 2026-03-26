@@ -38,9 +38,9 @@ logger = logging.getLogger(__name__)
 SESSION_DURATION_S = 3600             # 60 minutes
 PITLANE_COOLDOWN_S = 120             # min time between runs (tyre change + minor setup)
 PITLANE_QUEUE_DELAY_S = 7            # avg delay per queued car
-MAX_PITLANE_SLOTS = 8                # max cars exiting simultaneously
+MAX_PITLANE_SLOTS = 20               # max cars on track simultaneously (full grid)
 PITLANE_TRAVEL_S = 20                # time to traverse pitlane (in + out)
-MIN_PIT_EXIT_GAP_S = 5.0             # enforce at least 5s between pit releases
+MIN_PIT_EXIT_GAP_S = 3.0             # enforce at least 3s between pit releases
 
 
 # ---------------------------------------------------------------------------
@@ -323,15 +323,18 @@ class PitlaneQueue:
         Release cars whose release_at_s has passed.
 
         Returns list of cars released this tick.
+        Player cars always bypass the slot limit.
         """
         released: List[PitlaneRequest] = []
         remaining: List[PitlaneRequest] = []
 
         for req in self.queue:
+            slots_ok = req.is_player or len(self.active_exits) < MAX_PITLANE_SLOTS
+            gap_ok = req.is_player or (current_time_s - self._last_release_time) >= MIN_PIT_EXIT_GAP_S
             can_release = (
                 req.release_at_s <= current_time_s
-                and len(self.active_exits) < MAX_PITLANE_SLOTS
-                and (current_time_s - self._last_release_time) >= MIN_PIT_EXIT_GAP_S
+                and slots_ok
+                and gap_ok
             )
             if can_release:
                 released.append(req)
@@ -546,8 +549,8 @@ class PracticeSessionOrchestrator:
             self.set_session_flag(SessionFlag.GREEN)
             self._flag_clear_at_s = 0.0
 
-        # Process pitlane releases (blocked under yellow/red)
-        if self.clock.flag == SessionFlag.GREEN:
+        # Process pitlane releases (blocked only under RED)
+        if self.clock.flag != SessionFlag.RED:
             released = self.pitlane.process_tick(now)
             for req in released:
                 css = self.cars.get(req.car_id)
@@ -850,7 +853,7 @@ class PracticeSessionOrchestrator:
             return False
         if self.clock.is_finished:
             return False
-        if self.clock.flag in (SessionFlag.RED, SessionFlag.YELLOW):
+        if self.clock.flag == SessionFlag.RED:
             return False
         # Enforce cooldown between runs
         if self.clock.elapsed_s < css.next_available_s:

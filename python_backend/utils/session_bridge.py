@@ -98,6 +98,7 @@ OUT_LAP_SPEED_FACTOR = 0.65     # out lap ~65% of reference speed
 IN_LAP_SPEED_FACTOR = 0.70      # in lap ~70% of reference speed
 SLOW_LAP_SPEED_FACTOR = 0.75    # slow/cooldown lap
 MIN_CAR_GAP_M = 40.0            # minimum gap between cars on track (metres)
+PITLANE_SPEED_KPH = 80.0        # pitlane speed limit (km/h)
 BLUE_FLAG_CLEAR_TICKS = 5
 BLUE_FLAG_PROXIMITY_THRESHOLD_M = 250.0
 
@@ -188,6 +189,7 @@ class CarTrackState:
     setup_data_complete: bool = False       # AI: has enough setup info → head back in
     tyre_set_id: Optional[str] = None
     tyre_set: Optional['TyreSet'] = None
+    current_run_program: Optional[str] = None
 
 
 # Lap phases that should yield under blue flag during practice/quali when a HOT LAP approaches
@@ -807,9 +809,15 @@ class SessionBridge:
             if race_car is None:
                 continue
 
-            # ── Stagger delay: wait before entering track ──
+            # ── Pitlane transit: car moves at pit speed limit ──
             if ts.pit_exit_delay_s > 0 and ts.pit_exit_waited_s < ts.pit_exit_delay_s:
                 ts.pit_exit_waited_s += sim_dt
+                # Move car at pitlane speed instead of freezing it
+                pit_speed_ms = PITLANE_SPEED_KPH / 3.6
+                ts.distance_in_lap += pit_speed_ms * sim_dt
+                race_car.distance_traveled = ts.distance_in_lap % circuit_m
+                race_car.speed = pit_speed_ms
+                set_racecar_phase(race_car, ts.lap_phase)
                 continue
 
             self._advance_car_sections(car_id, ts, race_car, sim_dt, completed_runs)
@@ -1284,6 +1292,7 @@ class SessionBridge:
                 entry.state.current_section_idx = 0
                 ts.section_time_acc = 0.0
                 ts.sector_dt_acc = 0.0
+                ts.current_sector = 0
                 race_car.current_lap_sectors = {}
 
                 # Update lap phase for next lap
@@ -1480,6 +1489,17 @@ class SessionBridge:
             race_car.current_tyre_laps_completed,
             max((getattr(tyre_state, "age_laps", 0) for tyre_state in entry.state.tyres.values()), default=0)
         )
+        
+        # Sync AI-specific fields for debug tooltip
+        if not race_car.is_player_controlled:
+            race_car.ai_tyre_condition = race_car.current_tyre_condition_pct
+            race_car.ai_tyre_heat_cycles = race_car.current_tyre_heat_cycles
+            # tyre_set_id comes from the CarTrackState (ts)
+            ts = self._track_states.get(entry.car_id) # Use entry.car_id to get ts
+            if ts and hasattr(ts, 'tyre_set_id'):
+                race_car.ai_tyre_set_id = str(ts.tyre_set_id) if ts.tyre_set_id else "--"
+            if ts and hasattr(ts, 'current_run_program'):
+                race_car.ai_program = str(ts.current_run_program) if ts.current_run_program else "--"
 
         # Tyre temps (surface + core)
         temps = {}
@@ -2053,6 +2073,7 @@ class SessionBridge:
             selected_ers_mode=_normalize_ers_mode_name(getattr(entry.state, "ers_mode", None)) or "STANDARD",
             tyre_set_id=(active_tyre_set.set_id if active_tyre_set else (tyre_set_id or None)),
             tyre_set=active_tyre_set,
+            current_run_program=RunProgram.SETUP_VALIDATION,
         )
         self._sync_ers_mode_state(self._track_states[car_id])
         return True
@@ -2242,6 +2263,18 @@ class SessionBridge:
                 except Exception as exc:
                     logger.warning("AI dispatch: failed to sync tyre compound for %s: %s", car_id, exc)
 
+                # Push the actual tyre set stats (wear, heat cycles) to the CarEntry used by the simulator
+                try:
+                    wear_pct = max(0.0, min(100.0, 100.0 - reserved_set.condition))
+                    sim_cmp = game_compound_to_sim(game_compound) if 'game_compound' in locals() else car_entry.state.tyres[list(car_entry.state.tyres.keys())[0]].compound
+                    for tyre_state in car_entry.state.tyres.values():
+                        tyre_state.wear_pct = wear_pct
+                        tyre_state.heat_cycles = reserved_set.heat_cycles
+                        tyre_state.age_laps = reserved_set.laps_completed
+                        tyre_state.compound = sim_cmp
+                except Exception as exc:
+                    logger.warning("AI dispatch: failed to apply tyre set state to CarEntry for %s: %s", car_id, exc)
+
                 record = self.pso.request_run(
                     car_id=car_id, program=run_plan.program,
                     compound=run_plan.compound, fuel_kg=run_plan.fuel_kg,
@@ -2261,6 +2294,7 @@ class SessionBridge:
                         selected_ers_mode=_normalize_ers_mode_name(getattr(car_entry.state, "ers_mode", None)) or "STANDARD",
                         tyre_set_id=reserved_set_id,
                         tyre_set=reserved_set,
+                        current_run_program=run_plan.program,
                     )
                     self._track_states[car_id] = car_state
                     self._sync_ers_mode_state(car_state)
