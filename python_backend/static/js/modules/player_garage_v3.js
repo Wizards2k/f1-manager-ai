@@ -154,7 +154,7 @@ export class PlayerGarageV3 {
         // Get available ICE maps from catalog, fallback to defaults if not loaded
         const catalog = iceCatalog || this.getCachedIceCatalog() || null;
         if (catalog?.maps && Array.isArray(catalog.maps) && catalog.maps.length > 0) {
-            return catalog.maps.map(m => ({ label: m.label || m.id, value: m.id }));
+            return catalog.maps.map(m => ({ label: (m.label || m.id).toUpperCase(), value: m.id }));
         }
         // Fallback to default ICE maps if catalog not available
         return [

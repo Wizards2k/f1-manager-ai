@@ -12,7 +12,7 @@ export class PlayerGarage {
             { value: 'medium', label: 'Medium' },
             { value: 'hard', label: 'Hard' }
         ];
-        this.iceOptions = ['Save', 'Standard', 'Push'];
+        this.iceOptions = ['SAVE', 'STANDARD', 'PUSH'];
         this.ersOptions = ['RECHARGE', 'STANDARD', 'OVERTAKE', 'QUALIFY', 'DEFENCE'];
         this.STATE_DISPLAY = {
             BOX: 'BOX',
