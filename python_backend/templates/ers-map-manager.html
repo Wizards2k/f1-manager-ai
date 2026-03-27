@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Manager AI · ERS Map Manager</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <style>
         :root {
             --bg: #05060b;
@@ -802,6 +804,63 @@
             margin-top: 8px;
         }
 
+        .circuit-map-container {
+            width: 100%;
+            height: 280px;
+            border-radius: 16px;
+            background: rgba(3, 4, 10, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            margin-bottom: 16px;
+            overflow: hidden;
+            position: relative;
+            pointer-events: none;
+            touch-action: none;
+            user-select: none;
+        }
+
+        .circuit-map-container * {
+            pointer-events: none !important;
+            touch-action: none !important;
+        }
+
+        .map-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--muted);
+            font-size: 0.9rem;
+            letter-spacing: 0.1em;
+        }
+
+        .bucket-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px 20px;
+            margin-bottom: 16px;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            color: var(--text);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
         .hidden {
             display: none !important;
         }
@@ -1088,6 +1147,23 @@
 
                     <div class="fieldset">
                         <h3>Bucket Distribution</h3>
+                        <div class="circuit-map-container" id="circuit-bucket-map">
+                            <div class="map-loading">Loading circuit map...</div>
+                        </div>
+                        <div class="bucket-legend">
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #ff2e52;"></span>
+                                <span>Primary Bucket (Entry)</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #ffaa00;"></span>
+                                <span>Secondary Bucket (Middle)</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-color" style="background: #00ff88;"></span>
+                                <span>Exit Bucket</span>
+                            </div>
+                        </div>
                         <div class="field-grid">
                             <div class="field full">
                                 <div class="bucket-field-head">
@@ -1183,5 +1259,224 @@
 
     <script type="application/json" id="ers-manager-bootstrap">{{ ers_catalog_json | safe }}</script>
     <script type="module" src="{{ url_for('static', filename='js/modules/ers_map_manager_v1.js') }}"></script>
+    <script>
+        // Circuit map visualization with bucket zones
+        (function() {
+            const mapContainer = document.getElementById('circuit-bucket-map');
+            if (!mapContainer) return;
+
+            let map = null;
+            let circuitLayer = null;
+
+            function initBucketMap() {
+                // Get current circuit from URL or select
+                const urlParams = new URLSearchParams(window.location.search);
+                const circuitId = urlParams.get('circuit') || document.getElementById('circuit-select')?.value;
+                
+                if (!circuitId || !mapContainer) return;
+
+                // Initialize Leaflet map - COMPLETELY STATIC
+                map = L.map('circuit-bucket-map', {
+                    zoomControl: false,
+                    attributionControl: false,
+                    dragging: false,
+                    scrollWheelZoom: false,
+                    doubleClickZoom: false,
+                    boxZoom: false,
+                    keyboard: false,
+                    touchZoom: false,
+                    tap: false
+                });
+
+                // Dark themed tiles - no interaction
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19,
+                    opacity: 0.6,
+                    interactive: false
+                }).addTo(map);
+
+                loadCircuitGeometry(circuitId);
+            }
+
+            async function loadCircuitGeometry(circuitId) {
+                try {
+                    // Load both geometry and sections
+                    const [geoResponse, secResponse] = await Promise.all([
+                        fetch(`/api/circuit?circuit=${encodeURIComponent(circuitId)}`),
+                        fetch(`/api/circuit/sections?circuit=${encodeURIComponent(circuitId)}`)
+                    ]);
+                    
+                    const geoData = await geoResponse.json();
+                    const secData = await secResponse.json();
+                    
+                    const geometry = geoData.type === 'FeatureCollection'
+                        ? geoData.features?.[0]?.geometry
+                        : geoData.geometry;
+                    
+                    if (!geometry || !geometry.coordinates) {
+                        mapContainer.innerHTML = '<div class="map-loading">Circuit geometry not available</div>';
+                        return;
+                    }
+
+                    const coordinates = geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                    const sections = secData.sections || [];
+                    
+                    // Build distance-based coordinate mapping
+                    const coordDistances = buildCoordinateDistanceMap(coordinates);
+                    const totalLength = coordDistances[coordDistances.length - 1] || 1;
+                    
+                    const bucketLayers = L.layerGroup().addTo(map);
+                    
+                    // Calculate cumulative distance for color distribution
+                    let currentDistance = 0;
+                    const sectionColors = [];
+                    
+                    // First pass: assign colors to all sections based on distance
+                    sections.forEach((section, index) => {
+                        const sectionLength = section.length_m || (section.end_m - section.start_m);
+                        const startDist = currentDistance;
+                        const endDist = currentDistance + sectionLength;
+                        
+                        // Determine color based on position in circuit (0-100%)
+                        const startPct = (startDist / totalLength) * 100;
+                        const endPct = (endDist / totalLength) * 100;
+                        
+                        sectionColors.push({
+                            section,
+                            startDist,
+                            endDist,
+                            startPct,
+                            endPct,
+                            color: determineBucketColor(startPct, endPct)
+                        });
+                        
+                        currentDistance += sectionLength;
+                    });
+                    
+                    // Second pass: render sections with their colors
+                    sectionColors.forEach((item, index) => {
+                        const startIdx = findCoordinateIndex(coordDistances, item.startDist, totalLength);
+                        const endIdx = findCoordinateIndex(coordDistances, item.endDist, totalLength);
+                        const sectionCoords = coordinates.slice(startIdx, endIdx + 1);
+                        
+                        if (sectionCoords.length > 1) {
+                            const color = item.color;
+                            const weight = item.section.is_corner ? 10 : 7;
+                            const opacity = item.section.is_corner ? 0.95 : 0.75;
+                            
+                            L.polyline(sectionCoords, {
+                                color: color,
+                                weight: weight,
+                                opacity: opacity,
+                                lineCap: 'round',
+                                lineJoin: 'round'
+                            }).addTo(bucketLayers);
+                        }
+                    });
+                    
+                    // Helper function to determine bucket color based on position
+                    function determineBucketColor(startPct, endPct) {
+                        // Split circuit into 3 main zones with transitions
+                        // Primary: 0-40%, Secondary: 35-70%, Exit: 65-100%
+                        
+                        const avgPct = (startPct + endPct) / 2;
+                        
+                        if (avgPct < 35) {
+                            return '#ff2e52'; // Primary Bucket - Red
+                        } else if (avgPct < 40) {
+                            // Transition zone: blend between primary and secondary
+                            return '#ff6b2c'; // Orange-red blend
+                        } else if (avgPct < 60) {
+                            return '#ffaa00'; // Secondary Bucket - Orange
+                        } else if (avgPct < 70) {
+                            // Transition zone: blend between secondary and exit
+                            return '#ffc400'; // Yellow-green blend
+                        } else {
+                            return '#00ff88'; // Exit Bucket - Green
+                        }
+                    }
+                    
+                    // Add subtle base circuit outline
+                    L.polyline(coordinates, {
+                        color: '#ffffff',
+                        weight: 2,
+                        opacity: 0.2
+                    }).addTo(bucketLayers);
+                    
+                    // Fit map to circuit bounds
+                    const bounds = L.latLngBounds(coordinates);
+                    map.fitBounds(bounds, { padding: [20, 20] });
+                    
+                } catch (error) {
+                    console.error('Failed to load circuit:', error);
+                    mapContainer.innerHTML = '<div class="map-loading">Failed to load circuit map</div>';
+                }
+            }
+            
+            function buildCoordinateDistanceMap(coords) {
+                const distances = [0];
+                let total = 0;
+                for (let i = 1; i < coords.length; i++) {
+                    total += haversineDistance(coords[i-1], coords[i]);
+                    distances.push(total);
+                }
+                return distances;
+            }
+            
+            function haversineDistance(coord1, coord2) {
+                const R = 6371000;
+                const lat1 = coord1[0] * Math.PI / 180;
+                const lat2 = coord2[0] * Math.PI / 180;
+                const deltaLat = (coord2[0] - coord1[0]) * Math.PI / 180;
+                const deltaLon = (coord2[1] - coord1[1]) * Math.PI / 180;
+                
+                const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
+                          Math.cos(lat1) * Math.cos(lat2) *
+                          Math.sin(deltaLon/2) * Math.sin(deltaLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return R * c;
+            }
+            
+            function findCoordinateIndex(distances, targetDistance, totalLength) {
+                if (totalLength === 0) return 0;
+                const ratio = Math.max(0, Math.min(1, targetDistance / totalLength));
+                const targetIndex = Math.floor(ratio * (distances.length - 1));
+                return Math.max(0, Math.min(targetIndex, distances.length - 1));
+            }
+
+            // Listen for bucket percentage changes to update map
+            function setupBucketListeners() {
+                const bucketInputs = ['bucket-primary-pct', 'bucket-secondary-pct', 'bucket-exit-pct'];
+                bucketInputs.forEach(id => {
+                    const input = document.getElementById(id);
+                    if (input) {
+                        input.addEventListener('change', () => {
+                            if (map) {
+                                map.eachLayer(layer => {
+                                    if (layer instanceof L.LayerGroup) {
+                                        map.removeLayer(layer);
+                                    }
+                                });
+                                const circuitId = new URLSearchParams(window.location.search).get('circuit') || 
+                                                 document.getElementById('circuit-select')?.value;
+                                if (circuitId) loadCircuitGeometry(circuitId);
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Initialize when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    initBucketMap();
+                    setupBucketListeners();
+                });
+            } else {
+                initBucketMap();
+                setupBucketListeners();
+            }
+        })();
+    </script>
 </body>
 </html>

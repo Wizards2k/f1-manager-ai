@@ -163,6 +163,59 @@ def register_routes(app):
 
         return jsonify(data)
 
+    @app.route('/api/circuit/sections')
+    def get_circuit_sections():
+        """Restituisce le sezioni del circuito con i tipi (curve, rettilinei)."""
+        from flask import request
+        import config
+        from pathlib import Path
+        import json
+
+        circuit_id = request.args.get('circuit')
+        if not circuit_id:
+            circuit_id = getattr(config, 'current_circuit', None)
+        
+        if not circuit_id:
+            return jsonify({'error': 'Circuit ID required'}), 400
+        
+        root = Path(__file__).resolve().parents[1]
+        telemetry_path = root / 'data' / 'circuits' / '2025' / f'{circuit_id}_Telemetry.json'
+        
+        if not telemetry_path.exists():
+            return jsonify({'error': f'Telemetry not found for circuit: {circuit_id}'}), 404
+        
+        try:
+            payload = json.loads(telemetry_path.read_text(encoding='utf-8'))
+            geometry = payload.get('geometry', {})
+            sections = geometry.get('sections', [])
+            
+            # Enrich sections with normalized types
+            enriched = []
+            for section in sections:
+                kind = str(section.get('kind', 'Straight')).strip().lower()
+                is_corner = 'corner' in kind or kind.startswith('turn')
+                is_straight = 'straight' in kind
+                
+                enriched.append({
+                    'id': section.get('id', ''),
+                    'name': section.get('name', ''),
+                    'kind': section.get('kind', 'Straight'),
+                    'start_m': section.get('start_m', 0),
+                    'end_m': section.get('end_m', section.get('start_m', 0) + section.get('length_m', 0)),
+                    'length_m': section.get('length_m', 0),
+                    'corner_number': section.get('corner_number'),
+                    'is_corner': is_corner,
+                    'is_straight': is_straight,
+                })
+            
+            return jsonify({
+                'circuit_id': circuit_id,
+                'sections': enriched,
+                'count': len(enriched)
+            })
+        except Exception as e:
+            return jsonify({'error': f'Failed to load sections: {str(e)}'}), 500
+
     @app.route('/api/circuit/<circuit_id>')
     def get_selected_circuit(circuit_id):
         """Carica i dati del circuito selezionato"""
@@ -655,6 +708,10 @@ def register_routes(app):
             if stint_target < 1 or stint_target > max_stint_laps:
                 return _error_response(f'stint_target_laps must be between 1 and {max_stint_laps}')
             car.player_config['stint_target_laps'] = stint_target
+            # Update car fields immediately when in BOX so the value is used on send-out
+            if is_in_box:
+                car.stint_target_laps = stint_target
+                car.stint_laps_remaining = stint_target
             updates_applied['stint_target_laps'] = stint_target
 
         if not updates_applied:
