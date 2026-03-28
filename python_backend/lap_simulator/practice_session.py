@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Practice Session Orchestrator – coordinates FP1/FP2/FP3.
 
@@ -11,7 +12,6 @@ Manages 18 AI + 2 player cars through a 60-minute practice session:
 Reference: docs/practice-session-orchestrator.md
            docs/tyre-allocation.md
 """
-from __future__ import annotations
 
 import logging
 import random
@@ -66,6 +66,22 @@ class TyreSet:
     @property
     def is_available(self) -> bool:
         return self.status != TyreSetStatus.END_OF_LIFE and self.current_car_id is None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "set_id": self.set_id,
+            "compound": self.compound.value,
+            "heat_cycles": self.heat_cycles,
+            "km_driven": self.km_driven,
+            "status": self.status.value,
+            "current_car_id": self.current_car_id,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> TyreSet:
+        data["compound"] = TyreCompound(data["compound"])
+        data["status"] = TyreSetStatus(data["status"])
+        return cls(**data)
 
 
 # Default allocation per tyre-allocation.md §2
@@ -195,6 +211,21 @@ class TyreInventory:
                 by_compound[key]["eol"] += 1
         return by_compound
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "team_id": self.team_id,
+            "eol_threshold": self.eol_threshold,
+            "sets": {k: s.to_dict() for k, s in self.sets.items()},
+            "_next_id": self._next_id,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> TyreInventory:
+        inv = cls(team_id=data["team_id"], allocation={}, eol_threshold=data["eol_threshold"])
+        inv.sets = {k: TyreSet.from_dict(v) for k, v in data["sets"].items()}
+        inv._next_id = data["_next_id"]
+        return inv
+
 
 # ---------------------------------------------------------------------------
 # Session Clock (spec §2.1, §2.3)
@@ -256,6 +287,20 @@ class SessionClock:
         if flag == SessionFlag.GREEN and prev in (SessionFlag.RED, SessionFlag.YELLOW):
             self.paused = False
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "duration_s": self.duration_s,
+            "elapsed_s": self.elapsed_s,
+            "speed_multiplier": self.speed_multiplier,
+            "paused": self.paused,
+            "flag": self.flag.value,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> SessionClock:
+        data["flag"] = SessionFlag(data["flag"])
+        return cls(**data)
+
 
 # ---------------------------------------------------------------------------
 # Pitlane Queue (spec §3.2)
@@ -276,6 +321,21 @@ class PitlaneRequest:
     requested_at_s: float = 0.0
     release_at_s: float = 0.0         # when the car can actually exit
     is_player: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "car_id": self.car_id,
+            "team_id": self.team_id,
+            "priority": self.priority.value,
+            "requested_at_s": self.requested_at_s,
+            "release_at_s": self.release_at_s,
+            "is_player": self.is_player,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> PitlaneRequest:
+        data["priority"] = PitlanePriority(data["priority"])
+        return cls(**data)
 
 
 class PitlaneQueue:
@@ -358,6 +418,23 @@ class PitlaneQueue:
     def is_car_on_track(self, car_id: str) -> bool:
         return any(r.car_id == car_id for r in self.active_exits)
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "queue": [r.to_dict() for r in self.queue],
+            "active_exits": [r.to_dict() for r in self.active_exits],
+            "next_slot_time": self.next_slot_time,
+            "_last_release_time": self._last_release_time,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> PitlaneQueue:
+        pq = cls()
+        pq.queue = [PitlaneRequest.from_dict(r) for r in data["queue"]]
+        pq.active_exits = [PitlaneRequest.from_dict(r) for r in data["active_exits"]]
+        pq.next_slot_time = data["next_slot_time"]
+        pq._last_release_time = data["_last_release_time"]
+        return pq
+
 
 # ---------------------------------------------------------------------------
 # Practice Run Record (spec §4.1)
@@ -382,6 +459,20 @@ class PracticeRunRecord:
     outcome: RunOutcome = RunOutcome.SUCCESS
     abort_reason: str = ""
     notes: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {k: v for k, v in self.__dict__.items()}
+        d["program"] = self.program.value
+        d["compound"] = self.compound.value
+        d["outcome"] = self.outcome.value
+        return d
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> PracticeRunRecord:
+        data["program"] = RunProgram(data["program"])
+        data["compound"] = TyreCompound(data["compound"])
+        data["outcome"] = RunOutcome(data["outcome"])
+        return cls(**data)
 
 
 # ---------------------------------------------------------------------------
@@ -444,6 +535,16 @@ class CarSessionState:
     best_lap_s: float = 0.0
     next_available_s: float = 0.0     # earliest time this car can start a new run
     blue_flag: bool = False            # True when a leader is approaching this car
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {k: v for k, v in self.__dict__.items()}
+        d["phase"] = self.phase.value
+        return d
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> CarSessionState:
+        data["phase"] = CarPhase(data["phase"])
+        return cls(**data)
 
 
 # ---------------------------------------------------------------------------
@@ -965,3 +1066,38 @@ class PracticeSessionOrchestrator:
             message=message,
             priority=priority,
         ))
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize orchestrator state for saving."""
+        return {
+            "session_type": self.session_type.value,
+            "clock": self.clock.to_dict(),
+            "pitlane": self.pitlane.to_dict(),
+            "cars": {k: v.to_dict() for k, v in self.cars.items()},
+            "inventories": {k: v.to_dict() for k, v in self.inventories.items()},
+            "run_log": [r.to_dict() for r in self.run_log],
+            "_next_run_id": self._next_run_id,
+            "_started": self._started,
+            "_flag_clear_at_s": self._flag_clear_at_s,
+            "energy_guidance": self.energy_guidance,
+            "regen_profile": self.regen_profile,
+            "brake_profile": self.brake_profile,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> PracticeSessionOrchestrator:
+        """Initialize orchestrator from serialized state."""
+        st = SessionType(data["session_type"])
+        pso = cls(session_type=st)
+        pso.clock = SessionClock.from_dict(data["clock"])
+        pso.pitlane = PitlaneQueue.from_dict(data["pitlane"])
+        pso.cars = {k: CarSessionState.from_dict(v) for k, v in data["cars"].items()}
+        pso.inventories = {k: TyreInventory.from_dict(v) for k, v in data["inventories"].items()}
+        pso.run_log = [PracticeRunRecord.from_dict(r) for r in data.get("run_log", [])]
+        pso._next_run_id = data.get("_next_run_id", 0)
+        pso._started = data.get("_started", False)
+        pso._flag_clear_at_s = data.get("_flag_clear_at_s", 0.0)
+        pso.energy_guidance = data.get("energy_guidance", {})
+        pso.regen_profile = data.get("regen_profile", {})
+        pso.brake_profile = data.get("brake_profile", {})
+        return pso

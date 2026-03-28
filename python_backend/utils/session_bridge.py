@@ -191,6 +191,58 @@ class CarTrackState:
     tyre_set: Optional['TyreSet'] = None
     current_run_program: Optional[str] = None
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "car_id": self.car_id,
+            "car_entry": self.car_entry.to_dict() if hasattr(self.car_entry, "to_dict") else None,
+            "current_section_idx": self.current_section_idx,
+            "section_time_acc": self.section_time_acc,
+            "lap_number": self.lap_number,
+            "distance_in_lap": self.distance_in_lap,
+            "laps_done_in_run": self.laps_done_in_run,
+            "laps_planned": self.laps_planned,
+            "is_player": self.is_player,
+            "lap_phase": self.lap_phase,
+            "selected_active_map": self.selected_active_map.value,
+            "selected_ers_mode": self.selected_ers_mode,
+            "ers_recharge_forced": self.ers_recharge_forced,
+            "pit_exit_delay_s": self.pit_exit_delay_s,
+            "pit_exit_waited_s": self.pit_exit_waited_s,
+            "current_sector": self.current_sector,
+            "sector_dt_acc": self.sector_dt_acc,
+            "setup_data_complete": self.setup_data_complete,
+            "tyre_set_id": self.tyre_set_id,
+            "current_run_program": self.current_run_program,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> CarTrackState:
+        # We need the CarEntry object which might be tricky to recreate here
+        # without all dependencies, but we'll try.
+        from lap_simulator.lap_simulator import CarEntry
+        entry = CarEntry.from_dict(data["car_entry"]) if data.get("car_entry") else None
+        ts = cls(car_id=data["car_id"], car_entry=entry)
+        ts.current_section_idx = data.get("current_section_idx", 0)
+        ts.section_time_acc = data.get("section_time_acc", 0.0)
+        ts.lap_number = data.get("lap_number", 1)
+        ts.distance_in_lap = data.get("distance_in_lap", 0.0)
+        ts.laps_done_in_run = data.get("laps_done_in_run", 0)
+        ts.laps_planned = data.get("laps_planned", 5)
+        ts.is_player = data.get("is_player", False)
+        ts.lap_phase = data.get("lap_phase", LapPhase.OUT_LAP)
+        if "selected_active_map" in data:
+             ts.selected_active_map = EngineMapName(data["selected_active_map"])
+        ts.selected_ers_mode = data.get("selected_ers_mode", "STANDARD")
+        ts.ers_recharge_forced = data.get("ers_recharge_forced", False)
+        ts.pit_exit_delay_s = data.get("pit_exit_delay_s", 0.0)
+        ts.pit_exit_waited_s = data.get("pit_exit_waited_s", 0.0)
+        ts.current_sector = data.get("current_sector", 0)
+        ts.sector_dt_acc = data.get("sector_dt_acc", 0.0)
+        ts.setup_data_complete = data.get("setup_data_complete", False)
+        ts.tyre_set_id = data.get("tyre_set_id")
+        ts.current_run_program = data.get("current_run_program")
+        return ts
+
 
 # Lap phases that should yield under blue flag during practice/quali when a HOT LAP approaches
 PRACTICE_SLOW_LAP_PHASES = {
@@ -423,6 +475,66 @@ class SessionBridge:
         self._event_feed: List[Dict[str, Any]] = []
         self.tyre_inventory_service = TyreInventoryService()
         self._player_runtime_state: Dict[str, Dict[str, Any]] = {}
+
+    # ------------------------------------------------------------------
+    # Serialization
+    # ------------------------------------------------------------------
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "circuit_id": self.circuit_id,
+            "session_kind": self.session_kind,
+            "_accumulated_time_s": self._accumulated_time_s,
+            "_track_states": {k: v.to_dict() for k, v in self._track_states.items()},
+            "_ai_teams_cars": self._ai_teams_cars,
+            "_player_runtime_state": self._player_runtime_state,
+            "_ai_engines": {k: v.to_dict() for k, v in self.ai_engines.items()},
+            "_ai_setup_states": {k: v.to_dict() for k, v in self._ai_setup_states.items()},
+        }
+
+    def load_session_state(self, data: Dict[str, Any]) -> bool:
+        """Restores the bridge internal state from a dictionary."""
+        self.circuit_id = data.get("circuit_id")
+        self.session_kind = data.get("session_kind", "FP1")
+        self._accumulated_time_s = data.get("_accumulated_time_s", 0.0)
+        
+        # Track states restoration
+        raw_states = data.get("_track_states", {})
+        self._track_states = {}
+        for car_id, state_data in raw_states.items():
+            ts = CarTrackState.from_dict(state_data)
+            # Re-link tyre_set if tyre_set_id is present
+            if ts.tyre_set_id and self.pso:
+                # Find in inventories
+                for inv in self.pso.inventories.values():
+                    if ts.tyre_set_id in inv.sets:
+                        # Find the set in the list
+                        for s in inv.sets:
+                            if s.set_id == ts.tyre_set_id:
+                                ts.tyre_set = s
+                                break
+                        break
+            self._track_states[car_id] = ts
+            
+        self._ai_teams_cars = data.get("_ai_teams_cars", {})
+        self._player_runtime_state = data.get("_player_runtime_state", {})
+        
+        # AI Engines restoration
+        from lap_simulator.ai_driver_engine import AIDriverEngine
+        raw_engines = data.get("_ai_engines", {})
+        self.ai_engines = {}
+        if self.circuit_config:
+            for car_id, engine_data in raw_engines.items():
+                self.ai_engines[car_id] = AIDriverEngine.from_dict(engine_data, self.circuit_config)
+                
+        # AI Setup States restoration
+        from utils.ai_setup_search import AISetupState
+        raw_setup_states = data.get("_ai_setup_states", {})
+        self._ai_setup_states = {}
+        for car_id, setup_data in raw_setup_states.items():
+            self._ai_setup_states[car_id] = AISetupState.from_dict(setup_data)
+            
+        return True
 
     # ------------------------------------------------------------------
     # Initialization

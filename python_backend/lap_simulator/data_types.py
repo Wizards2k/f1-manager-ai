@@ -198,6 +198,35 @@ class TyreState:
     graining_time_acc_s: float = 0.0     # accumulated time below surface window
     blistering_time_acc_s: float = 0.0   # accumulated time above surface/core window
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "wheel_pos": self.wheel_pos.value,
+            "compound": self.compound.value,
+            "surface_temp_c": self.surface_temp_c,
+            "core_temp_c": self.core_temp_c,
+            "wear_pct": self.wear_pct,
+            "age_laps": self.age_laps,
+            "heat_cycles": self.heat_cycles,
+            "grip_multiplier": self.grip_multiplier,
+            "flatspot_severity": self.flatspot_severity,
+            "graining_level": self.graining_level,
+            "blistering_level": self.blistering_level,
+            "progressive_overtemp_sections": self.progressive_overtemp_sections,
+            "adaptive_dissipation_boost": self.adaptive_dissipation_boost,
+            "overheat_warning": self.overheat_warning,
+            "cold_warning": self.cold_warning,
+            "effective_grip": self.effective_grip,
+            "graining_time_acc_s": self.graining_time_acc_s,
+            "blistering_time_acc_s": self.blistering_time_acc_s,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> TyreState:
+        # Enums handle
+        if "wheel_pos" in data: data["wheel_pos"] = WheelPosition(data["wheel_pos"])
+        if "compound" in data: data["compound"] = TyreCompound(data["compound"])
+        return cls(**data)
+
 
 # ---------------------------------------------------------------------------
 # Brake state  (Passo 5)
@@ -229,6 +258,21 @@ class BrakeState:
     duct_opening: float = 0.5            # 0-1 from setup
     bias_front_pct: float = 55.0         # brake balance
     snapshot: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "temp_front_c": self.temp_front_c,
+            "temp_rear_c": self.temp_rear_c,
+            "wear_front_pct": self.wear_front_pct,
+            "wear_rear_pct": self.wear_rear_pct,
+            "fade_level": self.fade_level,
+            "duct_opening": self.duct_opening,
+            "bias_front_pct": self.bias_front_pct,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> BrakeState:
+        return cls(**data)
 
 
 # ---------------------------------------------------------------------------
@@ -337,6 +381,17 @@ class PUState:
     lap_ers_bonus_s: float = 0.0         # cumulative ERS time bonus this lap (negative = faster)
     last_section_ers_bonus_s: float = 0.0  # ERS bonus for the most recent section (negative = faster)
 
+    def to_dict(self) -> Dict[str, Any]:
+        d = {k: v for k, v in self.__dict__.items() if not k.startswith("_") and k not in {"energy_trace", "energy_trace_prev", "runtime_warnings", "runtime_warnings_prev"}}
+        if isinstance(d.get("active_map"), Enum):
+            d["active_map"] = d["active_map"].value
+        return d
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> PUState:
+        if "active_map" in data: data["active_map"] = EngineMapName(data["active_map"])
+        return cls(**data)
+
 
 # ---------------------------------------------------------------------------
 # Aero state  (Passo 3)
@@ -356,6 +411,13 @@ class AeroComponent:
     damage_factor: float = 1.0           # 1 = undamaged
     drs_drag_reduction: float = 0.0      # only rear wing
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> AeroComponent:
+        return cls(**data)
+
 
 @dataclass
 class SuspensionState:
@@ -363,6 +425,13 @@ class SuspensionState:
     rigidity: float = 0.6
     efficiency: float = 0.8
     df_bonus: float = 0.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> SuspensionState:
+        return cls(**data)
 
 
 @dataclass
@@ -388,6 +457,47 @@ class AeroSetup:
     ride_height_optimal_front_mm: float = 40.0
     ride_height_optimal_rear_mm: float = 50.0
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "front_wing": self.front_wing.to_dict(),
+            "rear_wing": self.rear_wing.to_dict(),
+            "beam_wing": self.beam_wing.to_dict(),
+            "front_floor": self.front_floor.to_dict(),
+            "rear_floor": self.rear_floor.to_dict(),
+            "sidepods": self.sidepods.to_dict(),
+            "engine_cover": self.engine_cover.to_dict(),
+            "b_wing": self.b_wing.to_dict(),
+            "suspension_front": self.suspension_front.to_dict(),
+            "suspension_rear": self.suspension_rear.to_dict(),
+            "antiroll_front_rigidity": self.antiroll_front_rigidity,
+            "antiroll_rear_rigidity": self.antiroll_rear_rigidity,
+            "ride_height_front_mm": self.ride_height_front_mm,
+            "ride_height_rear_mm": self.ride_height_rear_mm,
+            "ride_height_optimal_front_mm": self.ride_height_optimal_front_mm,
+            "ride_height_optimal_rear_mm": self.ride_height_optimal_rear_mm,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> AeroSetup:
+        setup = cls()
+        setup.front_wing = AeroComponent.from_dict(data["front_wing"])
+        setup.rear_wing = AeroComponent.from_dict(data["rear_wing"])
+        setup.beam_wing = AeroComponent.from_dict(data["beam_wing"])
+        setup.front_floor = AeroComponent.from_dict(data["front_floor"])
+        setup.rear_floor = AeroComponent.from_dict(data["rear_floor"])
+        setup.sidepods = AeroComponent.from_dict(data["sidepods"])
+        setup.engine_cover = AeroComponent.from_dict(data["engine_cover"])
+        setup.b_wing = AeroComponent.from_dict(data["b_wing"])
+        setup.suspension_front = SuspensionState.from_dict(data["suspension_front"])
+        setup.suspension_rear = SuspensionState.from_dict(data["suspension_rear"])
+        setup.antiroll_front_rigidity = data.get("antiroll_front_rigidity", 0.5)
+        setup.antiroll_rear_rigidity = data.get("antiroll_rear_rigidity", 0.5)
+        setup.ride_height_front_mm = data.get("ride_height_front_mm", 40.0)
+        setup.ride_height_rear_mm = data.get("ride_height_rear_mm", 50.0)
+        setup.ride_height_optimal_front_mm = data.get("ride_height_optimal_front_mm", 40.0)
+        setup.ride_height_optimal_rear_mm = data.get("ride_height_optimal_rear_mm", 50.0)
+        return setup
+
 
 @dataclass
 class AeroForces:
@@ -408,6 +518,13 @@ class AeroForces:
     airflow_penalty: float = 0.0         # dirty air / wake
     drag_ref: float = 30.0               # reference drag for index normalization
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> AeroForces:
+        return cls(**data)
+
 
 # ---------------------------------------------------------------------------
 # Driver model  (Passo 2)
@@ -426,6 +543,13 @@ class DriverSkills:
     wet_skill: int = 60
     smoothness: int = 60
     setup_finding: int = 60
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> DriverSkills:
+        return cls(**data)
 
 
 @dataclass
@@ -535,6 +659,47 @@ class CarState:
     attack_cooldown: int = 0             # sections remaining
     defense_reset: int = 0
     side_by_side: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "car_id": self.car_id,
+            "team_code": self.team_code,
+            "tyres": {k.value: v.to_dict() for k, v in self.tyres.items()},
+            "brakes": self.brakes.to_dict(),
+            "pu": self.pu.to_dict(),
+            "damage": {k: v for k, v in self.damage.__dict__.items() if not k.startswith("_")},
+            "driver_mental": {k: v for k, v in self.driver_mental.__dict__.items() if not k.startswith("_")},
+            "aero_forces": self.aero_forces.to_dict(),
+            "ers_mode": self.ers_mode,
+            "current_section_idx": self.current_section_idx,
+            "section_progress": self.section_progress,
+            "lap_time_acc_s": self.lap_time_acc_s,
+            "lap_number": self.lap_number,
+            "v_current_ms": self.v_current_ms,
+            "attack_cooldown": self.attack_cooldown,
+            "defense_reset": self.defense_reset,
+            "side_by_side": self.side_by_side,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> CarState:
+        cs = cls(car_id=data["car_id"], team_code=data.get("team_code", ""))
+        cs.tyres = {WheelPosition(k): TyreState.from_dict(v) for k, v in data["tyres"].items()}
+        cs.brakes = BrakeState.from_dict(data["brakes"])
+        cs.pu = PUState.from_dict(data["pu"])
+        cs.damage = DamageState(**data["damage"])
+        cs.driver_mental = DriverMentalState(**data["driver_mental"])
+        cs.aero_forces = AeroForces.from_dict(data["aero_forces"])
+        cs.ers_mode = data.get("ers_mode", "STANDARD")
+        cs.current_section_idx = data.get("current_section_idx", 0)
+        cs.section_progress = data.get("section_progress", 0.0)
+        cs.lap_time_acc_s = data.get("lap_time_acc_s", 0.0)
+        cs.lap_number = data.get("lap_number", 1)
+        cs.v_current_ms = data.get("v_current_ms", 0.0)
+        cs.attack_cooldown = data.get("attack_cooldown", 0)
+        cs.defense_reset = data.get("defense_reset", 0)
+        cs.side_by_side = data.get("side_by_side", False)
+        return cs
 
     def __post_init__(self):
         if not self.tyres:

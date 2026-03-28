@@ -143,6 +143,33 @@ class RunPlan:
     objective: str = ""                # human-readable objective
     priority: int = 1                  # 1=high, 3=low
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "program": self.program.value,
+            "laps_planned": self.laps_planned,
+            "fuel_kg": self.fuel_kg,
+            "compound": self.compound.value,
+            "engine_map": self.engine_map.value,
+            "ers_mode": self.ers_mode.value,
+            "push_level": self.push_level,
+            "objective": self.objective,
+            "priority": self.priority,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> RunPlan:
+        return cls(
+            program=RunProgram(data["program"]),
+            laps_planned=data["laps_planned"],
+            fuel_kg=data["fuel_kg"],
+            compound=TyreCompound(data["compound"]),
+            engine_map=EngineMapName(data["engine_map"]),
+            ers_mode=ERSModeName(data["ers_mode"]),
+            push_level=data["push_level"],
+            objective=data["objective"],
+            priority=data["priority"],
+        )
+
 
 # Run program defaults (from spec §3 + §6)
 RUN_PROGRAM_DEFAULTS: Dict[RunProgram, dict] = {
@@ -239,6 +266,25 @@ class SessionPlan:
     runs: List[RunPlan] = field(default_factory=list)
     session_duration_s: float = 3600.0  # 60 minutes
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "session_type": self.session_type.value,
+            "team_id": self.team_id,
+            "driver_id": self.driver_id,
+            "runs": [r.to_dict() for r in self.runs],
+            "session_duration_s": self.session_duration_s,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> SessionPlan:
+        return cls(
+            session_type=SessionType(data["session_type"]),
+            team_id=data["team_id"],
+            driver_id=data["driver_id"],
+            runs=[RunPlan.from_dict(r) for r in data["runs"]],
+            session_duration_s=data.get("session_duration_s", 3600.0),
+        )
+
 
 # ---------------------------------------------------------------------------
 # Run results & telemetry summary
@@ -262,6 +308,13 @@ class RunTelemetrySummary:
     traction_index_delta: float = 0.0  # + = too much rear grip
     brake_cooling_delta: float = 0.0   # + = brakes too hot
 
+    def to_dict(self) -> Dict[str, Any]:
+        return self.__dict__.copy()
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> RunTelemetrySummary:
+        return cls(**data)
+
 
 @dataclass
 class SetupAdjustment:
@@ -270,6 +323,13 @@ class SetupAdjustment:
     old_value: float = 0.0
     new_value: float = 0.0
     reason: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return self.__dict__.copy()
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> SetupAdjustment:
+        return cls(**data)
 
 
 @dataclass
@@ -281,6 +341,28 @@ class RunResult:
     setup_adjustments: List[SetupAdjustment] = field(default_factory=list)
     setup_converged: bool = False      # all indices in target range
     abort_reason: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "run_plan": self.run_plan.to_dict() if self.run_plan else None,
+            "outcome": self.outcome.value,
+            "telemetry": self.telemetry.to_dict(),
+            "setup_adjustments": [a.to_dict() for a in self.setup_adjustments],
+            "setup_converged": self.setup_converged,
+            "abort_reason": self.abort_reason,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> RunResult:
+        res = cls(
+            run_plan=RunPlan.from_dict(data["run_plan"]) if data.get("run_plan") else None,
+            outcome=RunOutcome(data["outcome"]),
+            telemetry=RunTelemetrySummary.from_dict(data["telemetry"]),
+            setup_adjustments=[SetupAdjustment.from_dict(a) for a in data.get("setup_adjustments", [])],
+        )
+        res.setup_converged = data.get("setup_converged", False)
+        res.abort_reason = data.get("abort_reason", "")
+        return res
 
 
 # ---------------------------------------------------------------------------

@@ -86,7 +86,10 @@ export class MapModuleV3 {
             this.state?.setCircuitId?.(this.selectedCircuit);
         }
 
-        if (this.selectedCircuit) {
+        const params = new URLSearchParams(window.location.search);
+        const isLoaded = params.get('loaded') === 'true';
+
+        if (this.selectedCircuit && !isLoaded) {
             try {
                 await fetch('/api/load_circuit', {
                     method: 'POST',

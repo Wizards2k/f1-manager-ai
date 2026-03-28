@@ -987,4 +987,61 @@ def register_routes(app):
             'car': _serialize_player_car(car)
         })
 
+    @app.route('/api/save', methods=['POST'])
+    def save_game():
+        """Salva lo stato corrente del gioco"""
+        try:
+            from datetime import datetime
+            from services.save_system import SaveGameService
+            
+            name = request.json.get('name', f"Save {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+            service = SaveGameService()
+            save_id = service.save_game(name)
+            
+            return jsonify({
+                'message': 'Game saved successfully',
+                'save_id': save_id
+            })
+        except Exception as e:
+            import traceback
+            err_msg = traceback.format_exc()
+            app.logger.error("!!! SAVE CRASH !!!\n%s", err_msg)
+            return jsonify({'error': f'Failed to save game: {str(e)}'}), 500
+
+    @app.route('/api/load', methods=['POST'])
+    def load_game():
+        """Carica uno stato salvato"""
+        try:
+            from services.save_system import SaveGameService
+            
+            save_id = request.json.get('save_id')
+            if not save_id:
+                return jsonify({'error': 'Save ID required'}), 400
+                
+            service = SaveGameService()
+            result = service.load_game(save_id)
+            
+            if isinstance(result, dict) and result.get('success'):
+                return jsonify({
+                    'message': 'Game loaded successfully',
+                    'circuit_id': result.get('circuit_id')
+                })
+            else:
+                return jsonify({'error': 'Failed to load game'}), 500
+        except Exception as e:
+            import traceback
+            print(f"Load error: {traceback.format_exc()}")
+            return jsonify({'error': f'Failed to load game: {str(e)}'}), 500
+
+    @app.route('/api/saves')
+    def get_saves():
+        """Restituisce la lista dei salvataggi"""
+        try:
+            from services.save_system import SaveGameService
+            service = SaveGameService()
+            saves = service.get_save_files()
+            return jsonify(saves)
+        except Exception as e:
+            return jsonify({'error': f'Failed to list saves: {str(e)}'}), 500
+
     return app

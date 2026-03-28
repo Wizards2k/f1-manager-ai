@@ -24,13 +24,47 @@ export class SessionControls {
             this.pauseButton.addEventListener('click', () => this.togglePause());
         }
         this.speedButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const uiSpeed = parseFloat(btn.dataset.speed);
-                this.changeSpeed(uiSpeed);
-            });
+            if (btn.hasAttribute('data-speed')) {
+                btn.addEventListener('click', () => {
+                    const uiSpeed = parseFloat(btn.dataset.speed);
+                    this.changeSpeed(uiSpeed);
+                });
+            }
         });
         if (this.selectCircuitButton) {
             this.selectCircuitButton.addEventListener('click', () => this.returnToCircuitSelection());
+        }
+        this.saveButton = document.getElementById('save-game-btn');
+        if (this.saveButton) {
+            this.saveButton.addEventListener('click', () => this.saveGame());
+        }
+    }
+
+    async saveGame() {
+        if (this.saveButton) {
+            this.saveButton.disabled = true;
+            this.saveButton.textContent = 'SAVING...';
+        }
+        try {
+            const response = await fetch('/api/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: `Save ${new Date().toLocaleString()}` })
+            });
+
+            if (!response.ok) throw new Error('Failed to save');
+            
+            const data = await response.json();
+            console.log('Game saved:', data.save_id);
+            alert('Game saved successfully!');
+        } catch (error) {
+            console.error('Error saving game:', error);
+            alert('Failed to save game.');
+        } finally {
+            if (this.saveButton) {
+                this.saveButton.disabled = false;
+                this.saveButton.textContent = 'SAVE';
+            }
         }
     }
 

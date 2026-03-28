@@ -102,6 +102,35 @@ class CarEntry:
     setup_sliders: Dict[str, int] = field(default_factory=dict)  # current setup (0-100 per slider)
     ideal_setup_sliders: Dict[str, int] = field(default_factory=dict)  # ideal setup for circuit
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "car_id": self.car_id,
+            "state": self.state.to_dict(),
+            "aero_setup": self.aero_setup.to_dict(),
+            "driver_skills": self.driver_skills.to_dict(),
+            "push_level": self.push_level,
+            "delta_aero": self.delta_aero,
+            "delta_grip": self.delta_grip,
+            "apply_baseline_delta": self.apply_baseline_delta,
+            "setup_sliders": self.setup_sliders,
+            "ideal_setup_sliders": self.ideal_setup_sliders,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> CarEntry:
+        return cls(
+            car_id=data["car_id"],
+            state=CarState.from_dict(data["state"]),
+            aero_setup=AeroSetup.from_dict(data["aero_setup"]),
+            driver_skills=DriverSkills.from_dict(data["driver_skills"]),
+            push_level=data.get("push_level", 1.0),
+            delta_aero=data.get("delta_aero", 0.0),
+            delta_grip=data.get("delta_grip", 0.0),
+            apply_baseline_delta=data.get("apply_baseline_delta", True),
+            setup_sliders=data.get("setup_sliders", {}),
+            ideal_setup_sliders=data.get("ideal_setup_sliders", {}),
+        )
+
 
 # ---------------------------------------------------------------------------
 # Lap result

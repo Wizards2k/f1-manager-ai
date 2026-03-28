@@ -310,6 +310,17 @@ class Gomma:
         malus = (0.5 - grip) * malus_coeff
         return malus
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "mescola": self.mescola.value,
+            "percentuale_vita": self.percentuale_vita,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Gomma:
+        mescola = TireCompound(data["mescola"])
+        return cls(mescola, percentuale_vita=data["percentuale_vita"])
+
 
 class Team:
     def __init__(
@@ -559,3 +570,39 @@ class RaceCar:
             print(f"[Telemetry] Failed to log lap debug: {exc}")
         finally:
             self.current_lap_debug = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+        # Serializzazione Enum
+        if isinstance(d.get("state"), Enum): d["state"] = d["state"].value
+        if isinstance(d.get("current_tire"), Enum): d["current_tire"] = d["current_tire"].value
+        if isinstance(d.get("last_lap_type"), Enum): d["last_lap_type"] = d["last_lap_type"].value
+        
+        # Sub-objects
+        if "current_gomma" in d and hasattr(d["current_gomma"], "to_dict"):
+            d["current_gomma"] = d["current_gomma"].to_dict()
+            
+        # Riferimenti esterni (ID invece di oggetti)
+        d["pilot_id"] = self.pilot.numero_di_gara
+        d["team_id"] = getattr(self.team, "team_id", None)
+        d.pop("pilot", None)
+        d.pop("team", None)
+        
+        return d
+
+    def load_state(self, data: Dict[str, Any]):
+        """Carica lo stato da un dizionario senza ricreare l'oggetto."""
+        for k, v in data.items():
+            if k in {"pilot_id", "team_id", "current_gomma"}:
+                continue
+            if k == "state":
+                self.state = CarState(v)
+            elif k == "current_tire":
+                self.current_tire = TireCompound(v)
+            elif k == "last_lap_type" and v:
+                self.last_lap_type = CarState(v)
+            else:
+                setattr(self, k, v)
+        
+        if "current_gomma" in data:
+            self.current_gomma = Gomma.from_dict(data["current_gomma"])
