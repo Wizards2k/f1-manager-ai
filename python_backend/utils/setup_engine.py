@@ -282,78 +282,68 @@ def evaluate_setup_categories(setup_values: Dict[str, int]) -> Dict[str, Any]:
     traction_index = base_eval.get('traction_index', 0.5)
     
     def get_field_score(field: str) -> float:
-        """Convert field evaluation to 0-100 score."""
+        """Convert field evaluation to 0-100 score based on proximity to optimal."""
         if field not in fields:
             return 50.0
         delta = abs(fields[field]['delta'])
         params = _resolve_field_params(field)
         tolerance = params.get('tolerance', 10)
-        # Score decreases as delta increases from optimal
-        score = max(0, 100 - (delta / tolerance) * 50)
+        
+        if delta <= tolerance:
+            # 90-100 range when in optimal window
+            return 100.0 - (delta / max(1, tolerance)) * 10.0
+        
+        # Drops off linearly outside the window
+        score = max(0.0, 90.0 - ((delta - tolerance) / max(1, tolerance)) * 40.0)
         return score
     
-    # Category 1: Cornering Balance (aero_balance)
-    cornering_score = _clamp(100 - abs(aero_balance - 0.5) * 200, 0, 100)
+    # Category 1: Cornering Balance
+    c_fields = ['front_wing', 'rear_wing', 'beam_wing']
+    cornering_score = sum(get_field_score(f) for f in c_fields) / len(c_fields)
     if cornering_score >= 90:
-        cornering_msg = "Neutral aero balance"
-    elif aero_balance > 0.55:
-        cornering_msg = "Front-heavy: likely understeer"
-    elif aero_balance < 0.45:
-        cornering_msg = "Rear-heavy: risk of oversteer"
+        cornering_msg = "Excellent cornering balance"
+    elif cornering_score >= 70:
+        cornering_msg = "Good cornering balance"
     else:
-        cornering_msg = "Aero balance needs fine-tuning"
+        cornering_msg = "Cornering balance needs fine-tuning"
     
-    # Category 2: Straight-line Speed (drag_index)
-    speed_score = _clamp(100 - drag_index * 100, 0, 100)
-    if speed_score >= 85:
+    # Category 2: Straight-line Speed
+    s_fields = ['rear_wing', 'beam_wing', 'ride_height_front', 'ride_height_rear']
+    speed_score = sum(get_field_score(f) for f in s_fields) / len(s_fields)
+    if speed_score >= 90:
+        speed_msg = "Optimized for straight-line speed"
+    elif speed_score >= 70:
         speed_msg = "Good top speed"
-    elif drag_index >= 0.75:
-        speed_msg = "Too much drag on straights"
     else:
         speed_msg = "Aero drag affecting top speed"
     
-    # Category 3: Traction (traction_index)
-    traction_score = _clamp(traction_index * 100, 0, 100)
-    if traction_score >= 85:
+    # Category 3: Traction
+    t_fields = ['ride_height_rear', 'suspension_rear', 'antiroll_rear']
+    traction_score = sum(get_field_score(f) for f in t_fields) / len(t_fields)
+    if traction_score >= 90:
+        traction_msg = "Excellent traction on exit"
+    elif traction_score >= 70:
         traction_msg = "Strong traction on exit"
-    elif traction_index < 0.45:
-        traction_msg = "Wheelspin risk on exits"
     else:
         traction_msg = "Traction could be improved"
     
-    # Category 4: Stability (brake balance + antiroll + suspension delta)
-    brake_balance = setup_values.get('brake_balance', 50)
-    antiroll_front = setup_values.get('antiroll_front', 50)
-    antiroll_rear = setup_values.get('antiroll_rear', 50)
-    susp_front_val = setup_values.get('suspension_front', 50)
-    susp_rear_val = setup_values.get('suspension_rear', 50)
-    balance_penalty = abs(brake_balance - 50) / 50
-    antiroll_penalty = abs(antiroll_front - antiroll_rear) / 100
-    susp_penalty = abs(susp_front_val - susp_rear_val) / 100
-    stability_index = _clamp(1 - (0.5 * balance_penalty + 0.3 * antiroll_penalty + 0.2 * susp_penalty), 0, 1)
-    stability_score = stability_index * 100
-    if stability_score >= 85:
+    # Category 4: Stability
+    st_fields = ['brake_balance', 'suspension_front', 'antiroll_front']
+    stability_score = sum(get_field_score(f) for f in st_fields) / len(st_fields)
+    if stability_score >= 90:
+        stability_msg = "Very stable under braking"
+    elif stability_score >= 70:
         stability_msg = "Stable under braking"
-    elif brake_balance > 56:
-        stability_msg = "Front locks under heavy braking"
-    elif brake_balance < 44:
-        stability_msg = "Rear unstable on entry"
-    elif antiroll_penalty > 0.25:
-        stability_msg = "Chassis balance hurts stability"
     else:
         stability_msg = "Stability could be improved"
     
-    # Category 5: Braking (brake balance + brake duct)
-    brake_duct = setup_values.get('brake_duct', 50)
-    brake_bal_score = get_field_score('brake_balance')
-    brake_duct_score = get_field_score('brake_duct')
-    braking_score = _clamp(0.6 * brake_bal_score + 0.4 * brake_duct_score, 0, 100)
-    if braking_score >= 85:
+    # Category 5: Braking
+    b_fields = ['brake_balance', 'brake_duct']
+    braking_score = sum(get_field_score(f) for f in b_fields) / len(b_fields)
+    if braking_score >= 90:
+        braking_msg = "Brakes perfectly balanced"
+    elif braking_score >= 70:
         braking_msg = "Brakes well balanced and cooled"
-    elif brake_bal_score < 60:
-        braking_msg = "Brake balance needs adjustment"
-    elif brake_duct_score < 60:
-        braking_msg = "Brake cooling insufficient"
     else:
         braking_msg = "Braking could be improved"
 

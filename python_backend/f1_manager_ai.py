@@ -111,6 +111,7 @@ def race_simulation():
                 'ice_mode': getattr(car, 'ice_mode', None),
                 'ers_mode': getattr(car, 'ers_mode', None),
                 'stint_target_laps': getattr(car, 'stint_target_laps', None),
+                'max_stint_laps': 150,
                 'blue_flag': bridge.get_car_blue_flag(str(car.driver_number)) if bridge and bridge.active else False,
                 'pu_stats': getattr(car, 'pu_stats', {}),
                 'brake_diagnostics': getattr(car, 'brake_diagnostics', {}),

@@ -71,6 +71,11 @@ _LAP_DEBUG_ENABLED = os.getenv("LAP_DEBUG_ENABLED", "0").lower() in {"1", "true"
 
 if _LAP_DEBUG_ENABLED:
     print(f"DEBUG: LAP_DEBUG_ENABLED is active. Logging to { _LAP_LOG_FILE.absolute() }")
+    # Reset log file on startup
+    try:
+        _LAP_LOG_FILE.write_text("", encoding="utf-8")
+    except OSError:
+        pass  # File may not exist yet, which is fine
 
 
 # Lazy import to avoid circular dependency
@@ -340,7 +345,7 @@ class LapSimulator:
             apply_baseline = entry.apply_baseline_delta if entry else True
             sectors = ",".join(f"{s:.3f}" for s in lr.sector_times_s)
             lines.append(
-                f"{lr.car_id} | Lap {lr.lap_number} | {lr.lap_time_s:.3f}s | sectors[{sectors}] | "
+                f"Car {lr.car_id} | Lap {lr.lap_number} | {lr.lap_time_s:.3f}s | sectors[{sectors}] | "
                 f"delta_aero={delta_aero:.4f} delta_grip={delta_grip:.4f} push={push_level:.2f} baseline={apply_baseline} | "
                 f"fuel={lr.fuel_kg:.1f}kg ers={lr.ers_energy_mj:.2f}MJ"
             )

@@ -290,6 +290,7 @@ def register_routes(app):
                 'is_player_controlled': car.is_player_controlled,
                 'player_config': car.player_config if car.is_player_controlled else None,
                 'setup_recommendation': car.setup_feedback if car.is_player_controlled else None,
+                'max_stint_laps': 150,
                 'brake_cooling': getattr(car, 'brake_cooling', {}),
             })
         return jsonify(cars_data)
@@ -515,7 +516,7 @@ def register_routes(app):
             'ers_mode': car.ers_mode,
             'stint_target_laps': car.stint_target_laps,
             'stint_laps_remaining': car.stint_laps_remaining,
-            'max_stint_laps': car.compute_max_stint_laps(car.player_config.get('fuel_percent', car.fuel_percent)),
+            'max_stint_laps': 150,
             'stint_laps_target': car.player_config.get('stint_target_laps', car.stint_target_laps),
             'setup': car.player_config.get('setup', {**DEFAULT_SETUP_CONFIG}),
             'setup_recommendation': car.setup_feedback or {},
@@ -699,14 +700,13 @@ def register_routes(app):
             effective_fuel = fuel_percent
             updates_applied['fuel_percent'] = fuel_percent
 
-        max_stint_laps = car.compute_max_stint_laps(effective_fuel)
         if 'stint_target_laps' in payload:
             try:
                 stint_target = int(payload['stint_target_laps'])
             except (TypeError, ValueError):
                 return _error_response('stint_target_laps must be an integer')
-            if stint_target < 1 or stint_target > max_stint_laps:
-                return _error_response(f'stint_target_laps must be between 1 and {max_stint_laps}')
+            if stint_target < 1 or stint_target > 150:
+                return _error_response(f'stint_target_laps must be between 1 and 150')
             car.player_config['stint_target_laps'] = stint_target
             # Update car fields immediately when in BOX so the value is used on send-out
             if is_in_box:
@@ -882,9 +882,8 @@ def register_routes(app):
             return _error_response('Invalid tyre_compound in player config')
 
         fuel_percent = config.get('fuel_percent', car.fuel_percent)
-        max_stint_laps = car.compute_max_stint_laps(fuel_percent)
         target_laps = config.get('stint_target_laps', car.stint_target_laps)
-        target_laps = max(1, min(max_stint_laps, target_laps))
+        target_laps = max(1, min(150, target_laps))
 
         selected_set_id = str(config.get('tyre_set_id') or '').strip() or None
         selected_set = None
