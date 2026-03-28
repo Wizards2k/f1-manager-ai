@@ -18,6 +18,13 @@
       "brake_energy_p90": 2.6806000000000005,
       "brake_energy_peak": 3.543,
       "circuit_length_m": 4229.099999999999
+    },
+    "mguh_profile": {
+      "total_mj": 2.92,
+      "direct_mj": 1.314,
+      "es_mj": 1.606,
+      "direct_bias": 0.45,
+      "es_bias": 0.55
     }
   },
   "maps": {
@@ -52,7 +59,7 @@
       "ers_output_kw": 190.79,
       "deploy_mj_per_lap": 3.926,
       "harvest_mj_per_lap": 1.035,
-      "mguh_direct_ratio": 0.421,
+      "mguh_direct_ratio": 0.45,
       "target_soc_end_lap": 0.05,
       "torque_bias": 0.0774,
       "notes": {
@@ -65,7 +72,8 @@
         "harvest_dynamic": 0.884,
         "deploy_limit_hit": false,
         "harvest_limit_hit": false
-      }
+      },
+      "mguh_power_kw": 42.507
     },
     "QUALIFY": {
       "heat_load_kw": 317.82,
@@ -141,7 +149,8 @@
         "harvest_mj_per_lap": 1.035,
         "target_soc_end_lap": 0.05,
         "deploy_ratio": 0.982,
-        "harvest_ratio": 0.517
+        "harvest_ratio": 0.517,
+        "mguh_direct_ratio": 0.45
       },
       "QUALIFY": {
         "deploy_mj_per_lap": 4.0,
@@ -160,17 +169,17 @@
     },
     "warnings": [
       "RACE: deploy at 98% of MGU-K limit",
-      "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+      "RACE: SOC target very low (0.05) – plan recharge lap",
       "QUALIFY: deploy at 100% of MGU-K limit",
       "QUALIFY: harvest insufficient vs deploy (ratio 0.33)",
-      "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+      "QUALIFY: SOC target very low (0.05) – plan recharge lap"
     ]
   },
   "soc_warnings": [
     "RACE: deploy at 98% of MGU-K limit",
-    "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+    "RACE: SOC target very low (0.05) – plan recharge lap",
     "QUALIFY: deploy at 100% of MGU-K limit",
     "QUALIFY: harvest insufficient vs deploy (ratio 0.33)",
-    "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+    "QUALIFY: SOC target very low (0.05) – plan recharge lap"
   ]
 }

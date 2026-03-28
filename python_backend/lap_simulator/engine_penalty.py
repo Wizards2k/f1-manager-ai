@@ -110,6 +110,53 @@ def get_engine_cv_for_team(team_code: str) -> float:
     return TEAM_ENGINE_CV.get(team_code.upper(), 1008.0)  # Fallback to Mercedes reference
 
 
+# ---------------------------------------------------------------------------
+# ERS Energy Bonus
+# ---------------------------------------------------------------------------
+
+# Calibration: 4 MJ/lap across ~8 straights → 0.5 MJ/straight → 0.0625s/straight
+# → ~0.5s/lap bonus for full ERS deployment (historical F1 reference)
+ERS_BONUS_COEFF_S_PER_MJ = 0.125   # seconds gained per MJ deployed on a straight
+ERS_BONUS_MAX_PER_SECTION_S = 0.12  # safety clamp per section
+
+
+def compute_ers_bonus(
+    deploy_mj: float,
+    mguh_direct_mj: float,
+    section: SectionContext,
+    ers_thermal_eta: float = 1.0,
+) -> float:
+    """
+    Compute ERS time bonus for the current section.
+
+    Energy deployed (battery + MGU-H direct) on straight sections translates
+    into a lap time improvement. Thermal clipping is already encoded in
+    deploy_mj via power_unit.generate_output(), but eta is passed explicitly
+    for diagnostic logging.
+
+    Args:
+        deploy_mj: Battery energy deployed this section (MJ)
+        mguh_direct_mj: MGU-H direct-to-wheels energy this section (MJ)
+        section: Current circuit section
+        ers_thermal_eta: Thermal derating factor (1.0 = no clipping)
+
+    Returns:
+        ERS bonus in seconds (negative = faster, 0.0 on non-straight sections)
+    """
+    if section.kind not in STRAIGHT_KINDS:
+        return 0.0
+
+    total_energy_mj = max(deploy_mj + mguh_direct_mj, 0.0)
+    if total_energy_mj <= 1e-6:
+        return 0.0
+
+    raw_bonus = total_energy_mj * ERS_BONUS_COEFF_S_PER_MJ
+    # Clamp to avoid unrealistic single-section gains
+    bonus = clamp(raw_bonus, 0.0, ERS_BONUS_MAX_PER_SECTION_S)
+    # Return negative (time gain)
+    return -bonus
+
+
 def validate_engine_coefficient(
     circuit_coeff: float,
     expected_cv_delta: float = 20.0,

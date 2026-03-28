@@ -63,6 +63,7 @@ from utils.adapter import (
     sim_compound_to_game,
 )
 from utils.microsector_logger import log_microsector
+from utils.pu_telemetry_logger import log_pu_section
 from utils.driver_feedback import (
     get_driver_feedback,
     should_trigger_feedback,
@@ -74,6 +75,8 @@ from models.models import TireCompound as GameTireCompound
 from debug_log import log_debug_event
 
 logger = logging.getLogger(__name__)
+if os.getenv("DEBUG_PU_TELEMETRY", "0").lower() in {"1", "true", "yes", "on"}:
+    logger.setLevel(logging.DEBUG)
 
 
 def _chip_color(percent: float) -> str:
@@ -95,6 +98,7 @@ OUT_LAP_SPEED_FACTOR = 0.65     # out lap ~65% of reference speed
 IN_LAP_SPEED_FACTOR = 0.70      # in lap ~70% of reference speed
 SLOW_LAP_SPEED_FACTOR = 0.75    # slow/cooldown lap
 MIN_CAR_GAP_M = 40.0            # minimum gap between cars on track (metres)
+PITLANE_SPEED_KPH = 80.0        # pitlane speed limit (km/h)
 BLUE_FLAG_CLEAR_TICKS = 5
 BLUE_FLAG_PROXIMITY_THRESHOLD_M = 250.0
 
@@ -113,11 +117,41 @@ ICE_MODE_TO_ENGINE_MAP = {
 
 ERS_MODE_CANONICAL = {
     "RECHARGE": "RECHARGE",
+    "HARVEST": "RECHARGE",
+    "SAFETY_CAR": "RECHARGE",
     "STANDARD": "STANDARD",
+    "NEUTRAL": "STANDARD",
     "OVERTAKE": "OVERTAKE",
+    "ATTACK": "OVERTAKE",
     "QUALIFY": "QUALIFY",
+    "DEPLOY": "QUALIFY",
+    "RACE": "RACE",
     "DEFENCE": "DEFENCE",
 }
+
+ERS_MODE_TO_ENGINE_MAP = {
+    "RECHARGE": EngineMapName.SAFETY_CAR,
+    "STANDARD": EngineMapName.RACE,
+    "RACE": EngineMapName.RACE,
+    "OVERTAKE": EngineMapName.QUALIFY,
+    "QUALIFY": EngineMapName.QUALIFY,
+    "DEFENCE": EngineMapName.RACE,
+}
+
+
+def _resolve_engine_map_for_ers_mode(ers_mode: Optional[str]) -> Optional[EngineMapName]:
+    if not ers_mode:
+        return None
+    canonical = ERS_MODE_CANONICAL.get(str(ers_mode).strip().upper())
+    if not canonical:
+        return None
+    return ERS_MODE_TO_ENGINE_MAP.get(canonical)
+
+
+def _normalize_ers_mode_name(ers_mode: Optional[str]) -> Optional[str]:
+    if not ers_mode:
+        return None
+    return ERS_MODE_CANONICAL.get(str(ers_mode).strip().upper())
 
 
 # ---------------------------------------------------------------------------
@@ -145,6 +179,9 @@ class CarTrackState:
     laps_planned: int = 5
     is_player: bool = False
     lap_phase: str = LapPhase.OUT_LAP       # current lap type
+    selected_active_map: EngineMapName = EngineMapName.RACE
+    selected_ers_mode: str = "STANDARD"
+    ers_recharge_forced: bool = False
     pit_exit_delay_s: float = 0.0           # stagger delay before going on track
     pit_exit_waited_s: float = 0.0          # time waited so far
     current_sector: int = 0                 # 0=S1, 1=S2, 2=S3
@@ -152,6 +189,59 @@ class CarTrackState:
     setup_data_complete: bool = False       # AI: has enough setup info → head back in
     tyre_set_id: Optional[str] = None
     tyre_set: Optional['TyreSet'] = None
+    current_run_program: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "car_id": self.car_id,
+            "car_entry": self.car_entry.to_dict() if hasattr(self.car_entry, "to_dict") else None,
+            "current_section_idx": self.current_section_idx,
+            "section_time_acc": self.section_time_acc,
+            "lap_number": self.lap_number,
+            "distance_in_lap": self.distance_in_lap,
+            "laps_done_in_run": self.laps_done_in_run,
+            "laps_planned": self.laps_planned,
+            "is_player": self.is_player,
+            "lap_phase": self.lap_phase,
+            "selected_active_map": self.selected_active_map.value,
+            "selected_ers_mode": self.selected_ers_mode,
+            "ers_recharge_forced": self.ers_recharge_forced,
+            "pit_exit_delay_s": self.pit_exit_delay_s,
+            "pit_exit_waited_s": self.pit_exit_waited_s,
+            "current_sector": self.current_sector,
+            "sector_dt_acc": self.sector_dt_acc,
+            "setup_data_complete": self.setup_data_complete,
+            "tyre_set_id": self.tyre_set_id,
+            "current_run_program": self.current_run_program,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> CarTrackState:
+        # We need the CarEntry object which might be tricky to recreate here
+        # without all dependencies, but we'll try.
+        from lap_simulator.lap_simulator import CarEntry
+        entry = CarEntry.from_dict(data["car_entry"]) if data.get("car_entry") else None
+        ts = cls(car_id=data["car_id"], car_entry=entry)
+        ts.current_section_idx = data.get("current_section_idx", 0)
+        ts.section_time_acc = data.get("section_time_acc", 0.0)
+        ts.lap_number = data.get("lap_number", 1)
+        ts.distance_in_lap = data.get("distance_in_lap", 0.0)
+        ts.laps_done_in_run = data.get("laps_done_in_run", 0)
+        ts.laps_planned = data.get("laps_planned", 5)
+        ts.is_player = data.get("is_player", False)
+        ts.lap_phase = data.get("lap_phase", LapPhase.OUT_LAP)
+        if "selected_active_map" in data:
+             ts.selected_active_map = EngineMapName(data["selected_active_map"])
+        ts.selected_ers_mode = data.get("selected_ers_mode", "STANDARD")
+        ts.ers_recharge_forced = data.get("ers_recharge_forced", False)
+        ts.pit_exit_delay_s = data.get("pit_exit_delay_s", 0.0)
+        ts.pit_exit_waited_s = data.get("pit_exit_waited_s", 0.0)
+        ts.current_sector = data.get("current_sector", 0)
+        ts.sector_dt_acc = data.get("sector_dt_acc", 0.0)
+        ts.setup_data_complete = data.get("setup_data_complete", False)
+        ts.tyre_set_id = data.get("tyre_set_id")
+        ts.current_run_program = data.get("current_run_program")
+        return ts
 
 
 # Lap phases that should yield under blue flag during practice/quali when a HOT LAP approaches
@@ -159,6 +249,11 @@ PRACTICE_SLOW_LAP_PHASES = {
     LapPhase.OUT_LAP,
     LapPhase.IN_LAP,
     LapPhase.SLOW_LAP,
+}
+
+FORCED_RECHARGE_LAP_PHASES = {
+    LapPhase.OUT_LAP,
+    LapPhase.IN_LAP,
 }
 
 
@@ -382,6 +477,66 @@ class SessionBridge:
         self._player_runtime_state: Dict[str, Dict[str, Any]] = {}
 
     # ------------------------------------------------------------------
+    # Serialization
+    # ------------------------------------------------------------------
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "circuit_id": self.circuit_id,
+            "session_kind": self.session_kind,
+            "_accumulated_time_s": self._accumulated_time_s,
+            "_track_states": {k: v.to_dict() for k, v in self._track_states.items()},
+            "_ai_teams_cars": self._ai_teams_cars,
+            "_player_runtime_state": self._player_runtime_state,
+            "_ai_engines": {k: v.to_dict() for k, v in self.ai_engines.items()},
+            "_ai_setup_states": {k: v.to_dict() for k, v in self._ai_setup_states.items()},
+        }
+
+    def load_session_state(self, data: Dict[str, Any]) -> bool:
+        """Restores the bridge internal state from a dictionary."""
+        self.circuit_id = data.get("circuit_id")
+        self.session_kind = data.get("session_kind", "FP1")
+        self._accumulated_time_s = data.get("_accumulated_time_s", 0.0)
+        
+        # Track states restoration
+        raw_states = data.get("_track_states", {})
+        self._track_states = {}
+        for car_id, state_data in raw_states.items():
+            ts = CarTrackState.from_dict(state_data)
+            # Re-link tyre_set if tyre_set_id is present
+            if ts.tyre_set_id and self.pso:
+                # Find in inventories
+                for inv in self.pso.inventories.values():
+                    if ts.tyre_set_id in inv.sets:
+                        # Find the set in the list
+                        for s in inv.sets:
+                            if s.set_id == ts.tyre_set_id:
+                                ts.tyre_set = s
+                                break
+                        break
+            self._track_states[car_id] = ts
+            
+        self._ai_teams_cars = data.get("_ai_teams_cars", {})
+        self._player_runtime_state = data.get("_player_runtime_state", {})
+        
+        # AI Engines restoration
+        from lap_simulator.ai_driver_engine import AIDriverEngine
+        raw_engines = data.get("_ai_engines", {})
+        self.ai_engines = {}
+        if self.circuit_config:
+            for car_id, engine_data in raw_engines.items():
+                self.ai_engines[car_id] = AIDriverEngine.from_dict(engine_data, self.circuit_config)
+                
+        # AI Setup States restoration
+        from utils.ai_setup_search import AISetupState
+        raw_setup_states = data.get("_ai_setup_states", {})
+        self._ai_setup_states = {}
+        for car_id, setup_data in raw_setup_states.items():
+            self._ai_setup_states[car_id] = AISetupState.from_dict(setup_data)
+            
+        return True
+
+    # ------------------------------------------------------------------
     # Initialization
     # ------------------------------------------------------------------
 
@@ -488,7 +643,7 @@ class SessionBridge:
                     )
                     ai_ss.initialize(seed=hash(car_id) & 0xFFFFFFFF)
                     self._ai_setup_states[car_id] = ai_ss
-                    logger.info(
+                    logger.debug(
                         "AI %s setup baseline: score=%.2f, threshold=%.2f (sim_q=%d, ric=%d, perf=%d)",
                         car_id, ai_ss.setup_score, ai_ss.threshold,
                         sim_q, ric_ass, perf,
@@ -532,12 +687,12 @@ class SessionBridge:
         # Generate randomized team session plans
         self._team_plans = _build_team_plans(self.ai_engines, self._ai_teams_cars)
         total_scheduled = sum(len(p.scheduled_runs) for p in self._team_plans.values())
-        logger.info("Generated %d team plans with %d scheduled runs", len(self._team_plans), total_scheduled)
+        logger.debug("Generated %d team plans with %d scheduled runs", len(self._team_plans), total_scheduled)
         for tn, plan in self._team_plans.items():
             for sr in plan.scheduled_runs:
                 logger.debug("  %s car %s: planned at %.0fs", tn, sr.car_id, sr.planned_start_s)
 
-        logger.info(
+        logger.debug(
             "SessionBridge v2 initialized: %s on %s (%d cars, %d AI, %d sections)",
             session_type, circuit_id, len(race_cars),
             len(self.ai_engines), len(self.sections),
@@ -696,6 +851,46 @@ class SessionBridge:
             return max(0.0, min(100.0, 100.0 - (float(live_ratio) * 100.0)))
         return None
 
+    def _sync_ers_mode_state(self, ts: CarTrackState) -> None:
+        entry = ts.car_entry
+        if entry is None:
+            return
+
+        race_car = self.race_cars_map.get(ts.car_id)
+
+        selected_ers_mode = _normalize_ers_mode_name(getattr(ts, "selected_ers_mode", None))
+
+        if ts.lap_phase in FORCED_RECHARGE_LAP_PHASES:
+            if selected_ers_mode is None:
+                selected_ers_mode = _normalize_ers_mode_name(getattr(entry.state, "ers_mode", None)) or "STANDARD"
+            ts.selected_ers_mode = selected_ers_mode
+            ts.ers_recharge_forced = True
+            entry.state.ers_mode = "RECHARGE"
+            entry.state.pu.active_map = EngineMapName.SAFETY_CAR
+            if race_car is not None:
+                race_car.ers_mode = "RECHARGE"
+                if hasattr(race_car, "player_config") and isinstance(race_car.player_config, dict):
+                    race_car.player_config["ers_mode"] = "RECHARGE"
+            return
+
+        if selected_ers_mode is None:
+            selected_ers_mode = _normalize_ers_mode_name(getattr(entry.state, "ers_mode", None)) or "STANDARD"
+
+        ts.ers_recharge_forced = False
+        ts.selected_ers_mode = selected_ers_mode
+        entry.state.ers_mode = selected_ers_mode
+
+        selected_active_map = _resolve_engine_map_for_ers_mode(selected_ers_mode)
+        if selected_active_map is None:
+            selected_active_map = getattr(ts, "selected_active_map", None)
+        if selected_active_map is not None:
+            ts.selected_active_map = selected_active_map
+            entry.state.pu.active_map = selected_active_map
+        if race_car is not None:
+            race_car.ers_mode = selected_ers_mode
+            if hasattr(race_car, "player_config") and isinstance(race_car.player_config, dict):
+                race_car.player_config["ers_mode"] = selected_ers_mode
+
     # ------------------------------------------------------------------
     # FASE 2: Move cars
     # ------------------------------------------------------------------
@@ -726,12 +921,23 @@ class SessionBridge:
             if race_car is None:
                 continue
 
-            # ── Stagger delay: wait before entering track ──
+            # ── Pitlane transit: car moves at pit speed limit ──
             if ts.pit_exit_delay_s > 0 and ts.pit_exit_waited_s < ts.pit_exit_delay_s:
                 ts.pit_exit_waited_s += sim_dt
+                # Move car at pitlane speed instead of freezing it
+                pit_speed_ms = PITLANE_SPEED_KPH / 3.6
+                ts.distance_in_lap += pit_speed_ms * sim_dt
+                race_car.distance_traveled = ts.distance_in_lap % circuit_m
+                race_car.speed = pit_speed_ms
+                set_racecar_phase(race_car, ts.lap_phase)
                 continue
 
+            self._advance_car_sections(car_id, ts, race_car, sim_dt, completed_runs)
+            continue
+
             section = self.sections[ts.current_section_idx]
+
+            self._sync_ers_mode_state(ts)
 
             # ── Speed factor based on lap phase ──
             if ts.lap_phase == LapPhase.OUT_LAP:
@@ -793,6 +999,8 @@ class SessionBridge:
                     logger.error("update_section returned None for %s; using fallback section result", car_id)
                     result = SectionResult(dt_s=dt_ref, v_exit_kph=speed_kph)
 
+                self._sync_ers_mode_state(ts)
+
                 # Apply out lap / in lap penalty to the recorded dt_s
                 from dataclasses import replace as _dc_replace
                 lap_speed_factor = 1.0
@@ -839,8 +1047,8 @@ class SessionBridge:
                             tyre_wear_vals.append(tyre.wear_pct)
                         if getattr(tyre, 'surface_temp_c', None) is not None:
                             tyre_temp_vals.append(tyre.surface_temp_c)
-
                     pu_state = getattr(entry.state, 'pu', None)
+                    pu_telemetry = self._format_pu_telemetry(pu_state)
                     log_microsector({
                         'car_id': entry.car_id,
                         'lap': ts.lap_number,
@@ -887,6 +1095,11 @@ class SessionBridge:
                     })
                 except Exception:
                     logger.debug('microsector logging failed for %s', entry.car_id, exc_info=True)
+
+                try:
+                    self._log_pu_section_usage(entry, ts, section)
+                except Exception:
+                    logger.debug('pu telemetry logging failed for %s', entry.car_id, exc_info=True)
 
                 ts.lap_section_results.append(result)
 
@@ -950,10 +1163,264 @@ class SessionBridge:
                         ts.lap_phase = LapPhase.IN_LAP
                     else:
                         ts.lap_phase = LapPhase.HOT_LAP
+                    self._sync_ers_mode_state(ts)
 
         # Complete finished runs
         for car_id in completed_runs:
             self._complete_car_run(car_id)
+
+    def _advance_car_sections(
+        self,
+        car_id: str,
+        ts: CarTrackState,
+        race_car,
+        sim_dt: float,
+        completed_runs: List[str],
+    ) -> None:
+        if not self.sections or self.circuit_config is None:
+            return
+
+        n_sections = len(self.sections)
+        circuit_m = self.circuit_config.circuit_length_m
+        remaining_dt = sim_dt
+
+        if remaining_dt <= 0:
+            return
+
+        while remaining_dt > 0:
+            section = self.sections[ts.current_section_idx]
+            self._sync_ers_mode_state(ts)
+
+            # ── Speed factor based on lap phase ──
+            if ts.lap_phase == LapPhase.OUT_LAP:
+                speed_factor = OUT_LAP_SPEED_FACTOR
+            elif ts.lap_phase == LapPhase.IN_LAP:
+                speed_factor = IN_LAP_SPEED_FACTOR
+            elif ts.lap_phase == LapPhase.SLOW_LAP:
+                speed_factor = SLOW_LAP_SPEED_FACTOR
+            else:
+                speed_factor = 1.0
+
+            # Accumulate time (slower laps take longer per section)
+            dt_ref = section.dt_ref_s if section.dt_ref_s > 0 else 3.0
+            effective_dt_ref = dt_ref / speed_factor
+            current_section_time = max(ts.section_time_acc, 0.0)
+            time_needed = max(effective_dt_ref - current_section_time, 0.0)
+            consume_dt = min(remaining_dt, time_needed)
+            current_section_time = min(current_section_time + consume_dt, effective_dt_ref)
+            ts.section_time_acc = current_section_time
+            remaining_dt -= consume_dt
+
+            # ── Interpolate position (every tick) ──
+            fraction = min(current_section_time / effective_dt_ref, 1.0)
+
+            dist_in_section = fraction * section.length_m
+            section_start_m = self._section_end_m[ts.current_section_idx] - section.length_m if ts.current_section_idx < len(self._section_end_m) else 0
+            ts.distance_in_lap = section_start_m + dist_in_section
+
+            # Speed interpolation (v_entry → v_exit) scaled by phase
+            v_entry = section.v_entry_kph if section.v_entry_kph > 0 else 200.0
+            v_exit = section.v_exit_kph if section.v_exit_kph > 0 else v_entry
+            speed_kph = (v_entry + fraction * (v_exit - v_entry)) * speed_factor
+
+            race_car.distance_traveled = ts.distance_in_lap % circuit_m
+            race_car.speed = max(speed_kph / 3.6, 1.0)
+
+            # Set RaceCar state based on lap phase
+            set_racecar_phase(race_car, ts.lap_phase)
+
+            if current_section_time < effective_dt_ref:
+                break
+
+            entry = ts.car_entry
+            try:
+                result = update_section(
+                    car_state=entry.state,
+                    aero_setup=entry.aero_setup,
+                    driver_skills=entry.driver_skills,
+                    section=section,
+                    env=self.env,
+                    config=self.circuit_config,
+                    push_level=entry.push_level,
+                    delta_aero=getattr(entry, 'delta_aero', 0.0),
+                    delta_grip=getattr(entry, 'delta_grip', 0.0),
+                    apply_baseline_delta=getattr(entry, 'apply_baseline_delta', True),
+                )
+            except Exception as e:
+                logger.error("update_section error for %s: %s", car_id, e)
+                result = None
+
+            if result is None:
+                logger.error("update_section returned None for %s; using fallback section result", car_id)
+                result = SectionResult(dt_s=dt_ref, v_exit_kph=speed_kph)
+
+            self._sync_ers_mode_state(ts)
+
+            # Apply out lap / in lap penalty to the recorded dt_s
+            from dataclasses import replace as _dc_replace
+            lap_speed_factor = 1.0
+            if ts.lap_phase == LapPhase.OUT_LAP:
+                lap_speed_factor = OUT_LAP_SPEED_FACTOR
+            elif ts.lap_phase == LapPhase.IN_LAP:
+                lap_speed_factor = IN_LAP_SPEED_FACTOR
+            elif ts.lap_phase == LapPhase.SLOW_LAP:
+                lap_speed_factor = SLOW_LAP_SPEED_FACTOR
+
+            if lap_speed_factor != 1.0:
+                scaled_points = []
+                for point in getattr(result, 'telemetry_points', []) or []:
+                    scaled_point = dict(point)
+                    if scaled_point.get('speed_kph') is not None:
+                        scaled_point['speed_kph'] = round(float(scaled_point['speed_kph']) * lap_speed_factor, 3)
+                    if scaled_point.get('dt_s') is not None:
+                        scaled_point['dt_s'] = round(float(scaled_point['dt_s']) / lap_speed_factor, 4)
+                    scaled_points.append(scaled_point)
+
+                result = _dc_replace(
+                    result,
+                    dt_s=result.dt_s / lap_speed_factor,
+                    v_exit_kph=result.v_exit_kph * lap_speed_factor,
+                    v_entry_kph=result.v_entry_kph * lap_speed_factor,
+                    v_effective_kph=result.v_effective_kph * lap_speed_factor,
+                    v_max_kph=result.v_max_kph * lap_speed_factor,
+                    telemetry_points=scaled_points,
+                )
+
+            try:
+                tyres_payload: Dict[str, Dict[str, Any]] = {}
+                tyre_wear_vals: List[float] = []
+                tyre_temp_vals: List[float] = []
+                for wp, tyre in getattr(entry.state, 'tyres', {}).items():
+                    compound = getattr(getattr(tyre, 'compound', None), 'value', None)
+                    tyres_payload[wp.name] = {
+                        'compound': compound,
+                        'wear_pct': getattr(tyre, 'wear_pct', None),
+                        'surface_temp_c': getattr(tyre, 'surface_temp_c', None),
+                        'age_laps': getattr(tyre, 'lap_age', None),
+                    }
+                    if getattr(tyre, 'wear_pct', None) is not None:
+                        tyre_wear_vals.append(tyre.wear_pct)
+                    if getattr(tyre, 'surface_temp_c', None) is not None:
+                        tyre_temp_vals.append(tyre.surface_temp_c)
+                pu_state = getattr(entry.state, 'pu', None)
+                pu_telemetry = self._format_pu_telemetry(pu_state)
+                log_microsector({
+                    'car_id': entry.car_id,
+                    'lap': ts.lap_number,
+                    'section_id': section.section_id,
+                    'section_index': ts.current_section_idx,
+                    'section_kind': section.kind.name,
+                    'section_length_m': section.length_m,
+                    'dt_s': result.dt_s,
+                    'v_entry_kph': result.v_entry_kph,
+                    'v_exit_kph': result.v_exit_kph,
+                    'v_max_kph': result.v_max_kph,
+                    'v_effective_kph': result.v_effective_kph,
+                    'penalties': {
+                        'fuel_s': result.fuel_penalty_s,
+                        'tyre_s': result.tyre_penalty_s,
+                        'push_s': result.push_penalty_s,
+                        'engine_s': result.engine_penalty_s,
+                        'brake_s': result.brake_penalty_s,
+                        'setup_s': result.setup_penalty_s,
+                        'df_curve_penalty_s': result.df_curve_penalty_s,
+                        'df_curve_bonus_s': result.df_curve_bonus_s,
+                        'drag_penalty_s': result.drag_penalty_s,
+                        'drag_bonus_s': result.drag_bonus_s,
+                        'handling_penalty': result.handling_penalty,
+                    },
+                    'push_level': entry.push_level,
+                    'delta_aero': getattr(entry, 'delta_aero', 0.0),
+                    'delta_grip': getattr(entry, 'delta_grip', 0.0),
+                    'apply_baseline_delta': getattr(entry, 'apply_baseline_delta', True),
+                    'setup_sliders': getattr(entry, 'setup_sliders', {}),
+                    'ideal_setup_sliders': getattr(entry, 'ideal_setup_sliders', {}),
+                    'tyres': tyres_payload,
+                    'tyre_avg_wear_pct': sum(tyre_wear_vals) / len(tyre_wear_vals) if tyre_wear_vals else None,
+                    'tyre_avg_temp_c': sum(tyre_temp_vals) / len(tyre_temp_vals) if tyre_temp_vals else None,
+                    'fuel_kg': getattr(pu_state, 'fuel_kg', None),
+                    'ers_energy_mj': getattr(pu_state, 'ers_energy_mj', None),
+                    'ers_mode': getattr(entry.state, 'ers_mode', None),
+                    'engine_map': getattr(getattr(pu_state, 'active_map', None), 'value', None),
+                    'overtake_window': result.overtake_window,
+                    'braking_efficiency': result.braking_efficiency,
+                    'power_kw': result.power_kw,
+                    'events': [evt.event_type for evt in result.events],
+                    'lap_phase': str(ts.lap_phase),
+                })
+            except Exception:
+                logger.debug('microsector logging failed for %s', entry.car_id, exc_info=True)
+
+            try:
+                self._log_pu_section_usage(entry, ts, section)
+            except Exception:
+                logger.debug('pu telemetry logging failed for %s', entry.car_id, exc_info=True)
+
+            ts.lap_section_results.append(result)
+
+            # Track sector time accumulation
+            ts.sector_dt_acc += result.dt_s
+
+            # Check sector crossing
+            section_end_m = self._section_end_m[ts.current_section_idx] if ts.current_section_idx < len(self._section_end_m) else 0
+            if ts.current_sector < len(self._sector_end_m) and section_end_m >= self._sector_end_m[ts.current_sector]:
+                sector_key = f"sector{ts.current_sector + 1}"
+                sector_index = ts.current_sector
+                sector_time = ts.sector_dt_acc
+                if not hasattr(race_car, 'current_lap_sectors') or race_car.current_lap_sectors is None:
+                    race_car.current_lap_sectors = {}
+                race_car.current_lap_sectors[sector_key] = sector_time
+                # Update personal best sectors live (only during HOT_LAP)
+                if ts.lap_phase == LapPhase.HOT_LAP:
+                    best = race_car.best_sectors.get(sector_key)
+                    if best is None or sector_time < best:
+                        race_car.best_sectors[sector_key] = sector_time
+                    # Update session bests immediately so frontend can show purple/green
+                    from utils.game_logic import update_session_bests
+                    update_session_bests(race_car)
+                ts.current_sector += 1
+                ts.sector_dt_acc = 0.0
+
+            # Update RaceCar with section data/telemetry
+            for ev in result.events:
+                self._update_brake_warning(race_car, ev.event_type)
+                if (
+                    ts.is_player
+                    and ts.lap_phase == LapPhase.HOT_LAP
+                    and ev.event_type in THERMAL_FEEDBACK_EVENTS
+                ):
+                    emit_thermal_feedback(race_car, ev.event_type, getattr(ev, "message", None))
+            self._apply_section_to_racecar(race_car, entry, result, section)
+
+            # Advance to next section
+            ts.current_section_idx += 1
+            entry.state.current_section_idx = ts.current_section_idx
+            ts.section_time_acc = 0.0
+
+            # ── Check lap completion ──
+            if ts.current_section_idx >= n_sections:
+                self._commit_lap(car_id, ts, race_car)
+                ts.current_section_idx = 0
+                entry.state.current_section_idx = 0
+                ts.section_time_acc = 0.0
+                ts.sector_dt_acc = 0.0
+                ts.current_sector = 0
+                race_car.current_lap_sectors = {}
+
+                # Update lap phase for next lap
+                if ts.laps_done_in_run >= ts.laps_planned:
+                    completed_runs.append(car_id)
+                    break
+                elif ts.setup_data_complete and not ts.is_player:
+                    ts.lap_phase = LapPhase.IN_LAP
+                elif ts.laps_done_in_run >= ts.laps_planned - 1:
+                    ts.lap_phase = LapPhase.IN_LAP
+                else:
+                    ts.lap_phase = LapPhase.HOT_LAP
+                self._sync_ers_mode_state(ts)
+
+            if remaining_dt <= 0:
+                break
 
     # ------------------------------------------------------------------
     # Lap commit
@@ -1134,6 +1601,17 @@ class SessionBridge:
             race_car.current_tyre_laps_completed,
             max((getattr(tyre_state, "age_laps", 0) for tyre_state in entry.state.tyres.values()), default=0)
         )
+        
+        # Sync AI-specific fields for debug tooltip
+        if not race_car.is_player_controlled:
+            race_car.ai_tyre_condition = race_car.current_tyre_condition_pct
+            race_car.ai_tyre_heat_cycles = race_car.current_tyre_heat_cycles
+            # tyre_set_id comes from the CarTrackState (ts)
+            ts = self._track_states.get(entry.car_id) # Use entry.car_id to get ts
+            if ts and hasattr(ts, 'tyre_set_id'):
+                race_car.ai_tyre_set_id = str(ts.tyre_set_id) if ts.tyre_set_id else "--"
+            if ts and hasattr(ts, 'current_run_program'):
+                race_car.ai_program = str(ts.current_run_program) if ts.current_run_program else "--"
 
         # Tyre temps (surface + core)
         temps = {}
@@ -1208,11 +1686,17 @@ class SessionBridge:
         primary_pct_cfg = map_budget.get("bucket_primary_pct")
         secondary_pct_cfg = map_budget.get("bucket_secondary_pct")
         exit_pct_cfg = map_budget.get("bucket_exit_pct")
-        defense_reserve_cfg = map_budget.get("defense_reserve_mj")
+        primary_es_deploy_pct_cfg = map_budget.get("bucket_primary_es_deploy_pct", 0.0)
+        secondary_es_deploy_pct_cfg = map_budget.get("bucket_secondary_es_deploy_pct", 0.0)
+        exit_es_deploy_pct_cfg = map_budget.get("bucket_exit_es_deploy_pct", 0.0)
         deploy_budget_cfg = map_budget.get("deploy_mj_per_lap")
-        mguh_direct_cfg_total = map_budget.get("mguh_direct_mj_per_lap")
+        harvest_budget_cfg = map_budget.get("harvest_mj_per_lap")
+        defense_reserve_cfg = map_budget.get("defense_reserve_mj")
+        mguh_direct_ratio = map_budget.get("mguh_direct_ratio")
+        if mguh_direct_ratio is None:
+            mguh_direct_ratio = 0.45
+        mguh_es_ratio = max(1.0 - float(mguh_direct_ratio), 0.0)
         bucket_cfg = {"primary": None, "secondary": None, "exit": None}
-        mguh_bucket_cfg = {"primary": None, "secondary": None, "exit": None}
         pct_sum = max(
             (primary_pct_cfg or 0.0) + (secondary_pct_cfg or 0.0) + (exit_pct_cfg or 0.0),
             1e-6,
@@ -1224,26 +1708,12 @@ class SessionBridge:
                 "secondary": available_cfg * ((secondary_pct_cfg or 0.0) / pct_sum),
                 "exit": available_cfg * ((exit_pct_cfg or 0.0) / pct_sum),
             }
-        if mguh_direct_cfg_total is not None and (primary_pct_cfg or secondary_pct_cfg or exit_pct_cfg):
-            mguh_bucket_cfg = {
-                "primary": mguh_direct_cfg_total * ((primary_pct_cfg or 0.0) / pct_sum),
-                "secondary": mguh_direct_cfg_total * ((secondary_pct_cfg or 0.0) / pct_sum),
-                "exit": mguh_direct_cfg_total * ((exit_pct_cfg or 0.0) / pct_sum),
-            }
 
         bucket_primary_total = pu_state.bucket_primary_total_mj if pu_state.bucket_primary_total_mj > 1e-6 else (bucket_cfg["primary"] or 0.0)
         bucket_secondary_total = pu_state.bucket_secondary_total_mj if pu_state.bucket_secondary_total_mj > 1e-6 else (bucket_cfg["secondary"] or 0.0)
         bucket_exit_total = pu_state.bucket_exit_total_mj if pu_state.bucket_exit_total_mj > 1e-6 else (bucket_cfg["exit"] or 0.0)
         deploy_budget_total = pu_state.deploy_budget_total_mj if pu_state.deploy_budget_total_mj > 1e-6 else (deploy_budget_cfg or deploy_limit)
         defense_reserve_available = pu_state.defense_reserve_available_mj if pu_state.defense_reserve_available_mj > 1e-6 else (defense_reserve_cfg or 0.0)
-        mguh_primary_total = pu_state.mguh_primary_total_mj if pu_state.mguh_primary_total_mj > 1e-6 else (mguh_bucket_cfg["primary"] or 0.0)
-        mguh_secondary_total = pu_state.mguh_secondary_total_mj if pu_state.mguh_secondary_total_mj > 1e-6 else (mguh_bucket_cfg["secondary"] or 0.0)
-        mguh_exit_total = pu_state.mguh_exit_total_mj if pu_state.mguh_exit_total_mj > 1e-6 else (mguh_bucket_cfg["exit"] or 0.0)
-        mguh_direct_total = mguh_primary_total + mguh_secondary_total + mguh_exit_total
-        mguh_primary_used = pu_state.mguh_primary_used_mj
-        mguh_secondary_used = pu_state.mguh_secondary_used_mj
-        mguh_exit_used = pu_state.mguh_exit_used_mj
-        mguh_direct_used = mguh_primary_used + mguh_secondary_used + mguh_exit_used
 
         return {
             "map": active_map,
@@ -1255,11 +1725,16 @@ class SessionBridge:
             "deploy_mj_per_lap": map_budget.get("deploy_mj_per_lap"),
             "harvest_mj_per_lap": map_budget.get("harvest_mj_per_lap"),
             "target_soc_end_lap": map_budget.get("target_soc_end_lap"),
+            "mguh_direct_ratio": round(float(mguh_direct_ratio), 3),
+            "mguh_es_ratio": round(mguh_es_ratio, 3),
             "deploy_ratio": map_budget.get("deploy_ratio"),
             "harvest_ratio": map_budget.get("harvest_ratio"),
             "bucket_primary_pct": primary_pct_cfg,
             "bucket_secondary_pct": secondary_pct_cfg,
             "bucket_exit_pct": exit_pct_cfg,
+            "bucket_primary_es_deploy_pct": round(primary_es_deploy_pct_cfg, 3),
+            "bucket_secondary_es_deploy_pct": round(secondary_es_deploy_pct_cfg, 3),
+            "bucket_exit_es_deploy_pct": round(exit_es_deploy_pct_cfg, 3),
             "bucket_primary_config_mj": None if bucket_cfg["primary"] is None else round(bucket_cfg["primary"], 4),
             "bucket_secondary_config_mj": None if bucket_cfg["secondary"] is None else round(bucket_cfg["secondary"], 4),
             "bucket_exit_config_mj": None if bucket_cfg["exit"] is None else round(bucket_cfg["exit"], 4),
@@ -1268,8 +1743,11 @@ class SessionBridge:
             "warnings_runtime": runtime_warnings,
             "warnings_runtime_prev": runtime_warnings_prev,
             "lap_deploy_mj": round(entry.state.pu.lap_deploy_mj, 3),
+            "deploy_ES": round(entry.state.pu.lap_deploy_mj, 3),
             "lap_harvest_mj": round(entry.state.pu.lap_harvest_mj, 3),
+            "mguh_dir": round(entry.state.pu.lap_mguh_direct_mj, 3),
             "lap_mguh_direct_mj": round(entry.state.pu.lap_mguh_direct_mj, 3),
+            "mguh_es": round(entry.state.pu.lap_mguh_harvest_mj, 3),
             "lap_mguh_harvest_mj": round(entry.state.pu.lap_mguh_harvest_mj, 3),
             "lap_deploy_prev_mj": round(entry.state.pu.lap_deploy_prev_mj, 3),
             "lap_harvest_prev_mj": round(entry.state.pu.lap_harvest_prev_mj, 3),
@@ -1289,19 +1767,12 @@ class SessionBridge:
             "defense_reserve_available_mj": round(defense_reserve_available, 4),
             "soc_floor_dynamic_pct": round(getattr(pu_state, "soc_floor_dynamic_pct", 0.0), 4),
             "soc_target_pct": round(getattr(pu_state, "soc_target_pct", 0.0), 4),
-            "mguh_primary_total_mj": round(mguh_primary_total, 4),
-            "mguh_secondary_total_mj": round(mguh_secondary_total, 4),
-            "mguh_exit_total_mj": round(mguh_exit_total, 4),
-            "mguh_primary_used_mj": round(mguh_primary_used, 4),
-            "mguh_secondary_used_mj": round(mguh_secondary_used, 4),
-            "mguh_exit_used_mj": round(mguh_exit_used, 4),
-            "mguh_direct_total_mj": round(mguh_direct_total, 4),
-            "mguh_direct_used_mj": round(mguh_direct_used, 4),
-            "mguh_direct_remaining_mj": round(max(mguh_direct_total - mguh_direct_used, 0.0), 4),
-            "mguh_primary_config_mj": None if mguh_bucket_cfg["primary"] is None else round(mguh_bucket_cfg["primary"], 4),
-            "mguh_secondary_config_mj": None if mguh_bucket_cfg["secondary"] is None else round(mguh_bucket_cfg["secondary"], 4),
-            "mguh_exit_config_mj": None if mguh_bucket_cfg["exit"] is None else round(mguh_bucket_cfg["exit"], 4),
-            "mguh_direct_config_total_mj": None if mguh_direct_cfg_total is None else round(mguh_direct_cfg_total, 4),
+            "primary_sections_count": pu_state.primary_sections_count,
+            "secondary_sections_count": pu_state.secondary_sections_count,
+            "exit_sections_count": pu_state.exit_sections_count,
+            "primary_sections_remaining": pu_state.primary_sections_remaining,
+            "secondary_sections_remaining": pu_state.secondary_sections_remaining,
+            "exit_sections_remaining": pu_state.exit_sections_remaining,
             "last_priority_score": round(pu_state.last_priority_score, 3),
             "last_bucket_key": pu_state.last_bucket_key,
             "last_bucket_allocated_mj": round(pu_state.last_bucket_allocated_mj, 4),
@@ -1310,6 +1781,155 @@ class SessionBridge:
             "last_defense_mode": bool(pu_state.last_defense_mode),
             "last_recharge_mode": bool(pu_state.last_recharge_mode),
         }
+
+    def _format_pu_telemetry(self, pu_state) -> Dict[str, Any]:
+        """Format PU telemetry data for microsector logging."""
+        if not pu_state:
+            return {}
+        return {
+            "ers_energy_mj": round(pu_state.ers_energy_mj, 4),
+            "lap_deploy_mj": round(getattr(pu_state, 'lap_deploy_mj', 0.0), 4),
+            "deploy_ES": round(getattr(pu_state, 'lap_deploy_mj', 0.0), 4),
+            "lap_harvest_mj": round(getattr(pu_state, 'lap_harvest_mj', 0.0), 4),
+            "mguh_dir": round(getattr(pu_state, 'lap_mguh_direct_mj', 0.0), 4),
+            "lap_mguh_direct_mj": round(getattr(pu_state, 'lap_mguh_direct_mj', 0.0), 4),
+            "mguh_es": round(getattr(pu_state, 'lap_mguh_harvest_mj', 0.0), 4),
+            "lap_mguh_harvest_mj": round(getattr(pu_state, 'lap_mguh_harvest_mj', 0.0), 4),
+            "soc_pct": round(pu_state.ers_energy_mj / 4.0 * 100, 2) if pu_state.ers_energy_mj is not None else 0.0,
+        }
+
+    def _log_pu_section_usage(self, entry, ts: CarTrackState, section: SectionContext) -> None:
+        if not self.circuit_config:
+            return
+
+        # Filter by PENALTY_LOG_DRIVER_IDS
+        from lap_simulator.lap_simulator import _TARGET_PENALTY_DRIVER_IDS
+        if str(entry.car_id) not in _TARGET_PENALTY_DRIVER_IDS:
+            return
+        
+        pu_state = getattr(entry.state, 'pu', None)
+        if not pu_state:
+            return
+        trace_entry = (pu_state.energy_trace or [{}])[-1] or {}
+
+        budget = self.circuit_config.ers_budget or {}
+        capacity = budget.get("battery_capacity_mj", 4.0) or 4.0
+        maps_budget = budget.get("maps", {})
+        active_map_name = pu_state.active_map.value if pu_state.active_map else "STANDARD"
+        map_budget = maps_budget.get(active_map_name, {})
+
+        deploy_budget_cfg = map_budget.get("deploy_mj_per_lap")
+        harvest_budget_cfg = map_budget.get("harvest_mj_per_lap")
+        mguh_direct_ratio = map_budget.get("mguh_direct_ratio")
+        if mguh_direct_ratio is None:
+            mguh_direct_ratio = 0.45
+        mguh_es_ratio = max(1.0 - float(mguh_direct_ratio), 0.0)
+
+        bucket_primary_total = pu_state.bucket_primary_total_mj
+        bucket_secondary_total = pu_state.bucket_secondary_total_mj
+        bucket_exit_total = pu_state.bucket_exit_total_mj
+        bucket_primary_used = pu_state.bucket_primary_used_mj
+        bucket_secondary_used = pu_state.bucket_secondary_used_mj
+        bucket_exit_used = pu_state.bucket_exit_used_mj
+
+        bucket_key = pu_state.last_bucket_key or "primary"
+        bucket_totals = {
+            "primary": bucket_primary_total,
+            "secondary": bucket_secondary_total,
+            "exit": bucket_exit_total,
+        }
+        bucket_used_map = {
+            "primary": bucket_primary_used,
+            "secondary": bucket_secondary_used,
+            "exit": bucket_exit_used,
+        }
+        bucket_budget_total = bucket_totals.get(bucket_key, 0.0)
+        bucket_budget_used = bucket_used_map.get(bucket_key, 0.0)
+        bucket_budget_remaining_after = max(bucket_budget_total - bucket_budget_used, 0.0)
+        bucket_section_es = trace_entry.get("deploy_mj") if trace_entry else 0.0
+        bucket_section_dir = trace_entry.get("mguh_direct_mj") if trace_entry else None
+        bucket_es_deploy_pct = map_budget.get(f"bucket_{bucket_key}_es_deploy_pct", 0.0)
+        bucket_consumed_mj = max(
+            float(getattr(pu_state, "last_bucket_allocated_mj", 0.0) or 0.0)
+            - float(getattr(pu_state, "last_defense_used_mj", 0.0) or 0.0),
+            0.0,
+        )
+        bucket_budget_remaining = min(
+            bucket_budget_total,
+            max(bucket_budget_remaining_after + bucket_consumed_mj, 0.0),
+        )
+        bucket_sections_remaining_after = {
+            "primary": pu_state.primary_sections_remaining,
+            "secondary": pu_state.secondary_sections_remaining,
+            "exit": pu_state.exit_sections_remaining,
+        }.get(bucket_key, 0)
+        bucket_sections_remaining_at_entry = max(bucket_sections_remaining_after + 1, 1)
+        bucket_section_cap = (
+            bucket_budget_remaining / bucket_sections_remaining_at_entry
+            if bucket_budget_remaining > 1e-6
+            else getattr(pu_state, "last_bucket_cap_mj", 0.0)
+        )
+
+        payload = {
+            "car_id": entry.car_id,
+            "driver": getattr(entry, "driver_name", None),
+            "lap": ts.lap_number,
+            "lap_id": pu_state.lap_id_current,
+            "section_id": trace_entry.get("section_id"),
+            "section_index": ts.current_section_idx,
+            "section_kind": section.kind.name,
+            "bucket_type": bucket_key,
+            "section_length_m": section.length_m,
+            "deploy_mj": trace_entry.get("deploy_mj"),
+            "harvest_mj": trace_entry.get("harvest_mj"),
+            "mguh_direct_mj": trace_entry.get("mguh_direct_mj"),
+            "mguh_es_mj": trace_entry.get("mguh_es_mj"),
+            "battery_soc_mj": pu_state.ers_energy_mj,
+            "battery_soc_pct": (pu_state.ers_energy_mj / capacity) * 100.0 if capacity > 1e-6 else 0.0,
+            "lap_deploy_mj": pu_state.lap_deploy_mj,
+            "lap_harvest_mj": pu_state.lap_harvest_mj,
+            "lap_mguh_direct_mj": pu_state.lap_mguh_direct_mj,
+            "lap_mguh_es_mj": pu_state.lap_mguh_harvest_mj,
+            "deploy_budget_mj": deploy_budget_cfg,
+            "harvest_budget_mj": harvest_budget_cfg,
+            "mguh_direct_ratio": round(float(mguh_direct_ratio), 3),
+            "mguh_es_ratio": round(mguh_es_ratio, 3),
+            "deploy_budget_total_mj": pu_state.deploy_budget_total_mj,
+            "bucket_primary_total_mj": bucket_primary_total,
+            "bucket_secondary_total_mj": bucket_secondary_total,
+            "bucket_exit_total_mj": bucket_exit_total,
+            "bucket_primary_used_mj": bucket_primary_used,
+            "bucket_secondary_used_mj": bucket_secondary_used,
+            "bucket_exit_used_mj": bucket_exit_used,
+            "bucket_budget_total_mj": bucket_budget_total,
+            "bucket_budget_remaining_mj": bucket_budget_remaining,
+            "bucket_section_cap_mj": bucket_section_cap,
+            "bucket_sections_left": bucket_sections_remaining_at_entry,
+            "bucket_es_deploy_pct": round(float(bucket_es_deploy_pct or 0.0), 3),
+            "bucket_section_es_mj": bucket_section_es,
+            "bucket_section_dir_mj": bucket_section_dir,
+            "primary_sections_count": pu_state.primary_sections_count,
+            "secondary_sections_count": pu_state.secondary_sections_count,
+            "exit_sections_count": pu_state.exit_sections_count,
+            "primary_sections_remaining": pu_state.primary_sections_remaining,
+            "secondary_sections_remaining": pu_state.secondary_sections_remaining,
+            "exit_sections_remaining": pu_state.exit_sections_remaining,
+            "bucket_key": pu_state.last_bucket_key,
+            "last_bucket_allocated_mj": pu_state.last_bucket_allocated_mj,
+            "last_priority_score": pu_state.last_priority_score,
+            "ers_mode": getattr(entry.state, 'ers_mode', None),
+            "engine_map": active_map_name,
+            "warnings": list(pu_state.runtime_warnings or []),
+            # Thermal clipping diagnostics
+            "ers_temp_c": round(pu_state.ers_temp_c, 2),
+            "ers_thermal_eta": round(getattr(pu_state, "ers_thermal_eta", 1.0), 4),
+            "ers_clipping_active": getattr(pu_state, "ers_thermal_eta", 1.0) < 0.99,
+            # ERS bonus diagnostics
+            "section_ers_bonus_s": round(getattr(pu_state, "last_section_ers_bonus_s", 0.0), 4),
+            "lap_ers_bonus_s": round(getattr(pu_state, "lap_ers_bonus_s", 0.0), 4),
+        }
+
+        log_pu_section(payload)
 
     def _build_brake_diagnostics(self, section: SectionContext) -> Dict[str, Any]:
         if not self.circuit_config:
@@ -1561,9 +2181,13 @@ class SessionBridge:
             laps_planned=stint_laps,
             is_player=True,
             pit_exit_delay_s=2.0,  # player gets short delay
+            selected_active_map=_resolve_engine_map_for_ers_mode(_normalize_ers_mode_name(getattr(entry.state, "ers_mode", None)) or "STANDARD") or entry.state.pu.active_map,
+            selected_ers_mode=_normalize_ers_mode_name(getattr(entry.state, "ers_mode", None)) or "STANDARD",
             tyre_set_id=(active_tyre_set.set_id if active_tyre_set else (tyre_set_id or None)),
             tyre_set=active_tyre_set,
+            current_run_program=RunProgram.SETUP_VALIDATION,
         )
+        self._sync_ers_mode_state(self._track_states[car_id])
         return True
 
     def player_box_now(self, car) -> None:
@@ -1600,9 +2224,28 @@ class SessionBridge:
             if engine_map:
                 entry.state.pu.active_map = engine_map
         if ers_mode:
-            canonical = ERS_MODE_CANONICAL.get(str(ers_mode).strip().upper())
+            canonical = _normalize_ers_mode_name(ers_mode)
             if canonical:
-                entry.state.ers_mode = canonical
+                ts.selected_ers_mode = canonical
+                ers_engine_map = _resolve_engine_map_for_ers_mode(canonical)
+                if ers_engine_map:
+                    ts.selected_active_map = ers_engine_map
+                if not ts.ers_recharge_forced:
+                    entry.state.ers_mode = canonical
+                    if ers_engine_map:
+                        entry.state.pu.active_map = ers_engine_map
+                else:
+                    entry.state.ers_mode = "RECHARGE"
+                    entry.state.pu.active_map = EngineMapName.SAFETY_CAR
+                if self.circuit_config and getattr(self.circuit_config, "ers_budget", None):
+                    budget_maps = self.circuit_config.ers_budget.get("maps", {})
+                    if isinstance(budget_maps, dict):
+                        target_soc = budget_maps.get(canonical, {}).get("target_soc_end_lap")
+                        if isinstance(target_soc, (int, float)):
+                            entry.state.pu.soc_target_pct = float(target_soc)
+                            entry.state.pu.soc_floor_dynamic_pct = float(target_soc)
+        if ers_mode or ts.ers_recharge_forced:
+            self._sync_ers_mode_state(ts)
 
 
     # ------------------------------------------------------------------
@@ -1732,6 +2375,18 @@ class SessionBridge:
                 except Exception as exc:
                     logger.warning("AI dispatch: failed to sync tyre compound for %s: %s", car_id, exc)
 
+                # Push the actual tyre set stats (wear, heat cycles) to the CarEntry used by the simulator
+                try:
+                    wear_pct = max(0.0, min(100.0, 100.0 - reserved_set.condition))
+                    sim_cmp = game_compound_to_sim(game_compound) if 'game_compound' in locals() else car_entry.state.tyres[list(car_entry.state.tyres.keys())[0]].compound
+                    for tyre_state in car_entry.state.tyres.values():
+                        tyre_state.wear_pct = wear_pct
+                        tyre_state.heat_cycles = reserved_set.heat_cycles
+                        tyre_state.age_laps = reserved_set.laps_completed
+                        tyre_state.compound = sim_cmp
+                except Exception as exc:
+                    logger.warning("AI dispatch: failed to apply tyre set state to CarEntry for %s: %s", car_id, exc)
+
                 record = self.pso.request_run(
                     car_id=car_id, program=run_plan.program,
                     compound=run_plan.compound, fuel_kg=run_plan.fuel_kg,
@@ -1747,10 +2402,14 @@ class SessionBridge:
                         car_entry=car_entry,
                         laps_planned=run_plan.laps_planned,
                         pit_exit_delay_s=pit_exit,
+                        selected_active_map=_resolve_engine_map_for_ers_mode(_normalize_ers_mode_name(getattr(car_entry.state, "ers_mode", None)) or "STANDARD") or car_entry.state.pu.active_map,
+                        selected_ers_mode=_normalize_ers_mode_name(getattr(car_entry.state, "ers_mode", None)) or "STANDARD",
                         tyre_set_id=reserved_set_id,
                         tyre_set=reserved_set,
+                        current_run_program=run_plan.program,
                     )
                     self._track_states[car_id] = car_state
+                    self._sync_ers_mode_state(car_state)
                     self._emit_run_started_event(
                         car_id,
                         program=run_plan.program.value,
@@ -1788,6 +2447,20 @@ class SessionBridge:
         ts = self._track_states.pop(car_id, None)
         if ts is None:
             return
+
+        selected_ers_mode = _normalize_ers_mode_name(getattr(ts, "selected_ers_mode", None)) or "STANDARD"
+        restored_map = _resolve_engine_map_for_ers_mode(selected_ers_mode)
+        entry = ts.car_entry
+        if entry is not None:
+            entry.state.ers_mode = selected_ers_mode
+            if restored_map is not None:
+                entry.state.pu.active_map = restored_map
+
+        race_car = self.race_cars_map.get(car_id)
+        if race_car is not None:
+            race_car.ers_mode = selected_ers_mode
+            if hasattr(race_car, "player_config") and isinstance(race_car.player_config, dict):
+                race_car.player_config["ers_mode"] = selected_ers_mode
 
         # Clear blue flag when car returns to box
         if self.pso:
@@ -1922,7 +2595,24 @@ class SessionBridge:
                 )
                 race_car.update_ai_setup_snapshot(
                     setup_snapshot=result.setup_snapshot,
+                    min_runs_required=ai_ss.min_runs_required,
                 )
+
+                # Sync AI tyre data for debug tooltip
+                ts = self._track_states.get(car_id)
+                if ts and ts.tyre_set:
+                    race_car.ai_tyre_set_id = str(ts.tyre_set.set_id)
+                    race_car.ai_tyre_condition = round(ts.tyre_set.condition, 1)
+                    race_car.ai_tyre_heat_cycles = ts.tyre_set.heat_cycles
+                # Sync current AI program
+                if engine and engine.current_run_idx > 0:
+                    idx = engine.current_run_idx - 1
+                    if idx < len(engine.session_plan.runs):
+                        race_car.ai_program = engine.session_plan.runs[idx].program.value
+                    else:
+                        race_car.ai_program = result.program
+                else:
+                    race_car.ai_program = result.program
 
                 after_points = race_car.setup_info_points
                 after_percent = race_car.setup_info_percent

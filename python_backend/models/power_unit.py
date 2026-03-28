@@ -78,7 +78,7 @@ class ErsMap:
     bucket_exit_pct: float = 0.15
     defense_reserve_mj: float = 0.2
     ers_output_kw: float = 120.0
-    mguh_direct_ratio: float = 0.0
+    mguh_direct_ratio: float = 0.45
     mguh_power_kw: float = 0.0
     heat_load_kw: float = 260.0
     cooling_share: float = 0.5
@@ -154,10 +154,5 @@ class PowerUnit:
         state.bucket_secondary_total_mj = ers_map.deploy_budget_mj * ers_map.bucket_secondary_pct
         state.bucket_exit_total_mj = ers_map.deploy_budget_mj * ers_map.bucket_exit_pct
         state.defense_reserve_available_mj = ers_map.defense_reserve_mj
-
-        # MGU-H coupling baseline
-        state.mguh_primary_total_mj = 0.0
-        state.mguh_secondary_total_mj = 0.0
-        state.mguh_exit_total_mj = 0.0
 
         return state, map_params

@@ -93,6 +93,8 @@
 .speed-buttons {
     display: flex;
     gap: 6px;
+    flex-wrap: nowrap;
+    align-items: center;
 }
 
 .speed-btn,

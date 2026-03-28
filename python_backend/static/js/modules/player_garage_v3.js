@@ -39,13 +39,7 @@ export class PlayerGarageV3 {
             },
         };
         this.tyreOptions = [];
-        this.iceOptions = [
-            { label: 'SAFETY CAR', value: 'SAFETY_CAR' },
-            { label: 'PRACTICE', value: 'PRACTICE' },
-            { label: 'RACE', value: 'RACE' },
-            { label: 'QUALIFY', value: 'QUALIFY' },
-        ];
-        this.ersOptions = ['RECHARGE', 'STANDARD', 'OVERTAKE', 'QUALIFY', 'DEFENCE'];
+        // ICE and ERS options are loaded dynamically from circuit catalogs
         this.STATE_DISPLAY = {
             BOX: 'BOX',
             OUT_LAP: 'OUT LAP',
@@ -135,7 +129,119 @@ export class PlayerGarageV3 {
         this.telemetryCache = new Map();
         this.telemetryCircuitMarkerCache = new Map();
         this.telemetryViewState = null;
+        this.liveDeployCache = new Map();
+        this.ersCatalogCache = new Map();
+        this.iceCatalogCache = new Map();
+        this._lastRenderedCircuitId = null;
         this.bindEvents();
+        // Preload catalogs when circuit is available
+        this.preloadCatalogs();
+    }
+
+    async preloadCatalogs() {
+        const circuitId = this.getResolvedCircuitId();
+        if (!circuitId) return;
+        // Preload both catalogs in parallel
+        await Promise.all([
+            this.fetchIceCatalog(circuitId).catch(() => null),
+            this.fetchErsCatalog(circuitId).catch(() => null)
+        ]);
+        // Re-render dock with loaded catalogs
+        this.render(true);
+    }
+
+    getIceOptions(iceCatalog = null) {
+        // Get available ICE maps from catalog, fallback to defaults if not loaded
+        const catalog = iceCatalog || this.getCachedIceCatalog() || null;
+        if (catalog?.maps && Array.isArray(catalog.maps) && catalog.maps.length > 0) {
+            return catalog.maps.map(m => ({ label: (m.label || m.id).toUpperCase(), value: m.id }));
+        }
+        // Fallback to default ICE maps if catalog not available
+        return [
+            { label: 'SAFETY CAR', value: 'SAFETY_CAR' },
+            { label: 'PRACTICE', value: 'PRACTICE' },
+            { label: 'RACE', value: 'RACE' },
+            { label: 'QUALIFY', value: 'QUALIFY' },
+        ];
+    }
+
+    getIceCatalogCacheKey(circuitId) {
+        return `${circuitId || 'default'}:ice`;
+    }
+
+    getCachedIceCatalog(circuitId = null) {
+        const key = this.getIceCatalogCacheKey(circuitId || this.getResolvedCircuitId());
+        return this.iceCatalogCache?.get(key) || null;
+    }
+
+    async fetchIceCatalog(circuitId = null, { force = false } = {}) {
+        const resolvedCircuitId = circuitId || this.getResolvedCircuitId();
+        if (!resolvedCircuitId) return null;
+        const cacheKey = this.getIceCatalogCacheKey(resolvedCircuitId);
+        if (!force && this.iceCatalogCache?.has(cacheKey)) {
+            return this.iceCatalogCache.get(cacheKey);
+        }
+        try {
+            const url = `/api/engine/ice/catalog?circuit_id=${encodeURIComponent(resolvedCircuitId)}`;
+            const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const catalog = await response.json();
+            if (!this.iceCatalogCache) this.iceCatalogCache = new Map();
+            this.iceCatalogCache.set(cacheKey, catalog);
+            return catalog;
+        } catch (err) {
+            console.warn('[GarageV3] Failed to load ICE catalog:', err);
+            return null;
+        }
+    }
+
+    normalizeIceMode(mode, iceCatalog = null) {
+        if (!mode) return 'PRACTICE';
+        const key = String(mode).trim().replace(/\s+/g, '_').toUpperCase();
+        const availableOptions = this.getIceOptions(iceCatalog);
+        const canonical = new Set(availableOptions.map(o => o.value));
+        if (canonical.has(key)) return key;
+        const aliases = {
+            SAVE: 'SAFETY_CAR',
+            STANDARD: 'RACE',
+            PUSH: 'RACE',
+            QUALY: 'QUALIFY',
+            QUALIFYING: 'QUALIFY',
+        };
+        const aliased = aliases[key];
+        if (aliased && canonical.has(aliased)) return aliased;
+        // Return first available option as ultimate fallback
+        return availableOptions[0]?.value || 'PRACTICE';
+    }
+
+    getErsOptions(ersCatalog = null) {
+        // Get available ERS maps from catalog, fallback to defaults if not loaded
+        const catalog = ersCatalog || this.getCachedErsCatalog() || null;
+        if (catalog?.maps && Array.isArray(catalog.maps) && catalog.maps.length > 0) {
+            return catalog.maps.map(m => m.id);
+        }
+        // Fallback to default ERS maps if catalog not available
+        return ['RACE', 'QUALIFY', 'RECHARGE', 'STANDARD', 'OVERTAKE'];
+    }
+
+    normalizeErsMode(mode, ersCatalog = null) {
+        if (!mode) return 'STANDARD';
+        const key = String(mode).trim().replace(/\s+/g, '_').toUpperCase();
+        const availableOptions = this.getErsOptions(ersCatalog);
+        const canonical = new Set(availableOptions);
+        if (canonical.has(key)) return key;
+        const aliases = {
+            HARVEST: 'RECHARGE',
+            NEUTRAL: 'STANDARD',
+            DEPLOY: 'QUALIFY',
+            ATTACK: 'OVERTAKE',
+        };
+        const aliased = aliases[key];
+        if (aliased && canonical.has(aliased)) return aliased;
+        // Return first available option as ultimate fallback
+        return availableOptions[0] || 'STANDARD';
     }
 
     computeRuntimeCondition(tyreSet) {
@@ -498,7 +604,7 @@ export class PlayerGarageV3 {
         }
     }
 
-    buildLapUsageChipRow({ mapName, iceMode, ersMode, deployLimit, harvestLimit, deployPerLap, harvestPerLap, mguhDirectBudget, current, previous, hasPrevTrace, hasPrevWarnings, hasPrevLap }) {
+    buildLapUsageChipRow({ mapName, iceMode, ersMode, deployLimit, harvestLimit, deployPerLap, harvestPerLap, current, previous, hasPrevTrace, hasPrevWarnings, hasPrevLap }) {
         const chips = [];
         if (current) {
             chips.push(this.buildLapUsageChip({
@@ -513,7 +619,6 @@ export class PlayerGarageV3 {
                 deployLimit,
                 harvestLimit,
                 mapName,
-                mguhDirectBudget,
                 iceMode,
                 ersMode,
             }));
@@ -538,7 +643,6 @@ export class PlayerGarageV3 {
                 deployLimit,
                 harvestLimit,
                 mapName,
-                mguhDirectBudget,
                 iceMode,
                 ersMode,
             }));
@@ -559,14 +663,163 @@ export class PlayerGarageV3 {
         return `${pct.toFixed(digits)}%`;
     }
 
-    resolveBudgetValue(runtimeValue, configValue, fallback = 0) {
+    resolveRuntimeBudgetValue(runtimeValue, secondaryRuntimeValue = null) {
         if (typeof runtimeValue === 'number' && !Number.isNaN(runtimeValue) && runtimeValue > 1e-5) {
             return runtimeValue;
         }
-        if (typeof configValue === 'number' && !Number.isNaN(configValue)) {
-            return configValue;
+        if (typeof secondaryRuntimeValue === 'number' && !Number.isNaN(secondaryRuntimeValue) && secondaryRuntimeValue > 1e-5) {
+            return secondaryRuntimeValue;
         }
-        return fallback;
+        return null;
+    }
+
+    resolveNumericStat(primaryValue, fallbackValue = null, defaultValue = 0) {
+        if (typeof primaryValue === 'number' && !Number.isNaN(primaryValue)) {
+            return primaryValue;
+        }
+        if (typeof fallbackValue === 'number' && !Number.isNaN(fallbackValue)) {
+            return fallbackValue;
+        }
+        return defaultValue;
+    }
+
+    resolveErsTargetSocPercent(puStats = {}, selectedMapData = {}, selectedBudgetData = {}) {
+        const catalogTarget = this.resolveNumericStat(
+            selectedBudgetData?.target_soc_end_lap,
+            selectedMapData?.target_soc_end_lap,
+            null,
+        );
+        if (typeof catalogTarget === 'number' && !Number.isNaN(catalogTarget)) {
+            return catalogTarget > 1 ? catalogTarget : catalogTarget * 100;
+        }
+
+        const runtimeBudgetTarget = this.resolveNumericStat(puStats?.target_soc_end_lap, null, null);
+        if (typeof runtimeBudgetTarget === 'number' && !Number.isNaN(runtimeBudgetTarget)) {
+            return runtimeBudgetTarget > 1 ? runtimeBudgetTarget : runtimeBudgetTarget * 100;
+        }
+
+        return null;
+    }
+
+    resolveErsFloorSocPercent(puStats = {}, selectedMapData = {}, selectedBudgetData = {}) {
+        const runtimeFloor = this.resolveNumericStat(puStats?.soc_floor_dynamic_pct, null, null);
+        if (typeof runtimeFloor === 'number' && !Number.isNaN(runtimeFloor)) {
+            const runtimeFloorPct = runtimeFloor > 1 ? runtimeFloor : runtimeFloor * 100;
+            const hasRuntimeTrace = Array.isArray(puStats?.energy_trace) && puStats.energy_trace.length > 0;
+            const lapIdCurrent = Number.isFinite(puStats?.lap_id_current) ? puStats.lap_id_current : null;
+            const looksUninitialized = Math.abs(runtimeFloorPct - 50) < 0.01 && !hasRuntimeTrace && (lapIdCurrent === null || lapIdCurrent <= 0);
+            if (!looksUninitialized) {
+                return runtimeFloorPct;
+            }
+        }
+
+        return this.resolveErsTargetSocPercent(puStats, selectedMapData, selectedBudgetData);
+    }
+
+    getErsCatalogCacheKey(circuitId, selectedMapId = null) {
+        return `${circuitId || 'default'}:${selectedMapId || 'default'}`;
+    }
+
+    getCachedErsCatalog(circuitId = null, selectedMapId = null) {
+        const resolvedCircuitId = circuitId || this.getResolvedCircuitId();
+        const specificKey = this.getErsCatalogCacheKey(resolvedCircuitId, selectedMapId);
+        const specificCatalog = this.ersCatalogCache.get(specificKey) || null;
+        if (specificCatalog || !selectedMapId) {
+            return specificCatalog;
+        }
+        const genericKey = this.getErsCatalogCacheKey(resolvedCircuitId, null);
+        return this.ersCatalogCache.get(genericKey) || null;
+    }
+
+    buildErsEditorSourceSignature(selectedMapId = null, selectedMapData = {}, selectedBudgetData = {}) {
+        const mapId = selectedMapId || 'default';
+        const mapData = selectedMapData && typeof selectedMapData === 'object' ? selectedMapData : {};
+        const budgetData = selectedBudgetData && typeof selectedBudgetData === 'object' ? selectedBudgetData : {};
+        const hasMapData = Object.keys(mapData).length > 0 ? 'map' : 'runtime';
+        const hasBudgetData = Object.keys(budgetData).length > 0 ? 'budget' : 'runtime';
+        const signatureParts = [
+            mapData.bucket_primary_pct,
+            mapData.bucket_secondary_pct,
+            mapData.bucket_exit_pct,
+            budgetData.bucket_primary_pct,
+            budgetData.bucket_secondary_pct,
+            budgetData.bucket_exit_pct,
+            budgetData.deploy_mj_per_lap,
+            budgetData.harvest_mj_per_lap,
+            budgetData.target_soc_end_lap,
+            budgetData.defense_reserve_mj,
+        ].map((value) => (typeof value === 'number' && !Number.isNaN(value) ? value.toFixed(6) : ''));
+        return `${mapId}:${hasMapData}:${hasBudgetData}:${signatureParts.join('|')}`;
+    }
+
+    resolveErsCatalogSelectedMap(ersCatalog = null, preferredMapId = null) {
+        if (!ersCatalog) return null;
+        const maps = Array.isArray(ersCatalog.maps) ? ersCatalog.maps : [];
+        const candidateIds = [];
+        if (preferredMapId) {
+            candidateIds.push(String(preferredMapId).trim());
+        }
+        const selectedMapId = ersCatalog.selected_map_id
+            || ersCatalog.selectedMapId
+            || ersCatalog.selected_map?.id
+            || ersCatalog.selectedMap?.id
+            || null;
+        if (selectedMapId) {
+            candidateIds.push(String(selectedMapId).trim());
+        }
+        for (const mapId of candidateIds) {
+            const match = maps.find((entry) => entry?.id === mapId);
+            if (match) return match;
+        }
+        if (ersCatalog.selected_map && typeof ersCatalog.selected_map === 'object') return ersCatalog.selected_map;
+        if (ersCatalog.selectedMap && typeof ersCatalog.selectedMap === 'object') return ersCatalog.selectedMap;
+        return maps.find((entry) => entry?.id) || null;
+    }
+
+    resolveErsBucketEsDeployPct(key, puStats = {}, ersCatalog = null, preferredMapId = null) {
+        const selectedMap = this.resolveErsCatalogSelectedMap(ersCatalog, preferredMapId);
+        const selectedMapData = selectedMap?.map_data || {};
+        const selectedBudgetData = selectedMap?.budget_data || {};
+        const mapKey = `bucket_${key}_es_deploy_pct`;
+        const catalogValue = this.resolveNumericStat(selectedMapData[mapKey], selectedBudgetData[mapKey], null);
+        
+        // If ES Deploy value is 0, try to use bucket distribution percentage as fallback
+        if (typeof catalogValue === 'number' && catalogValue > 0) {
+            return catalogValue;
+        }
+        
+        // Fallback to bucket distribution percentage when ES Deploy is 0
+        const bucketKey = `bucket_${key}_pct`;
+        const bucketPctValue = this.resolveNumericStat(selectedMapData[bucketKey], selectedBudgetData[bucketKey], null);
+        if (typeof bucketPctValue === 'number' && bucketPctValue > 0) {
+            return bucketPctValue;
+        }
+        
+        const runtimeValue = this.resolveNumericStat(puStats?.[mapKey], null, null);
+        return typeof runtimeValue === 'number' && !Number.isNaN(runtimeValue) ? runtimeValue : 0;
+    }
+
+    async fetchErsCatalog(circuitId = null, selectedMapId = null, { force = false } = {}) {
+        const resolvedCircuitId = circuitId || this.getResolvedCircuitId();
+        if (!resolvedCircuitId) return null;
+        const cacheKey = this.getErsCatalogCacheKey(resolvedCircuitId, selectedMapId);
+        if (!force && this.ersCatalogCache.has(cacheKey)) {
+            return this.ersCatalogCache.get(cacheKey);
+        }
+
+        try {
+            const url = `/api/engine/ers/catalog?circuit_id=${encodeURIComponent(resolvedCircuitId)}${selectedMapId ? `&selected_map_id=${encodeURIComponent(selectedMapId)}` : ''}`;
+            const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const catalog = await response.json();
+            this.ersCatalogCache.set(cacheKey, catalog);
+            return catalog;
+        } catch (err) {
+            console.warn('[GarageV3] Failed to load ERS catalog:', err);
+            return null;
+        }
     }
 
     buildErsBucketCard(entry) {
@@ -599,12 +852,15 @@ export class PlayerGarageV3 {
         if (!Number.isFinite(rawValue)) return;
         const car = this.state.getPlayerCar(driverNumber);
         const puStats = car?.pu_stats || {};
+        const circuitId = this.getResolvedCircuitId();
+        const playerErsMode = car?.player_config?.ers_mode || car?.ers_mode || 'STANDARD';
+        const ersCatalog = this.getCachedErsCatalog(circuitId, playerErsMode || null);
         bucket.pct = this.clampNumber(rawValue, bucket.min, bucket.max);
         if (state.autoBalance) {
             this.normalizeErsBuckets(state, bucketKey);
             this.enforceErsTotalConstraint(state, bucketKey);
         }
-        this.syncErsBucketCards(state, puStats);
+        this.syncErsBucketCards(state, puStats, ersCatalog, playerErsMode || null);
         if (forceRefresh || event.type !== 'input') {
             this.refreshErsEditorPanel(driverNumber);
         }
@@ -637,24 +893,39 @@ export class PlayerGarageV3 {
         this.refreshErsEditorPanel(driverNumber);
     }
 
-    initializeErsEditorState(driverNumber, puStats = {}, { force = false } = {}) {
+    initializeErsEditorState(driverNumber, puStats = {}, { force = false, selectedMapId = null, selectedMapData = {}, selectedBudgetData = {} } = {}) {
         if (!driverNumber) return null;
+        const sourceMapId = selectedMapId || null;
+        const sourceSignature = this.buildErsEditorSourceSignature(sourceMapId, selectedMapData, selectedBudgetData);
         let state = this.ersEditorState.get(driverNumber);
-        if (!state || force) {
-            state = this.buildErsEditorDefaults(puStats);
+        if (!state || force || state.sourceSignature !== sourceSignature) {
+            state = this.buildErsEditorDefaults(puStats, { sourceMapId, sourceSignature, selectedMapData, selectedBudgetData });
             this.ersEditorState.set(driverNumber, state);
         }
         return state;
     }
 
-    buildErsEditorDefaults(puStats = {}) {
-        const deployLimit = puStats.deploy_limit_mj || 4.0;
-        const deployBudget = this.resolveBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap, deployLimit);
+    buildErsEditorDefaults(puStats = {}, { sourceMapId = null, sourceSignature = null, selectedMapData = {}, selectedBudgetData = {} } = {}) {
+        const deployBudget = this.resolveRuntimeBudgetValue(selectedBudgetData?.deploy_mj_per_lap, puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap);
+        const pctToDisplay = (value) => {
+            if (typeof value !== 'number' || Number.isNaN(value)) {
+                return null;
+            }
+            return value > 1 ? value : value * 100;
+        };
         const pctFromStats = (key) => {
             const statKey = `bucket_${key}_pct`;
-            const direct = puStats[statKey];
-            if (typeof direct === 'number' && !Number.isNaN(direct)) {
-                return direct > 1 ? direct : direct * 100;
+            const selectedBudgetValue = pctToDisplay(selectedBudgetData?.[statKey]);
+            if (selectedBudgetValue !== null) {
+                return selectedBudgetValue;
+            }
+            const selectedMapValue = pctToDisplay(selectedMapData?.[statKey]);
+            if (selectedMapValue !== null) {
+                return selectedMapValue;
+            }
+            const direct = pctToDisplay(puStats[statKey]);
+            if (direct !== null) {
+                return direct;
             }
             const bucketTotal = puStats[`bucket_${key}_total_mj`];
             if (typeof bucketTotal === 'number' && deployBudget > 1e-6) {
@@ -677,11 +948,15 @@ export class PlayerGarageV3 {
         const state = {
             buckets,
             autoBalance: true,
+            sourceMapId,
+            sourceSignature: sourceSignature || this.buildErsEditorSourceSignature(sourceMapId, selectedMapData, selectedBudgetData),
         };
         this.normalizeErsBuckets(state, null, true);
         state.initial = {
             autoBalance: state.autoBalance,
             buckets: this.cloneErsBuckets(state.buckets),
+            sourceMapId: state.sourceMapId,
+            sourceSignature: state.sourceSignature,
         };
         return state;
     }
@@ -693,15 +968,35 @@ export class PlayerGarageV3 {
         }, {});
     }
 
-    resetErsEditorState(driverNumber, puStats = {}) {
+    resetErsEditorState(driverNumber, puStats = {}, context = {}) {
         let state = this.ersEditorState.get(driverNumber);
         if (!state) {
-            state = this.initializeErsEditorState(driverNumber, puStats, { force: true });
+            state = this.initializeErsEditorState(driverNumber, puStats, { ...context, force: true });
             return state;
         }
-        const defaults = state.initial || this.buildErsEditorDefaults(puStats);
+        const contextSourceMapId = context.selectedMapId || state.sourceMapId || null;
+        const contextSourceSignature = this.buildErsEditorSourceSignature(
+            contextSourceMapId,
+            context.selectedMapData || {},
+            context.selectedBudgetData || {},
+        );
+        const defaults = state.initial && state.sourceSignature === contextSourceSignature
+            ? state.initial
+            : this.buildErsEditorDefaults(puStats, {
+                ...context,
+                sourceMapId: contextSourceMapId,
+                sourceSignature: contextSourceSignature,
+            });
         state.autoBalance = defaults.autoBalance;
         state.buckets = this.cloneErsBuckets(defaults.buckets);
+        state.sourceMapId = defaults.sourceMapId || contextSourceMapId;
+        state.sourceSignature = defaults.sourceSignature || contextSourceSignature;
+        state.initial = {
+            autoBalance: state.autoBalance,
+            buckets: this.cloneErsBuckets(state.buckets),
+            sourceMapId: state.sourceMapId,
+            sourceSignature: state.sourceSignature,
+        };
         return state;
     }
 
@@ -713,19 +1008,22 @@ export class PlayerGarageV3 {
         if (!car) return;
         const puStats = car.pu_stats || {};
         const isBox = this.getCarState(car) === 'BOX';
-        ersPanel.innerHTML = this.buildErsMapPanel(car, puStats, isBox);
+        const circuitId = this.getResolvedCircuitId();
+        const playerErsMode = car?.player_config?.ers_mode || car?.ers_mode || 'STANDARD';
+        const ersCatalog = this.getCachedErsCatalog(circuitId, playerErsMode || null);
+        ersPanel.innerHTML = this.buildErsMapPanel(car, puStats, isBox, ersCatalog);
     }
 
-    syncErsBucketCards(state, puStats = {}) {
+    syncErsBucketCards(state, puStats = {}, ersCatalog = null, preferredMapId = null) {
         if (!state || !this.overlayContainer) return;
         const panel = this.overlayContainer.querySelector('section[data-panel="ers-map"]');
         if (!panel) return;
         const formatMJ = (value) => (typeof value === 'number' && !Number.isNaN(value) ? `${value.toFixed(2)} MJ` : '-- MJ');
-        const deployLimit = puStats.deploy_limit_mj || 4.0;
-        const deployBudget = this.resolveBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap, deployLimit);
-        const socTarget = typeof puStats.soc_target_pct === 'number' && puStats.soc_target_pct > 0
-            ? Math.round(puStats.soc_target_pct * 100)
-            : (typeof puStats.target_soc_end_lap === 'number' ? Math.round(puStats.target_soc_end_lap * 100) : '--');
+        const deployBudget = this.resolveRuntimeBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap);
+        const selectedMap = this.resolveErsCatalogSelectedMap(ersCatalog, preferredMapId);
+        const selectedMapData = selectedMap?.map_data || {};
+        const selectedBudgetData = selectedMap?.budget_data || {};
+        const socTarget = this.resolveErsTargetSocPercent(puStats, selectedMapData, selectedBudgetData);
 
         Object.keys(this.ERS_BUCKET_SETTINGS).forEach(key => {
             const card = panel.querySelector(`.ers-bucket-card[data-bucket="${key}"]`);
@@ -745,10 +1043,21 @@ export class PlayerGarageV3 {
             const runtimeDeploy = puStats[`bucket_${key}_used_mj`] ?? 0;
             const valueRow = card.querySelectorAll('.value-row span');
             if (valueRow[0]) {
-                valueRow[0].textContent = `Target deploy: ${formatMJ(targetDeploy)}`;
+                valueRow[0].textContent = `Target: ${formatMJ(targetDeploy)}`;
             }
             if (valueRow[1]) {
-                valueRow[1].textContent = `Realtime: ${formatMJ(runtimeDeploy)}`;
+                const esDeployPct = this.resolveNumericStat(
+                    selectedMapData[`bucket_${key}_es_deploy_pct`],
+                    selectedBudgetData[`bucket_${key}_es_deploy_pct`],
+                    this.resolveNumericStat(puStats[`bucket_${key}_es_deploy_pct`], null, 0),
+                );
+                const esDeployLabel = (esDeployPct * 100).toFixed(1) + '%';
+                valueRow[1].innerHTML = `ES Deploy: <strong style="color:#4ccbff;">${esDeployLabel}</strong>`;
+            }
+            // Check for the third span in the second value-row if exists
+            const allValueRows = card.querySelectorAll('.value-row span');
+            if (allValueRows[2]) {
+                allValueRows[2].textContent = `Realtime: ${formatMJ(runtimeDeploy)}`;
             }
             const lockInput = card.querySelector('[data-ers-lock]');
             if (lockInput) {
@@ -846,32 +1155,46 @@ export class PlayerGarageV3 {
         return `${base}: ${detail}`;
     }
 
-    buildErsMapPanel(car, puStats, isBox) {
+    buildErsMapPanel(car, puStats, isBox, ersCatalog = null) {
         if (!puStats || !Object.keys(puStats).length) {
             return '<div class="ers-editor-panel-empty">No ERS telemetry available yet.</div>';
         }
         const formatMJ = (value, digits = 2) => (typeof value === 'number' && !Number.isNaN(value) ? `${value.toFixed(digits)} MJ` : '-- MJ');
         const driverNumber = car?.driver_number;
-        const editorState = driverNumber ? this.initializeErsEditorState(driverNumber, puStats) : null;
+        const playerErsMode = car?.player_config?.ers_mode || car?.ers_mode || 'STANDARD';
+        const selectedMap = this.resolveErsCatalogSelectedMap(ersCatalog, playerErsMode);
+        const selectedMapData = selectedMap?.map_data || {};
+        const selectedBudgetData = selectedMap?.budget_data || {};
+        const mapName = selectedMap?.id || playerErsMode || 'STANDARD';
+        const editorState = driverNumber ? this.initializeErsEditorState(driverNumber, puStats, {
+            selectedMapId: selectedMap?.id || playerErsMode || null,
+            selectedMapData,
+            selectedBudgetData,
+        }) : null;
         if (!editorState) {
             return '<div class="ers-editor-panel-empty">ERS editor unavailable.</div>';
         }
         const bucketState = editorState.buckets || {};
         const autoBalanceEnabled = editorState.autoBalance !== false;
 
-        const mapName = puStats.map || 'STANDARD';
-        const lapDeploy = typeof puStats.lap_deploy_mj === 'number' ? puStats.lap_deploy_mj : 0;
-        const deployLimit = puStats.deploy_limit_mj || 4.0;
-        const deployBudget = this.resolveBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap, deployLimit);
-        const defenseReserve = this.resolveBudgetValue(puStats.defense_reserve_available_mj, puStats.defense_reserve_mj_config, 0);
+        // Use catalog data for budget values, fallback to runtime stats
+        const catalogDeployBudget = selectedBudgetData?.deploy_mj_per_lap;
+        const catalogHarvestMjpL = selectedBudgetData?.harvest_mj_per_lap;
+        const catalogDefenseReserve = selectedBudgetData?.defense_reserve_mj;
+        
+        const lapDeploy = typeof puStats.lap_deploy_mj === 'number' ? puStats.lap_deploy_mj : (catalogDeployBudget || 0);
+        const deployBudget = catalogDeployBudget || this.resolveRuntimeBudgetValue(puStats.deploy_budget_total_mj, puStats.deploy_mj_per_lap) || 0;
+        const harvestBudget = catalogHarvestMjpL || this.resolveRuntimeBudgetValue(puStats.harvest_budget_total_mj, puStats.harvest_mj_per_lap) || 0;
+        const defenseReserve = Number.isFinite(catalogDefenseReserve)
+            ? catalogDefenseReserve
+            : this.resolveRuntimeBudgetValue(puStats.defense_reserve_available_mj, puStats.defense_reserve_mj_config);
         const lastAllocation = typeof puStats.last_bucket_allocated_mj === 'number' ? puStats.last_bucket_allocated_mj : 0;
-        const defenseReservePct = deployBudget > 1e-6 ? `${Math.round((defenseReserve / deployBudget) * 100)}%` : '--';
-        const socFloor = typeof puStats.soc_floor_dynamic_pct === 'number' && puStats.soc_floor_dynamic_pct > 0 ? Math.round(puStats.soc_floor_dynamic_pct * 100) : '--';
-        const socTarget = typeof puStats.soc_target_pct === 'number' && puStats.soc_target_pct > 0
-            ? Math.round(puStats.soc_target_pct * 100)
-            : (typeof puStats.target_soc_end_lap === 'number' ? Math.round(puStats.target_soc_end_lap * 100) : '--');
+        const defenseReservePct = typeof deployBudget === 'number' && deployBudget > 1e-6 && typeof defenseReserve === 'number'
+            ? `${Math.round((defenseReserve / deployBudget) * 100)}%`
+            : '--';
+        const socFloor = this.resolveErsFloorSocPercent(puStats, selectedMapData, selectedBudgetData);
+        const socTarget = this.resolveErsTargetSocPercent(puStats, selectedMapData, selectedBudgetData);
         const totalPct = Math.round(this.sumErsBucketPct(editorState));
-        const playerErsMode = car?.player_config?.ers_mode || car?.ers_mode || 'STANDARD';
         const driverName = car?.driver_name || `Driver #${driverNumber || '—'}`;
         const autoBalanceLabel = autoBalanceEnabled ? 'Auto-balance unlocked buckets' : 'Manual balance';
 
@@ -881,6 +1204,8 @@ export class PlayerGarageV3 {
             const pctValue = this.clampNumber(bucket.pct ?? cfg.defaultPct, cfg.min, cfg.max);
             const targetDeploy = deployBudget > 0 ? (deployBudget * (pctValue / 100)) : 0;
             const runtimeDeploy = puStats[`bucket_${key}_used_mj`] ?? 0;
+            const esDeployPct = this.resolveErsBucketEsDeployPct(key, puStats, ersCatalog, selectedMap?.id || playerErsMode || null);
+            const esDeployLabel = (esDeployPct * 100).toFixed(1) + '%';
             const mguhRealtime = puStats[`mguh_${key}_used_mj`];
             const pillText = this.resolveBucketPillLabel(key, { socTarget, mguhRealtime });
             return `
@@ -894,7 +1219,10 @@ export class PlayerGarageV3 {
                     </div>
                     <input type="range" class="ers-bucket-slider" value="${pctValue.toFixed(0)}" min="${cfg.min}" max="${cfg.max}" data-ers-bucket="${key}" step="1">
                     <div class="value-row">
-                        <span>Target deploy: ${formatMJ(targetDeploy)}</span>
+                        <span>Target: ${formatMJ(targetDeploy)}</span>
+                        <span>ES Deploy: <strong style="color:#4ccbff;">${esDeployLabel}</strong></span>
+                    </div>
+                    <div class="value-row">
                         <span>Realtime: ${formatMJ(runtimeDeploy)}</span>
                     </div>
                     <div class="lock-row">
@@ -905,21 +1233,7 @@ export class PlayerGarageV3 {
             `;
         }).join('');
 
-        const toolbarHtml = `
-            <section class="ers-controls-tile">
-                <h3>Totals & Actions</h3>
-                <div class="ers-bucket-toolbar">
-                    <div class="ers-toolbar-summary">
-                        <strong>Total ${totalPct}%</strong>
-                        <label><input type="checkbox" data-ers-auto-balance="true" ${autoBalanceEnabled ? 'checked' : ''}>${autoBalanceLabel}</label>
-                    </div>
-                    <div class="ers-toolbar-actions">
-                        <button class="ghost-btn" type="button" data-action="ers-reset">Reset preset</button>
-                        <button class="primary-btn" type="button" disabled title="Custom saves coming soon">Save custom map</button>
-                    </div>
-                </div>
-            </section>
-        `;
+        const toolbarHtml = '';
 
         return `
             <div class="ers-editor-panel">
@@ -936,15 +1250,15 @@ export class PlayerGarageV3 {
                             <div class="ers-budget-row ers-metrics">
                                 <div>
                                     <div class="label">SOC floor</div>
-                                    <strong>${socFloor === '--' ? '--' : `${socFloor}%`}</strong>
+                                    <strong>${socFloor == null ? '--' : `${Math.round(socFloor)}%`}</strong>
                                 </div>
                                 <div>
                                     <div class="label">Target lap end</div>
-                                    <strong>${socTarget === '--' ? '--' : `${socTarget}%`}</strong>
+                                    <strong>${socTarget == null ? '--' : `${Math.round(socTarget)}%`}</strong>
                                 </div>
                             </div>
                             <div class="ers-note-bar">
-                                <span>Preset: ${mapName} · ${playerErsMode}</span>
+                                <span>Preset: ${selectedMap?.id || mapName}</span>
                                 <span>Total deploy ${formatMJ(deployBudget)}</span>
                                 <span>Sum must equal 100% (currently ${totalPct}%)</span>
                             </div>
@@ -955,10 +1269,10 @@ export class PlayerGarageV3 {
                         <div class="ers-bucket-header">
                             <div>
                                 <div class="sublabel">ERS MAP</div>
-                                <div class="ers-map-title">${mapName} · ${playerErsMode}</div>
+                                <div class="ers-map-title">${selectedMap?.id || mapName}</div>
                                 <div class="ers-map-subtitle">${driverName} · ${isBox ? 'In garage' : 'On track'}</div>
                             </div>
-                            <div class="ers-bucket-tabs">
+                            <div class="ers-bucket-tabs" style="display:none;">
                                 <div class="map-pill active">Preset</div>
                                 <div class="map-pill">Custom</div>
                                 <div class="map-pill">Import</div>
@@ -984,30 +1298,21 @@ export class PlayerGarageV3 {
         const deployPctLabel = deployBudget ? formatTargetPct(deployRatio, deployBudget) : (deploy ? '—' : '0%');
         const harvestPctLabel = harvestBudget ? formatTargetPct(harvestRatio, harvestBudget) : (harvest ? '—' : '0%');
         const mguhValue = typeof mguhDirect === 'number' ? mguhDirect : 0;
-        const hasMguhBudget = typeof mguhDirectBudget === 'number' && mguhDirectBudget > 1e-4;
-        const mguhRatio = hasMguhBudget ? Math.min(mguhValue / mguhDirectBudget, 1) : 0;
-        const showMguh = hasMguhBudget;
-        const mguhPctLabel = showMguh ? formatTargetPct(mguhRatio, mguhDirectBudget) : '';
-        const mguhText = `${mguhValue.toFixed(2)} MJ`;
         const mguhHarvestValue = typeof mguhHarvest === 'number' ? mguhHarvest : 0;
-        const hasHarvestBudget = harvestBudget > 1e-5;
-        const mguhHarvestRatio = hasHarvestBudget ? Math.min(mguhHarvestValue / harvestBudget, 1) : 0;
-        const showMguhHarvest = hasHarvestBudget && mguhHarvestValue > 1e-4;
-        const mguhHarvestPctLabel = showMguhHarvest ? formatTargetPct(mguhHarvestRatio, harvestBudget) : '';
+        const mguhTotal = mguhValue + mguhHarvestValue;
+        const mguhText = `${mguhValue.toFixed(2)} MJ`;
         const mguhHarvestText = `${mguhHarvestValue.toFixed(2)} MJ`;
-        const combinedDeployRatio = deployRatio + (showMguh ? mguhRatio : 0);
-        const combinedScale = combinedDeployRatio > 1 ? (1 / combinedDeployRatio) : 1;
-        const deployCombinedPct = deployRatio * combinedScale * 100;
-        const mguhCombinedPct = showMguh ? mguhRatio * combinedScale * 100 : 0;
-        const combinedHarvestRatio = harvestRatio + (showMguhHarvest ? mguhHarvestRatio : 0);
-        const harvestScale = combinedHarvestRatio > 1 ? (1 / combinedHarvestRatio) : 1;
-        const harvestCombinedPct = harvestRatio * harvestScale * 100;
-        const mguhHarvestCombinedPct = showMguhHarvest ? mguhHarvestRatio * harvestScale * 100 : 0;
-        const mguhLegend = showMguh
-            ? `<div class="pu-chip-submetric">MGU-H Direct ${mguhText} <span class="pu-chip-percent">${mguhPctLabel}</span></div>`
+        const deployCombinedPct = deployRatio * 100;
+        const harvestCombinedPct = harvestRatio * 100;
+        const mguhLegend = mguhTotal > 1e-4
+            ? `
+                <div class="pu-chip-submetric">MGU-H Total ${mguhTotal.toFixed(2)} MJ</div>
+                <div class="pu-chip-submetric">MGU-H Direct ${mguhText}</div>
+                <div class="pu-chip-submetric">MGU-H → ES ${mguhHarvestText}</div>
+            `
             : '';
-        const mguhHarvestLegend = showMguhHarvest
-            ? `<div class="pu-chip-submetric">MGU-H → ES ${mguhHarvestText} <span class="pu-chip-percent">${mguhHarvestPctLabel}</span></div>`
+        const mguhHarvestLegend = mguhHarvestValue > 1e-4
+            ? `<div class="pu-chip-submetric">MGU-H → ES ${mguhHarvestText}</div>`
             : '';
         return `
             <div class="pu-lap-chip-v3">
@@ -1021,7 +1326,6 @@ export class PlayerGarageV3 {
                         <div class="pu-chip-metric-value">${deployText} <span class="pu-chip-percent">${deployPctLabel}</span></div>
                         <div class="pu-chip-progress combined">
                             <div class="pu-chip-progress-bar deploy" style="width:${deployCombinedPct}%"></div>
-                            ${showMguh ? `<div class="pu-chip-progress-bar mguh" style="width:${mguhCombinedPct}%; left:${deployCombinedPct}%"></div>` : ''}
                         </div>
                         ${mguhLegend}
                     </div>
@@ -1030,7 +1334,6 @@ export class PlayerGarageV3 {
                         <div class="pu-chip-metric-value">${harvestText} <span class="pu-chip-percent">${harvestPctLabel}</span></div>
                         <div class="pu-chip-progress combined harvest">
                             <div class="pu-chip-progress-bar harvest" style="width:${harvestCombinedPct}%"></div>
-                            ${showMguhHarvest ? `<div class="pu-chip-progress-bar mguh-harvest" style="width:${mguhHarvestCombinedPct}%; left:${harvestCombinedPct}%"></div>` : ''}
                         </div>
                         ${mguhHarvestLegend}
                     </div>
@@ -1233,6 +1536,40 @@ export class PlayerGarageV3 {
         const mguhHarvest = resolveValue(totals.mguhHarvest, fallbackMguhHarvest);
         const hasData = hasTrace || deploy > 0.0005 || harvest > 0.0005 || mguhDirect > 0.0005 || mguhHarvest > 0.0005;
         return { deploy, harvest, mguhDirect, mguhHarvest, hasData, hasTrace };
+    }
+
+    resolveLiveLapDeploy(puStats, driverNumber = null) {
+        if (!puStats) return 0;
+        const trace = puStats.energy_trace || [];
+        const fallbackDeploy = this.resolveNumericStat(puStats.deploy_ES, puStats.lap_deploy_mj, 0);
+        const fallbackHarvest = this.resolveNumericStat(puStats.lap_harvest_mj, 0, 0);
+        const fallbackMguhDirect = this.resolveNumericStat(puStats.mguh_dir, puStats.lap_mguh_direct_mj, 0);
+        const fallbackMguhHarvest = this.resolveNumericStat(puStats.mguh_es, puStats.lap_mguh_harvest_mj, 0);
+        const totals = this.computeLapTotals(trace, fallbackDeploy, fallbackHarvest, fallbackMguhDirect, fallbackMguhHarvest);
+        const lapId = Number.isFinite(puStats.lap_id_current) ? puStats.lap_id_current : null;
+        const cacheKey = driverNumber ?? puStats.driver_number ?? null;
+
+        let deployValue = totals.deploy;
+        const hasTraceData = totals.hasData || totals.hasTrace;
+
+        if (!hasTraceData) {
+            if (cacheKey != null && this.liveDeployCache.has(cacheKey)) {
+                const cached = this.liveDeployCache.get(cacheKey);
+                if (cached && cached.lapId === lapId) {
+                    deployValue = cached.value;
+                } else {
+                    deployValue = 0;
+                }
+            } else {
+                deployValue = 0;
+            }
+        }
+
+        if (cacheKey != null) {
+            this.liveDeployCache.set(cacheKey, { lapId, value: deployValue });
+        }
+
+        return deployValue;
     }
 
     setStatus(message, tone = 'info', autoHideMs = 4000) {
@@ -1616,8 +1953,14 @@ export class PlayerGarageV3 {
         const fuelPercent = car.player_config?.fuel_percent ?? car.fuel_percent ?? 100;
         const stintTarget = car.player_config?.stint_target_laps ?? car.stint_target_laps ?? 5;
         const paceLevel = car.player_config?.pace_level ?? car.pace_level ?? 5;
-        const iceMode = car.player_config?.ice_mode ?? car.ice_mode ?? 'PRACTICE';
-        const ersMode = car?.player_config?.ers_mode ?? car?.ers_mode ?? 'STANDARD';
+        const iceModeRaw = car.player_config?.ice_mode ?? car.ice_mode ?? 'PRACTICE';
+        const ersModeRaw = car?.player_config?.ers_mode ?? car?.ers_mode ?? 'STANDARD';
+        // Load ICE catalog for proper mode normalization
+        const circuitId = this.getResolvedCircuitId();
+        const iceCatalog = this.getCachedIceCatalog(circuitId);
+        const ersCatalog = this.getCachedErsCatalog(circuitId);
+        const iceMode = this.normalizeIceMode(iceModeRaw, iceCatalog);
+        const ersMode = this.normalizeErsMode(ersModeRaw, ersCatalog);
         const maxStint = car.max_stint_laps ?? stintTarget;
         const tireWear = Math.max(0, Math.min(1, car.tire_wear ?? 0));
         const liveTyreCondition = PlayerGarageV3.computeLiveTyreCondition(car);
@@ -1648,15 +1991,32 @@ export class PlayerGarageV3 {
         const sendLabel = 'Send Out';
         const puStats = car.pu_stats || {};
         const socMj = puStats.soc_mj || 0;
-        const socPct = puStats.soc_pct || 0;
-        const lapDeploy = puStats.lap_deploy_mj || 0;
-        const deployLimit = puStats.deploy_limit_mj || 4.0;
+        const lapDeploy = this.resolveLiveLapDeploy(puStats, car.driver_number);
+        const deployES = this.resolveNumericStat(puStats.deploy_ES, puStats.lap_deploy_mj, lapDeploy);
+        const deployLimit = puStats.deploy_mj_per_lap ?? puStats.deploy_limit_mj ?? 4.0;
         const lapHarvest = puStats.lap_harvest_mj || 0;
-        const lapMguhDirect = puStats.mguh_direct_used_mj || 0;
-        const lapMguhEs = puStats.mguh_es_used_mj || 0;
-        const socClass = socPct < 30 ? 'pu-critical' : socPct < 60 ? 'pu-low' : 'pu-ok';
+        const mguhDir = this.resolveNumericStat(puStats.mguh_dir, puStats.lap_mguh_direct_mj, 0);
+        const mguhEs = this.resolveNumericStat(puStats.mguh_es, puStats.lap_mguh_harvest_mj, 0);
+        const mguhTotal = mguhDir + mguhEs;
+        const capacityMj = puStats.capacity_mj || 4.0;
+        const socReferenceMj = 4.0;
+        const displaySocPct = Math.min(Math.max((socMj / socReferenceMj) * 100, 0), 100);
+        const socClass = displaySocPct < 30 ? 'pu-critical' : displaySocPct < 60 ? 'pu-low' : 'pu-ok';
         const tabPilota = this.buildTabPilota(car, { tyreChoice, fuelPercent, stintTarget, maxStint, paceLevel, iceMode, ersMode, tireHealthPct, isBox, brakeChipPreview });
-        const tabMotore = this.buildTabMotore(car, { socMj, socPct, lapDeploy, deployLimit, lapHarvest, lapMguhDirect, lapMguhEs, socClass, iceMode, ersMode });
+        const tabMotore = this.buildTabMotore(car, {
+            socMj,
+            socPct: displaySocPct,
+            deployES,
+            deployLimit,
+            lapHarvest,
+            mguhDir,
+            mguhEs,
+            mguhTotal,
+            capacityMj,
+            socClass,
+            iceMode,
+            ersMode,
+        });
         const tabTyres = this.buildTabTyres(car, { tireHealthPct });
         return `
             <div class="car-card-v3" data-driver="${car.driver_number}" data-state="${currentState}">
@@ -1755,13 +2115,13 @@ export class PlayerGarageV3 {
                 <div class="dock-field" style="flex: 1.2;">
                     <label>ICE map</label>
                     <select class="select-compact-v3" data-field="ice_mode">
-                        ${this.iceOptions.map(option => `<option value="${option.value}" ${option.value === iceMode ? 'selected' : ''}>${option.label}</option>`).join('')}
+                        ${this.getIceOptions().map(option => `<option value="${option.value}" ${option.value === iceMode ? 'selected' : ''}>${option.label}</option>`).join('')}
                     </select>
                 </div>
                 <div class="dock-field" style="flex: 1.2;">
                     <label>ERS mode</label>
                     <select class="select-compact-v3" data-field="ers_mode">
-                        ${this.ersOptions.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                        ${this.getErsOptions().map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
                     </select>
                 </div>
                 <div class="dock-field" style="flex: 1.5;">
@@ -1772,46 +2132,64 @@ export class PlayerGarageV3 {
         `;
     }
 
-    buildTabMotore(car, { socMj, socPct, lapDeploy, deployLimit, lapHarvest, lapMguhDirect, lapMguhEs, socClass, iceMode, ersMode }) {
-        const deployPct = deployLimit > 0 ? Math.min((lapDeploy / deployLimit) * 100, 100) : 0;
+    buildTabMotore(car, {
+        socMj,
+        socPct,
+        deployES,
+        deployLimit,
+        lapHarvest,
+        mguhDir,
+        mguhEs,
+        mguhTotal,
+        capacityMj,
+        socClass,
+        iceMode,
+        ersMode,
+    }) {
+        const socReferenceMj = 4.0;
+        const safeSocPct = Math.min(Math.max((socMj / socReferenceMj) * 100, 0), 100);
+        const safeDirectPct = Math.min(Math.max((mguhDir / socReferenceMj) * 100, 0), 100);
         return `
             <div class="dock-ers-meter">
                 <div class="dock-ers-header">
                     <span class="dock-lbl">Batteria SOC</span>
-                    <span class="dock-val ${socClass}">${socMj.toFixed(1)} MJ (${Math.round(socPct)}%)</span>
+                    <span class="dock-val ${socClass}">${socMj.toFixed(1)} MJ (${Math.round(safeSocPct)}%)</span>
                 </div>
-                <div class="pu-bar-track-v3"><div class="pu-bar-fill-v3" style="width:${socPct}%"></div></div>
+                <div class="pu-bar-track-v3">
+                    <div class="pu-bar-layer pu-bar-layer--soc" style="width:${safeSocPct}%" title="Battery SOC"></div>
+                    <div class="pu-bar-layer pu-bar-layer--dir" style="width:${safeDirectPct}%" title="MGU-H DIRECT"></div>
+                </div>
                 <div class="dock-ers-stats">
-                    <span>Deploy: ${lapDeploy.toFixed(1)} / ${deployLimit.toFixed(1)} MJ</span>
+                    <span>Deploy: ${deployES.toFixed(1)} / ${deployLimit.toFixed(1)} MJ</span>
                     <span>Harvest: ${lapHarvest.toFixed(1)} MJ</span>
                 </div>
             </div>
             <div class="dock-row-2">
                 <div class="dock-field">
-                    <label>ERS Map</label>
-                    <select class="select-compact-v3" data-field="ers_mode">
-                        ${this.ersOptions.map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                    <label>ICE Map</label>
+                    <select class="select-compact-v3" data-field="ice_mode">
+                        ${this.getIceOptions().map(option => `<option value="${option.value}" ${option.value === iceMode ? 'selected' : ''}>${option.label}</option>`).join('')}
                     </select>
                 </div>
                 <div class="dock-field">
-                    <label>ICE Map</label>
-                    <select class="select-compact-v3" data-field="ice_mode">
-                        ${this.iceOptions.map(mode => `<option value="${mode}" ${mode === iceMode ? 'selected' : ''}>${mode}</option>`).join('')}
+                    <label>ERS Map</label>
+                    <select class="select-compact-v3" data-field="ers_mode">
+                        ${this.getErsOptions().map(mode => `<option value="${mode}" ${mode === ersMode ? 'selected' : ''}>${mode}</option>`).join('')}
                     </select>
                 </div>
             </div>
             <div class="dock-row-3">
                 <div class="dock-field">
-                    <label>ERS Deploy Rate</label>
-                    <span class="dock-val">${deployLimit.toFixed(1)} MJ/lap</span>
+                    <label>Battery Deploy</label>
+                    <span class="dock-val" data-pu-field="deploy_es">${deployES.toFixed(2)} MJ</span>
                 </div>
                 <div class="dock-field">
                     <label>MGU-H Direct</label>
-                    <span class="dock-val">${lapMguhDirect.toFixed(2)} MJ</span>
+                    <span class="dock-val" data-pu-field="mguh_dir">${mguhDir.toFixed(2)} MJ</span>
                 </div>
                 <div class="dock-field">
                     <label>MGU-H ES</label>
-                    <span class="dock-val">${lapMguhEs.toFixed(2)} MJ</span>
+                    <span class="dock-val" data-pu-field="mguh_es">${mguhEs.toFixed(2)} MJ</span>
                 </div>
             </div>
         `;
@@ -1822,7 +2200,6 @@ export class PlayerGarageV3 {
         const tyreStates = car.tyre_states || {};
         const rawWindow = car.tire_temp_window;
         const tempWindow = PlayerGarageV3.extractTempWindow(rawWindow);
-        const inventoryPanel = this.buildTyreInventoryPanel(car);
         
         const fl = tyreTemps.fl ?? null;
         const fr = tyreTemps.fr ?? null;
@@ -1843,7 +2220,6 @@ export class PlayerGarageV3 {
         
         const brakeFront = car.brake_thermal?.front ?? null;
         const brakeRear = car.brake_thermal?.rear ?? null;
-        
         const aeroBalance = car.aero_balance != null ? `${(car.aero_balance * 100).toFixed(0)}%` : '--';
         const dragIndex = car.drag_index != null ? car.drag_index.toFixed(2) : '--';
         const coolingMargin = car.cooling_margin != null ? `${car.cooling_margin > 0 ? '+' : ''}${car.cooling_margin.toFixed(2)}` : '--';
@@ -1893,16 +2269,16 @@ export class PlayerGarageV3 {
                     <span class="dock-val" style="color:#ddd;">${fmt(brakeRear)}</span>
                 </div>
             </div>
-            <div class="dock-row-3">
-                <div class="dock-field">
+            <div class="dock-row-3 dock-row-compact">
+                <div class="dock-field dock-field--compact">
                     <label>Aero Bal.</label>
                     <span class="dock-val">${aeroBalance}</span>
                 </div>
-                <div class="dock-field">
+                <div class="dock-field dock-field--compact">
                     <label>Drag</label>
                     <span class="dock-val">${dragIndex}</span>
                 </div>
-                <div class="dock-field">
+                <div class="dock-field dock-field--compact">
                     <label>Cooling</label>
                     <span class="dock-val">${coolingMargin}</span>
                 </div>
@@ -1911,9 +2287,6 @@ export class PlayerGarageV3 {
                 <span class="dock-flag ${grainingWarn ? 'flag-warn' : 'flag-ok'}">Grain ${grainingDisplay}</span>
                 <span class="dock-flag ${blisteringWarn ? 'flag-warn' : 'flag-ok'}">Blister ${blisteringDisplay}</span>
                 <span class="dock-flag flag-info">Health ${tireHealthPct}%</span>
-            </div>
-            <div class="dock-tyre-inventory-panel">
-                ${inventoryPanel}
             </div>
         `;
     }
@@ -1976,12 +2349,14 @@ export class PlayerGarageV3 {
     buildPUInlineBar(car) {
         const puStats = car.pu_stats || {};
         const socMj = puStats.soc_mj ?? 0;
-        const socPct = puStats.soc_pct ?? 0;
+        const socPctRaw = puStats.soc_pct ?? 0;
         const lapDeploy = puStats.lap_deploy_mj ?? 0;
-        const deployLimit = puStats.deploy_mj_per_lap ?? 4.0;
-        const deployPct = deployLimit > 0 ? Math.min((lapDeploy / deployLimit) * 100, 100) : 0;
-        const socClass = socPct >= 60 ? 'pu-soc-good' : socPct >= 30 ? 'pu-soc-warn' : 'pu-soc-low';
-        
+        const deployLimit = puStats.deploy_mj_per_lap ?? puStats.deploy_limit_mj ?? 4.0;
+        const socClass = socPctRaw >= 60 ? 'pu-soc-good' : socPctRaw >= 30 ? 'pu-soc-warn' : 'pu-soc-low';
+        const socPct = Math.min(Math.max(socPctRaw, 0), 100);
+        const lapMguhDirect = puStats.lap_mguh_direct_mj ?? 0;
+        const lapMguhEs = puStats.lap_mguh_harvest_mj ?? 0;
+        const mguhTotal = lapMguhDirect + lapMguhEs;
         return `
             <div class="pu-inline-bar-v3">
                 <div class="pu-metric-v3">
@@ -1992,10 +2367,157 @@ export class PlayerGarageV3 {
                     <span class="pu-label-v3">Deploy</span>
                     <span class="pu-value-v3">${lapDeploy.toFixed(1)} / ${deployLimit.toFixed(1)} MJ</span>
                 </div>
+                <div class="pu-metric-v3">
+                    <span class="pu-label-v3">MGU-H</span>
+                    <span class="pu-value-v3">${mguhTotal.toFixed(1)} MJ</span>
+                </div>
+            </div>
+        `;
+        }
+
+        async buildPUModal(car) {
+            if (!this.overlayContainer) return;
+            if (!this.getTyreInventory(car.driver_number)) {
+                const inventory = await this.loadTyreInventory(car.driver_number);
+                if (inventory) {
+                    this.primeTyreInventory(car.driver_number, inventory);
+                }
+            }
+            const puStats = car.pu_stats || {};
+            const brakeDiag = car.brake_diagnostics || {};
+            const driverName = car.driver_name || `Driver #${car.driver_number}`;
+            const carState = this.getCarState(car);
+            const isBox = carState === 'BOX';
+            this.overlayContainer.style.zIndex = '1500';
+            const socMj = puStats.soc_mj ?? 0;
+            const socPct = puStats.soc_pct ?? 0;
+            const capacityMj = puStats.capacity_mj ?? 4.0;
+            const deployLimit = puStats.deploy_limit_mj ?? 4.0;
+            const harvestLimit = puStats.harvest_limit_mj ?? 2.0;
+            const lapDeploy = puStats.lap_deploy_mj ?? 0;
+            const lapHarvest = puStats.lap_harvest_mj ?? 0;
+            const deployPerLap = puStats.deploy_mj_per_lap ?? 4.0;
+            const harvestPerLap = puStats.harvest_mj_per_lap ?? 2.0;
+            const lapMguhDirectPrev = puStats.lap_mguh_direct_prev_mj ?? null;
+            const lapMguhHarvestPrev = puStats.lap_mguh_harvest_prev_mj ?? null;
+            const lapMguhDirectCurrent = puStats.lap_mguh_direct_mj ?? 0;
+            const lapMguhHarvestCurrent = puStats.lap_mguh_harvest_mj ?? 0;
+            const lapMguhDirect = lapMguhDirectPrev != null ? lapMguhDirectPrev : lapMguhDirectCurrent;
+            const lapMguhHarvest = lapMguhHarvestPrev != null ? lapMguhHarvestPrev : lapMguhHarvestCurrent;
+            const deployPct = deployPerLap > 0 ? Math.min((lapDeploy / deployPerLap) * 100, 100) : 0;
+            const harvestPct = harvestPerLap > 0 ? Math.min((lapHarvest / harvestPerLap) * 100, 100) : 0;
+            const energyBalance = lapHarvest - lapDeploy;
+            const warnings = puStats.warnings_runtime || [];
+            const warningsActive = warnings.length > 0;
+            const regenClampActive = !!puStats.regen_clamp_active;
+            const warningsPrev = puStats.warnings_runtime_prev || [];
+            const trace = puStats.energy_trace || [];
+            const tracePrev = puStats.energy_trace_prev || [];
+            const lapDeployPrev = puStats.lap_deploy_prev_mj ?? null;
+            const lapHarvestPrev = puStats.lap_harvest_prev_mj ?? null;
+            const lapIdCurrent = puStats.lap_id_current ?? null;
+            const lapIdPrev = puStats.lap_id_prev ?? null;
+            const mapName = puStats.map || 'STANDARD';
+            const socClass = socPct >= 60 ? 'pu-soc-good' : socPct >= 30 ? 'pu-soc-warn' : 'pu-soc-low';
+            
+            const { currentLapIndex, previousLapIndex, completedLapCount } = this.resolveLapIndexes({
+                car,
+                lapIdCurrent,
+                lapIdPrev,
+            });
+
+            const currentTotals = this.computeLapTotals(trace, lapDeploy, lapHarvest, lapMguhDirectCurrent, lapMguhHarvestCurrent);
+            const previousTotals = this.computeLapTotals(tracePrev, lapDeployPrev, lapHarvestPrev, lapMguhDirectPrev, lapMguhHarvestPrev);
+
+            const hasPrevWarnings = Array.isArray(warningsPrev) && warningsPrev.length > 0;
+            const hasPrevLap = previousLapIndex !== null || (completedLapCount !== null && completedLapCount > 0);
+
+            const iceModeDisplay = car.player_config?.ice_mode || car.ice_mode || puStats.ice_map || 'RACE';
+            const ersModeDisplay = car.player_config?.ers_mode || car.ers_mode || puStats.ers_mode || mapName;
+
+            const lapChipRow = this.buildLapUsageChipRow({
+                mapName,
+                iceMode: iceModeDisplay,
+                ersMode: ersModeDisplay,
+                deployLimit,
+                harvestLimit,
+                deployPerLap,
+                harvestPerLap,
+                current: currentTotals.hasData ? {
+                    lapIndex: currentLapIndex,
+                    deploy: currentTotals.deploy,
+                    harvest: currentTotals.harvest,
+                    mguhDirect: currentTotals.mguhDirect,
+                    mguhHarvest: currentTotals.mguhHarvest,
+                } : null,
+                previous: (previousLapIndex !== null || previousTotals.hasData || previousTotals.hasTrace) ? {
+                    lapIndex: previousLapIndex,
+                    deploy: previousTotals.deploy,
+                    harvest: previousTotals.harvest,
+                    mguhDirect: previousTotals.mguhDirect,
+                    mguhHarvest: previousTotals.mguhHarvest,
+                } : null,
+                hasPrevTrace: previousTotals.hasTrace,
+                hasPrevWarnings,
+                hasPrevLap,
+            });
+
+            const traceRows = this.buildPUTableRows(trace, tracePrev, currentLapIndex, previousLapIndex);
+            
+            const brakeTile = this.buildBrakeRegenTile(puStats, brakeDiag, regenClampActive);
+
+            const puStatsPanel = `
+                <div class="pu-stats-grid-v3" style="margin-bottom: 12px;">
+                    <div class="pu-stats-metrics-grid">
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">Battery SOC</div>
+                            <div class="pu-stat-value-v3 ${socClass}" style="font-size: 18px; margin: 3px 0;">${socMj.toFixed(1)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">${Math.round(socPct)}% charge</div>
+                        </div>
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">Battery Capacity</div>
+                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${capacityMj.toFixed(1)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Total</div>
+                        </div>
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">Deploy Limit</div>
+                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${deployLimit.toFixed(1)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Per lap</div>
+                        </div>
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">Harvest Limit</div>
+                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${harvestLimit.toFixed(1)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Per lap</div>
+                        </div>
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">MGU-H Direct Drive</div>
+                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${lapMguhDirect.toFixed(2)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Last lap</div>
+                        </div>
+                        <div class="pu-stat-card-v3" style="padding: 10px;">
+                            <div class="pu-stat-label-v3" style="font-size: 10px;">MGU-H → ES</div>
+                            <div class="pu-stat-value-v3" style="font-size: 18px; margin: 3px 0;">${lapMguhHarvest.toFixed(2)} MJ</div>
+                            <div class="pu-stat-sub-v3" style="font-size: 9px;">Last lap</div>
+                        </div>
+                    </div>
+                    ${brakeTile}
+                </div>
+                ${lapChipRow}
+                <div class="pu-trace-container-v3" style="max-height: 280px; overflow-y: auto;">
+                    <table class="pu-trace-table-v3">
+                        <thead>
+                            <tr><th>Lap</th><th>Section</th><th>Deploy</th><th>Harvest</th><th>Hydraulic</th><th>Regen Ratio</th><th>MGU-H Direct Drive</th><th>MGU-H → ES</th></tr>
+                        </thead>
+                        <tbody>
+                            ${traceRows || '<tr><td colspan="8" style="text-align:center;color:#888;">No trace data</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
                 <div class="pu-budget-bar-v3">
                     <span class="pu-label-v3">Lap Budget</span>
                     <div class="pu-bar-track-v3">
                         <div class="pu-bar-fill-v3" style="width:${deployPct}%"></div>
+                    </div>
                     </div>
                 </div>
                 <button class="pu-details-btn-v3" data-action="pu-details">⚡ Details</button>
@@ -2012,6 +2534,13 @@ export class PlayerGarageV3 {
             }
         }
         const puStats = car.pu_stats || {};
+        const circuitId = this.getResolvedCircuitId();
+        // Load both ICE and ERS catalogs for dynamic map options
+        const playerErsMode = car?.player_config?.ers_mode || car?.ers_mode || 'STANDARD';
+        const [iceCatalog, ersCatalog] = await Promise.all([
+            this.fetchIceCatalog(circuitId, { force: true }),
+            this.fetchErsCatalog(circuitId, playerErsMode || null, { force: true })
+        ]);
         const brakeDiag = car.brake_diagnostics || {};
         const driverName = car.driver_name || `Driver #${car.driver_number}`;
         const carState = this.getCarState(car);
@@ -2032,12 +2561,6 @@ export class PlayerGarageV3 {
         const lapMguhHarvestCurrent = puStats.lap_mguh_harvest_mj ?? 0;
         const lapMguhDirect = lapMguhDirectPrev != null ? lapMguhDirectPrev : lapMguhDirectCurrent;
         const lapMguhHarvest = lapMguhHarvestPrev != null ? lapMguhHarvestPrev : lapMguhHarvestCurrent;
-        const mguhDirectBudget = this.resolveBudgetValue(puStats.mguh_direct_total_mj, puStats.mguh_direct_config_total_mj, 0);
-        const deployPct = deployPerLap > 0 ? Math.min((lapDeploy / deployPerLap) * 100, 100) : 0;
-        const harvestPct = harvestPerLap > 0 ? Math.min((lapHarvest / harvestPerLap) * 100, 100) : 0;
-        const energyBalance = lapHarvest - lapDeploy;
-        const warnings = puStats.warnings_runtime || [];
-        const warningsActive = warnings.length > 0;
         const regenClampActive = !!puStats.regen_clamp_active;
         const warningsPrev = puStats.warnings_runtime_prev || [];
         const trace = puStats.energy_trace || [];
@@ -2048,6 +2571,7 @@ export class PlayerGarageV3 {
         const lapIdPrev = puStats.lap_id_prev ?? null;
         const mapName = puStats.map || 'STANDARD';
         const socClass = socPct >= 60 ? 'pu-soc-good' : socPct >= 30 ? 'pu-soc-warn' : 'pu-soc-low';
+        const deployPct = deployPerLap > 0 ? Math.min((lapDeploy / deployPerLap) * 100, 100) : 0;
         
         const { currentLapIndex, previousLapIndex, completedLapCount } = this.resolveLapIndexes({
             car,
@@ -2072,7 +2596,6 @@ export class PlayerGarageV3 {
             harvestLimit,
             deployPerLap,
             harvestPerLap,
-            mguhDirectBudget,
             current: currentTotals.hasData ? {
                 lapIndex: currentLapIndex,
                 deploy: currentTotals.deploy,
@@ -2158,7 +2681,7 @@ export class PlayerGarageV3 {
         const tyresPanel = this.buildTabTyres(car, { tireHealthPct });
         
         // Render ERS Panel
-        const ersPanel = this.buildErsMapPanel(car, puStats, isBox);
+        const ersPanel = this.buildErsMapPanel(car, puStats, isBox, ersCatalog);
         const telemetryPanel = await this.buildTelemetryPanel(car);
         
         this.overlayContainer.innerHTML = `
@@ -3231,19 +3754,86 @@ export class PlayerGarageV3 {
             // 3. Motore Tab
             const puStats = car.pu_stats || {};
             const socMj = puStats.soc_mj || 0;
-            const socPct = puStats.soc_pct || 0;
-            const lapDeploy = puStats.lap_deploy_mj || 0;
+            const lapDeploy = this.resolveLiveLapDeploy(puStats, car.driver_number);
+            const deployES = this.resolveNumericStat(puStats.deploy_ES, puStats.lap_deploy_mj, lapDeploy);
             const deployLimit = puStats.deploy_limit_mj || 4.0;
             const lapHarvest = puStats.lap_harvest_mj || 0;
-            const lapMguhDirect = puStats.lap_mguh_direct_mj || 0;
-            const lapMguhEs = puStats.mguh_es_used_mj || 0;
-            const socClass = socPct < 30 ? 'pu-critical' : socPct < 60 ? 'pu-low' : 'pu-ok';
-            const iceMode = car.player_config?.ice_mode || car.ice_mode || 'PRACTICE';
-            const ersMode = car.player_config?.ers_mode || car.ers_mode || 'Neutral';
-            
+            const mguhDir = this.resolveNumericStat(puStats.mguh_dir, puStats.lap_mguh_direct_mj, 0);
+            const mguhEs = this.resolveNumericStat(puStats.mguh_es, puStats.lap_mguh_harvest_mj, 0);
+            const mguhTotal = mguhDir + mguhEs;
+            const capacityMj = puStats.capacity_mj || 4.0;
+            const socReferenceMj = 4.0;
+            const displaySocPct = Math.min(Math.max((socMj / socReferenceMj) * 100, 0), 100);
+            const directPct = Math.min(Math.max((mguhDir / socReferenceMj) * 100, 0), 100);
+            const socClass = displaySocPct < 30 ? 'pu-critical' : displaySocPct < 60 ? 'pu-low' : 'pu-ok';
+
+            if (window?.DEBUG_PU_DEPLOY_UI && car.is_player_controlled) {
+                const trace = Array.isArray(puStats.energy_trace) ? puStats.energy_trace : [];
+                const lastTrace = trace.length ? trace[trace.length - 1] : null;
+                console.log('[Garage][PU]', {
+                    driver: car.driver_number,
+                    lap_id: puStats.lap_id_current ?? null,
+                    deploy_mj: lapDeploy,
+                    trace_len: trace.length,
+                    last_section: lastTrace?.section_id ?? null,
+                    last_section_deploy: lastTrace?.deploy_mj ?? null,
+                });
+            }
+            const iceMode = this.normalizeIceMode(car.player_config?.ice_mode || car.ice_mode || 'PRACTICE', this.getCachedIceCatalog());
+            // Load ERS catalog for proper mode normalization
+            const circuitId = this.getResolvedCircuitId();
+            const ersCatalog = this.getCachedErsCatalog(circuitId);
+            const ersMode = this.normalizeErsMode(car.player_config?.ers_mode || car.ers_mode || 'STANDARD', ersCatalog);
+
             const motoreTab = cardEl.querySelector('.dock-tab-pane[data-tab="motore"]');
             if (motoreTab) {
-                motoreTab.innerHTML = this.buildTabMotore(car, { socMj, socPct, lapDeploy, deployLimit, lapHarvest, lapMguhDirect, lapMguhEs, socClass, iceMode, ersMode });
+                const activeEl = document.activeElement;
+                const isRuntimeFocused = activeEl
+                    && motoreTab.contains(activeEl)
+                    && activeEl.dataset?.field
+                    && this.RUNTIME_FIELDS.has(activeEl.dataset.field);
+                if (!isRuntimeFocused) {
+                    motoreTab.innerHTML = this.buildTabMotore(car, {
+                        socMj,
+                        socPct: displaySocPct,
+                        deployES,
+                        deployLimit,
+                        lapHarvest,
+                        mguhDir,
+                        mguhEs,
+                        mguhTotal,
+                        capacityMj,
+                        socClass,
+                        iceMode,
+                        ersMode,
+                    });
+                } else {
+                    const socVal = motoreTab.querySelector('.dock-ers-header .dock-val');
+                    if (socVal) socVal.textContent = `${socMj.toFixed(1)} MJ (${Math.round(displaySocPct)}%)`;
+                    const safeSocPct = displaySocPct;
+                    const socLayer = motoreTab.querySelector('.pu-bar-layer--soc');
+                    if (socLayer) socLayer.style.width = `${safeSocPct}%`;
+                    const directLayer = motoreTab.querySelector('.pu-bar-layer--dir');
+                    if (directLayer) directLayer.style.width = `${directPct}%`;
+                    const deployLabel = motoreTab.querySelector('.dock-ers-stats span:first-child');
+                    if (deployLabel) deployLabel.textContent = `Deploy: ${deployES.toFixed(1)} / ${deployLimit.toFixed(1)} MJ`;
+                    const harvestLabel = motoreTab.querySelector('.dock-ers-stats span:last-child');
+                    if (harvestLabel) harvestLabel.textContent = `Harvest: ${lapHarvest.toFixed(1)} MJ`;
+                    const batteryDeployField = motoreTab.querySelector('[data-pu-field="deploy_es"]');
+                    if (batteryDeployField) batteryDeployField.textContent = `${deployES.toFixed(2)} MJ`;
+                    const mguhDirectField = motoreTab.querySelector('[data-pu-field="mguh_dir"]');
+                    if (mguhDirectField) mguhDirectField.textContent = `${mguhDir.toFixed(2)} MJ`;
+                    const mguhEsField = motoreTab.querySelector('[data-pu-field="mguh_es"]');
+                    if (mguhEsField) mguhEsField.textContent = `${mguhEs.toFixed(2)} MJ`;
+                }
+            }
+
+            const pilotaTab = cardEl.querySelector('.dock-tab-pane[data-tab="pilota"]');
+            if (pilotaTab) {
+                const iceSelect = pilotaTab.querySelector('select[data-field="ice_mode"]');
+                if (iceSelect) iceSelect.value = iceMode;
+                const ersSelect = pilotaTab.querySelector('select[data-field="ers_mode"]');
+                if (ersSelect) ersSelect.value = ersMode;
             }
 
             // 4. Update minor elements in Pilota tab
@@ -3275,6 +3865,15 @@ export class PlayerGarageV3 {
         const cars = this.state.getPlayerCarsSorted();
         if (cars.length === 0) {
             this.cardsContainer.innerHTML = '<p style="color:#777;">Waiting for garage data...</p>';
+            return;
+        }
+
+        // Check if circuit changed and reload catalogs if needed
+        const currentCircuitId = this.getResolvedCircuitId();
+        if (currentCircuitId && currentCircuitId !== this._lastRenderedCircuitId) {
+            this._lastRenderedCircuitId = currentCircuitId;
+            // Preload catalogs and re-render once ready
+            this.preloadCatalogs();
             return;
         }
 
@@ -3449,14 +4048,14 @@ export class PlayerGarageV3 {
             return exists ? normalized : null;
         };
 
-        const normalizedIce = normalizeMode(allowedPayload.ice_mode, this.iceOptions);
+        const normalizedIce = normalizeMode(allowedPayload.ice_mode, this.getIceOptions());
         if (allowedPayload.ice_mode && !normalizedIce) {
             delete allowedPayload.ice_mode;
         } else if (normalizedIce) {
             allowedPayload.ice_mode = normalizedIce;
         }
 
-        const normalizedErs = normalizeMode(allowedPayload.ers_mode, this.ersOptions);
+        const normalizedErs = normalizeMode(allowedPayload.ers_mode, this.getErsOptions());
         if (allowedPayload.ers_mode && !normalizedErs) {
             delete allowedPayload.ers_mode;
         } else if (normalizedErs) {
@@ -3488,7 +4087,14 @@ export class PlayerGarageV3 {
             }
             this.applyLocalPlayerUpdates(driverNumber, allowedPayload);
             if (!options.skipRender) {
-                this.render(true);
+                if (runtimeOnly) {
+                    const carData = this.state.getPlayerCar(driverNumber);
+                    if (carData) {
+                        this.updateContinuousData([carData]);
+                    }
+                } else {
+                    this.render(true);
+                }
             }
             return true;
         } catch (err) {
@@ -3675,7 +4281,8 @@ export class PlayerGarageV3 {
             return;
         }
 
-        this.sendPlayerConfig(resolvedDriverNumber, payload, state);
+        const isRuntimeField = this.RUNTIME_FIELDS.has(field);
+        this.sendPlayerConfig(resolvedDriverNumber, payload, state, { suppressStatus: isRuntimeField, skipRender: isRuntimeField });
     }
 
     handleTelemetryChipSelection(target) {

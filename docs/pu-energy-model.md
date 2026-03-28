@@ -1,7 +1,7 @@
 ---
 title: PU Energy Model & UI Strategy
-last_updated: 2026-02-15
-status: draft
+last_updated: 2026-03-21
+status: active
 scope: Definire requisiti funzionali/UI per la gestione di ICE + MGU-K/H + Batteria (SOC) in gioco
 links:
   - docs/PowerUnit.md
@@ -17,6 +17,7 @@ Integrare nel gioco la gestione completa della Power Unit 2025 (limiti 4 MJ depl
 - **SOC tracking**: SOC normalizzato 0–1 + valore assoluto in MJ; warning sotto 0.2, clipping sotto 0.1.
 - **Torque curve**: lookup ICE+MGU-K da `docs/EngineData2025.md`; usato per calcolare la resa delle mappe e per il grafico UI.
 - **R&D overrides**: possibilità di impostare manualmente percentuali di energia immessa/recuperata per ogni mappa (file `config/calibration/pu/<cid>.json`).
+- **ERS Bucket System**: ripartizione del budget deploy/harvest per tipo di sezione (primary/secondary/exit) tramite `bucket_primary_pct`, `bucket_secondary_pct`, `bucket_exit_pct`. Questo è il lever principale per calibrare il recupero MGU-K per giro.
 - **Telemetria**: segment log deve includere `mj_deploy`, `mj_harvest_k`, `mj_harvest_h`, `soc_after_section`.
 
 ## 3. UI/UX – Mockup testuale

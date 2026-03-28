@@ -2445,10 +2445,33 @@ timeline-toggle-btn:hover {
 
 .pu-bar-track-v3 {
     width: 100%;
-    height: 6px;
-    border-radius: 3px;
+    height: 10px;
+    border-radius: 5px;
     background: #1f1f1f;
+    position: relative;
     overflow: hidden;
+}
+
+.pu-bar-layer {
+    position: absolute;
+    left: 0;
+    border-radius: inherit;
+    transition: width 0.3s ease;
+}
+
+.pu-bar-layer--soc {
+    top: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, #ffd94a, #d6a929);
+    z-index: 1;
+}
+
+.pu-bar-layer--dir {
+    top: 1px;
+    bottom: 1px;
+    background: linear-gradient(90deg, #7cd7ff, #2f98ff);
+    opacity: 0.84;
+    z-index: 2;
 }
 
 .pu-bar-fill-v3 {
@@ -3965,5 +3988,133 @@ font-weight: 500;
 .dock-tyre-chip strong {
     font-size: 9px;
     color: rgba(255, 255, 255, 0.95);
+}
+
+/* ===============================
+   AI Debug Tooltip (Timing Panel)
+   =============================== */
+.ai-debug-tooltip {
+    position: fixed;
+    z-index: 1000;
+    min-width: 300px;
+    max-width: 380px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16162a 100%);
+    border: 1px solid rgba(255, 210, 76, 0.4);
+    border-radius: 10px;
+    padding: 0;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 210, 76, 0.1);
+    font-family: 'Inter', 'Roboto', 'Helvetica Neue', sans-serif;
+    font-size: 14px;
+    color: #e0e0e0;
+    animation: aiTooltipEnter 0.2s ease-out;
+    pointer-events: none;
+}
+
+@keyframes aiTooltipEnter {
+    from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ai-debug-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: rgba(255, 210, 76, 0.12);
+    border-bottom: 1px solid rgba(255, 210, 76, 0.2);
+    border-radius: 10px 10px 0 0;
+}
+
+.ai-debug-driver {
+    font-weight: 700;
+    font-size: 18px;
+    color: #ffd24c;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.ai-debug-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+    pointer-events: auto;
+}
+
+.ai-debug-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.ai-debug-section {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ai-debug-section:last-child {
+    border-bottom: none;
+    border-radius: 0 0 10px 10px;
+}
+
+.ai-debug-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 6px;
+}
+
+.ai-debug-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+}
+
+.ai-debug-label {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+}
+
+.ai-debug-value {
+    font-weight: 600;
+    font-size: 15px;
+    color: #fff;
+    font-family: 'Roboto Mono', 'SF Mono', monospace;
+}
+
+.ai-debug-status-complete {
+    color: #69f0ae;
+}
+
+.ai-debug-status-collecting {
+    color: #ffd24c;
+}
+
+.ai-debug-program {
+    color: #ffd24c;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Data chip cursor pointer for AI cars */
+.data-chip {
+    cursor: default;
+}
+
+.data-chip[data-ai="true"],
+.driver-row .data-chip:not(.data-chip-ready):hover {
+    cursor: pointer;
 }
 

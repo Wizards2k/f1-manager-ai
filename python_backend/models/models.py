@@ -1,3 +1,4 @@
+from __future__ import annotations
 # Models F1 Manager AI - Solo classi, senza logica di posizione
 import time
 import random
@@ -332,6 +333,17 @@ class Gomma:
         malus_coeff = self.MALUS_COEFF[self.mescola]
         malus = (0.5 - grip) * malus_coeff
         return malus
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "mescola": self.mescola.value,
+            "percentuale_vita": self.percentuale_vita,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> Gomma:
+        mescola = TireCompound(data["mescola"])
+        return cls(mescola, percentuale_vita=data["percentuale_vita"])
 
 
 class Team:
@@ -722,11 +734,14 @@ class RaceCar:
         *,
         reset_progress: bool = False,
         force_complete: bool = False,
+        min_runs_required: Optional[int] = None,
     ):
         """Sync AI setup data and optionally reset/complete progress."""
         if setup_snapshot:
             setup_store = self.player_config.setdefault('setup', {**DEFAULT_SETUP_CONFIG})
             setup_store.update(setup_snapshot)
+        if min_runs_required is not None:
+            self.ai_min_runs_required = min_runs_required
         if force_complete:
             # Consider setup fully learned
             self.setup_info_points = max(self.setup_info_target, 1.0)
@@ -751,6 +766,15 @@ class RaceCar:
         self.setup_info_target = AI_SETUP_PROGRESS_TARGET
         current = max(0.0, self.setup_info_points)
         percent_before = self.setup_info_percent
+
+        # Store AI debug fields for tooltip visualization
+        self.ai_setup_score = score_after
+        self.ai_setup_threshold = score_threshold
+        self.ai_setup_complete = setup_complete
+        if hasattr(self, 'ai_total_runs'):
+            self.ai_total_runs = getattr(self, 'ai_total_runs', 0) + 1
+        else:
+            self.ai_total_runs = 1
 
         derived_percent = None
         if score_after is not None and score_threshold:
@@ -901,12 +925,12 @@ class RaceCar:
         try:
             recommendation = evaluate_setup(current_setup)
             categories = evaluate_setup_categories(current_setup)
-        except Exception as exc:  # pragma: no cover
+        except Exception as e:  # pragma: no cover
             log_debug_event(
                 'setup_feedback_error',
                 driver=self.driver_number,
                 trigger=trigger,
-                reason=str(exc),
+                reason=str(e),
             )
             return
 
@@ -1001,3 +1025,57 @@ class RaceCar:
             pass
         finally:
             self.current_lap_debug = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serializza lo stato dell'auto per il salvataggio."""
+        # Filtra i campi privati e quelli non serializzabili
+        d = {}
+        for k, v in self.__dict__.items():
+            if k.startswith("_"):
+                continue
+            
+            # Gestione casi specifici che causano problemi con JSON
+            if isinstance(v, set):
+                d[k] = list(v)
+            elif isinstance(v, Enum):
+                d[k] = v.value
+            elif k in {"pilot", "team", "current_tyre_set", "current_lap_debug", "tire_model", "car_physics", "damage_model"}:
+                # Saltiamo questi riferimenti diretti ad oggetti (modelli logici)
+                continue
+            else:
+                d[k] = v
+        
+        # Aggiungiamo ID per i riferimenti rimossi
+        d["pilot_id"] = self.pilot.numero_di_gara if self.pilot else None
+        d["team_id"] = getattr(self.team, "team_id", None)
+        
+        # Gestione manuale di sub-oggetti con il loro to_dict
+        if self.current_gomma and hasattr(self.current_gomma, "to_dict"):
+            d["current_gomma"] = self.current_gomma.to_dict()
+            
+        return d
+
+    def load_state(self, data: Dict[str, Any]):
+        """Carica lo stato da un salvataggio senza ricreare l'oggetto."""
+        for k, v in data.items():
+            if k in {"pilot_id", "team_id", "current_gomma", "current_tyre_set"}:
+                continue
+            
+            if k == "state":
+                self.state = CarState(v)
+            elif k == "current_tire":
+                self.current_tire = TireCompound(v)
+            elif k == "last_lap_type" and v:
+                self.last_lap_type = CarState(v)
+            elif k == "feedback_zones_used_this_lap":
+                self.feedback_zones_used_this_lap = set(v)
+            else:
+                try:
+                    # Verifica se l'attributo esiste prima di settarlo
+                    if hasattr(self, k):
+                        setattr(self, k, v)
+                except Exception:
+                    pass
+        
+        if "current_gomma" in data:
+            self.current_gomma = Gomma.from_dict(data["current_gomma"])

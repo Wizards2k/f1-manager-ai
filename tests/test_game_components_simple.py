@@ -18,7 +18,7 @@ from utils.adapter import racecar_to_car_entry
 from models.models import RaceCar, Team, Pilota, Nazionalita, TireCompound
 from lap_simulator.lap_simulator import LapSimulator
 from lap_simulator.config_loader import load_circuit_config
-from lap_simulator.data_types import EnvContext, CarState, AeroSetup, DriverSkills, DriverIntent
+from lap_simulator.data_types import EnvContext, CarState, AeroSetup, DriverSkills, DriverIntent, EngineMapName
 from lap_simulator.lap_simulator import CarEntry
 
 def create_test_team_and_driver(team_code: str, team_name: str, driver_name: str, skill: int) -> tuple:
@@ -83,6 +83,19 @@ def extract_penalties_from_lap_result(lap_result) -> Dict[str, float]:
                 penalties['tyre'] = penalties.get('tyre', 0) + section_result.tyre_penalty_s
     
     return penalties
+
+def test_racecar_to_car_entry_prefers_ers_mode_for_active_map():
+    team, driver = create_test_team_and_driver("FER", "Ferrari", "Charles Leclerc", 96)
+    race_car = RaceCar(pilot=driver, team=team, initial_compound=TireCompound.MEDIUM)
+    race_car.ice_mode = "standard"
+    race_car.ers_mode = "QUALIFY"
+    race_car.player_config["ice_mode"] = race_car.ice_mode
+    race_car.player_config["ers_mode"] = race_car.ers_mode
+
+    car_entry = racecar_to_car_entry(race_car)
+
+    assert car_entry.state.pu.active_map == EngineMapName.QUALIFY
+    assert car_entry.state.ers_mode == "QUALIFY"
 
 def run_simulation_with_game_components(team_code: str, team_name: str, driver_name: str, skill: int, run_type: str = "setup_validation") -> Dict[str, Any]:
     """Esegue simulazione usando componenti del gioco con mescole diverse"""

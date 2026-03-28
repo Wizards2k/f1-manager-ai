@@ -234,6 +234,7 @@ def _build_ers_maps(pu_id: str, ers_factor: float) -> Dict[EngineMapName, ERSMap
             bucket_secondary_pct=cfg["bucket_secondary"],
             bucket_exit_pct=cfg["bucket_exit"],
             defense_reserve_mj=_DEFENSE_RESERVE_MJ.get(map_name, 0.0),
+            mguh_direct_ratio=0.45,
         )
     return maps
 

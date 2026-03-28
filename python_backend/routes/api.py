@@ -20,6 +20,7 @@ from utils import (
 )
 from services.setup_engine_service import SetupEngineService
 from services.tyre_inventory_service import TyreInventoryService
+from routes.engine import register_engine_routes
 from utils.debug_log import log_debug_event
 
 
@@ -125,6 +126,8 @@ def register_routes(app):
         """Quick Race - redirects to circuit selection"""
         return render_template('circuits.html')
 
+    register_engine_routes(app)
+
     @app.route('/race')
     def index():
         return render_template('index.html')
@@ -160,6 +163,59 @@ def register_routes(app):
 
         return jsonify(data)
 
+    @app.route('/api/circuit/sections')
+    def get_circuit_sections():
+        """Restituisce le sezioni del circuito con i tipi (curve, rettilinei)."""
+        from flask import request
+        import config
+        from pathlib import Path
+        import json
+
+        circuit_id = request.args.get('circuit')
+        if not circuit_id:
+            circuit_id = getattr(config, 'current_circuit', None)
+        
+        if not circuit_id:
+            return jsonify({'error': 'Circuit ID required'}), 400
+        
+        root = Path(__file__).resolve().parents[1]
+        telemetry_path = root / 'data' / 'circuits' / '2025' / f'{circuit_id}_Telemetry.json'
+        
+        if not telemetry_path.exists():
+            return jsonify({'error': f'Telemetry not found for circuit: {circuit_id}'}), 404
+        
+        try:
+            payload = json.loads(telemetry_path.read_text(encoding='utf-8'))
+            geometry = payload.get('geometry', {})
+            sections = geometry.get('sections', [])
+            
+            # Enrich sections with normalized types
+            enriched = []
+            for section in sections:
+                kind = str(section.get('kind', 'Straight')).strip().lower()
+                is_corner = 'corner' in kind or kind.startswith('turn')
+                is_straight = 'straight' in kind
+                
+                enriched.append({
+                    'id': section.get('id', ''),
+                    'name': section.get('name', ''),
+                    'kind': section.get('kind', 'Straight'),
+                    'start_m': section.get('start_m', 0),
+                    'end_m': section.get('end_m', section.get('start_m', 0) + section.get('length_m', 0)),
+                    'length_m': section.get('length_m', 0),
+                    'corner_number': section.get('corner_number'),
+                    'is_corner': is_corner,
+                    'is_straight': is_straight,
+                })
+            
+            return jsonify({
+                'circuit_id': circuit_id,
+                'sections': enriched,
+                'count': len(enriched)
+            })
+        except Exception as e:
+            return jsonify({'error': f'Failed to load sections: {str(e)}'}), 500
+
     @app.route('/api/circuit/<circuit_id>')
     def get_selected_circuit(circuit_id):
         """Carica i dati del circuito selezionato"""
@@ -168,7 +224,7 @@ def register_routes(app):
 
         circuit_data = config.set_current_circuit(circuit_id)
         start_session_for_circuit()
-        circuit_logger.info(
+        circuit_logger.debug(
             "GET /api/circuit/%s from %s (new circuit=%s)",
             circuit_id,
             request.remote_addr,
@@ -189,7 +245,7 @@ def register_routes(app):
 
             circuit_data = config.set_current_circuit(circuit_id)
             start_session_for_circuit()
-            circuit_logger.info(
+            circuit_logger.debug(
                 "POST /api/load_circuit from %s (new circuit=%s)",
                 request.remote_addr,
                 getattr(config, 'current_circuit', None),
@@ -234,6 +290,7 @@ def register_routes(app):
                 'is_player_controlled': car.is_player_controlled,
                 'player_config': car.player_config if car.is_player_controlled else None,
                 'setup_recommendation': car.setup_feedback if car.is_player_controlled else None,
+                'max_stint_laps': 150,
                 'brake_cooling': getattr(car, 'brake_cooling', {}),
             })
         return jsonify(cars_data)
@@ -420,6 +477,7 @@ def register_routes(app):
             'STANDARD': 'STANDARD',
             'OVERTAKE': 'OVERTAKE',
             'QUALIFY': 'QUALIFY',
+            'RACE': 'RACE',
             'DEFENCE': 'DEFENCE',
         }
         # Check canonical first
@@ -458,7 +516,7 @@ def register_routes(app):
             'ers_mode': car.ers_mode,
             'stint_target_laps': car.stint_target_laps,
             'stint_laps_remaining': car.stint_laps_remaining,
-            'max_stint_laps': car.compute_max_stint_laps(car.player_config.get('fuel_percent', car.fuel_percent)),
+            'max_stint_laps': 150,
             'stint_laps_target': car.player_config.get('stint_target_laps', car.stint_target_laps),
             'setup': car.player_config.get('setup', {**DEFAULT_SETUP_CONFIG}),
             'setup_recommendation': car.setup_feedback or {},
@@ -593,7 +651,7 @@ def register_routes(app):
         if 'ers_mode' in payload:
             normalized_ers = _normalize_ers_mode(payload['ers_mode'])
             if not normalized_ers:
-                valid_values = ', '.join(sorted({'RECHARGE', 'STANDARD', 'OVERTAKE', 'QUALIFY', 'DEFENCE'}))
+                valid_values = ', '.join(sorted({'RECHARGE', 'STANDARD', 'OVERTAKE', 'QUALIFY', 'RACE', 'DEFENCE'}))
                 return _error_response(f'ers_mode must be one of: {valid_values}')
             car.ers_mode = normalized_ers
             car.player_config['ers_mode'] = normalized_ers
@@ -642,15 +700,18 @@ def register_routes(app):
             effective_fuel = fuel_percent
             updates_applied['fuel_percent'] = fuel_percent
 
-        max_stint_laps = car.compute_max_stint_laps(effective_fuel)
         if 'stint_target_laps' in payload:
             try:
                 stint_target = int(payload['stint_target_laps'])
             except (TypeError, ValueError):
                 return _error_response('stint_target_laps must be an integer')
-            if stint_target < 1 or stint_target > max_stint_laps:
-                return _error_response(f'stint_target_laps must be between 1 and {max_stint_laps}')
+            if stint_target < 1 or stint_target > 150:
+                return _error_response(f'stint_target_laps must be between 1 and 150')
             car.player_config['stint_target_laps'] = stint_target
+            # Update car fields immediately when in BOX so the value is used on send-out
+            if is_in_box:
+                car.stint_target_laps = stint_target
+                car.stint_laps_remaining = stint_target
             updates_applied['stint_target_laps'] = stint_target
 
         if not updates_applied:
@@ -821,9 +882,8 @@ def register_routes(app):
             return _error_response('Invalid tyre_compound in player config')
 
         fuel_percent = config.get('fuel_percent', car.fuel_percent)
-        max_stint_laps = car.compute_max_stint_laps(fuel_percent)
         target_laps = config.get('stint_target_laps', car.stint_target_laps)
-        target_laps = max(1, min(max_stint_laps, target_laps))
+        target_laps = max(1, min(150, target_laps))
 
         selected_set_id = str(config.get('tyre_set_id') or '').strip() or None
         selected_set = None
@@ -926,5 +986,62 @@ def register_routes(app):
             'message': 'Box request acknowledged',
             'car': _serialize_player_car(car)
         })
+
+    @app.route('/api/save', methods=['POST'])
+    def save_game():
+        """Salva lo stato corrente del gioco"""
+        try:
+            from datetime import datetime
+            from services.save_system import SaveGameService
+            
+            name = request.json.get('name', f"Save {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+            service = SaveGameService()
+            save_id = service.save_game(name)
+            
+            return jsonify({
+                'message': 'Game saved successfully',
+                'save_id': save_id
+            })
+        except Exception as e:
+            import traceback
+            err_msg = traceback.format_exc()
+            app.logger.error("!!! SAVE CRASH !!!\n%s", err_msg)
+            return jsonify({'error': f'Failed to save game: {str(e)}'}), 500
+
+    @app.route('/api/load', methods=['POST'])
+    def load_game():
+        """Carica uno stato salvato"""
+        try:
+            from services.save_system import SaveGameService
+            
+            save_id = request.json.get('save_id')
+            if not save_id:
+                return jsonify({'error': 'Save ID required'}), 400
+                
+            service = SaveGameService()
+            result = service.load_game(save_id)
+            
+            if isinstance(result, dict) and result.get('success'):
+                return jsonify({
+                    'message': 'Game loaded successfully',
+                    'circuit_id': result.get('circuit_id')
+                })
+            else:
+                return jsonify({'error': 'Failed to load game'}), 500
+        except Exception as e:
+            import traceback
+            print(f"Load error: {traceback.format_exc()}")
+            return jsonify({'error': f'Failed to load game: {str(e)}'}), 500
+
+    @app.route('/api/saves')
+    def get_saves():
+        """Restituisce la lista dei salvataggi"""
+        try:
+            from services.save_system import SaveGameService
+            service = SaveGameService()
+            saves = service.get_save_files()
+            return jsonify(saves)
+        except Exception as e:
+            return jsonify({'error': f'Failed to list saves: {str(e)}'}), 500
 
     return app

@@ -106,6 +106,37 @@ The engine penalty system is fully integrated into the LapSimulator physics loop
 4. **Circuit Scaling**: Uses circuit-specific coefficient
 5. **Result Accumulation**: Added to total section time
 
+## ERS Bonus Integration
+
+The engine penalty system now works in conjunction with the **ERS Bonus System** for complete power unit modeling:
+
+### ERS Bonus Model
+- **Formula**: `ers_bonus_s = -1 * (deploy_mj + mguh_direct_mj) * 0.125`
+- **Effect**: Negative penalty (time gain) when ERS is deployed on straights
+- **Thermal Clipping**: `ers_thermal_eta` reduces bonus if temperature > 102°C
+- **Applied To**: Same straight sections as engine penalties
+
+### Combined Physics
+```python
+# In update_section.py:
+dt_s = base_dt + engine_penalty_s + ers_bonus_s + other_penalties
+```
+
+Where:
+- `engine_penalty_s` is always ≥ 0 (slower with less powerful engines)
+- `ers_bonus_s` is always ≤ 0 (faster when deploying ERS)
+
+### Data Structures (Extended)
+```python
+# PUState extension
+ers_thermal_eta: float = 1.0       # Thermal efficiency factor
+lap_ers_bonus_s: float = 0.0     # Cumulative ERS bonus per lap
+last_section_ers_bonus_s: float = 0.0  # Previous section bonus
+
+# SectionResult extension
+ers_bonus_s: float = 0.0          # ERS time gain/loss for section
+```
+
 ## Validation Commands
 
 ```bash

@@ -1,12 +1,198 @@
 export class TimingPanelV3 {
     constructor({ state = null, tableContainer, timerElement, headerElement = null }) {
         this.state = state || { sessionBests: { best_lap: null, best_sectors: {} } };
-        this.tableElement = tableContainer;
         this.timerElement = timerElement;
-        this.headerElement = headerElement || document.querySelector('.timing-header');
-        this._currentFlag = 'green';
-        this._rowMap = new Map();          // driver_number → DOM element
+        this.headerElement = headerElement;
+        this.tableElement = tableContainer; // tableContainer is already an element, not an ID
+        this._rowMap = new Map();           // driver_number → row element
         this._lastSectors = new Map();     // driver_number → {sector1, sector2, sector3}
+        this._activeTooltip = null;        // Currently open AI debug tooltip
+        this._carDataMap = new Map();      // driver_number → latest car data for tooltip
+        this._boundDocumentClick = this._handleDocumentClick.bind(this);
+        this._boundTableClick = this._handleTableClick.bind(this);
+        
+        document.addEventListener('pointerdown', this._boundDocumentClick);
+        // Single click delegate on the table container for AI debug tooltip
+        if (this.tableElement) {
+            this.tableElement.addEventListener('pointerdown', this._boundTableClick, true);
+        } else {
+            console.error('[TimingPanelV3] Table element NOT found:', tableContainer);
+        }
+
+        
+        // Esponi funzione globale per handler inline onclick
+        window.showAiDebugTooltip = (chipElement) => {
+            const row = chipElement.closest('.driver-row');
+            if (!row) return;
+            const dn = row.dataset.driverNumber;
+            const car = this._carDataMap.get(String(dn));
+            if (!car || car.is_player_controlled) return;
+            this._showAiDebugTooltip(car, chipElement);
+        };
+    }
+
+    destroy() {
+        document.removeEventListener('pointerdown', this._boundDocumentClick);
+        if (this.tableElement && this._boundTableClick) {
+            this.tableElement.removeEventListener('pointerdown', this._boundTableClick, true);
+        }
+        this._closeActiveTooltip();
+        // Rimuovi funzione globale
+        if (window.showAiDebugTooltip) {
+            delete window.showAiDebugTooltip;
+        }
+    }
+
+    /**
+     * Find the DATA chip in the event path using composedPath for robustness.
+     * @param {Event} e - Click event
+     * @returns {HTMLElement|null} The DATA chip element or null
+     */
+    _findDataChipFromEvent(e) {
+        const path = e.composedPath();
+        for (const el of path) {
+            if (el.classList && (el.classList.contains('data-chip') || el.classList.contains('data-chip-ready'))) {
+                return el;
+            }
+        }
+        return null;
+    }
+
+    _handleTableClick(e) {
+        const chip = this._findDataChipFromEvent(e);
+        if (!chip) return;
+
+        const row = chip.closest('.driver-row');
+        if (!row) return;
+
+        const dn = row.dataset.driverNumber;
+        const car = this._carDataMap.get(String(dn));
+        if (!car || car.is_player_controlled) return;
+
+        e.stopPropagation();
+        this._showAiDebugTooltip(car, chip);
+    }
+
+    _handleDocumentClick(e) {
+        // Close tooltip when clicking outside
+        const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
+        const clickedInsideTooltip = this._activeTooltip && path.includes(this._activeTooltip);
+        if (this._activeTooltip && !clickedInsideTooltip) {
+            const chip = this._findDataChipFromEvent(e);
+            if (!chip) {
+                this._closeActiveTooltip();
+            }
+        }
+    }
+
+    _closeActiveTooltip() {
+        if (this._activeTooltip) {
+            this._activeTooltip.remove();
+            this._activeTooltip = null;
+        }
+    }
+
+    _buildAiDebugTooltip(car) {
+        const setupScore = car.ai_setup_score != null ? car.ai_setup_score.toFixed(2) : '--';
+        const setupThreshold = car.ai_setup_threshold != null ? car.ai_setup_threshold.toFixed(2) : '--';
+        const runsDone = car.ai_total_runs ?? 0;
+        const runsRequired = car.ai_min_runs_required ?? '--';
+        const setupStatus = car.ai_setup_complete ? 'Complete' : 'Collecting';
+        const setupPct = car.setup_info_percent?.toFixed(0) ?? '0';
+
+        const tyreSetId = car.ai_tyre_set_id ?? '--';
+        const tyreCondition = car.ai_tyre_condition != null ? `${car.ai_tyre_condition.toFixed(0)}%` : '--';
+        const tyreHeatCycles = car.ai_tyre_heat_cycles ?? '--';
+        const currentTire = car.current_tire?.toUpperCase() ?? '--';
+        const aiProgram = car.ai_program ?? '--';
+
+        const tooltip = document.createElement('div');
+        tooltip.className = 'ai-debug-tooltip';
+        tooltip.innerHTML = `
+            <div class="ai-debug-header">
+                <span class="ai-debug-driver">${car.driver_name || 'Driver'}</span>
+                <button class="ai-debug-close" aria-label="Close">×</button>
+            </div>
+            <div class="ai-debug-section">
+                <div class="ai-debug-title">Setup Search</div>
+                <div class="ai-debug-row">
+                    <span class="ai-debug-label">Score:</span>
+                    <span class="ai-debug-value">${setupScore}/${setupThreshold}</span>
+                </div>
+                <div class="ai-debug-row">
+                    <span class="ai-debug-label">Runs:</span>
+                    <span class="ai-debug-value">${runsDone}/${runsRequired}</span>
+                </div>
+                <div class="ai-debug-row">
+                    <span class="ai-debug-label">Progress:</span>
+                    <span class="ai-debug-value">${setupPct}%</span>
+                </div>
+                <div class="ai-debug-row">
+                    <span class="ai-debug-label">Status:</span>
+                    <span class="ai-debug-value ai-debug-status-${car.ai_setup_complete ? 'complete' : 'collecting'}">${setupStatus}</span>
+                </div>
+            </div>
+            <div class="ai-debug-section">
+                <div class="ai-debug-title">Tyre Set</div>
+                <div class="ai-debug-row">
+                    <span class="ai-debug-label">Compound:</span>
+                    <span class="ai-debug-value">${currentTire}</span>
+                </div>
+                <div class="ai-debug-row">
+                    <span class="ai-debug-label">Set ID:</span>
+                    <span class="ai-debug-value">${tyreSetId}</span>
+                </div>
+                <div class="ai-debug-row">
+                    <span class="ai-debug-label">Condition:</span>
+                    <span class="ai-debug-value">${tyreCondition}</span>
+                </div>
+                <div class="ai-debug-row">
+                    <span class="ai-debug-label">Heat Cycles:</span>
+                    <span class="ai-debug-value">${tyreHeatCycles}</span>
+                </div>
+            </div>
+            <div class="ai-debug-section">
+                <div class="ai-debug-title">Current Program</div>
+                <div class="ai-debug-row">
+                    <span class="ai-debug-value ai-debug-program">${aiProgram}</span>
+                </div>
+            </div>
+        `;
+
+        tooltip.querySelector('.ai-debug-close').addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+            this._closeActiveTooltip();
+        });
+
+        return tooltip;
+    }
+
+    _showAiDebugTooltip(car, chipElement) {
+        this._closeActiveTooltip();
+
+        const tooltip = this._buildAiDebugTooltip(car);
+        document.body.appendChild(tooltip);
+        this._activeTooltip = tooltip;
+
+        // Position tooltip near the chip
+        const rect = chipElement.getBoundingClientRect();
+        const tooltipRect = tooltip.getBoundingClientRect();
+
+        let top = rect.bottom + 8;
+        let left = rect.left;
+
+        // Prevent overflow on right edge
+        if (left + tooltipRect.width > window.innerWidth - 16) {
+            left = window.innerWidth - tooltipRect.width - 16;
+        }
+
+        // Prevent overflow on bottom - flip to top if needed
+        if (top + tooltipRect.height > window.innerHeight - 16) {
+            top = rect.top - tooltipRect.height - 8;
+        }
+
+        tooltip.style.top = `${top}px`;
+        tooltip.style.left = `${left}px`;
     }
 
     static formatLapTime(seconds) {
@@ -162,7 +348,8 @@ export class TimingPanelV3 {
                 <div class="state-indicator ${stateClass}">
                     ${car.state || 'BOX'}
                 </div>
-                <div class="data-chip ${dataChipClass}">DATA</div>
+                ${!car.is_player_controlled ? `<div class="data-chip ${dataChipClass}" data-ai="true" style="pointer-events: auto; cursor: pointer; z-index: 10;" title="AI Debug Data" onpointerdown="window.showAiDebugTooltip && window.showAiDebugTooltip(this); event.stopPropagation();">DATA</div>` : ''}
+                ${car.is_player_controlled ? `<div class="data-chip ${dataChipClass}" title="Player controlled">DATA</div>` : ''}
             </div>
         `;
     }
@@ -204,6 +391,9 @@ export class TimingPanelV3 {
 
             row.className = `driver-row ${isInBox ? 'in-box' : 'on-track'}`;
             row.style.borderLeftColor = car.team_color;
+
+            // Store latest car data for AI debug tooltip
+            this._carDataMap.set(dn, car);
         });
 
         // Reorder DOM nodes to match sorted order (only moves if needed)

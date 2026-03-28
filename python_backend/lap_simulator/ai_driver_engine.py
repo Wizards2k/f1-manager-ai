@@ -14,7 +14,8 @@ from __future__ import annotations
 import logging
 import random
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 from .ai_data_types import (
     AIDriverConfig,
@@ -677,7 +678,7 @@ class AIDriverEngine:
         self.events = []
         self.elapsed_s = 0.0
 
-        logger.info(
+        logger.debug(
             "AI %s/%s: planned %d runs for %s",
             self.team_config.team_id,
             self.driver_config.driver_id,
@@ -695,6 +696,55 @@ class AIDriverEngine:
         if self.elapsed_s >= self.session_plan.session_duration_s:
             return False
         return True
+
+    def run_tick(self, dt: float) -> List[AIPracticeRunEvent]:
+        """Advance time and return new events."""
+        self.elapsed_s += dt
+        new_events = list(self.events)
+        self.events = []
+        return new_events
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize engine state for saving."""
+        return {
+            "aero_setup": self.aero_setup.to_dict(),
+            "setup_converged": self.setup_converged,
+            "current_run_idx": self.current_run_idx,
+            "elapsed_s": self.elapsed_s,
+            "car_status": self.car_status.value if isinstance(self.car_status, Enum) else str(self.car_status),
+            "driver_skills": self.driver_skills.to_dict(),
+            "driver_config": self.driver_config.to_dict() if hasattr(self.driver_config, "to_dict") else self.driver_config.__dict__,
+            "team_config": self.team_config.to_dict() if hasattr(self.team_config, "to_dict") else self.team_config.__dict__,
+            # SessionPlan and RunResults
+            "session_plan": self.session_plan.to_dict() if self.session_plan else None,
+            "run_results": [r.to_dict() for r in self.run_results],
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any], circuit_config: CircuitConfig) -> AIDriverEngine:
+        """Restore engine state from dictionary."""
+        # Helper to convert dict back to objects
+        from .ai_data_types import AIDriverConfig, AITeamConfig, SessionPlan
+        
+        tc_data = data["team_config"]
+        team_cfg = AITeamConfig(**tc_data) if isinstance(tc_data, dict) else tc_data
+        
+        dc_data = data["driver_config"]
+        driver_cfg = AIDriverConfig(**dc_data) if isinstance(dc_data, dict) else dc_data
+        
+        skills = DriverSkills.from_dict(data["driver_skills"])
+        
+        engine = cls(circuit_config, team_cfg, driver_cfg, skills)
+        engine.aero_setup = AeroSetup.from_dict(data["aero_setup"])
+        engine.setup_converged = data["setup_converged"]
+        engine.current_run_idx = data["current_run_idx"]
+        engine.elapsed_s = data["elapsed_s"]
+        engine.car_status = CarStatus(data["car_status"])
+        
+        if data.get("session_plan"):
+            engine.session_plan = SessionPlan.from_dict(data["session_plan"])
+            
+        return engine
 
     def next_run(self) -> Optional[RunPlan]:
         """Get the next run plan."""

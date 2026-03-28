@@ -433,6 +433,15 @@ def resolve_pair(
         attacker_state.attack_cooldown = 3  # cooldown after failed attempt
         attacker_state.side_by_side = False
         defender_state.side_by_side = False
+        
+        # Apply penalties (spec §6)
+        attacker_state.lap_time_acc_s += BLOCKED_TIME_PENALTY_S
+        attacker_result.dt_s += BLOCKED_TIME_PENALTY_S
+        # Section progress is typically 1.0 after update_section,
+        # reducing it slightly models the car being 'physically' behind due to lost momentum.
+        attacker_state.section_progress = clamp(
+            attacker_state.section_progress - BLOCKED_PROGRESSION_PENALTY, 0.0, 1.0
+        )
 
     return pair
 

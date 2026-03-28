@@ -2,6 +2,8 @@ Ecco una panoramica tecnica dettagliata sulle **Power Unit (PU)** secondo i rego
 
 Questi dati sono fondamentali per la fisica di un simulatore, poiché la gestione dell'energia (ERS) è complessa e strategica.
 
+**Nota di calibrazione (2026-03-21)**: I valori energetici per circuito sono ora raggiunti dal runtime tramite il sistema ERS Bucket (`bucket_primary_pct`, `bucket_secondary_pct`, `bucket_exit_pct`) nei `pu_maps.json`. Questo sistema sostituisce `regen_migration_bias` come lever principale per il recupero MGU-K.
+
 ### 1. Specifiche Tecniche Hardware (Regolamento 2025)
 
 Il motore è ibrido: **ICE** (Termico) + **ERS** (Sistema di recupero energia).

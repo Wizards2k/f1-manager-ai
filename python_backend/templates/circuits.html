@@ -311,6 +311,16 @@
                 <p class="text-gray-400 loading">Loading circuits...</p>
             </div>
         </div>
+
+        <!-- Continue Section (New) -->
+        <div id="continue-section" class="mt-12 hidden">
+            <h1 class="text-3xl font-bold mb-8 flex items-center f1-red">
+                <i class="fas fa-history mr-4"></i>RIPRENDI SESSIONE
+            </h1>
+            <div id="saves-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Saves will be injected here -->
+            </div>
+        </div>
     </main>
 
     <!-- Footer -->
@@ -405,7 +415,80 @@
         document.addEventListener('DOMContentLoaded', () => {
             renderCircuits();
             setupFilters();
+            loadSaves();
         });
+
+        // Load available saves
+        async function loadSaves() {
+            try {
+                const response = await fetch('/api/saves');
+                const saves = await response.json();
+                
+                const continueSection = document.getElementById('continue-section');
+                const savesGrid = document.getElementById('saves-grid');
+                
+                if (saves && saves.length > 0) {
+                    continueSection.classList.remove('hidden');
+                    savesGrid.innerHTML = saves.map(save => {
+                        const date = new Date(save.timestamp).toLocaleString();
+                        return `
+                            <div class="circuit-card rounded-xl p-6 border-l-4 border-green-500" onclick="loadSave('${save.id}')">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h4 class="font-bold text-xl text-white">${save.name}</h4>
+                                        <p class="text-sm text-gray-400">${date}</p>
+                                    </div>
+                                    <span class="bg-green-600/20 text-green-500 px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">
+                                        Snapshot
+                                    </span>
+                                </div>
+                                <div class="flex items-center text-gray-300 text-sm">
+                                    <i class="fas fa-map-marker-alt mr-2 text-red-500"></i>
+                                    <span>${save.circuit_id.replace(/_/g, ' ')}</span>
+                                </div>
+                                <div class="mt-4 flex items-center text-green-500 text-sm font-bold">
+                                    <i class="fas fa-play-circle mr-2"></i>RIPRENDI ORA
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    continueSection.classList.add('hidden');
+                }
+            } catch (err) {
+                console.error('Failed to load saves', err);
+            }
+        }
+
+        async function loadSave(saveId) {
+            if (!confirm('Vuoi caricare questo salvataggio? La sessione attuale andrà persa.')) return;
+            
+            try {
+                const response = await fetch('/api/load', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ save_id: saveId })
+                });
+                
+                if (!response.ok) throw new Error('Failed to load save');
+                
+                const data = await response.json();
+                
+                // Redirect to race page
+                // We need to know which circuit to load on the frontend side for the map
+                // But the backend already fixed the bridge.
+                // We'll just redirect to /circuit (or whatever handles the race)
+                // Redirect to race page with correct circuit ID
+                if (data.circuit_id) {
+                    window.location.href = `/circuit?circuit=${data.circuit_id}&loaded=true`;
+                } else {
+                    window.location.href = `/circuit`; 
+                }
+            } catch (err) {
+                alert('Errore nel caricamento del salvataggio');
+                console.error(err);
+            }
+        }
 
         // Render circuits grid
         function renderCircuits(filter = 'all') {

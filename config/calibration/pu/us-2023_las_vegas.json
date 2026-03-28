@@ -18,6 +18,13 @@
       "brake_energy_p90": 1.5954,
       "brake_energy_peak": 2.121,
       "circuit_length_m": 6144.0
+    },
+    "mguh_profile": {
+      "total_mj": 5.496,
+      "direct_mj": 2.473,
+      "es_mj": 3.023,
+      "direct_bias": 0.45,
+      "es_bias": 0.55
     }
   },
   "maps": {
@@ -52,7 +59,10 @@
       "ers_output_kw": 171.51,
       "deploy_mj_per_lap": 3.712,
       "harvest_mj_per_lap": 0.908,
-      "mguh_direct_ratio": 0.365,
+      "mguh_direct_ratio": 0.45,
+      "bucket_primary_pct": 0.5,
+      "bucket_secondary_pct": 0.35,
+      "bucket_exit_pct": 1.0,
       "target_soc_end_lap": 0.05,
       "torque_bias": 0.0625,
       "notes": {
@@ -65,7 +75,8 @@
         "harvest_dynamic": 0.776,
         "deploy_limit_hit": false,
         "harvest_limit_hit": false
-      }
+      },
+      "mguh_power_kw": 50.952
     },
     "QUALIFY": {
       "heat_load_kw": 309.87,
@@ -141,7 +152,8 @@
         "harvest_mj_per_lap": 0.908,
         "target_soc_end_lap": 0.05,
         "deploy_ratio": 0.928,
-        "harvest_ratio": 0.454
+        "harvest_ratio": 0.454,
+        "mguh_direct_ratio": 0.45
       },
       "QUALIFY": {
         "deploy_mj_per_lap": 4.0,
@@ -159,16 +171,16 @@
       }
     },
     "warnings": [
-      "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+      "RACE: SOC target very low (0.05) – plan recharge lap",
       "QUALIFY: deploy at 100% of MGU-K limit",
       "QUALIFY: harvest insufficient vs deploy (ratio 0.29)",
-      "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+      "QUALIFY: SOC target very low (0.05) – plan recharge lap"
     ]
   },
   "soc_warnings": [
-    "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+    "RACE: SOC target very low (0.05) – plan recharge lap",
     "QUALIFY: deploy at 100% of MGU-K limit",
     "QUALIFY: harvest insufficient vs deploy (ratio 0.29)",
-    "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+    "QUALIFY: SOC target very low (0.05) – plan recharge lap"
   ]
 }

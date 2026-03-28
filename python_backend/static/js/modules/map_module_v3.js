@@ -15,10 +15,23 @@ export class MapModuleV3 {
 
         this.mapContainer = document.getElementById('circuit-map');
         this.carMarkers = new Map();
+        this.carStates = new Map();
         this.circuitLine = null;
         this.lastBounds = null;
         this.rotationAngle = 0;
         this.centerPoint = null;
+        this.baseMinSpeed = 300; // ~576 km/h visual minimum
+        this.baseMaxSpeed = 360; // ~1296 km/h visual maximum
+        this.baseSpeedScale = 12; // visual exaggeration factor
+        this.speedMultiplier = 1;
+        this.MIN_SPEED_MPS = this.baseMinSpeed;
+        this.MAX_SPEED_MPS = this.baseMaxSpeed;
+        this.SNAP_DISTANCE_M = 0.5;
+        this.MIN_QUEUE_DELTA_M = 1.5;
+        this.POSITION_SMOOTHING = 0.35;
+        this.MAX_QUEUE_LENGTH = 8;
+        this._animationFrameId = null;
+        this._lastFrameTs = performance.now();
 
         this.map = L.map('circuit-map', {
             crs: L.CRS.Simple,
@@ -40,6 +53,9 @@ export class MapModuleV3 {
         // Background is now handled by CSS (transparent/dark)
         // V3: NO resize listeners, NO ResizeObserver
         // Map fills container via CSS only
+
+        this.setVisualSpeedMultiplier(1);
+        this._animationFrameId = requestAnimationFrame(this._animateMarkers.bind(this));
     }
 
     // Helper to project GPS to local meters (approximate equirectangular)
@@ -70,7 +86,10 @@ export class MapModuleV3 {
             this.state?.setCircuitId?.(this.selectedCircuit);
         }
 
-        if (this.selectedCircuit) {
+        const params = new URLSearchParams(window.location.search);
+        const isLoaded = params.get('loaded') === 'true';
+
+        if (this.selectedCircuit && !isLoaded) {
             try {
                 await fetch('/api/load_circuit', {
                     method: 'POST',
@@ -190,42 +209,69 @@ export class MapModuleV3 {
     }
 
     updateCarMarker(car) {
-        if (car.state === 'BOX' || !this.centerPoint) {
-            const marker = this.carMarkers.get(car.driver_number);
-            if (marker) {
-                this.map.removeLayer(marker);
-                this.carMarkers.delete(car.driver_number);
-            }
+        if (car.state === 'BOX' || car.is_on_track === false || !this.centerPoint) {
+            this._removeMarkerState(car.driver_number);
             return;
         }
 
-        // 1. Convert GPS to local Cartesian
         const [localX, localY] = this.gpsToMeters(
-            car.position[0], 
-            car.position[1], 
-            this.centerPoint.lon, 
+            car.position[0],
+            car.position[1],
+            this.centerPoint.lon,
             this.centerPoint.lat
         );
-
-        // 2. Rotate to match circuit
         const [rotX, rotY] = this.rotatePoint(localX, localY, this.rotationAngle);
 
-        // 3. Update marker (Leaflet expects [y, x])
-        const latLng = [rotY, rotX];
+        let state = this.carStates.get(car.driver_number);
+        const now = performance.now();
 
-        let marker = this.carMarkers.get(car.driver_number);
-        if (!marker) {
-            marker = this.createCarMarker(car);
-            marker.setLatLng(latLng);
-            marker.addTo(this.map);
-            this.carMarkers.set(car.driver_number, marker);
-        } else {
-            marker.setLatLng(latLng);
+        if (!state) {
+            let marker = this.carMarkers.get(car.driver_number);
+            if (!marker) {
+                marker = this.createCarMarker(car);
+                marker.addTo(this.map);
+                this.carMarkers.set(car.driver_number, marker);
+            }
+            state = {
+                marker,
+                displayX: rotX,
+                displayY: rotY,
+                targetX: rotX,
+                targetY: rotY,
+                prevSampleX: rotX,
+                prevSampleY: rotY,
+                prevSampleTs: now,
+                serverSpeed: this.MIN_SPEED_MPS,
+                positionQueue: [],
+                currentTarget: null,
+            };
+            marker.setLatLng([rotY, rotX]);
+            this.carStates.set(car.driver_number, state);
+            return;
         }
+
+        const dt = Math.max((now - state.prevSampleTs) / 1000, 0.001);
+        const dist = Math.hypot(rotX - state.prevSampleX, rotY - state.prevSampleY);
+        const serverSpeed = dist / dt;
+        if (Number.isFinite(serverSpeed) && serverSpeed > 0.1) {
+            state.serverSpeed = serverSpeed;
+        }
+        state.prevSampleX = rotX;
+        state.prevSampleY = rotY;
+        state.prevSampleTs = now;
+        state.targetX = rotX;
+        state.targetY = rotY;
+
+        this._enqueuePosition(state, rotX, rotY);
     }
 
     removeAllCarMarkers() {
-        this.carMarkers.forEach(marker => this.map.removeLayer(marker));
+        this.carStates.forEach(state => {
+            if (state.marker) {
+                this.map.removeLayer(state.marker);
+            }
+        });
+        this.carStates.clear();
         this.carMarkers.clear();
     }
 
@@ -256,3 +302,93 @@ export class MapModuleV3 {
     // V3: NO updateMapHeight - CSS Grid handles sizing
     // V3: NO invalidateSize calls
 }
+
+MapModuleV3.prototype._animateMarkers = function(timestamp) {
+    const dt = Math.min(0.2, Math.max((timestamp - this._lastFrameTs) / 1000, 0.016));
+    this._lastFrameTs = timestamp;
+
+    this.carStates.forEach((state, carId) => {
+        if (!state.marker) {
+            return;
+        }
+
+        if (!state.currentTarget && state.positionQueue?.length) {
+            state.currentTarget = state.positionQueue.shift();
+        }
+
+        const targetX = state.currentTarget?.x ?? state.targetX;
+        const targetY = state.currentTarget?.y ?? state.targetY;
+
+        const dx = targetX - state.displayX;
+        const dy = targetY - state.displayY;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist <= this.SNAP_DISTANCE_M) {
+            state.displayX = targetX;
+            state.displayY = targetY;
+            if (state.currentTarget) {
+                state.currentTarget = null;
+            }
+        } else {
+            const serverComponent = (state.serverSpeed || this.baseMinSpeed) * this.baseSpeedScale * this.speedMultiplier;
+            const desiredSpeed = this._clampSpeed(serverComponent);
+            const step = desiredSpeed * dt;
+            const ratio = Math.min(1, step / dist);
+            state.displayX += dx * ratio;
+            state.displayY += dy * ratio;
+        }
+
+        state.marker.setLatLng([state.displayY, state.displayX]);
+    });
+
+    this._animationFrameId = requestAnimationFrame(this._animateMarkers.bind(this));
+};
+
+MapModuleV3.prototype._clampSpeed = function(speed) {
+    if (!Number.isFinite(speed) || speed <= 0) {
+        return this.MIN_SPEED_MPS;
+    }
+    return Math.min(this.MAX_SPEED_MPS, Math.max(this.MIN_SPEED_MPS, speed));
+};
+
+MapModuleV3.prototype._removeMarkerState = function(carId) {
+    const state = this.carStates.get(carId);
+    if (state?.marker) {
+        this.map.removeLayer(state.marker);
+        this.carMarkers.delete(carId);
+    }
+    this.carStates.delete(carId);
+};
+
+MapModuleV3.prototype._enqueuePosition = function(state, x, y) {
+    if (!state.positionQueue) {
+        state.positionQueue = [];
+    }
+    const lastQueued = state.positionQueue[state.positionQueue.length - 1] || state.currentTarget;
+    if (lastQueued) {
+        const delta = Math.hypot(x - lastQueued.x, y - lastQueued.y);
+        if (delta < this.MIN_QUEUE_DELTA_M) {
+            const blended = {
+                x: lastQueued.x + (x - lastQueued.x) * this.POSITION_SMOOTHING,
+                y: lastQueued.y + (y - lastQueued.y) * this.POSITION_SMOOTHING,
+            };
+            state.positionQueue[state.positionQueue.length - 1] = blended;
+            return;
+        }
+    }
+
+    state.positionQueue.push({ x, y });
+    if (state.positionQueue.length > this.MAX_QUEUE_LENGTH) {
+        state.positionQueue.shift();
+    }
+};
+
+MapModuleV3.prototype.setVisualSpeedMultiplier = function(multiplier) {
+    const numeric = Number(multiplier);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+        return;
+    }
+    this.speedMultiplier = numeric;
+    this.MIN_SPEED_MPS = this.baseMinSpeed * numeric;
+    this.MAX_SPEED_MPS = this.baseMaxSpeed * numeric;
+};

@@ -295,6 +295,23 @@ class SetupRunResult:
     slider_changes: Dict[str, float] = field(default_factory=dict)
     setup_snapshot: Dict[str, int] = field(default_factory=dict)
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "run_index": self.run_index,
+            "session": self.session,
+            "program": self.program,
+            "score_before": self.score_before,
+            "score_after": self.score_after,
+            "threshold": self.threshold,
+            "setup_complete": self.setup_complete,
+            "slider_changes": self.slider_changes,
+            "setup_snapshot": self.setup_snapshot,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> SetupRunResult:
+        return cls(**data)
+
 
 @dataclass
 class AISetupState:
@@ -315,6 +332,34 @@ class AISetupState:
     completion_session: Optional[str] = None
     min_runs_required: int = 3
     _rng: Optional[random.Random] = field(default=None, repr=False)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "car_id": self.car_id,
+            "driver_name": self.driver_name,
+            "team_name": self.team_name,
+            "simulator_quality": self.simulator_quality,
+            "ricerca_assetto": self.ricerca_assetto,
+            "perfezionismo": self.perfezionismo,
+            "setup_config": self.setup_config,
+            "setup_score": self.setup_score,
+            "threshold": self.threshold,
+            "setup_complete": self.setup_complete,
+            "run_history": [r.to_dict() for r in self.run_history],
+            "total_runs": self.total_runs,
+            "completion_run": self.completion_run,
+            "completion_session": self.completion_session,
+            "min_runs_required": self.min_runs_required,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> AISetupState:
+        history_data = data.pop("run_history", [])
+        state = cls(**data)
+        state.run_history = [SetupRunResult.from_dict(r) for r in history_data]
+        # Re-initialize RNG if needed
+        state._rng = random.Random(hash(state.car_id))
+        return state
 
     def initialize(self, seed: Optional[int] = None):
         """Generate baseline setup and compute initial score."""

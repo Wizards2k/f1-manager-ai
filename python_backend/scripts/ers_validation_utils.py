@@ -164,6 +164,7 @@ def clone_config_without_ers(config: CircuitConfig, map_name: EngineMapName) -> 
         {
             "deploy_mj_per_lap": 0.0,
             "mguh_direct_mj_per_lap": 0.0,
+            "mguh_direct_ratio": 0.0,
             "bucket_primary_pct": 1.0,
             "bucket_secondary_pct": 0.0,
             "bucket_exit_pct": 0.0,

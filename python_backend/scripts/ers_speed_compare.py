@@ -134,6 +134,7 @@ def clone_config_with_ers_disabled(config, map_name: EngineMapName) -> object:
     clone.ers_budget["maps"][map_name.value].update({
         "deploy_mj_per_lap": 0.0,
         "mguh_direct_mj_per_lap": 0.0,
+        "mguh_direct_ratio": 0.0,
         "bucket_primary_pct": 1.0,
         "bucket_secondary_pct": 0.0,
         "bucket_exit_pct": 0.0,

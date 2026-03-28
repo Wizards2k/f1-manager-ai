@@ -18,6 +18,13 @@
       "brake_energy_p90": 2.2798,
       "brake_energy_peak": 2.558,
       "circuit_length_m": 5937.900000000001
+    },
+    "mguh_profile": {
+      "total_mj": 4.504,
+      "direct_mj": 2.027,
+      "es_mj": 2.477,
+      "direct_bias": 0.45,
+      "es_bias": 0.55
     }
   },
   "maps": {
@@ -52,7 +59,10 @@
       "ers_output_kw": 200,
       "deploy_mj_per_lap": 3.537,
       "harvest_mj_per_lap": 1.078,
-      "mguh_direct_ratio": 0.46,
+      "mguh_direct_ratio": 0.45,
+      "bucket_primary_pct": 0.5,
+      "bucket_secondary_pct": 0.35,
+      "bucket_exit_pct": 1.0,
       "target_soc_end_lap": 0.081,
       "torque_bias": 0.0439,
       "notes": {
@@ -65,7 +75,8 @@
         "harvest_dynamic": 0.921,
         "deploy_limit_hit": false,
         "harvest_limit_hit": false
-      }
+      },
+      "mguh_power_kw": 44.559
     },
     "QUALIFY": {
       "heat_load_kw": 322.41,
@@ -141,7 +152,8 @@
         "harvest_mj_per_lap": 1.078,
         "target_soc_end_lap": 0.081,
         "deploy_ratio": 0.884,
-        "harvest_ratio": 0.539
+        "harvest_ratio": 0.539,
+        "mguh_direct_ratio": 0.45
       },
       "QUALIFY": {
         "deploy_mj_per_lap": 4.0,
@@ -159,16 +171,16 @@
       }
     },
     "warnings": [
-      "RACE: SOC target very low (0.08) \u2013 plan recharge lap",
+      "RACE: SOC target very low (0.08) – plan recharge lap",
       "QUALIFY: deploy at 100% of MGU-K limit",
       "QUALIFY: harvest insufficient vs deploy (ratio 0.35)",
-      "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+      "QUALIFY: SOC target very low (0.05) – plan recharge lap"
     ]
   },
   "soc_warnings": [
-    "RACE: SOC target very low (0.08) \u2013 plan recharge lap",
+    "RACE: SOC target very low (0.08) – plan recharge lap",
     "QUALIFY: deploy at 100% of MGU-K limit",
     "QUALIFY: harvest insufficient vs deploy (ratio 0.35)",
-    "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+    "QUALIFY: SOC target very low (0.05) – plan recharge lap"
   ]
 }

@@ -99,7 +99,7 @@ def create_power_unit_2025(team_name: str, scaling_factor: float) -> PowerUnit:
             bucket_exit_pct=0.2,
             defense_reserve_mj=0.4,
             ers_output_kw=120.0 / scaling_factor,
-            mguh_direct_ratio=0.0,
+            mguh_direct_ratio=0.45,
             mguh_power_kw=90.0 / scaling_factor,
             heat_load_kw=260.0 * scaling_factor,
             cooling_share=0.5,

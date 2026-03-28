@@ -18,6 +18,13 @@
       "brake_energy_p90": 1.7331999999999999,
       "brake_energy_peak": 2.763,
       "circuit_length_m": 4887.099999999999
+    },
+    "mguh_profile": {
+      "total_mj": 2.988,
+      "direct_mj": 1.345,
+      "es_mj": 1.643,
+      "direct_bias": 0.45,
+      "es_bias": 0.55
     }
   },
   "maps": {
@@ -52,7 +59,10 @@
       "ers_output_kw": 185.94,
       "deploy_mj_per_lap": 3.833,
       "harvest_mj_per_lap": 1.017,
-      "mguh_direct_ratio": 0.41,
+      "mguh_direct_ratio": 0.45,
+      "bucket_primary_pct": 0.5,
+      "bucket_secondary_pct": 0.35,
+      "bucket_exit_pct": 1.0,
       "target_soc_end_lap": 0.05,
       "torque_bias": 0.0676,
       "notes": {
@@ -65,7 +75,8 @@
         "harvest_dynamic": 0.87,
         "deploy_limit_hit": false,
         "harvest_limit_hit": false
-      }
+      },
+      "mguh_power_kw": 33.462
     },
     "QUALIFY": {
       "heat_load_kw": 316.21,
@@ -141,7 +152,8 @@
         "harvest_mj_per_lap": 1.017,
         "target_soc_end_lap": 0.05,
         "deploy_ratio": 0.958,
-        "harvest_ratio": 0.508
+        "harvest_ratio": 0.508,
+        "mguh_direct_ratio": 0.45
       },
       "QUALIFY": {
         "deploy_mj_per_lap": 4.0,
@@ -160,17 +172,17 @@
     },
     "warnings": [
       "RACE: deploy at 96% of MGU-K limit",
-      "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+      "RACE: SOC target very low (0.05) – plan recharge lap",
       "QUALIFY: deploy at 100% of MGU-K limit",
       "QUALIFY: harvest insufficient vs deploy (ratio 0.33)",
-      "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+      "QUALIFY: SOC target very low (0.05) – plan recharge lap"
     ]
   },
   "soc_warnings": [
     "RACE: deploy at 96% of MGU-K limit",
-    "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+    "RACE: SOC target very low (0.05) – plan recharge lap",
     "QUALIFY: deploy at 100% of MGU-K limit",
     "QUALIFY: harvest insufficient vs deploy (ratio 0.33)",
-    "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+    "QUALIFY: SOC target very low (0.05) – plan recharge lap"
   ]
 }

@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Manager AI · Engine Hub</title>
+    <style>
+        :root {
+            --bg: #05060b;
+            --panel: #101522;
+            --panel-soft: #151b2c;
+            --card: #1a2136;
+            --accent: #ff2e52;
+            --accent-soft: rgba(255, 46, 82, 0.14);
+            --text: #f3f6ff;
+            --muted: #8d95b8;
+            --grid: rgba(255, 255, 255, 0.06);
+            --good: #00ff88;
+            --warn: #ffaa00;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(255, 46, 82, 0.18), transparent 28%),
+                linear-gradient(145deg, #04050a 0%, #0b1020 55%, #04050a 100%);
+            color: var(--text);
+            font-family: 'Formula Condensed', 'Space Grotesk', system-ui, sans-serif;
+        }
+
+        a { color: inherit; text-decoration: none; }
+
+        .page-shell {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 28px 40px 40px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 24px;
+            padding: 20px 0 28px;
+            border-bottom: 1px solid var(--grid);
+        }
+
+        .title-group h1 {
+            margin: 0;
+            font-size: clamp(2.2rem, 4vw, 4rem);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .title-group p {
+            margin: 8px 0 0;
+            color: var(--muted);
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        .top-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .chip,
+        .ghost-btn,
+        .hub-tile,
+        .meta-card {
+            border: 1px solid var(--grid);
+            background: rgba(16, 21, 34, 0.86);
+            backdrop-filter: blur(12px);
+        }
+
+        .chip {
+            padding: 10px 14px;
+            border-radius: 999px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-size: 0.72rem;
+        }
+
+        .ghost-btn {
+            padding: 12px 18px;
+            border-radius: 14px;
+            color: var(--text);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+        }
+
+        .ghost-btn:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 46, 82, 0.6);
+            background: rgba(255, 46, 82, 0.12);
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+            gap: 22px;
+            align-items: stretch;
+            margin-top: 24px;
+        }
+
+        .hero-copy,
+        .meta-card {
+            padding: 28px;
+            border-radius: 28px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+        }
+
+        .hero-copy {
+            background: linear-gradient(145deg, rgba(16, 21, 34, 0.94), rgba(10, 14, 25, 0.94));
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .eyebrow {
+            margin: 0 0 10px;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.28em;
+            font-size: 0.75rem;
+        }
+
+        .hero-copy h2 {
+            margin: 0;
+            font-size: clamp(2rem, 3.6vw, 3.2rem);
+            line-height: 1;
+            letter-spacing: 0.04em;
+        }
+
+        .hero-copy p {
+            margin: 16px 0 0;
+            color: var(--muted);
+            font-size: 1.02rem;
+            line-height: 1.65;
+            max-width: 62ch;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 24px;
+        }
+
+        .stat-card {
+            padding: 18px;
+            border-radius: 20px;
+            background: var(--panel-soft);
+            border: 1px solid var(--grid);
+        }
+
+        .stat-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .stat-card .label {
+            margin-top: 6px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-size: 0.72rem;
+        }
+
+        .meta-card h3 {
+            margin: 0 0 8px;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+
+        .meta-card p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .meta-card .divider {
+            height: 1px;
+            margin: 18px 0;
+            background: var(--grid);
+        }
+
+        .meta-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .meta-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .meta-item span:first-child {
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            font-size: 0.72rem;
+        }
+
+        .meta-item span:last-child {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .hub-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+            margin-top: 24px;
+        }
+
+        .hub-tile {
+            position: relative;
+            overflow: hidden;
+            border-radius: 28px;
+            padding: 28px;
+            min-height: 240px;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .hub-tile::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 46, 82, 0.12), transparent 40%);
+            pointer-events: none;
+        }
+
+        .hub-tile:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 46, 82, 0.7);
+            box-shadow: 0 24px 48px rgba(255, 46, 82, 0.16);
+        }
+
+        .tile-icon {
+            width: 68px;
+            height: 68px;
+            display: grid;
+            place-items: center;
+            border-radius: 18px;
+            background: var(--accent);
+            color: #03040a;
+            font-size: 2rem;
+            margin-bottom: 18px;
+        }
+
+        .hub-tile h3 {
+            margin: 0;
+            font-size: 1.9rem;
+            letter-spacing: 0.04em;
+        }
+
+        .hub-tile p {
+            margin: 10px 0 0;
+            color: var(--muted);
+            line-height: 1.7;
+            max-width: 42ch;
+        }
+
+        .tile-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top: 1px solid var(--grid);
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-size: 0.72rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--good);
+            box-shadow: 0 0 0 4px rgba(0, 255, 136, 0.16);
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .footer-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-top: 28px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            font-size: 0.72rem;
+        }
+
+        @media (max-width: 1024px) {
+            .hero {
+                grid-template-columns: 1fr;
+            }
+
+            .hub-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .page-shell {
+                padding: 22px 18px 28px;
+            }
+
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .top-actions {
+                justify-content: flex-start;
+            }
+
+            .hero-copy,
+            .meta-card,
+            .hub-tile {
+                padding: 22px;
+                border-radius: 22px;
+            }
+
+            .hero-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-shell">
+        <header class="topbar">
+            <div class="title-group">
+                <h1>Engine Hub</h1>
+                <p>Navigation hub for power unit, ICE, and ERS management</p>
+            </div>
+            <div class="top-actions">
+                <span class="chip">Circuit: {{ current_circuit_label }}</span>
+                <a class="ghost-btn" href="/">← Main Menu</a>
+            </div>
+        </header>
+
+        <section class="hero">
+            <div class="hero-copy">
+                <div class="eyebrow">Power Unit Workbench</div>
+                <h2>Choose the engine workflow you want to manage.</h2>
+                <p>
+                    This hub keeps engine-related tasks in one place while preserving a clean separation
+                    between navigation, map editing, and live race telemetry.
+                </p>
+                <div class="hero-stats">
+                    <div class="stat-card">
+                        <div class="value">4</div>
+                        <div class="label">Hub Tiles</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value">1</div>
+                        <div class="label">ERS Manager</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value">Live</div>
+                        <div class="label">Circuit Context</div>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="meta-card">
+                <h3>Current Session</h3>
+                <p>Keep engine maps aligned with the active circuit and the current session strategy.</p>
+                <div class="divider"></div>
+                <div class="meta-list">
+                    <div class="meta-item"><span>Active Circuit</span><span>{{ current_circuit_label }}</span></div>
+                    <div class="meta-item"><span>UI Language</span><span>English</span></div>
+                    <div class="meta-item"><span>Editor Scope</span><span>Separate component chain</span></div>
+                </div>
+            </aside>
+        </section>
+
+        <section class="hub-grid" aria-label="Engine hub tiles">
+            <a class="hub-tile" href="/engine/development{{ circuit_query }}">
+                <div class="tile-icon">⚙️</div>
+                <h3>Engine Development</h3>
+                <p>Plan upgrades, reliability work, and long-term power unit development without touching the map editor.</p>
+                <div class="tile-footer">
+                    <span><span class="status-dot"></span>Planned</span>
+                    <span>Open Section</span>
+                </div>
+            </a>
+
+            <a class="hub-tile" href="/engine/ice{{ circuit_query }}">
+                <div class="tile-icon">🔥</div>
+                <h3>ICE Maps</h3>
+                <p>Manage combustion maps, thermal balance, and ICE-specific tuning presets in a dedicated workflow.</p>
+                <div class="tile-footer">
+                    <span><span class="status-dot"></span>Planned</span>
+                    <span>Open Section</span>
+                </div>
+            </a>
+
+            <a class="hub-tile" href="/engine/ers{{ circuit_query }}">
+                <div class="tile-icon">⚡</div>
+                <h3>ERS Maps</h3>
+                <p>Open the ERS Map Manager to select, create, modify, save, or delete circuit-specific ERS maps.</p>
+                <div class="tile-footer">
+                    <span><span class="status-dot"></span>Ready</span>
+                    <span>Open Manager</span>
+                </div>
+            </a>
+
+            <a class="hub-tile" href="/engine/technicians{{ circuit_query }}">
+                <div class="tile-icon">👨‍🔧</div>
+                <h3>Engine Technicians</h3>
+                <p>Assign the engineering crew responsible for map development, validation support, and reliability tasks.</p>
+                <div class="tile-footer">
+                    <span><span class="status-dot"></span>Planned</span>
+                    <span>Open Section</span>
+                </div>
+            </a>
+        </section>
+
+        <div class="footer-row">
+            <span>Engine Hub · separate from player garage v3</span>
+            <span>All in-game labels remain in English</span>
+        </div>
+    </div>
+</body>
+</html>

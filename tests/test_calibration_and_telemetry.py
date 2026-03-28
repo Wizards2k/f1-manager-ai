@@ -1,15 +1,17 @@
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 TESTS_DIR = Path(__file__).resolve().parent
-PYTHON_BACKEND_ROOT = TESTS_DIR.parent
-REPO_ROOT = PYTHON_BACKEND_ROOT.parent
+PROJECT_ROOT = TESTS_DIR.parent
+PYTHON_BACKEND_ROOT = PROJECT_ROOT / "python_backend"
+REPO_ROOT = PROJECT_ROOT
 
-for path in (PYTHON_BACKEND_ROOT, REPO_ROOT):
+for path in (PROJECT_ROOT, PYTHON_BACKEND_ROOT):
     path_str = str(path)
     if path_str not in sys.path:
         sys.path.insert(0, path_str)
@@ -27,8 +29,10 @@ from lap_simulator.data_types import (
     SectionContext,
     SectionKind,
 )
-from lap_simulator.power_unit import generate_output, ERS_MAX_ENERGY_MJ
+from lap_simulator.power_unit import generate_output, ERS_MAX_ENERGY_MJ, _resolve_mguh_bias
 from models import RaceCar
+from utils.pu_telemetry_logger import _build_line
+import utils.pu_telemetry_logger as pu_telemetry_logger
 from utils.session_bridge import SessionBridge
 
 DERIVED_DIR = REPO_ROOT / "config" / "circuits" / "derived"
@@ -130,6 +134,270 @@ def test_power_unit_clamps_when_deploy_budget_exhausted():
     assert pu_state.lap_deploy_mj <= 0.0501
     assert pu_state.energy_trace[-1]["deploy_mj"] == pytest.approx(0.0, abs=1e-4)
     assert pu_state.ers_output_kw == pytest.approx(0.0, abs=1e-3)
+
+
+def test_bucket_es_deploy_uses_full_cap_even_when_direct_fills_it():
+    section = SectionContext(
+        section_id="sec_bucket_es",
+        name="Bucket ES Deploy",
+        kind=SectionKind.STRAIGHT,
+        length_m=200.0,
+        v_base_kph=360.0,
+        braking_energy_mj=0.0,
+    )
+    config = CircuitConfig(
+        sections=[section],
+        pu_maps={
+            EngineMapName.QUALIFY: EngineMapParams(
+                name=EngineMapName.QUALIFY,
+                torque_ramp=1.0,
+                cooling_share=0.5,
+                ers_output_kw=0.0,
+                mguh_direct_ratio=1.0,
+                mguh_power_kw=120.0,
+            )
+        },
+        pu_reliability=PUReliabilityParams(),
+        ers_budget={
+            "deploy_limit_mj": 0.05,
+            "harvest_limit_mj": 0.02,
+            "maps": {
+                "QUALIFY": {
+                    "deploy_mj_per_lap": 0.05,
+                    "harvest_mj_per_lap": 0.0,
+                    "target_soc_end_lap": 0.0,
+                    "mguh_direct_ratio": 1.0,
+                    "bucket_primary_pct": 1.0,
+                    "bucket_secondary_pct": 0.0,
+                    "bucket_exit_pct": 0.0,
+                    "bucket_primary_es_deploy_pct": 1.0,
+                    "bucket_secondary_es_deploy_pct": 0.0,
+                    "bucket_exit_es_deploy_pct": 0.0,
+                }
+            },
+        },
+    )
+    env = EnvContext()
+    driver = DriverIntent(ers_deploy_request=True)
+    aero = SimpleNamespace(cooling_capacity=1.0, kerb_severity=0.0, bump_penalty=0.0)
+    pu_state = PUState(active_map=EngineMapName.QUALIFY, ers_energy_mj=0.2)
+
+    generate_output(pu_state, driver, aero, section, env, config, dt_estimate_s=1.0)
+
+    trace = pu_state.energy_trace[-1]
+    assert trace["mguh_direct_mj"] > trace["deploy_mj"]
+    assert trace["deploy_mj"] == pytest.approx(0.05, abs=1e-4)
+    assert pu_state.lap_deploy_mj == pytest.approx(0.05, abs=1e-4)
+
+
+def test_pu_telemetry_line_includes_qualify_bucket_diagnostics(monkeypatch):
+    captured = {}
+
+    def _capture(payload):
+        captured.update(payload)
+
+    monkeypatch.setattr("utils.session_bridge.log_pu_section", _capture)
+
+    config = SimpleNamespace(
+        ers_budget={
+            "battery_capacity_mj": 4.0,
+            "deploy_limit_mj": 4.0,
+            "harvest_limit_mj": 2.0,
+            "maps": {
+                "QUALIFY": {
+                    "deploy_mj_per_lap": 4.0,
+                    "harvest_mj_per_lap": 0.47,
+                    "target_soc_end_lap": 0.0,
+                    "mguh_direct_ratio": 1.0,
+                    "bucket_primary_pct": 0.7,
+                    "bucket_secondary_pct": 0.225,
+                    "bucket_exit_pct": 0.075,
+                    "bucket_primary_es_deploy_pct": 1.0,
+                    "bucket_secondary_es_deploy_pct": 1.0,
+                    "bucket_exit_es_deploy_pct": 1.0,
+                }
+            },
+        }
+    )
+    bridge = SessionBridge.__new__(SessionBridge)
+    bridge.circuit_config = config
+
+    pu_state = PUState(active_map=EngineMapName.QUALIFY, ers_energy_mj=3.8)
+    pu_state.lap_deploy_mj = 0.353
+    pu_state.lap_harvest_mj = 0.0
+    pu_state.lap_mguh_direct_mj = 0.322
+    pu_state.lap_mguh_harvest_mj = 0.0
+    pu_state.energy_trace = [{"section_id": "sec_05", "deploy_mj": 0.353, "mguh_direct_mj": 0.322, "mguh_es_mj": 0.0}]
+    pu_state.runtime_warnings = []
+    pu_state.bucket_primary_total_mj = 1.859
+    pu_state.bucket_primary_used_mj = 0.095
+    pu_state.bucket_secondary_total_mj = 0.0
+    pu_state.bucket_secondary_used_mj = 0.0
+    pu_state.bucket_exit_total_mj = 0.0
+    pu_state.bucket_exit_used_mj = 0.0
+    pu_state.primary_sections_count = 5
+    pu_state.secondary_sections_count = 0
+    pu_state.exit_sections_count = 0
+    pu_state.primary_sections_remaining = 4
+    pu_state.secondary_sections_remaining = 0
+    pu_state.exit_sections_remaining = 0
+    pu_state.last_bucket_key = "primary"
+    pu_state.last_bucket_allocated_mj = 0.0
+    pu_state.last_defense_used_mj = 0.0
+    pu_state.deploy_budget_total_mj = 4.0
+    pu_state.defense_reserve_available_mj = 0.2
+
+    entry = SimpleNamespace(
+        car_id="16",
+        driver_name="Test Driver",
+        state=SimpleNamespace(pu=pu_state, ers_mode="QUALIFY"),
+    )
+    section = SectionContext(
+        section_id="sec_05",
+        name="Sector 05",
+        kind=SectionKind.MEDIUM_STRAIGHT,
+        length_m=180.0,
+        v_base_kph=300.0,
+        braking_energy_mj=0.0,
+    )
+    ts = SimpleNamespace(lap_number=1, current_section_idx=4)
+
+    bridge._log_pu_section_usage(entry, ts, section)
+
+    assert captured["engine_map"] == "QUALIFY"
+    assert captured["ers_mode"] == "QUALIFY"
+    assert captured["bucket_es_deploy_pct"] == pytest.approx(1.0)
+    assert captured["bucket_sections_left"] == 5
+
+    line = _build_line(captured, datetime(2026, 3, 23, 22, 44, 16))
+    assert "engine_map=QUALIFY" in line
+    assert "ers_mode=QUALIFY" in line
+    assert "bucket_es_deploy_pct=1.000" in line
+    assert "bucket_sections_left=5" in line
+
+
+def test_pu_telemetry_writer_emits_qualify_bucket_diagnostics_to_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(pu_telemetry_logger, "_ENABLED", True)
+    monkeypatch.setattr(pu_telemetry_logger, "_DRIVER_FILTERS", {"16"})
+    monkeypatch.setattr(pu_telemetry_logger, "_LOG_FILE", tmp_path / "pu_telemetry.log")
+    monkeypatch.delattr(pu_telemetry_logger.log_pu_section, "_initialized", raising=False)
+    pu_telemetry_logger._SECTION_TRACKING.clear()
+
+    payload = {
+        "car_id": "16",
+        "lap": 5,
+        "section_id": "sec_05",
+        "engine_map": "QUALIFY",
+        "ers_mode": "QUALIFY",
+        "battery_soc_mj": 3.764,
+        "battery_soc_pct": 94.1,
+        "lap_deploy_mj": 0.353,
+        "lap_harvest_mj": 0.0,
+        "lap_mguh_direct_mj": 0.322,
+        "lap_mguh_harvest_mj": 0.0,
+        "deploy_budget_total_mj": 4.0,
+        "defense_reserve_available_mj": 0.2,
+        "bucket_type": "primary",
+        "bucket_budget_total_mj": 1.859,
+        "bucket_budget_remaining_mj": 1.764,
+        "bucket_section_cap_mj": 0.353,
+        "bucket_sections_left": 5,
+        "bucket_es_deploy_pct": 1.0,
+        "bucket_section_es_mj": 0.353,
+        "bucket_section_dir_mj": 0.322,
+        "bucket_key": "primary",
+        "mguh_direct_ratio": 1.0,
+        "mguh_es_ratio": 0.0,
+        "mguh_dir": 0.322,
+        "mguh_es": 0.0,
+        "mguh_total": 0.322,
+        "batt_budget": 4.0,
+        "def_res": 0.2,
+        "deploy_mj": 0.353,
+        "harvest_mj": 0.0,
+        "warnings": [],
+        "last_bucket": "primary",
+        "section_deploy": 0.353,
+        "section_harvest": 0.0,
+    }
+
+    pu_telemetry_logger.log_pu_section(payload)
+    pu_telemetry_logger.log_pu_section(payload)
+
+    log_file = tmp_path / "pu_telemetry.log"
+    lines = log_file.read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+    assert "engine_map=QUALIFY" in lines[0]
+    assert "ers_mode=QUALIFY" in lines[0]
+    assert "bucket_es_deploy_pct=1.000" in lines[0]
+    assert "bucket_sections_left=5" in lines[0]
+
+
+def test_mguh_bias_uses_ers_budget_and_baseline_fallback():
+    map_params = EngineMapParams(
+        name=EngineMapName.RACE,
+        torque_ramp=1.0,
+        cooling_share=0.5,
+        ers_output_kw=120.0,
+        mguh_direct_ratio=0.9,
+    )
+    pu_state = PUState(active_map=EngineMapName.RACE, ers_energy_mj=ERS_MAX_ENERGY_MJ)
+
+    direct, es = _resolve_mguh_bias(map_params, pu_state, {"mguh_direct_ratio": 0.45})
+    assert direct == pytest.approx(0.45)
+    assert es == pytest.approx(0.55)
+
+    direct_zero, es_zero = _resolve_mguh_bias(map_params, pu_state, {"mguh_direct_ratio": 0.0})
+    assert direct_zero == pytest.approx(0.0)
+    assert es_zero == pytest.approx(1.0)
+
+    direct_default, es_default = _resolve_mguh_bias(map_params, pu_state, {})
+    assert direct_default == pytest.approx(0.45)
+    assert es_default == pytest.approx(0.55)
+
+
+def test_mguh_energy_reroutes_to_direct_when_ers_is_full():
+    config = CircuitConfig(
+        pu_maps={
+            EngineMapName.RACE: EngineMapParams(
+                name=EngineMapName.RACE,
+                torque_ramp=1.0,
+                cooling_share=0.5,
+                ers_output_kw=0.0,
+                mguh_direct_ratio=0.0,
+                mguh_power_kw=90.0,
+            )
+        },
+        pu_reliability=PUReliabilityParams(),
+        ers_budget={
+            "maps": {
+                "RACE": {
+                    "mguh_direct_ratio": 0.0,
+                    "mguh_es_mj": 0.0,
+                }
+            }
+        },
+    )
+    section = SectionContext(
+        section_id="sec_mguh_direct",
+        name="MGU-H Direct",
+        kind=SectionKind.STRAIGHT,
+        length_m=220.0,
+        v_base_kph=320.0,
+        braking_energy_mj=0.0,
+    )
+    env = EnvContext()
+    driver = DriverIntent(ers_deploy_request=False)
+    aero = SimpleNamespace(cooling_capacity=1.0, kerb_severity=0.0, bump_penalty=0.0)
+    pu_state = PUState(active_map=EngineMapName.RACE, ers_energy_mj=ERS_MAX_ENERGY_MJ)
+
+    generate_output(pu_state, driver, aero, section, env, config, dt_estimate_s=1.0)
+
+    trace = pu_state.energy_trace[-1]
+    assert trace["mguh_direct_mj"] > 0.0
+    assert trace["mguh_es_mj"] == pytest.approx(0.0)
+    assert trace["deploy_mj"] == pytest.approx(0.0)
+    assert pu_state.ers_output_kw > 0.0
 
 
 def test_brake_migration_respects_hydraulic_ratio():
@@ -313,6 +581,9 @@ def test_session_bridge_three_laps_per_circuit(circuit_id):
                 assert stats.get("harvest_mj_per_lap") == pytest.approx(harvest)
             if target_soc is not None:
                 assert stats.get("target_soc_end_lap") == pytest.approx(target_soc)
+            map_enum = EngineMapName[map_name]
+            expected_direct_ratio = map_budget.get("mguh_direct_ratio", 0.45)
+            assert config.pu_maps[map_enum].mguh_direct_ratio == pytest.approx(expected_direct_ratio)
             lap_deploy = stats.get("lap_deploy_mj")
             lap_harvest = stats.get("lap_harvest_mj")
             if lap_deploy is not None:

@@ -33,12 +33,16 @@ from utils import (
     update_car_position, get_car_position, is_simulation_ready
 )
 from utils.game_logic import get_game_speed, get_pause_state, get_session_bests, mark_simulation_pending, is_v2_engine_active, get_session_bridge
+from utils.pu_telemetry_logger import reset_pu_telemetry_log
+from lap_simulator.update_section import reset_lap_debug_log
 
 app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = SECRET_KEY
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins=SOCKETIO_CORS_ORIGINS)
 
+reset_pu_telemetry_log()
+reset_lap_debug_log()
 register_routes(app)
 mark_simulation_pending(reset_cars=True)
 
@@ -109,6 +113,7 @@ def race_simulation():
                 'ice_mode': getattr(car, 'ice_mode', None),
                 'ers_mode': getattr(car, 'ers_mode', None),
                 'stint_target_laps': getattr(car, 'stint_target_laps', None),
+                'max_stint_laps': 150,
                 'blue_flag': bridge.get_car_blue_flag(str(car.driver_number)) if bridge and bridge.active else False,
                 'pu_stats': getattr(car, 'pu_stats', {}),
                 'brake_diagnostics': getattr(car, 'brake_diagnostics', {}),
@@ -119,6 +124,16 @@ def race_simulation():
                 'cooling_margin': getattr(car, 'cooling_margin', None),
                 'tire_core_temps': getattr(car, 'tire_core_temps', {}),
                 'tyre_states': getattr(car, 'tyre_states', {}),
+                # AI debug fields for setup/tyre tooltip
+                'ai_setup_score': getattr(car, 'ai_setup_score', None),
+                'ai_setup_threshold': getattr(car, 'ai_setup_threshold', None),
+                'ai_setup_complete': getattr(car, 'ai_setup_complete', False),
+                'ai_total_runs': getattr(car, 'ai_total_runs', 0),
+                'ai_min_runs_required': getattr(car, 'ai_min_runs_required', 0),
+                'ai_tyre_set_id': getattr(car, 'ai_tyre_set_id', None),
+                'ai_tyre_condition': getattr(car, 'ai_tyre_condition', None),
+                'ai_tyre_heat_cycles': getattr(car, 'ai_tyre_heat_cycles', 0),
+                'ai_program': getattr(car, 'ai_program', None),
             })
         
         session_flag = bridge.session_flag if bridge and bridge.active else 'green'

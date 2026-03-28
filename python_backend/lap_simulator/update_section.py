@@ -9,7 +9,9 @@ Reference: docs/lap-physics-spec-v0.5.md §3.3 (Passi 1-8)
 from __future__ import annotations
 
 from typing import Dict, List, Optional
+import os
 import logging
+from pathlib import Path
 
 from .aero_package import compute_forces
 from .brake_system import update_brakes
@@ -35,6 +37,7 @@ from .engine_penalty import (
     DEFAULT_ENGINE_MAP_PENALTIES,
     STRAIGHT_KINDS,
     compute_engine_penalty,
+    compute_ers_bonus,
     get_engine_cv_for_team,
 )
 from .brake_penalty import compute_brake_penalty
@@ -57,6 +60,20 @@ from .penalty_cache import get_penalty_cache
 PENALTY_LOGGER_NAME = "lap_simulator.penalties"
 logger = logging.getLogger(PENALTY_LOGGER_NAME)
 
+_LAP_DEBUG_ENABLED = os.getenv("LAP_DEBUG_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
+_LAP_LOG_FILE = Path("logs/lap_times_debug.log")
+
+def reset_lap_debug_log() -> None:
+    if _LAP_DEBUG_ENABLED:
+        try:
+            _LAP_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+            _LAP_LOG_FILE.write_text("", encoding="utf-8")
+        except OSError:
+            pass
+
+# Initialize on import
+reset_lap_debug_log()
+
 # Import penalty system flags
 try:
     from utils.game_logic import (
@@ -70,6 +87,7 @@ try:
         ENABLE_BRAKE_PENALTIES,
         ENABLE_SETUP_PENALTIES,
         ENABLE_PENALTY_CACHE,
+        ENABLE_ERS_BONUS,
     )
 except ImportError:
     # Fallback if flags not available
@@ -83,6 +101,7 @@ except ImportError:
     ENABLE_BRAKE_PENALTIES = True
     ENABLE_SETUP_PENALTIES = True
     ENABLE_PENALTY_CACHE = False
+    ENABLE_ERS_BONUS = True
 
 
 # ---------------------------------------------------------------------------
@@ -128,14 +147,18 @@ def update_section(
     driver_id : str             – Driver identifier for penalty RNG
     lap_number : int            – Lap number for penalty RNG
     """
-    logger.debug(
-        "[PEN] start sec=%s push=%.2f map=%s ers=%s tyres=%s",
-        section.section_id,
-        push_level,
-        getattr(getattr(car_state.pu, "active_map", None), "value", None),
-        getattr(car_state, "ers_mode", None),
-        {wp.name: car_state.tyres[wp].compound.name for wp in WheelPosition if wp in car_state.tyres},
-    )
+    from lap_simulator.lap_simulator import _should_log_penalties
+    
+    if _should_log_penalties(getattr(car_state, "car_id", "unknown")):
+        logger.debug(
+            "[PEN] car=%s start sec=%s push=%.2f map=%s ers=%s tyres=%s",
+            getattr(car_state, "car_id", "unknown"),
+            section.section_id,
+            push_level,
+            getattr(getattr(car_state.pu, "active_map", None), "value", None),
+            getattr(car_state, "ers_mode", None),
+            {wp.name: car_state.tyres[wp].compound.name for wp in WheelPosition if wp in car_state.tyres},
+        )
     all_events: List[SectionEvent] = []
 
     # Get penalty cache if enabled
@@ -264,7 +287,7 @@ def update_section(
     CLA_REF = aero_forces.df_total * 0.020
 
     # Grip meccanico: F1 2025 mu_mech ~ 1.6 (gomme Pirelli C3 nuove)
-    # Degradato esponenzialmente con l'usura per amplificare l'effetto
+    # Degradato esponenzialmente con l'usura per amplificare l'effetto fisico
     grip_avg = (eff_grip_front + eff_grip_rear) / 2.0
     mu = 1.6 * (grip_avg ** 2.0) * (1.0 - aero_forces.handling_penalty)
     # Identificazione del carico ottimale del circuito (per R_eff e next_v_apex)
@@ -634,19 +657,22 @@ def update_section(
                 for tyre in car_state.tyres.values()
             )
             
-            # 2. Wear penalty
+            # 2. Wear penalty (distributed per lap via section_weight)
             wear_coeff = config.tyre_wear_coeffs.get(current_compound, 0.12)
             total_wear = sum(tyre.wear_pct for tyre in car_state.tyres.values()) / 4.0
             
-            # Scale to meaningful time penalties (approx 0.05s - 0.15s per 10% wear)
-            wear_multiplier = 0.05
+            # Parametro di usura da agganciare al giro intero: 
+            # 0.5s penalty per ogni 10% di usura sul giro base.
+            lap_wear_multiplier = 0.5 
             
             if total_wear <= 50.0:
-                wear_penalty = wear_coeff * wear_multiplier * (total_wear / 10.0)
+                wear_penalty_lap = wear_coeff * lap_wear_multiplier * (total_wear / 10.0)
             else:
-                base_penalty = wear_coeff * wear_multiplier * 5.0  # Penalty at 50%
+                base_lap_penalty = wear_coeff * lap_wear_multiplier * 5.0  # Penalty base al 50%
                 excess_wear = total_wear - 50.0
-                wear_penalty = base_penalty + wear_coeff * wear_multiplier * (excess_wear / 10.0) * 4.0
+                wear_penalty_lap = base_lap_penalty + wear_coeff * lap_wear_multiplier * (excess_wear / 10.0) * 3.0
+            
+            wear_penalty = wear_penalty_lap * section_weight
             
             # 3. Temperature penalty
             temp_penalty = 0.0
@@ -700,11 +726,14 @@ def update_section(
     section_kind = getattr(section.kind, "name", str(section.kind))
     straight_kind = section.kind in STRAIGHT_KINDS
 
-    if logger.isEnabledFor(logging.INFO):
+    from lap_simulator.lap_simulator import _should_log_penalties
+    
+    if logger.isEnabledFor(logging.DEBUG) and _should_log_penalties(getattr(car_state, "car_id", "unknown")):
         map_penalties = config.engine_map_penalties or DEFAULT_ENGINE_MAP_PENALTIES
         preview_map_penalty = map_penalties.get(engine_map, 0.0) if engine_map else 0.0
-        logger.info(
-            "[PEN] engine_input sec=%s kind=%s straight=%s enabled=%s team_code=%s map=%s coeff=%.6f ref_cv=%.1f map_penalty=%.4f",
+        logger.debug(
+            "[PEN] car=%s engine_input sec=%s kind=%s straight=%s enabled=%s team_code=%s map=%s coeff=%.6f ref_cv=%.1f map_penalty=%.4f",
+            getattr(car_state, "car_id", "unknown"),
             section.section_id,
             section_kind,
             straight_kind,
@@ -725,11 +754,14 @@ def update_section(
             config=config
         )
 
-        if logger.isEnabledFor(logging.INFO):
+        from lap_simulator.lap_simulator import _should_log_penalties
+        
+        if logger.isEnabledFor(logging.INFO) and _should_log_penalties(getattr(car_state, "car_id", "unknown")):
             cv_delta = team_cv - config.engine_reference_cv
             cv_penalty = cv_delta * config.engine_penalty_coeff if straight_kind else 0.0
-            logger.info(
-                "[PEN] engine_result sec=%s team=%s map=%s straight=%s cv=%.1f cv_delta=%.1f cv_penalty=%.4f engine_s=%.4f",
+            logger.debug(
+                "[PEN] car=%s engine_result sec=%s team=%s map=%s straight=%s cv=%.1f cv_delta=%.1f cv_penalty=%.4f engine_s=%.4f",
+                getattr(car_state, "car_id", "unknown"),
                 section.section_id,
                 team_code,
                 getattr(engine_map, "value", engine_map),
@@ -761,10 +793,27 @@ def update_section(
             section=section,
             config=config
         )
-    
-    base_dt_s = dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s + engine_delta_s + brake_delta_s
-    dt_s = max(base_dt_s + push_delta_s, 0.01)
+
+    # ERS energy bonus – negative term (faster on straights when ERS is deployed)
+    ers_bonus_s = 0.0
+    if ENABLE_ERS_BONUS and USE_NEW_PENALTY_SYSTEM:
+        _trace = (car_state.pu.energy_trace or [{}])[-1] if car_state.pu.energy_trace else {}
+        _deploy_mj = float(_trace.get("deploy_mj", 0.0) or 0.0)
+        _mguh_direct_mj = float(_trace.get("mguh_direct_mj", 0.0) or 0.0)
+        ers_bonus_s = compute_ers_bonus(
+            deploy_mj=_deploy_mj,
+            mguh_direct_mj=_mguh_direct_mj,
+            section=section,
+            ers_thermal_eta=car_state.pu.ers_thermal_eta,
+        )
+        # Accumulate per-lap ERS bonus in PUState for telemetry
+        car_state.pu.lap_ers_bonus_s += ers_bonus_s
+        car_state.pu.last_section_ers_bonus_s = ers_bonus_s
+
+    dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s + push_delta_s + engine_delta_s + brake_delta_s + ers_bonus_s, 0.01)
     v_effective = (section.length_m / dt_s) * 3.6
+
+    # Logging moved to the end of function to capture final penalties and cumulative time
 
     car_state.v_current_ms = v
 
@@ -956,14 +1005,45 @@ def update_section(
         df_curve_bonus_s=setup_penalty_result.df_curve_bonus_s,
         drag_penalty_s=setup_penalty_result.drag_penalty_s,
         drag_bonus_s=setup_penalty_result.drag_bonus_s,
+        ers_bonus_s=ers_bonus_s,
     )
-    logger.info(
-        "[PEN] sec=%s push=%.1f fuel=%.4f tyre=%.4f push_s=%.4f engine_s=%.4f",
-        section.section_id,
-        push_level,
-        fuel_delta_s,
-        tyre_delta_s,
-        push_delta_s,
-        engine_delta_s,
-    )
+    from lap_simulator.lap_simulator import _should_log_penalties
+    
+    if logger.isEnabledFor(logging.DEBUG) and _should_log_penalties(getattr(car_state, "car_id", "unknown")):
+        _trace_log = (car_state.pu.energy_trace or [{}])[-1] if car_state.pu.energy_trace else {}
+        _deploy_log = float(_trace_log.get("deploy_mj", 0.0) or 0.0)
+        _mguh_log = float(_trace_log.get("mguh_direct_mj", 0.0) or 0.0)
+        logger.debug(
+            "[PEN] car=%s sec=%s push=%.1f fuel=%.4f tyre=%.4f push_s=%.4f engine_s=%.4f ers_bonus=%.4f deploy=%.4f eta_th=%.3f",
+            getattr(car_state, "car_id", "unknown"),
+            section.section_id,
+            push_level,
+            fuel_delta_s,
+            tyre_delta_s,
+            push_delta_s,
+            engine_delta_s,
+            ers_bonus_s,
+            _deploy_log + _mguh_log,
+            car_state.pu.ers_thermal_eta,
+        )
+
+    if _LAP_DEBUG_ENABLED and _should_log_penalties(getattr(car_state, "car_id", "unknown")):
+        try:
+            # Re-calculate total wear and compound for the log
+            t_wear = sum(t.wear_pct for t in car_state.tyres.values()) / 4.0
+            t_comp = car_state.tyres[WheelPosition.LF].compound
+            if hasattr(t_comp, "value"): t_comp = t_comp.value
+            
+            p_map = getattr(car_state.pu, "active_map", "RACE")
+            if hasattr(p_map, "value"): p_map = p_map.value
+            
+            with _LAP_LOG_FILE.open("a", encoding="utf-8") as f:
+                f.write(
+                    f"SEC|car={getattr(car_state, 'car_id', '??')}|lap={lap_number:02d}|sec={section.section_id:8s}"
+                    f"|dt={dt_s:.4f}|cum={car_state.lap_time_acc_s:.3f}|tyre={t_comp:3s}|wear={t_wear:4.1f}%"
+                    f"|fuel={car_state.pu.fuel_kg:6.2f}|soc={car_state.pu.ers_energy_mj:4.2f}|map={str(p_map):8s}"
+                    f"|ers={str(car_state.ers_mode):8s}|push={push_level:2d}|mu={mu:.4f}\n"
+                )
+        except Exception:
+            pass
     return result

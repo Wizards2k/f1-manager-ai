@@ -18,6 +18,13 @@
       "brake_energy_p90": 2.3122,
       "brake_energy_peak": 2.928,
       "circuit_length_m": 4273.8
+    },
+    "mguh_profile": {
+      "total_mj": 3.355,
+      "direct_mj": 1.51,
+      "es_mj": 1.845,
+      "direct_bias": 0.45,
+      "es_bias": 0.55
     }
   },
   "maps": {
@@ -52,7 +59,10 @@
       "ers_output_kw": 196.94,
       "deploy_mj_per_lap": 3.808,
       "harvest_mj_per_lap": 1.041,
-      "mguh_direct_ratio": 0.441,
+      "mguh_direct_ratio": 0.45,
+      "bucket_primary_pct": 0.5,
+      "bucket_secondary_pct": 0.35,
+      "bucket_exit_pct": 1.0,
       "target_soc_end_lap": 0.05,
       "torque_bias": 0.0689,
       "notes": {
@@ -65,7 +75,8 @@
         "harvest_dynamic": 0.89,
         "deploy_limit_hit": false,
         "harvest_limit_hit": false
-      }
+      },
+      "mguh_power_kw": 47.252
     },
     "QUALIFY": {
       "heat_load_kw": 316.8,
@@ -141,7 +152,8 @@
         "harvest_mj_per_lap": 1.041,
         "target_soc_end_lap": 0.05,
         "deploy_ratio": 0.952,
-        "harvest_ratio": 0.52
+        "harvest_ratio": 0.52,
+        "mguh_direct_ratio": 0.45
       },
       "QUALIFY": {
         "deploy_mj_per_lap": 4.0,
@@ -160,17 +172,17 @@
     },
     "warnings": [
       "RACE: deploy at 95% of MGU-K limit",
-      "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+      "RACE: SOC target very low (0.05) – plan recharge lap",
       "QUALIFY: deploy at 100% of MGU-K limit",
       "QUALIFY: harvest insufficient vs deploy (ratio 0.33)",
-      "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+      "QUALIFY: SOC target very low (0.05) – plan recharge lap"
     ]
   },
   "soc_warnings": [
     "RACE: deploy at 95% of MGU-K limit",
-    "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
+    "RACE: SOC target very low (0.05) – plan recharge lap",
     "QUALIFY: deploy at 100% of MGU-K limit",
     "QUALIFY: harvest insufficient vs deploy (ratio 0.33)",
-    "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
+    "QUALIFY: SOC target very low (0.05) – plan recharge lap"
   ]
 }

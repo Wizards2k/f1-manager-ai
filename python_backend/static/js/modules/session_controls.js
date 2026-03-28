@@ -6,6 +6,14 @@ export class SessionControls {
         this.selectCircuitButton = selectCircuitButton || document.getElementById('select-circuit-btn');
         this.currentSpeed = 1;
         this.isPaused = false;
+        this.onSpeedChange = null;
+        this.uiToServerSpeed = { 1: 1.0, 2: 5.0, 4: 15.0, 6: 30.0 };
+        this.serverToUiSpeed = {
+            1.0: 1,
+            5.0: 2,
+            15.0: 4,
+            30.0: 6,
+        };
         this.bindEvents();
         this.updateSpeedIndicator(this.currentSpeed);
         this.updatePauseButton(this.isPaused);
@@ -16,13 +24,47 @@ export class SessionControls {
             this.pauseButton.addEventListener('click', () => this.togglePause());
         }
         this.speedButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const speed = parseFloat(btn.dataset.speed);
-                this.changeSpeed(speed);
-            });
+            if (btn.hasAttribute('data-speed')) {
+                btn.addEventListener('click', () => {
+                    const uiSpeed = parseFloat(btn.dataset.speed);
+                    this.changeSpeed(uiSpeed);
+                });
+            }
         });
         if (this.selectCircuitButton) {
             this.selectCircuitButton.addEventListener('click', () => this.returnToCircuitSelection());
+        }
+        this.saveButton = document.getElementById('save-game-btn');
+        if (this.saveButton) {
+            this.saveButton.addEventListener('click', () => this.saveGame());
+        }
+    }
+
+    async saveGame() {
+        if (this.saveButton) {
+            this.saveButton.disabled = true;
+            this.saveButton.textContent = 'SAVING...';
+        }
+        try {
+            const response = await fetch('/api/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: `Save ${new Date().toLocaleString()}` })
+            });
+
+            if (!response.ok) throw new Error('Failed to save');
+            
+            const data = await response.json();
+            console.log('Game saved:', data.save_id);
+            alert('Game saved successfully!');
+        } catch (error) {
+            console.error('Error saving game:', error);
+            alert('Failed to save game.');
+        } finally {
+            if (this.saveButton) {
+                this.saveButton.disabled = false;
+                this.saveButton.textContent = 'SAVE';
+            }
         }
     }
 
@@ -65,19 +107,21 @@ export class SessionControls {
         }
     }
 
-    async changeSpeed(speed) {
+    async changeSpeed(uiSpeed) {
         try {
+            this.uiToServerSpeed[uiSpeed] ?? uiSpeed;
             const response = await fetch('/api/set_speed', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ speed })
+                body: JSON.stringify({ speed: uiSpeed })
             });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             await response.json();
-            this.currentSpeed = speed;
-            this.updateSpeedIndicator(speed);
+            this.currentSpeed = uiSpeed;
+            this.updateSpeedIndicator(uiSpeed);
+            this._emitSpeedChange(uiSpeed);
         } catch (error) {
             console.error('Network error setting speed:', error);
         }
@@ -88,9 +132,13 @@ export class SessionControls {
             this.isPaused = isPaused;
             this.updatePauseButton(this.isPaused);
         }
-        if (typeof gameSpeed === 'number' && !Number.isNaN(gameSpeed) && gameSpeed !== this.currentSpeed) {
-            this.currentSpeed = gameSpeed;
-            this.updateSpeedIndicator(this.currentSpeed);
+        if (typeof gameSpeed === 'number' && !Number.isNaN(gameSpeed)) {
+            const uiSpeed = this.serverToUiSpeed[gameSpeed] ?? this.currentSpeed;
+            if (uiSpeed !== this.currentSpeed) {
+                this.currentSpeed = uiSpeed;
+                this.updateSpeedIndicator(this.currentSpeed);
+                this._emitSpeedChange(this.currentSpeed);
+            }
         }
     }
 
@@ -114,6 +162,12 @@ export class SessionControls {
             console.error('Error resetting session:', error);
         } finally {
             window.location.href = '/';
+        }
+    }
+
+    _emitSpeedChange(speed) {
+        if (typeof this.onSpeedChange === 'function') {
+            this.onSpeedChange(speed);
         }
     }
 }
