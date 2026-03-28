@@ -34,6 +34,7 @@ from utils import (
 )
 from utils.game_logic import get_game_speed, get_pause_state, get_session_bests, mark_simulation_pending, is_v2_engine_active, get_session_bridge
 from utils.pu_telemetry_logger import reset_pu_telemetry_log
+from lap_simulator.update_section import reset_lap_debug_log
 
 app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = SECRET_KEY
@@ -41,6 +42,7 @@ CORS(app)
 socketio = SocketIO(app, cors_allowed_origins=SOCKETIO_CORS_ORIGINS)
 
 reset_pu_telemetry_log()
+reset_lap_debug_log()
 register_routes(app)
 mark_simulation_pending(reset_cars=True)
 

@@ -52,7 +52,7 @@ else:
 
 
 def _parse_penalty_log_filter() -> set:
-    raw_value = os.getenv("PENALTY_LOG_DRIVER_IDS", "16")
+    raw_value = os.getenv("PENALTY_LOG_DRIVER_IDS", "")
     ids = {item.strip() for item in raw_value.split(",") if item.strip()}
     return ids
 
@@ -71,11 +71,6 @@ _LAP_DEBUG_ENABLED = os.getenv("LAP_DEBUG_ENABLED", "0").lower() in {"1", "true"
 
 if _LAP_DEBUG_ENABLED:
     print(f"DEBUG: LAP_DEBUG_ENABLED is active. Logging to { _LAP_LOG_FILE.absolute() }")
-    # Reset log file on startup
-    try:
-        _LAP_LOG_FILE.write_text("", encoding="utf-8")
-    except OSError:
-        pass  # File may not exist yet, which is fine
 
 
 # Lazy import to avoid circular dependency

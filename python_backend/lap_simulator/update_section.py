@@ -63,6 +63,17 @@ logger = logging.getLogger(PENALTY_LOGGER_NAME)
 _LAP_DEBUG_ENABLED = os.getenv("LAP_DEBUG_ENABLED", "0").lower() in {"1", "true", "yes", "on"}
 _LAP_LOG_FILE = Path("logs/lap_times_debug.log")
 
+def reset_lap_debug_log() -> None:
+    if _LAP_DEBUG_ENABLED:
+        try:
+            _LAP_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+            _LAP_LOG_FILE.write_text("", encoding="utf-8")
+        except OSError:
+            pass
+
+# Initialize on import
+reset_lap_debug_log()
+
 # Import penalty system flags
 try:
     from utils.game_logic import (
@@ -795,12 +806,7 @@ def update_section(
     dt_s = max(dt_s + ref_dt * total_penalty + fuel_delta_s + tyre_delta_s + push_delta_s + engine_delta_s + brake_delta_s + ers_bonus_s, 0.01)
     v_effective = (section.length_m / dt_s) * 3.6
 
-    if _LAP_DEBUG_ENABLED:
-        try:
-            with _LAP_LOG_FILE.open("a", encoding="utf-8") as f:
-                f.write(f"SEC|{getattr(car_state, 'car_id', '??')}|{section.section_id}|dt={dt_s:.4f}|tyre_d={tyre_delta_s:.4f}|fuel_d={fuel_delta_s:.4f}|mu={mu:.4f}|wear={total_wear:.1f}%\n")
-        except:
-            pass
+    # Logging moved to the end of function to capture final penalties and cumulative time
 
     car_state.v_current_ms = v
 
@@ -1013,4 +1019,24 @@ def update_section(
             _deploy_log + _mguh_log,
             car_state.pu.ers_thermal_eta,
         )
+
+    if _LAP_DEBUG_ENABLED and _should_log_penalties(getattr(car_state, "car_id", "unknown")):
+        try:
+            # Re-calculate total wear and compound for the log
+            t_wear = sum(t.wear_pct for t in car_state.tyres.values()) / 4.0
+            t_comp = car_state.tyres[WheelPosition.LF].compound
+            if hasattr(t_comp, "value"): t_comp = t_comp.value
+            
+            p_map = getattr(car_state.pu, "active_map", "RACE")
+            if hasattr(p_map, "value"): p_map = p_map.value
+            
+            with _LAP_LOG_FILE.open("a", encoding="utf-8") as f:
+                f.write(
+                    f"SEC|car={getattr(car_state, 'car_id', '??')}|lap={lap_number:02d}|sec={section.section_id:8s}"
+                    f"|dt={dt_s:.4f}|cum={car_state.lap_time_acc_s:.3f}|tyre={t_comp:3s}|wear={t_wear:4.1f}%"
+                    f"|fuel={car_state.pu.fuel_kg:6.2f}|soc={car_state.pu.ers_energy_mj:4.2f}|map={str(p_map):8s}"
+                    f"|ers={str(car_state.ers_mode):8s}|push={push_level:2d}|mu={mu:.4f}\n"
+                )
+        except Exception:
+            pass
     return result
