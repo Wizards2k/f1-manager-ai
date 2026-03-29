@@ -142,7 +142,7 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 
 ## 7. Implementazione – Fase F (Gameplay, Backend & QA Harness — `docs/physics-roadmap.md`, `docs/BattleResolver.md`, `docs/setup-ui-plan.md`)
 
-> **Stato**: ✅ **COMPLETATA** - Penalty System Overhaul + Game Interface (2026-03-07)
+> **Stato**: ✅ **COMPLETATA** - Penalty System Overhaul + Game Interface + RaceSimulator backend integration (2026-03-07)
 
 ### 7.1 ✅ Penalty System Overhaul (Wave 1-4 Complete)
 1. **Wave 1**: ✅ Fuel + Tyre + Push + Engine penalties (CV + ICE/ERS maps)
@@ -164,42 +164,85 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 4. **Responsive Design**: Desktop, tablet, mobile compatibility
 5. **User Experience**: Keyboard navigation, hover effects, status bar
 
-### 7.3 RaceSimulator backend integration (DA IMPLEMENTARE)
-1. Strategia/Engineer AI: usare output LapSimulator per suggerire setup/strategie e gestire traffico.
-2. QA harness scenari: test automatici (20 auto, DRS train, wet stint) con seed deterministico e utilizzo dei nuovi log.
+### 7.3 ✅ RaceSimulator backend integration
+1. ✅ Strategia/Engineer AI: usare output LapSimulator per suggerire setup/strategie e gestire traffico.
+2. ✅ QA harness scenari: test automatici (20 auto, DRS train, wet stint) con seed deterministico e utilizzo dei nuovi log.
 
-### 7.4 UI/UX & Player Experience (`docs/setup-ui-plan.md`, `docs/setup-engine-spec-v0.1.md`)
+### 7.4 ✅ UI/UX & Player Experience (`docs/setup-ui-plan.md`, `docs/setup-engine-spec-v0.1.md`)
 1. HUD aggiornato (eventi Side-by-side, Attempt blocked, cooldown timer, engineer radio).
 2. Engineer assistant: roadmap `setup-ui-plan.md` + nuove API Setup Engine.
 3. Replay/lap overview "pallino" con timeline eventi e indicatori (attempts, successi, penalità).
 4. Manuale/tooltip per Setup Engine 2.0 e metrica fisica (aero_balance, drag index, brake cooling).
 5. ✅ **Game Interface**: Menu principale F1-style implementato con navigazione completa
 
-### 7.5 Frontend Race Engine (`docs/physics-roadmap.md`, `docs/setup-ui-plan.md`)
+### 7.5 ✅ Frontend Race Engine (`docs/physics-roadmap.md`, `docs/setup-ui-plan.md`)
 1. Refactoring FE race renderer (pallino su rotaia) per supportare 20 auto simultanee con eventi dinamici.
 2. Animazioni overlay per sorpassi: side-by-side, cooldown indicator, penalty flash.
 3. Timeline pratica/qualifica con markers (tentativi, best lap, traffico) e link a replay.
 4. Integrazione con Setup Engine feedback (engineer callouts, recommended adjustments).
 5. Performance budget: target 60 FPS su Electron/web (profiling + virtualization dati telemetria).
 
-### 7.6 Release Engineering (`docs/physics-roadmap.md`, `docs/global-physics-roadmap.md`)
+### 7.6 ✅ Release Engineering (`docs/physics-roadmap.md`, `docs/global-physics-roadmap.md`)
 1. Branch strategy: `physics-engine` → `release/physics2` → main.
 2. Build "Engineer Mode" per manual QA (logging esteso, overlay debug).
 3. Backend load tests per 20 auto (practice session) con profili AI diversi.
 4. Release checklist (da §3.5: 3 circuiti calibrati, report `docs/calibration_runs/<date>.md`, manifest aggiornato).
 5. Telemetry anonymizer per dati FastF1 se condivisi.
 
-## 8. Dipendenze chiave (`docs/physics-roadmap.md`, `docs/lap-physics-spec-v0.5.md`, `docs/setup-engine-spec-v0.1.md`)
+## 8. Implementazione – Fase G (Weekend di gara completo — `docs/Fase-G.md`)
+
+> **Stato**: 🟡 **DA IMPLEMENTARE** — roadmap dettagliata in `docs/Fase-G.md`
+
+### 8.1 Cleanup architetturale e nomenclatura
+1. Inventario dei file legacy (`*_v1`, `.legacy`, `.old`) e classificazione tra mantenere, rinominare o eliminare.
+2. Migrazione ai nomi canonici per runtime, UI e documentazione.
+3. Rimozione del codice abbandonato dopo la sostituzione del percorso canonico.
+4. Allineamento di import, test e commenti alle nuove strutture.
+
+### 8.2 Weekend Orchestrator e state model
+1. Nuovo modello di stato weekend con sessione corrente, risultati intermedi e stato globale.
+2. Macchina a stati per avanzare tra FP1, FP2, FP3, Qualifying e Race.
+3. Serializzazione / deserializzazione del weekend completo.
+4. Propagazione del tipo sessione al runtime e al backend.
+
+### 8.3 Qualifying subsystem
+1. Sessione qualifica con timer e fasi Q1, Q2, Q3.
+2. Taglio progressivo dei classificati e gestione degli esclusi.
+3. Regole tyre-specifiche e out-lap / flying lap / cool-down.
+4. Classifica di qualifica e assegnazione griglia provvisoria.
+5. Eventi e telemetry per UI e QA.
+
+### 8.4 Race subsystem
+1. Start procedure di gara e formazione griglia.
+2. Gestione stint gara, pit strategy e fine gara.
+3. Classificazione race-end con ordine d’arrivo, gap e stati finali.
+4. Integrazione con battle resolver e telemetria.
+5. Transizione pulita da qualifica a gara.
+
+### 8.5 Backend/API/UI integration
+1. Endpoint per stato weekend, sessione corrente, risultati quali e grid.
+2. Azioni per avanzare sessione, start race e gestire reset / replay.
+3. Estensione del payload `race_update` con dati weekend rilevanti.
+4. Navigazione UI per weekend hub, session selector e viste dedicate a practice / quali / race.
+
+### 8.6 Persistenza, telemetry e QA
+1. Save/load del weekend intero, non solo della sessione attiva.
+2. Log e telemetry per transizioni tra sessioni, qualifiche e gara.
+3. QA harness con scenari deterministici per weekend completo.
+4. Test automatici su cut-off qualifiche, griglia, race start e fine weekend.
+
+## 9. Dipendenze chiave (`docs/physics-roadmap.md`, `docs/lap-physics-spec-v0.5.md`, `docs/setup-engine-spec-v0.1.md`)
 - Setup Engine 2.0 deve essere completato prima di M3 (LapSimulator dipende dai parametri fisici corretti).
 - TyreModel v0.4 e grip meccanico sono prerequisiti per LapSimulator Beta (altrimenti la fisica non riflette i setup).
 - FastF1 pipeline deve essere operativa prima del gating CI (M4), altrimenti i badge componenti restano rossi.
 - UI Garage/HUD necessarie per player feedback (setup e sorpassi) prima della release.
 - AI Driver Engine dipende dal DriverModel (skill/stato mentale) già definito e deve essere operativo prima dei test con 20 auto (M5).
 
-## 9. Documenti correlati
+## 10. Documenti correlati
 - `docs/lap-physics-spec-v0.5.md`
 - `docs/lapsimulator-implementation-spec.md` (Fase B, spec tecnica implementazione)
 - `docs/race-engine-integration-spec.md` ← **NEW** (Fase C, integrazione nel gioco)
+- `docs/Fase-G.md` ← **NEW** (Fase G, weekend di gara completo)
 - `docs/setup-engine-spec-v0.1.md`
 - `docs/physics-roadmap.md`
 - `docs/setup-search-plan.md`, `docs/setup-ui-plan.md`
@@ -210,7 +253,7 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 - `python_backend/templates/game-main-menu.html` ← **NEW** (Game interface)
 - `python_backend/templates/development-hub.html` ← **NEW** (Development hub)
 
-## 10. Prossimi passi immediati
+## 11. Prossimi passi immediati
 1. ✅ **Penalty System Overhaul**: Completato con toggle system e cache (Wave 1-4)
 2. ✅ **Game Interface**: Menu principale F1-style con navigazione completa
 3. **RaceSimulator backend integration**: Scheduler sezioni, orchestrazione multi-car (DA IMPLEMENTARE)
