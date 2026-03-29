@@ -191,13 +191,13 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 
 ## 8. Implementazione – Fase G (Weekend di gara completo — `docs/Fase-G.md`)
 
-> **Stato**: 🟡 **DA IMPLEMENTARE** — roadmap dettagliata in `docs/Fase-G.md`
+> **Stato**: � **IN PROGRESS** — Punto 1 (Cleanup) ✅ completato, iniziato Punto 2 (Weekend Orchestrator)
 
-### 8.1 Cleanup architetturale e nomenclatura
-1. Inventario dei file legacy (`*_v1`, `.legacy`, `.old`) e classificazione tra mantenere, rinominare o eliminare.
-2. Migrazione ai nomi canonici per runtime, UI e documentazione.
-3. Rimozione del codice abbandonato dopo la sostituzione del percorso canonico.
-4. Allineamento di import, test e commenti alle nuove strutture.
+### 8.1 ✅ Cleanup architetturale e nomenclatura — **COMPLETATO**
+1. ✅ Inventario dei file legacy (`*_v1`, `.legacy`, `.old`) — 10 file rimossi.
+2. ✅ Migrazione ai nomi canonici — route `/race` → `index-v3.html`.
+3. ✅ Rimozione del codice abbandonato — backend e frontend puliti.
+4. ✅ Allineamento di import, test e documentazione — test passati.
 
 ### 8.2 Weekend Orchestrator e state model
 1. Nuovo modello di stato weekend con sessione corrente, risultati intermedi e stato globale.

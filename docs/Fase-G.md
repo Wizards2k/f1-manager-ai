@@ -2,6 +2,7 @@
 title: Fase G — Weekend di gara completo
 version: 0.1
 last_updated: 2026-03-29
+status: "Punto 1 completato — in progress su Weekend Orchestrator"
 scope: "Weekend di gara completo con cleanup architetturale aggressivo, Qualifying e Race"
 ---
 
@@ -11,16 +12,20 @@ Fase G porta il motore da una singola sessione practice a un weekend completo, c
 
 ## Roadmap in 6 punti
 
-### 1) Cleanup architetturale e nomenclatura
+### 1) ✅ Cleanup architetturale e nomenclatura — **COMPLETATO**
 
-Obiettivo: ridurre la ridondanza e rendere canonico un solo percorso runtime, backend e frontend.
+**Stato**: ✅ Completato il 2026-03-29
 
-Deliverable:
+**Azioni eseguite**:
+- Rimossi 10 file legacy orfani (6 backend + 4 frontend)
+- Migrato route `/race` al frontend V3 canonico
+- Allineata documentazione di migrazione
+- Test di import backend: passato
+- Test di riferimenti residui: nessuno trovato
 
-- inventario dei file legacy (`*_v1`, `.legacy`, `.old`) e classificazione tra mantenere, rinominare o eliminare;
-- sostituzione dei nomi ambigui con nomi canonici;
-- rimozione del codice abbandonato dopo la migrazione;
-- allineamento di docs, test e import ai nuovi nomi.
+**File rimossi**:
+- Backend: `api_legacy.py.old`, `models_v1.py`, `game_logic_v1.py`, `simulation_v1.py`, `performance_v1.py`, `dashboard.legacy.js`
+- Frontend: `index.html`, `base.html`, `dashboard-v1.css`, `dashboard-v1.js`
 
 ### 2) Weekend Orchestrator e state model
 
