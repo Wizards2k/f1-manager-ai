@@ -503,17 +503,42 @@ class SessionBridge:
         self._track_states = {}
         for car_id, state_data in raw_states.items():
             ts = CarTrackState.from_dict(state_data)
-            # Re-link tyre_set if tyre_set_id is present
-            if ts.tyre_set_id and self.pso:
-                # Find in inventories
-                for inv in self.pso.inventories.values():
-                    if ts.tyre_set_id in inv.sets:
-                        # Find the set in the list
-                        for s in inv.sets:
-                            if s.set_id == ts.tyre_set_id:
-                                ts.tyre_set = s
-                                break
-                        break
+            # Re-link tyre_set if tyre_set_id is present.
+            if ts.tyre_set_id:
+                tyre_set = None
+
+                if self.circuit_id:
+                    try:
+                        inventory = self.tyre_inventory_service.get_inventory(car_id, self.circuit_id)
+                        tyre_set = inventory.find_set(ts.tyre_set_id)
+                    except Exception as exc:
+                        logger.warning(
+                            "load_session_state: failed to resolve tyre set %s for car %s via bridge inventory: %s",
+                            ts.tyre_set_id,
+                            car_id,
+                            exc,
+                        )
+
+                if tyre_set is None and self.pso:
+                    for inv in self.pso.inventories.values():
+                        candidate = None
+                        sets = getattr(inv, "sets", None)
+                        if isinstance(sets, dict):
+                            candidate = sets.get(ts.tyre_set_id)
+                        elif isinstance(sets, list):
+                            candidate = next(
+                                (
+                                    tyre_set
+                                    for tyre_set in sets
+                                    if getattr(tyre_set, "set_id", None) == ts.tyre_set_id
+                                ),
+                                None,
+                            )
+                        if candidate is not None:
+                            tyre_set = candidate
+                            break
+
+                ts.tyre_set = tyre_set
             self._track_states[car_id] = ts
             
         self._ai_teams_cars = data.get("_ai_teams_cars", {})
@@ -2073,6 +2098,14 @@ class SessionBridge:
                 inventory = self.tyre_inventory_service.get_inventory(car_id, self.circuit_id)
                 if tyre_set_id:
                     active_tyre_set = inventory.find_set(tyre_set_id)
+                logger.info(
+                    "player_send_out DEBUG: car=%s tyre_set_id=%s found=%s condition=%.1f available=%s inv_sets=[%s]",
+                    car_id, tyre_set_id,
+                    active_tyre_set is not None,
+                    getattr(active_tyre_set, "condition", -1),
+                    getattr(active_tyre_set, "is_available", None),
+                    ", ".join(f"{s.set_id}:{s.condition:.1f}:{s.is_available}" for s in (inventory.sets if inventory else [])),
+                )
         except Exception as exc:
             logger.warning("player_send_out: failed to resolve tyre set %s for car %s: %s", tyre_set_id, car_id, exc)
 
@@ -2111,6 +2144,28 @@ class SessionBridge:
                 compound,
             )
         else:
+            live_tyre_set = getattr(car, "current_tyre_set", None)
+            live_condition = getattr(car, "current_tyre_condition_pct", None)
+            live_laps_completed = getattr(car, "current_tyre_laps_completed", None)
+            live_heat_cycles = getattr(car, "current_tyre_heat_cycles", None)
+            if (
+                live_tyre_set is not None
+                and getattr(live_tyre_set, "set_id", None) == active_tyre_set.set_id
+            ):
+                live_condition = getattr(live_tyre_set, "condition", live_condition)
+                live_laps_completed = getattr(live_tyre_set, "laps_completed", live_laps_completed)
+                live_heat_cycles = getattr(live_tyre_set, "heat_cycles", live_heat_cycles)
+
+            if isinstance(live_condition, (int, float)):
+                active_tyre_set.condition = max(0.0, min(100.0, float(live_condition)))
+            if isinstance(live_laps_completed, (int, float)):
+                active_tyre_set.laps_completed = max(0, int(live_laps_completed))
+            if isinstance(live_heat_cycles, (int, float)):
+                active_tyre_set.heat_cycles = max(0, int(live_heat_cycles))
+            try:
+                active_tyre_set.update_runtime_snapshot(getattr(car, "tyre_states", {}) or {})
+            except Exception:
+                pass
             car.apply_tyre_set(active_tyre_set, preserve_temps=True)
             compound = car.player_config.get('tyre_compound', compound)
         sim_compound = game_compound_to_sim(compound)
@@ -2487,6 +2542,15 @@ class SessionBridge:
             )
 
         final_condition_pct: Optional[float] = self._compute_live_tyre_condition_pct(race_car)
+        logger.info(
+            "_complete_car_run DEBUG: car=%s tyre_set=%s tyre_set.condition=%.1f final_condition_pct=%s car.current_tyre_condition_pct=%s car.current_tyre_set=%s",
+            car_id,
+            getattr(getattr(ts, 'tyre_set', None), 'set_id', 'N/A'),
+            getattr(getattr(ts, 'tyre_set', None), 'condition', -1),
+            final_condition_pct,
+            getattr(race_car, 'current_tyre_condition_pct', 'N/A') if race_car else 'no_car',
+            getattr(getattr(race_car, 'current_tyre_set', None), 'set_id', 'N/A') if race_car else 'no_car',
+        )
 
         if race_car and self.circuit_id:
             tyre_set_id = None

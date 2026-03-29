@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from lap_simulator.practice_session import PracticeSessionOrchestrator
+from models.tyre_inventory import DriverTyreInventory
 from utils.game_logic import (
     race_cars, get_session_bridge, get_session_telemetry_store,
     accumulated_game_time, is_paused, game_speed_multiplier,
@@ -23,6 +24,93 @@ class SaveGameService:
         self.save_dir = self.base_path / "saves"
         os.makedirs(self.save_dir, exist_ok=True)
         self.tyre_service = TyreInventoryService()
+
+    def _restore_tyre_inventories(
+        self,
+        service: Optional[TyreInventoryService],
+        inventories_state: Dict[str, Dict[str, Any]],
+        circuit_id: str,
+    ) -> None:
+        if service is None or not circuit_id:
+            return
+
+        store = service._load_store()
+        for driver_id, inv_data in inventories_state.items():
+            try:
+                inventory = DriverTyreInventory.from_dict(inv_data)
+            except Exception as exc:
+                logger.warning(
+                    "Failed to restore tyre inventory for driver %s on circuit %s: %s",
+                    driver_id,
+                    circuit_id,
+                    exc,
+                )
+                continue
+
+            key = service._inventory_key(driver_id, circuit_id)
+            service._inventory_cache[key] = inventory
+            store[key] = inv_data
+
+    def _merge_car_state_into_inventory_payloads(
+        self,
+        inventories_state: Dict[str, Dict[str, Any]],
+        cars_state: List[Dict[str, Any]],
+    ) -> None:
+        active_track_states = {"OUT LAP", "HOT LAP", "IN LAP"}
+
+        for car_data in cars_state:
+            if not isinstance(car_data, dict):
+                continue
+
+            driver_number = car_data.get("driver_number")
+            if driver_number is None:
+                continue
+
+            driver_id = str(driver_number)
+            inv_data = inventories_state.get(driver_id)
+            if not isinstance(inv_data, dict):
+                continue
+
+            tyre_set_id = ""
+            player_config = car_data.get("player_config") or {}
+            if isinstance(player_config, dict):
+                tyre_set_id = str(player_config.get("tyre_set_id") or "").strip()
+            if not tyre_set_id:
+                tyre_set_id = str(car_data.get("current_tyre_set_id") or "").strip()
+            if not tyre_set_id:
+                continue
+
+            sets = inv_data.get("sets")
+            if not isinstance(sets, list):
+                continue
+
+            matching_set = next(
+                (
+                    tyre_set for tyre_set in sets
+                    if isinstance(tyre_set, dict) and tyre_set.get("set_id") == tyre_set_id
+                ),
+                None,
+            )
+            if matching_set is None:
+                continue
+
+            condition = car_data.get("current_tyre_condition_pct")
+            if condition is not None:
+                matching_set["condition"] = max(0.0, min(100.0, float(condition)))
+
+            heat_cycles = car_data.get("current_tyre_heat_cycles")
+            if heat_cycles is not None:
+                matching_set["heat_cycles"] = int(heat_cycles)
+
+            laps_completed = car_data.get("current_tyre_laps_completed")
+            if laps_completed is not None:
+                matching_set["laps_completed"] = int(laps_completed)
+
+            state_value = str(car_data.get("state") or "").strip().upper()
+            if state_value in active_track_states:
+                matching_set["is_available"] = False
+            elif state_value == "BOX":
+                matching_set["is_available"] = True
 
     def get_save_files(self) -> List[Dict[str, Any]]:
         saves = []
@@ -80,10 +168,11 @@ class SaveGameService:
 
         # 6. Tyre Inventory State
         inventories = {}
-        if bridge.circuit_id:
+        tyre_service = getattr(bridge, "tyre_inventory_service", None) or self.tyre_service
+        if bridge.circuit_id and tyre_service is not None:
             for car in race_cars:
                 driver_id = str(car.driver_number)
-                inv = self.tyre_service.get_inventory(driver_id, bridge.circuit_id)
+                inv = tyre_service.get_inventory(driver_id, bridge.circuit_id)
                 inventories[driver_id] = inv.to_dict()
 
         payload = {
@@ -134,6 +223,10 @@ class SaveGameService:
         gl.start_session_for_circuit()
         gl.simulation_ready = True
 
+        # Reconcile inventory payloads with the saved car state so older saves
+        # keep the currently installed tyre set condition.
+        self._merge_car_state_into_inventory_payloads(inventories_state, cars_state)
+
         # 2. Restore Global Game Logic State
         with gl.state_lock:
             gl.accumulated_game_time = engine_state.get("accumulated_game_time", 0.0)
@@ -150,14 +243,7 @@ class SaveGameService:
                 gl.pause_start_time = None
 
         # 3. Restore Tyre Inventories Caches
-        for driver_id, inv_data in inventories_state.items():
-            from models.tyre_inventory import DriverTyreInventory
-            inv = DriverTyreInventory.from_dict(inv_data)
-            key = self.tyre_service._inventory_key(driver_id, circuit_id)
-            self.tyre_service._inventory_cache[key] = inv
-            # Update store cache too
-            store = self.tyre_service._load_store()
-            store[key] = inv_data
+        self._restore_tyre_inventories(self.tyre_service, inventories_state, circuit_id)
 
         # 4. Restore RaceCars data into existing objects
         for car_data in cars_state:
@@ -173,6 +259,8 @@ class SaveGameService:
             if pso_state:
                 from lap_simulator.practice_session import PracticeSessionOrchestrator
                 bridge.pso = PracticeSessionOrchestrator.from_dict(pso_state)
+
+            self._restore_tyre_inventories(getattr(bridge, "tyre_inventory_service", None), inventories_state, circuit_id)
             
             # Load the sub-state (track states, accumulated time, AI engines, etc.)
             bridge_state = data.get("bridge_state")

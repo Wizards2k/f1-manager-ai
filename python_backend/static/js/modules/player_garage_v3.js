@@ -256,6 +256,29 @@ export class PlayerGarageV3 {
         return Math.max(0, Math.min(100, Math.round(condition)));
     }
 
+    static resolveTyreHealthPct(car) {
+        const currentCondition = typeof car?.current_tyre_condition_pct === 'number'
+            ? Number(car.current_tyre_condition_pct)
+            : null;
+        if (currentCondition != null && Number.isFinite(currentCondition)) {
+            return Math.max(0, Math.min(100, Math.round(currentCondition)));
+        }
+
+        const liveCondition = PlayerGarageV3.computeLiveTyreCondition(car);
+        if (liveCondition != null) {
+            return liveCondition;
+        }
+
+        const tireWear = typeof car?.tire_wear === 'number'
+            ? Math.max(0, Math.min(1, car.tire_wear))
+            : null;
+        if (tireWear != null) {
+            return Math.round((1 - tireWear) * 100);
+        }
+
+        return null;
+    }
+
     buildTyreRuntimeChips(tyreSet) {
         const runtime = tyreSet?.runtime;
         if (!runtime || typeof runtime !== 'object') {
@@ -393,8 +416,8 @@ export class PlayerGarageV3 {
         const preferredAvailableSet = sets.find(tyreSet => tyreSet.compound === tyreChoice && tyreSet.is_available !== false)
             || sets.find(tyreSet => tyreSet.is_available !== false)
             || sets[0];
-        const selectedSetId = car.player_config?.tyre_set_id || preferredAvailableSet?.set_id || null;
-        const liveTyreCondition = PlayerGarageV3.computeLiveTyreCondition(car);
+        const selectedSetId = car.current_tyre_set_id || car.player_config?.tyre_set_id || preferredAvailableSet?.set_id || null;
+        const liveTyreCondition = PlayerGarageV3.resolveTyreHealthPct(car);
         const grouped = sets.reduce((acc, tyreSet) => {
             const key = tyreSet.compound || 'other';
             if (!acc[key]) acc[key] = [];
@@ -455,12 +478,13 @@ export class PlayerGarageV3 {
         }
 
         const selectedSetId = car.player_config?.tyre_set_id || null;
+        const canonicalSelectedSetId = car.current_tyre_set_id || selectedSetId;
         const activeCompound = String(car.player_config?.tyre_compound || car.current_tire || '').toLowerCase();
-        const fallbackSelectedSetId = selectedSetId
+        const fallbackSelectedSetId = canonicalSelectedSetId
             || sets.find(tyreSet => tyreSet.compound === activeCompound && tyreSet.is_available !== false)?.set_id
             || sets.find(tyreSet => tyreSet.compound === activeCompound)?.set_id
             || null;
-        const liveTyreCondition = PlayerGarageV3.computeLiveTyreCondition(car);
+        const liveTyreCondition = PlayerGarageV3.resolveTyreHealthPct(car);
 
         const grouped = sets.reduce((acc, tyreSet) => {
             const key = tyreSet.compound || 'other';
@@ -1962,9 +1986,7 @@ export class PlayerGarageV3 {
         const iceMode = this.normalizeIceMode(iceModeRaw, iceCatalog);
         const ersMode = this.normalizeErsMode(ersModeRaw, ersCatalog);
         const maxStint = car.max_stint_laps ?? stintTarget;
-        const tireWear = Math.max(0, Math.min(1, car.tire_wear ?? 0));
-        const liveTyreCondition = PlayerGarageV3.computeLiveTyreCondition(car);
-        const tireHealthPct = liveTyreCondition != null ? liveTyreCondition : Math.round((1 - tireWear) * 100);
+        const tireHealthPct = PlayerGarageV3.resolveTyreHealthPct(car) ?? 100;
         const currentState = this.getCarState(car);
         const lapInfo = typeof car.total_laps === 'number' && car.total_laps > 0 ? `- Lap ${car.total_laps}` : '';
         const stateDisplay = this.getStateDisplay(currentState);
@@ -2086,8 +2108,6 @@ export class PlayerGarageV3 {
     }
 
     buildTabPilota(car, { tyreChoice, fuelPercent, stintTarget, maxStint, paceLevel, iceMode, ersMode, tireHealthPct, isBox, brakeChipPreview }) {
-        const tireWear = Math.max(0, Math.min(1, car.tire_wear ?? 0));
-        const tireWearPct = Math.round(tireWear * 100);
         const fuel = Math.round(car.fuel_percent ?? car.player_config?.fuel_percent ?? 100);
         
         return `
@@ -2319,8 +2339,7 @@ export class PlayerGarageV3 {
             return `<span class="telemetry-sector-v3 ${status}" aria-label="${key}">${current ? current.toFixed(2) : '--'}</span>`;
         }).join('');
 
-        const tireWear = typeof car.tire_wear === 'number' ? Math.max(0, Math.min(1, car.tire_wear)) : 0;
-        const tireHealthPct = Math.round((1 - tireWear) * 100);
+        const tireHealthPct = PlayerGarageV3.resolveTyreHealthPct(car) ?? 100;
         const fuel = Math.round(car.fuel_percent ?? car.player_config?.fuel_percent ?? 100);
 
         return `
@@ -2676,8 +2695,7 @@ export class PlayerGarageV3 {
         
         // Render Setup Panel
         const setupHtml = await this.renderSetupPanelHtml(car, isBox);
-        const tireWear = typeof car.tire_wear === 'number' ? Math.max(0, Math.min(1, car.tire_wear)) : 0;
-        const tireHealthPct = Math.round((1 - tireWear) * 100);
+        const tireHealthPct = PlayerGarageV3.resolveTyreHealthPct(car) ?? 100;
         const tyresPanel = this.buildTabTyres(car, { tireHealthPct });
         
         // Render ERS Panel
@@ -3565,6 +3583,8 @@ export class PlayerGarageV3 {
         const fuelPercent = car.player_config?.fuel_percent ?? car.fuel_percent ?? 100;
         const stintTarget = car.player_config?.stint_target_laps ?? car.stint_target_laps ?? 5;
         const maxStint = car.max_stint_laps ?? stintTarget;
+        const tireHealthPct = PlayerGarageV3.resolveTyreHealthPct(car) ?? 100;
+        const tyresPanel = this.buildTabTyres(car, { tireHealthPct });
         const hasFeedback = !!car.has_setup_feedback;
         const infoPct = car.setup_info_percent ?? 0;
         const fieldFeedback = hasFeedback ? (recommendation?.fields || {}) : {};
@@ -3744,8 +3764,7 @@ export class PlayerGarageV3 {
             }
 
             // 2. Tyres Tab
-            const tireWear = typeof car.tire_wear === 'number' ? Math.max(0, Math.min(1, car.tire_wear)) : 0;
-            const tireHealthPct = Math.round((1 - tireWear) * 100);
+            const tireHealthPct = PlayerGarageV3.resolveTyreHealthPct(car) ?? 100;
             const tyresTab = cardEl.querySelector('.dock-tab-pane[data-tab="tyres"]');
             if (tyresTab) {
                 tyresTab.innerHTML = this.buildTabTyres(car, { tireHealthPct });

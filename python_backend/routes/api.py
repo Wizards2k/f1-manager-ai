@@ -44,7 +44,20 @@ def _find_team_by_id(team_id: int):
 def _error_response(message: str, status: int = 400):
     return jsonify({'error': message}), status
 
+
 tyre_inventory_service = TyreInventoryService()
+
+def _get_tyre_inventory_service():
+    try:
+        from utils.game_logic import get_session_bridge
+
+        bridge = get_session_bridge()
+        service = getattr(bridge, 'tyre_inventory_service', None) if bridge and bridge.active else None
+        if service is not None:
+            return service
+    except Exception:
+        pass
+    return tyre_inventory_service
 
 
 def _load_reference_telemetry(circuit_id: str):
@@ -285,8 +298,14 @@ def register_routes(app):
                 'current_tire': car.current_tire.value,
                 'tire_age': car.tire_age,
                 'tire_wear': car.tire_wear,
+                'current_tyre_condition_pct': getattr(car, 'current_tyre_condition_pct', None),
+                'current_tyre_heat_cycles': getattr(car, 'current_tyre_heat_cycles', None),
+                'current_tyre_laps_completed': getattr(car, 'current_tyre_laps_completed', None),
+                'current_tyre_laps_at_install': getattr(car, 'current_tyre_laps_at_install', None),
+                'current_tyre_set_id': getattr(getattr(car, 'current_tyre_set', None), 'set_id', None),
                 'tire_temps': getattr(car, 'tire_temps', None),
                 'tire_temp_window': getattr(car, 'tire_temp_window', None),
+                'tyre_states': getattr(car, 'tyre_states', {}),
                 'is_player_controlled': car.is_player_controlled,
                 'player_config': car.player_config if car.is_player_controlled else None,
                 'setup_recommendation': car.setup_feedback if car.is_player_controlled else None,
@@ -347,7 +366,7 @@ def register_routes(app):
     @app.route('/api/driver/<driver_id>/tyre-inventory/<circuit_id>')
     def get_driver_tyre_inventory(driver_id, circuit_id):
         try:
-            inventory = tyre_inventory_service.get_inventory(driver_id, circuit_id)
+            inventory = _get_tyre_inventory_service().get_inventory(driver_id, circuit_id)
             return jsonify(inventory.to_dict())
         except FileNotFoundError as exc:
             return _error_response(str(exc), 404)
@@ -366,8 +385,9 @@ def register_routes(app):
             return _error_response('circuit_id and set_id are required')
 
         try:
+            service = _get_tyre_inventory_service()
             if 'available' in payload:
-                tyre_set = tyre_inventory_service.mark_availability(
+                tyre_set = service.mark_availability(
                     driver_id,
                     circuit_id,
                     set_id,
@@ -378,7 +398,7 @@ def register_routes(app):
                 if laps is None:
                     return _error_response('laps is required when updating wear')
                 wear_factor = float(payload.get('wear_factor', 1.0))
-                tyre_set = tyre_inventory_service.apply_usage(
+                tyre_set = service.apply_usage(
                     driver_id,
                     circuit_id,
                     set_id,
@@ -518,6 +538,15 @@ def register_routes(app):
             'stint_laps_remaining': car.stint_laps_remaining,
             'max_stint_laps': 150,
             'stint_laps_target': car.player_config.get('stint_target_laps', car.stint_target_laps),
+            'current_tyre_condition_pct': getattr(car, 'current_tyre_condition_pct', None),
+            'current_tyre_heat_cycles': getattr(car, 'current_tyre_heat_cycles', None),
+            'current_tyre_laps_completed': getattr(car, 'current_tyre_laps_completed', None),
+            'current_tyre_laps_at_install': getattr(car, 'current_tyre_laps_at_install', None),
+            'current_tyre_set_id': getattr(getattr(car, 'current_tyre_set', None), 'set_id', None),
+            'tire_wear': getattr(car, 'tire_wear', None),
+            'tire_temps': getattr(car, 'tire_temps', None),
+            'tire_temp_window': getattr(car, 'tire_temp_window', None),
+            'tyre_states': getattr(car, 'tyre_states', {}),
             'setup': car.player_config.get('setup', {**DEFAULT_SETUP_CONFIG}),
             'setup_recommendation': car.setup_feedback or {},
             'has_setup_feedback': bool(getattr(car, 'setup_feedback_ready', False) and car.setup_feedback),
@@ -666,7 +695,7 @@ def register_routes(app):
                     return _error_response('Current circuit unavailable for tyre selection', 409)
 
                 tyre_set_id = str(payload['tyre_set_id']).strip()
-                inventory = tyre_inventory_service.get_inventory(str(driver_number), circuit_id)
+                inventory = _get_tyre_inventory_service().get_inventory(str(driver_number), circuit_id)
                 tyre_set = inventory.find_set(tyre_set_id)
                 if tyre_set is None:
                     return _error_response(f'tyre_set_id {tyre_set_id} not found for driver {driver_number}')
@@ -894,10 +923,10 @@ def register_routes(app):
 
                 circuit_id = getattr(app_config, 'current_circuit', None)
                 if circuit_id:
-                    inventory = tyre_inventory_service.get_inventory(str(driver_number), circuit_id)
+                    inventory = _get_tyre_inventory_service().get_inventory(str(driver_number), circuit_id)
                     selected_set = inventory.find_set(selected_set_id)
                     if selected_set:
-                        tyre_inventory_service.mark_availability(
+                        _get_tyre_inventory_service().mark_availability(
                             str(driver_number),
                             circuit_id,
                             selected_set.set_id,
@@ -908,6 +937,18 @@ def register_routes(app):
 
         if selected_set:
             try:
+                live_tyre_set = getattr(car, 'current_tyre_set', None)
+                live_condition = getattr(car, 'current_tyre_condition_pct', None)
+                if (
+                    live_tyre_set is not None
+                    and getattr(live_tyre_set, 'set_id', None) == selected_set.set_id
+                    and isinstance(live_condition, (int, float))
+                ):
+                    selected_set.condition = max(0.0, min(100.0, float(live_condition)))
+                    try:
+                        selected_set.update_runtime_snapshot(getattr(car, 'tyre_states', {}) or {})
+                    except Exception:
+                        pass
                 car.apply_tyre_set(selected_set, compound=compound, preserve_temps=False)
             except Exception:
                 # Fallback to scalar fields if apply_tyre_set fails for any reason

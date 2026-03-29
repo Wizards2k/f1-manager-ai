@@ -61,6 +61,7 @@ export class AppState {
         if (!car || !car.driver_number) return;
         const previous = this.playerCars.get(car.driver_number) || {};
         const merged = {
+            ...previous,
             ...car,
             telemetry_rival_target: car.telemetry_rival_target ?? previous.telemetry_rival_target ?? '',
             telemetry_lap_selector: car.telemetry_lap_selector ?? previous.telemetry_lap_selector ?? 'best',
