@@ -4,11 +4,17 @@ import random
 import threading
 from typing import Optional
 from config import circuit_sectors, SESSION_DURATION
+from utils.weekend_orchestrator import (
+    WeekendOrchestrator,
+    WeekendSessionType,
+    normalize_weekend_session_type,
+)
 
 # --- V2 Engine flag ---
 USE_NEW_ENGINE = True
 session_bridge = None  # SessionBridge instance (lazy init)
 session_telemetry_store = None
+weekend_orchestrator = None
 
 # --- Penalty System flags ---
 USE_NEW_PENALTY_SYSTEM = True      # Master toggle per tutto il sistema penalty
@@ -78,19 +84,36 @@ def reset_session_bests():
     session_best_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
 
 
+def _bridge_session_type_for_weekend(session_type: str) -> str:
+    try:
+        weekend_session_type = normalize_weekend_session_type(session_type)
+    except ValueError:
+        return WeekendSessionType.FP1.value
+
+    if weekend_session_type in {
+        WeekendSessionType.FP1,
+        WeekendSessionType.FP2,
+        WeekendSessionType.FP3,
+    }:
+        return weekend_session_type.value
+
+    return WeekendSessionType.FP1.value
+
+
 def is_simulation_ready():
     """Indica se la simulazione può avanzare (circuito selezionato)."""
     with state_lock:
         return simulation_ready
 
 
-def start_session_for_circuit():
+def start_session_for_circuit(session_type: str = "FP1"):
     """Resetta lo stato partendo dal circuito appena caricato e avvia la sessione."""
     global session_start_time, session_start_real_time, accumulated_game_time
     global last_speed_change_time, pause_start_time, is_paused, simulation_ready
     global game_speed_multiplier
     global session_bridge
     global session_telemetry_store
+    global weekend_orchestrator
 
     start_time = time.time()
     with state_lock:
@@ -106,27 +129,43 @@ def start_session_for_circuit():
     reset_cars_for_session(start_time)
 
     # Initialize V2 engine if enabled
+    weekend_orchestrator = None
     if USE_NEW_ENGINE:
         try:
             import config as cfg
             circuit_id = getattr(cfg, 'current_circuit', None)
             if circuit_id:
+                try:
+                    requested_weekend_session = normalize_weekend_session_type(session_type)
+                except ValueError:
+                    requested_weekend_session = WeekendSessionType.FP1
+                bridge_session_type = _bridge_session_type_for_weekend(requested_weekend_session.value)
                 import logging
-                logging.getLogger(__name__).info("V2 engine: Initializing SessionBridge for circuit %s", circuit_id)
+                logging.getLogger(__name__).info(
+                    "V2 engine: Initializing WeekendOrchestrator/SessionBridge for circuit %s (%s)",
+                    circuit_id,
+                    requested_weekend_session.value,
+                )
                 from services.tyre_inventory_service import TyreInventoryService
                 from utils.session_bridge import SessionBridge
                 TyreInventoryService().reset_inventories_for_circuit(circuit_id)
                 from utils.session_telemetry_store import SessionTelemetryStore
                 session_telemetry_store = SessionTelemetryStore(circuit_id=circuit_id)
+                weekend_orchestrator = WeekendOrchestrator().start(
+                    circuit_id=circuit_id,
+                    session_type=requested_weekend_session,
+                    metadata={"bridge_session_type": bridge_session_type},
+                )
                 session_bridge = SessionBridge()
                 session_bridge.telemetry_store = session_telemetry_store
                 logging.getLogger(__name__).info("V2 engine: SessionBridge created, initializing session...")
-                ok = session_bridge.init_session(circuit_id, race_cars, session_type="FP1")
+                ok = session_bridge.init_session(circuit_id, race_cars, session_type=bridge_session_type)
                 logging.getLogger(__name__).info("V2 engine: SessionBridge init returned %s", ok)
                 if not ok:
                     logging.getLogger(__name__).warning("V2 engine: SessionBridge init failed")
                     session_bridge = None
                     session_telemetry_store = None
+                    weekend_orchestrator = None
             else:
                 import logging
                 logging.getLogger(__name__).warning("V2 engine: No circuit_id found")
@@ -137,6 +176,7 @@ def start_session_for_circuit():
             logging.getLogger(__name__).error("V2 engine traceback: %s", traceback.format_exc())
             session_bridge = None
             session_telemetry_store = None
+            weekend_orchestrator = None
 
     return start_time
 
@@ -146,6 +186,7 @@ def mark_simulation_pending(reset_cars=False):
     global simulation_ready, session_start_time, session_start_real_time
     global accumulated_game_time, last_speed_change_time, pause_start_time, is_paused
     global game_speed_multiplier
+    global weekend_orchestrator
 
     start_time = time.time()
     with state_lock:
@@ -159,6 +200,7 @@ def mark_simulation_pending(reset_cars=False):
 
     if reset_cars:
         reset_cars_for_session(start_time)
+    weekend_orchestrator = None
 
 def reset_cars_for_session(start_time):
     """Rimette tutte le auto ai box con uscite scaglionate."""
@@ -360,6 +402,18 @@ def get_session_bridge():
 def get_session_telemetry_store():
     """Return the active session telemetry store or None."""
     return session_telemetry_store
+
+
+def get_weekend_orchestrator():
+    """Return the active weekend orchestrator or None."""
+    return weekend_orchestrator
+
+
+def set_weekend_orchestrator(orchestrator):
+    """Set the active weekend orchestrator."""
+    global weekend_orchestrator
+    weekend_orchestrator = orchestrator
+    return weekend_orchestrator
 
 
 def is_v2_engine_active() -> bool:

@@ -18,6 +18,7 @@ from models.tyre_inventory import DriverTyreInventory, TyreSet
 from services.save_system import SaveGameService
 from utils.adapter import racecar_to_car_entry
 from utils.session_bridge import CarTrackState, SessionBridge
+from utils.weekend_orchestrator import WeekendOrchestrator, WeekendSessionType
 
 
 def _build_team_and_driver(driver_number: int = 7) -> tuple[Team, Pilota]:
@@ -94,8 +95,9 @@ def test_save_load_preserves_tyre_condition_after_reentry(tmp_path, monkeypatch)
     bridge.tyre_inventory_service._inventory_cache[inventory_key] = _build_inventory()
 
     monkeypatch.setattr(save_system_module, "get_session_bridge", lambda: bridge)
+    monkeypatch.setattr(save_system_module, "get_weekend_orchestrator", lambda: None)
     monkeypatch.setattr(save_system_module, "race_cars", [race_car], raising=False)
-    monkeypatch.setattr(gl, "start_session_for_circuit", lambda: None)
+    monkeypatch.setattr(gl, "start_session_for_circuit", lambda session_type="FP1": None)
     monkeypatch.setattr(gl, "get_session_bridge", lambda: bridge)
     monkeypatch.setattr(gl, "get_car_by_driver_number", lambda driver_number: race_car if int(driver_number) == 7 else None)
     monkeypatch.setattr(config, "set_current_circuit", lambda circuit_id: None)
@@ -134,6 +136,52 @@ def test_save_load_preserves_tyre_condition_after_reentry(tmp_path, monkeypatch)
     assert restored_set.laps_completed == 12
     assert restored_set.is_available is False
     assert race_car.current_tyre_condition_pct == pytest.approx(94.0)
+
+
+def test_save_load_roundtrip_weekend_state(tmp_path, monkeypatch):
+    bridge = SessionBridge()
+    bridge.active = True
+    bridge.circuit_id = "test-circuit"
+    bridge._track_states = {}
+
+    race_car = _build_race_car()
+    inventory_key = bridge.tyre_inventory_service._inventory_key("7", "test-circuit")
+    bridge.tyre_inventory_service._inventory_cache[inventory_key] = _build_inventory()
+    weekend = WeekendOrchestrator().start(
+        circuit_id="test-circuit",
+        session_type=WeekendSessionType.FP2,
+        metadata={"round": "Monza"},
+    )
+    weekend.record_session_snapshot(WeekendSessionType.FP1, {"winner": "NOR"})
+
+    monkeypatch.setattr(save_system_module, "get_session_bridge", lambda: bridge)
+    monkeypatch.setattr(save_system_module, "get_weekend_orchestrator", lambda: weekend)
+    monkeypatch.setattr(save_system_module, "race_cars", [race_car], raising=False)
+    monkeypatch.setattr(gl, "start_session_for_circuit", lambda session_type="FP1": None)
+    monkeypatch.setattr(gl, "get_session_bridge", lambda: bridge)
+    monkeypatch.setattr(gl, "get_car_by_driver_number", lambda driver_number: race_car if int(driver_number) == 7 else None)
+    monkeypatch.setattr(config, "set_current_circuit", lambda circuit_id: None)
+
+    service = SaveGameService(data_root=tmp_path)
+    save_id = service.save_game("weekend regression")
+    save_path = service.save_dir / f"{save_id}.json"
+
+    with save_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["metadata"]["weekend_session_type"] == WeekendSessionType.FP2.value
+    assert payload["metadata"]["weekend_status"] == "active"
+    assert payload["weekend_state"]["current_session_type"] == WeekendSessionType.FP2.value
+    assert payload["weekend_state"]["metadata"]["round"] == "Monza"
+
+    result = service.load_game(save_id)
+    assert result["success"] is True
+
+    restored_weekend = gl.get_weekend_orchestrator()
+    assert restored_weekend is not None
+    assert restored_weekend.current_session_type == WeekendSessionType.FP2.value
+    assert restored_weekend.metadata["round"] == "Monza"
+    assert restored_weekend.get_session(WeekendSessionType.FP1).summary["winner"] == "NOR"
 
 
 def test_session_bridge_relinks_loaded_tyre_set_from_bridge_inventory():
