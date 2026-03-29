@@ -143,7 +143,7 @@ def register_routes(app):
 
     @app.route('/race')
     def index():
-        return render_template('index.html')
+        return render_template('index-v3.html')
 
     @app.route('/circuit')
     def circuit_v3():

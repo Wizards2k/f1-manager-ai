@@ -6,6 +6,8 @@ Create a fully autonomous V3 UI layout that does not depend on V1 CSS/JS, elimin
 ## Key Principle: Complete Autonomy
 The V3 UI must function independently without loading or referencing any V1 styles or scripts. All styles, components, and behaviors must be self-contained in V3-specific files.
 
+> **Status note (Fase G cleanup)**: the old `base.html` / `index.html` V1 entrypoint and the `dashboard-v1.*` assets have been retired; `/race` and `/circuit` now share the canonical `index-v3.html` path.
+
 ## Migration Steps (Sequential)
 
 ### Recap (Feb 4)
