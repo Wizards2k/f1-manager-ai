@@ -277,8 +277,12 @@ class WeekendOrchestrator:
         lap_number: int,
         phase: Optional[Any] = None,
         timestamp_s: Optional[float] = None,
-        sector_times: Optional[Dict[str, float]] = None,
+        sector_times: Optional[Dict[str, Any]] = None,
         is_competitive: bool = True,
+        tyre_set_id: Optional[str] = None,
+        tyre_compound: Optional[str] = None,
+        tyre_condition_pct: Optional[float] = None,
+        tyre_is_q3_reserve: bool = False,
     ) -> Optional[QualifyingLapRecord]:
         if self.qualifying_state is None:
             return None
@@ -292,6 +296,10 @@ class WeekendOrchestrator:
             timestamp_s=timestamp_s,
             sector_times=sector_times,
             is_competitive=is_competitive,
+            tyre_set_id=tyre_set_id,
+            tyre_compound=tyre_compound,
+            tyre_condition_pct=tyre_condition_pct,
+            tyre_is_q3_reserve=tyre_is_q3_reserve,
         )
         self.record_session_snapshot(WeekendSessionType.QUALIFYING, self.qualifying_state.summary(), merge=False)
         self._touch(timestamp_s)

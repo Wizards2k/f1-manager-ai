@@ -115,6 +115,10 @@ class QualifyingLapRecord:
     team_name: str = ""
     is_player: bool = False
     sector_times: Dict[str, float] = field(default_factory=dict)
+    tyre_set_id: Optional[str] = None
+    tyre_compound: Optional[str] = None
+    tyre_condition_pct: Optional[float] = None
+    tyre_is_q3_reserve: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -128,6 +132,10 @@ class QualifyingLapRecord:
             "team_name": self.team_name,
             "is_player": self.is_player,
             "sector_times": dict(self.sector_times),
+            "tyre_set_id": self.tyre_set_id,
+            "tyre_compound": self.tyre_compound,
+            "tyre_condition_pct": self.tyre_condition_pct,
+            "tyre_is_q3_reserve": self.tyre_is_q3_reserve,
         }
 
     @classmethod
@@ -143,6 +151,10 @@ class QualifyingLapRecord:
             team_name=str(data.get("team_name", "") or ""),
             is_player=bool(data.get("is_player", False)),
             sector_times=dict(data.get("sector_times", {}) or {}),
+            tyre_set_id=data.get("tyre_set_id"),
+            tyre_compound=data.get("tyre_compound"),
+            tyre_condition_pct=data.get("tyre_condition_pct"),
+            tyre_is_q3_reserve=bool(data.get("tyre_is_q3_reserve", False)),
         )
 
 
@@ -155,8 +167,16 @@ class QualifyingDriverState:
     status: str = "active"
     best_lap_s: Optional[float] = None
     best_lap_phase: Optional[str] = None
+    best_lap_tyre_set_id: Optional[str] = None
+    best_lap_tyre_compound: Optional[str] = None
+    best_lap_tyre_condition_pct: Optional[float] = None
+    best_lap_tyre_is_q3_reserve: bool = False
     phase_best_laps: Dict[str, float] = field(default_factory=dict)
     last_lap_s: Optional[float] = None
+    last_tyre_set_id: Optional[str] = None
+    last_tyre_compound: Optional[str] = None
+    last_tyre_condition_pct: Optional[float] = None
+    last_tyre_is_q3_reserve: bool = False
     best_sector_times: Dict[str, float] = field(default_factory=dict)
     last_sector_times: Dict[str, float] = field(default_factory=dict)
     lap_count: int = 0
@@ -170,9 +190,17 @@ class QualifyingDriverState:
         lap_time_s: float,
         sector_times: Optional[Dict[str, float]] = None,
         is_competitive: bool = True,
+        tyre_set_id: Optional[str] = None,
+        tyre_compound: Optional[str] = None,
+        tyre_condition_pct: Optional[float] = None,
+        tyre_is_q3_reserve: bool = False,
     ) -> None:
         self.lap_count += 1
         self.last_lap_s = lap_time_s
+        self.last_tyre_set_id = tyre_set_id
+        self.last_tyre_compound = tyre_compound
+        self.last_tyre_condition_pct = tyre_condition_pct
+        self.last_tyre_is_q3_reserve = tyre_is_q3_reserve
         if sector_times:
             self.last_sector_times = dict(sector_times)
 
@@ -187,6 +215,10 @@ class QualifyingDriverState:
         if self.best_lap_s is None or lap_time_s < self.best_lap_s:
             self.best_lap_s = lap_time_s
             self.best_lap_phase = phase_key
+            self.best_lap_tyre_set_id = tyre_set_id
+            self.best_lap_tyre_compound = tyre_compound
+            self.best_lap_tyre_condition_pct = tyre_condition_pct
+            self.best_lap_tyre_is_q3_reserve = tyre_is_q3_reserve
 
         if sector_times:
             for key, value in sector_times.items():
@@ -213,8 +245,16 @@ class QualifyingDriverState:
             "status": self.status,
             "best_lap_s": self.best_lap_s,
             "best_lap_phase": self.best_lap_phase,
+            "best_lap_tyre_set_id": self.best_lap_tyre_set_id,
+            "best_lap_tyre_compound": self.best_lap_tyre_compound,
+            "best_lap_tyre_condition_pct": self.best_lap_tyre_condition_pct,
+            "best_lap_tyre_is_q3_reserve": self.best_lap_tyre_is_q3_reserve,
             "phase_best_laps": dict(self.phase_best_laps),
             "last_lap_s": self.last_lap_s,
+            "last_tyre_set_id": self.last_tyre_set_id,
+            "last_tyre_compound": self.last_tyre_compound,
+            "last_tyre_condition_pct": self.last_tyre_condition_pct,
+            "last_tyre_is_q3_reserve": self.last_tyre_is_q3_reserve,
             "best_sector_times": dict(self.best_sector_times),
             "last_sector_times": dict(self.last_sector_times),
             "lap_count": self.lap_count,
@@ -233,8 +273,16 @@ class QualifyingDriverState:
             status=str(data.get("status", "active") or "active"),
             best_lap_s=data.get("best_lap_s"),
             best_lap_phase=data.get("best_lap_phase"),
+            best_lap_tyre_set_id=data.get("best_lap_tyre_set_id"),
+            best_lap_tyre_compound=data.get("best_lap_tyre_compound"),
+            best_lap_tyre_condition_pct=data.get("best_lap_tyre_condition_pct"),
+            best_lap_tyre_is_q3_reserve=bool(data.get("best_lap_tyre_is_q3_reserve", False)),
             phase_best_laps=dict(data.get("phase_best_laps", {}) or {}),
             last_lap_s=data.get("last_lap_s"),
+            last_tyre_set_id=data.get("last_tyre_set_id"),
+            last_tyre_compound=data.get("last_tyre_compound"),
+            last_tyre_condition_pct=data.get("last_tyre_condition_pct"),
+            last_tyre_is_q3_reserve=bool(data.get("last_tyre_is_q3_reserve", False)),
             best_sector_times=dict(data.get("best_sector_times", {}) or {}),
             last_sector_times=dict(data.get("last_sector_times", {}) or {}),
             lap_count=int(data.get("lap_count", 0) or 0),
@@ -403,6 +451,10 @@ class QualifyingSessionState:
                     "status": status,
                     "eliminated_in_phase": participant.eliminated_in_phase,
                     "is_player": participant.is_player,
+                    "best_lap_tyre_set_id": participant.best_lap_tyre_set_id,
+                    "best_lap_tyre_compound": participant.best_lap_tyre_compound,
+                    "best_lap_tyre_condition_pct": participant.best_lap_tyre_condition_pct,
+                    "best_lap_tyre_is_q3_reserve": participant.best_lap_tyre_is_q3_reserve,
                 }
             )
 
@@ -497,6 +549,10 @@ class QualifyingSessionState:
         timestamp_s: Optional[float] = None,
         sector_times: Optional[Dict[str, float]] = None,
         is_competitive: bool = True,
+        tyre_set_id: Optional[str] = None,
+        tyre_compound: Optional[str] = None,
+        tyre_condition_pct: Optional[float] = None,
+        tyre_is_q3_reserve: bool = False,
     ) -> Optional[QualifyingLapRecord]:
         participant = self.get_participant(car_id)
         if participant is None:
@@ -518,6 +574,10 @@ class QualifyingSessionState:
             team_name=participant.team_name,
             is_player=participant.is_player,
             sector_times=dict(sector_times or {}),
+            tyre_set_id=tyre_set_id,
+            tyre_compound=tyre_compound,
+            tyre_condition_pct=tyre_condition_pct,
+            tyre_is_q3_reserve=tyre_is_q3_reserve,
         )
         self.lap_records.append(record)
         participant.record_lap(
@@ -525,6 +585,10 @@ class QualifyingSessionState:
             float(lap_time_s),
             sector_times=sector_times,
             is_competitive=is_competitive,
+            tyre_set_id=tyre_set_id,
+            tyre_compound=tyre_compound,
+            tyre_condition_pct=tyre_condition_pct,
+            tyre_is_q3_reserve=tyre_is_q3_reserve,
         )
         phase_state.lap_count += 1
         if is_competitive:
@@ -578,6 +642,10 @@ class QualifyingSessionState:
                     "best_lap_s": best_time,
                     "lap_count": participant.lap_count,
                     "status": status,
+                    "best_lap_tyre_set_id": participant.best_lap_tyre_set_id,
+                    "best_lap_tyre_compound": participant.best_lap_tyre_compound,
+                    "best_lap_tyre_condition_pct": participant.best_lap_tyre_condition_pct,
+                    "best_lap_tyre_is_q3_reserve": participant.best_lap_tyre_is_q3_reserve,
                 }
             )
 

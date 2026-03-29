@@ -225,6 +225,10 @@ def test_save_load_roundtrip_qualifying_state(tmp_path, monkeypatch):
         timestamp_s=12.5,
         sector_times={"sector1": 25.0, "sector2": 26.0, "sector3": 26.456},
         is_competitive=True,
+        tyre_set_id="Q1-01",
+        tyre_compound="soft",
+        tyre_condition_pct=95.5,
+        tyre_is_q3_reserve=False,
     )
 
     monkeypatch.setattr(save_system_module, "get_session_bridge", lambda: bridge)
@@ -245,6 +249,10 @@ def test_save_load_roundtrip_qualifying_state(tmp_path, monkeypatch):
     assert payload["metadata"]["weekend_session_type"] == WeekendSessionType.QUALIFYING.value
     assert payload["weekend_state"]["qualifying_state"] is not None
     assert payload["weekend_state"]["qualifying_state"]["participants"]["7"]["best_lap_s"] == pytest.approx(77.456)
+    assert payload["weekend_state"]["qualifying_state"]["participants"]["7"]["best_lap_tyre_set_id"] == "Q1-01"
+    assert payload["weekend_state"]["qualifying_state"]["participants"]["7"]["best_lap_tyre_compound"] == "soft"
+    assert payload["weekend_state"]["qualifying_state"]["participants"]["7"]["best_lap_tyre_condition_pct"] == pytest.approx(95.5)
+    assert payload["weekend_state"]["qualifying_state"]["participants"]["7"]["best_lap_tyre_is_q3_reserve"] is False
 
     result = service.load_game(save_id)
     assert result["success"] is True
@@ -254,6 +262,10 @@ def test_save_load_roundtrip_qualifying_state(tmp_path, monkeypatch):
     assert restored_weekend.current_session_type == WeekendSessionType.QUALIFYING.value
     assert restored_weekend.qualifying_state is not None
     assert restored_weekend.qualifying_state.participants["7"].best_lap_s == pytest.approx(77.456)
+    assert restored_weekend.qualifying_state.participants["7"].best_lap_tyre_set_id == "Q1-01"
+    assert restored_weekend.qualifying_state.participants["7"].best_lap_tyre_compound == "soft"
+    assert restored_weekend.qualifying_state.participants["7"].best_lap_tyre_condition_pct == pytest.approx(95.5)
+    assert restored_weekend.qualifying_state.participants["7"].best_lap_tyre_is_q3_reserve is False
     assert restored_weekend.qualifying_state.current_phase == "Q1"
     assert restored_weekend.metadata["round"] == "Spa"
 

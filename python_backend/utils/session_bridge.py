@@ -907,6 +907,58 @@ class SessionBridge:
             return max(0.0, min(100.0, 100.0 - (float(live_ratio) * 100.0)))
         return None
 
+    def _build_qualifying_tyre_snapshot(
+        self,
+        car_id: str,
+        race_car,
+        track_state: Optional[CarTrackState],
+    ) -> Dict[str, Any]:
+        tyre_set = getattr(track_state, "tyre_set", None) if track_state is not None else None
+        tyre_set_id = getattr(track_state, "tyre_set_id", None) if track_state is not None else None
+        tyre_compound = getattr(tyre_set, "compound", None) if tyre_set is not None else None
+        tyre_condition_pct = getattr(tyre_set, "condition", None) if tyre_set is not None else None
+        tyre_is_q3_reserve = bool(getattr(tyre_set, "is_q3_reserve", False)) if tyre_set is not None else False
+
+        if tyre_set is None and race_car is not None:
+            tyre_set = getattr(race_car, "current_tyre_set", None)
+            if tyre_set is not None:
+                tyre_set_id = tyre_set_id or getattr(tyre_set, "set_id", None)
+                tyre_compound = tyre_compound or getattr(tyre_set, "compound", None)
+                tyre_condition_pct = tyre_condition_pct if tyre_condition_pct is not None else getattr(tyre_set, "condition", None)
+                tyre_is_q3_reserve = bool(getattr(tyre_set, "is_q3_reserve", tyre_is_q3_reserve))
+
+        player_config = getattr(race_car, "player_config", {}) if race_car is not None else {}
+        if isinstance(player_config, dict):
+            tyre_set_id = tyre_set_id or player_config.get("tyre_set_id")
+            tyre_compound = tyre_compound or player_config.get("tyre_compound")
+
+        if tyre_set_id and self.circuit_id and (tyre_set is None or tyre_compound is None or tyre_condition_pct is None):
+            try:
+                inventory = self.tyre_inventory_service.get_inventory(str(car_id), self.circuit_id)
+                inventory_set = inventory.find_set(str(tyre_set_id))
+                if inventory_set is not None:
+                    tyre_compound = tyre_compound or getattr(inventory_set, "compound", None)
+                    if tyre_condition_pct is None:
+                        tyre_condition_pct = getattr(inventory_set, "condition", None)
+                    tyre_is_q3_reserve = bool(getattr(inventory_set, "is_q3_reserve", tyre_is_q3_reserve))
+            except Exception as exc:
+                logger.debug(
+                    "Failed to resolve qualifying tyre snapshot for car %s set %s: %s",
+                    car_id,
+                    tyre_set_id,
+                    exc,
+                )
+
+        if tyre_condition_pct is None:
+            tyre_condition_pct = self._compute_live_tyre_condition_pct(race_car)
+
+        return {
+            "tyre_set_id": str(tyre_set_id) if tyre_set_id is not None else None,
+            "tyre_compound": str(tyre_compound) if tyre_compound is not None else None,
+            "tyre_condition_pct": float(tyre_condition_pct) if tyre_condition_pct is not None else None,
+            "tyre_is_q3_reserve": bool(tyre_is_q3_reserve),
+        }
+
     def _sync_ers_mode_state(self, ts: CarTrackState) -> None:
         entry = ts.car_entry
         if entry is None:
@@ -1576,6 +1628,7 @@ class SessionBridge:
 
                 weekend_orchestrator = get_weekend_orchestrator()
                 if weekend_orchestrator is not None and weekend_orchestrator.qualifying_state is not None:
+                    tyre_snapshot = self._build_qualifying_tyre_snapshot(car_id, race_car, ts)
                     weekend_orchestrator.record_qualifying_lap(
                         car_id=car_id,
                         lap_time_s=lap_time,
@@ -1584,6 +1637,10 @@ class SessionBridge:
                         timestamp_s=self._accumulated_time_s,
                         sector_times=sectors,
                         is_competitive=is_competitive,
+                        tyre_set_id=tyre_snapshot["tyre_set_id"],
+                        tyre_compound=tyre_snapshot["tyre_compound"],
+                        tyre_condition_pct=tyre_snapshot["tyre_condition_pct"],
+                        tyre_is_q3_reserve=tyre_snapshot["tyre_is_q3_reserve"],
                     )
             except Exception as exc:
                 logger.warning("Failed to record qualifying lap for %s: %s", car_id, exc)
