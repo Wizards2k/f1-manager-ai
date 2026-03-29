@@ -23,6 +23,7 @@ class SessionType(str, Enum):
     FP1 = "FP1"
     FP2 = "FP2"
     FP3 = "FP3"
+    QUALIFYING = "QUALIFYING"
 
 
 class RunProgram(str, Enum):
@@ -253,6 +254,11 @@ SESSION_PROGRAMS: Dict[SessionType, List[RunProgram]] = {
     SessionType.FP3: [
         RunProgram.QUALI_SIM,
         RunProgram.SETUP_VALIDATION,  # only if setup not converged
+    ],
+    SessionType.QUALIFYING: [
+        RunProgram.QUALI_SIM,
+        RunProgram.QUALI_SIM,
+        RunProgram.QUALI_SIM,
     ],
 }
 

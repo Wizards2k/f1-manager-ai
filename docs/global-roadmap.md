@@ -191,7 +191,7 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 
 ## 8. Implementazione – Fase G (Weekend di gara completo — `docs/Fase-G.md`)
 
-> **Stato**: � **IN PROGRESS** — Punto 1 (Cleanup) ✅ completato, iniziato Punto 2 (Weekend Orchestrator)
+> **Stato**: **IN PROGRESS** — Punto 1 (Cleanup) ✅ completato, Punto 2 (Weekend Orchestrator) ✅ completato, aggiunta roadmap per pagina risultati sessioni
 
 ### 8.1 ✅ Cleanup architetturale e nomenclatura — **COMPLETATO**
 1. ✅ Inventario dei file legacy (`*_v1`, `.legacy`, `.old`) — 10 file rimossi.
@@ -220,12 +220,18 @@ Collegare il LapSimulator (Fase B) al gioco esistente, sostituendo il vecchio mo
 5. Transizione pulita da qualifica a gara.
 
 ### 8.5 Backend/API/UI integration
-1. Endpoint per stato weekend, sessione corrente, risultati quali e grid.
+1. Endpoint per stato weekend, sessione corrente, risultati quali, grid e summary sessioni.
 2. Azioni per avanzare sessione, start race e gestire reset / replay.
 3. Estensione del payload `race_update` con dati weekend rilevanti.
 4. Navigazione UI per weekend hub, session selector e viste dedicate a practice / quali / race.
 
-### 8.6 Persistenza, telemetry e QA
+### 8.6 Pagina consultazione risultati sessioni
+1. Vista read-only per consultare i risultati registrati durante il weekend.
+2. Overview del weekend con stato di FP1, FP2, FP3, Qualifying e Race.
+3. Dettaglio sessione con classifiche, best lap, stint, incidenti e note.
+4. Accesso dal weekend hub e dal selettore sessioni.
+
+### 8.7 Persistenza, telemetry e QA
 1. Save/load del weekend intero, non solo della sessione attiva.
 2. Log e telemetry per transizioni tra sessioni, qualifiche e gara.
 3. QA harness con scenari deterministici per weekend completo.

@@ -12,6 +12,17 @@ from .weekend_orchestrator import (
     DEFAULT_WEEKEND_SEQUENCE, WeekendOrchestrator, WeekendSessionState,
     WeekendSessionType, normalize_weekend_session_type,
 )
+from .qualifying_session import (
+    DEFAULT_QUALIFYING_CUTOFFS,
+    DEFAULT_QUALIFYING_PHASE_DURATIONS_S,
+    DEFAULT_QUALIFYING_PHASE_SEQUENCE,
+    QualifyingDriverState,
+    QualifyingLapRecord,
+    QualifyingPhase,
+    QualifyingPhaseState,
+    QualifyingSessionState,
+    normalize_qualifying_phase,
+)
 from .simulation import update_car_position, check_car_sector_crossing, calculate_simulated_sector_time
 from .setup_engine import evaluate_setup, evaluate_setup_categories
 
@@ -25,6 +36,10 @@ __all__ = [
     'get_weekend_orchestrator', 'set_weekend_orchestrator',
     'DEFAULT_WEEKEND_SEQUENCE', 'WeekendOrchestrator', 'WeekendSessionState',
     'WeekendSessionType', 'normalize_weekend_session_type',
+    'DEFAULT_QUALIFYING_CUTOFFS', 'DEFAULT_QUALIFYING_PHASE_DURATIONS_S',
+    'DEFAULT_QUALIFYING_PHASE_SEQUENCE', 'QualifyingDriverState',
+    'QualifyingLapRecord', 'QualifyingPhase', 'QualifyingPhaseState',
+    'QualifyingSessionState', 'normalize_qualifying_phase',
     'update_car_position', 'check_car_sector_crossing', 'calculate_simulated_sector_time',
     'evaluate_setup', 'evaluate_setup_categories'
 ]

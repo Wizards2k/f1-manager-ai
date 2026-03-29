@@ -2,7 +2,7 @@
 title: Fase G — Weekend di gara completo
 version: 0.1
 last_updated: 2026-03-29
-status: "Punto 1 completato — in progress su Weekend Orchestrator"
+status: "Punto 3 completato — in progress su Race subsystem"
 scope: "Weekend di gara completo con cleanup architetturale aggressivo, Qualifying e Race"
 ---
 
@@ -10,7 +10,7 @@ scope: "Weekend di gara completo con cleanup architetturale aggressivo, Qualifyi
 
 Fase G porta il motore da una singola sessione practice a un weekend completo, consolidando anche la nomenclatura dei file e rimuovendo gli ultimi legacy path non più necessari.
 
-## Roadmap in 6 punti
+## Roadmap in 7 punti
 
 ### 1) ✅ Cleanup architetturale e nomenclatura — **COMPLETATO**
 
@@ -27,7 +27,9 @@ Fase G porta il motore da una singola sessione practice a un weekend completo, c
 - Backend: `api_legacy.py.old`, `models_v1.py`, `game_logic_v1.py`, `simulation_v1.py`, `performance_v1.py`, `dashboard.legacy.js`
 - Frontend: `index.html`, `base.html`, `dashboard-v1.css`, `dashboard-v1.js`
 
-### 2) Weekend Orchestrator e state model
+### 2) ✅ Weekend Orchestrator e state model — **COMPLETATO**
+
+**Stato**: ✅ Completato
 
 Obiettivo: introdurre un layer superiore al `SessionBridge` per governare l’intero weekend.
 
@@ -38,21 +40,25 @@ Deliverable:
 - serializzazione e deserializzazione del weekend completo;
 - propagazione del tipo sessione al runtime e al backend.
 
-### 3) Qualifying subsystem
+### 3) ✅ Qualifying subsystem — **COMPLETATO**
 
 Obiettivo: implementare Q1, Q2 e Q3 come flusso dedicato con regole proprie.
 
+**Stato**: ✅ Completato il 2026-03-29
+
 Deliverable:
 
-- timer e fasi qualifying-oriented;
+- timer e fasi qualifying-oriented tramite `QualifyingSessionState`;
 - taglio progressivo dei classificati e gestione degli esclusi;
 - regole tyre-specifiche e out-lap / flying lap / cool-down;
 - classifica finale di qualifica e griglia provvisoria;
 - eventi e telemetry per UI e QA.
 
-### 4) Race subsystem
+### 4) Race subsystem — **IN PROGRESS**
 
 Obiettivo: trasformare il runtime in una vera sessione gara con partenza, stint e arrivo.
+
+**Input dalla qualifica**: griglia finale (`final_grid`) esportata da `QualifyingSessionState`.
 
 Deliverable:
 
@@ -68,12 +74,23 @@ Obiettivo: esporre il weekend completo alla UI senza rompere il flusso attuale.
 
 Deliverable:
 
-- endpoint per stato weekend, sessione corrente, risultati quali e grid;
+- endpoint per stato weekend, sessione corrente, risultati quali, grid e summary sessioni;
 - azioni per avanzare sessione, avviare la race e gestire reset / replay;
 - estensione del payload `race_update` con dati weekend;
 - navigazione UI per weekend hub, session selector e viste dedicate.
 
-### 6) Persistenza, telemetry e QA
+### 6) Pagina consultazione risultati sessioni
+
+Obiettivo: offrire una vista read-only per consultare i risultati già registrati durante il weekend.
+
+Deliverable:
+
+- overview del weekend con stato di FP1, FP2, FP3, Qualifying e Race;
+- dettaglio sessione con classifiche, best lap, stint, incidenti e note;
+- accesso dal weekend hub e dal selettore sessioni;
+- consultazione basata su snapshot persistiti e risultati serializzati dal backend.
+
+### 7) Persistenza, telemetry e QA
 
 Obiettivo: rendere il weekend verificabile, salvabile e testabile end-to-end.
 
@@ -91,7 +108,8 @@ Deliverable:
 3. Qualifying subsystem.
 4. Race subsystem.
 5. Backend/API/UI integration.
-6. Persistenza, telemetry e QA.
+6. Pagina consultazione risultati sessioni.
+7. Persistenza, telemetry e QA.
 
 ## Documenti correlati
 

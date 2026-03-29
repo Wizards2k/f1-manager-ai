@@ -90,6 +90,9 @@ def _bridge_session_type_for_weekend(session_type: str) -> str:
     except ValueError:
         return WeekendSessionType.FP1.value
 
+    if weekend_session_type == WeekendSessionType.QUALIFYING:
+        return WeekendSessionType.QUALIFYING.value
+
     if weekend_session_type in {
         WeekendSessionType.FP1,
         WeekendSessionType.FP2,

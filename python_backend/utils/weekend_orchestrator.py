@@ -5,6 +5,14 @@ from enum import Enum
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
+from .qualifying_session import (
+    QualifyingLapRecord,
+    QualifyingPhase,
+    QualifyingPhaseState,
+    QualifyingSessionState,
+    normalize_qualifying_phase,
+)
+
 
 class WeekendSessionType(str, Enum):
     FP1 = "FP1"
@@ -15,6 +23,7 @@ class WeekendSessionType(str, Enum):
 
 
 _SESSION_TYPE_ALIASES = {
+    "Q": "QUALIFYING",
     "QUALI": "QUALIFYING",
     "QUALY": "QUALIFYING",
     "QUALIFY": "QUALIFYING",
@@ -118,6 +127,7 @@ class WeekendOrchestrator:
     status: str = "idle"
     current_index: int = 0
     sessions: List[WeekendSessionState] = field(default_factory=_build_default_sessions)
+    qualifying_state: Optional[QualifyingSessionState] = None
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -148,6 +158,7 @@ class WeekendOrchestrator:
             self.metadata.update(metadata)
 
         self.sessions = _build_default_sessions()
+        self.qualifying_state = None
         self.current_index = self._index_for_session(session_type)
         now = time.time()
         self.created_at = now
@@ -241,6 +252,80 @@ class WeekendOrchestrator:
         session.record_snapshot(snapshot, merge=merge)
         self._touch()
 
+    def start_qualifying(
+        self,
+        participants: List[Any],
+        metadata: Optional[Dict[str, Any]] = None,
+        session_elapsed_s: float = 0.0,
+    ) -> QualifyingSessionState:
+        qualifying = QualifyingSessionState()
+        qualifying.start(
+            participants=participants,
+            circuit_id=self.circuit_id,
+            metadata=metadata,
+            started_at_s=session_elapsed_s,
+        )
+        self.qualifying_state = qualifying
+        self.record_session_snapshot(WeekendSessionType.QUALIFYING, qualifying.summary(), merge=False)
+        self._touch(session_elapsed_s)
+        return qualifying
+
+    def record_qualifying_lap(
+        self,
+        car_id: Any,
+        lap_time_s: float,
+        lap_number: int,
+        phase: Optional[Any] = None,
+        timestamp_s: Optional[float] = None,
+        sector_times: Optional[Dict[str, float]] = None,
+        is_competitive: bool = True,
+    ) -> Optional[QualifyingLapRecord]:
+        if self.qualifying_state is None:
+            return None
+
+        phase_to_use = phase or self.qualifying_state.current_phase
+        record = self.qualifying_state.record_lap(
+            car_id=car_id,
+            lap_time_s=lap_time_s,
+            lap_number=lap_number,
+            phase=phase_to_use,
+            timestamp_s=timestamp_s,
+            sector_times=sector_times,
+            is_competitive=is_competitive,
+        )
+        self.record_session_snapshot(WeekendSessionType.QUALIFYING, self.qualifying_state.summary(), merge=False)
+        self._touch(timestamp_s)
+        return record
+
+    def advance_qualifying_phase(self, current_elapsed_s: float) -> List[str]:
+        if self.qualifying_state is None:
+            return []
+
+        completed = self.qualifying_state.advance_if_elapsed(current_elapsed_s)
+        if completed:
+            self.record_session_snapshot(WeekendSessionType.QUALIFYING, self.qualifying_state.summary(), merge=False)
+        self._touch(current_elapsed_s)
+        return completed
+
+    def finalize_qualifying(self, finished_at_s: Optional[float] = None) -> List[Dict[str, Any]]:
+        if self.qualifying_state is None:
+            return []
+
+        grid = self.qualifying_state.finalize_session(finished_at_s=finished_at_s)
+        self.record_session_snapshot(WeekendSessionType.QUALIFYING, self.qualifying_state.summary(), merge=False)
+        self._touch(finished_at_s)
+        return grid
+
+    def get_qualifying_summary(self) -> Optional[Dict[str, Any]]:
+        if self.qualifying_state is None:
+            return None
+        return self.qualifying_state.summary()
+
+    def is_qualifying_driver_active(self, car_id: Any) -> bool:
+        if self.qualifying_state is None:
+            return False
+        return self.qualifying_state.is_car_active(car_id)
+
     def to_dict(self) -> Dict[str, Any]:
         self._ensure_sessions()
         return {
@@ -253,6 +338,7 @@ class WeekendOrchestrator:
             "updated_at": self.updated_at,
             "metadata": self.metadata,
             "sessions": [session.to_dict() for session in self.sessions],
+            "qualifying_state": self.qualifying_state.to_dict() if self.qualifying_state else None,
         }
 
     @classmethod
@@ -272,6 +358,10 @@ class WeekendOrchestrator:
             metadata=dict(data.get("metadata", {}) or {}),
         )
 
+        qualifying_state_data = data.get("qualifying_state")
+        if qualifying_state_data:
+            orchestrator.qualifying_state = QualifyingSessionState.from_dict(qualifying_state_data)
+
         current_session_type = data.get("current_session_type")
         if current_session_type is not None:
             try:
@@ -289,5 +379,10 @@ __all__ = [
     "WeekendOrchestrator",
     "WeekendSessionState",
     "WeekendSessionType",
+    "QualifyingLapRecord",
+    "QualifyingPhase",
+    "QualifyingPhaseState",
+    "QualifyingSessionState",
+    "normalize_qualifying_phase",
     "normalize_weekend_session_type",
 ]

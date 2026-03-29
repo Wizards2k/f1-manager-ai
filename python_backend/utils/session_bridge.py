@@ -54,6 +54,7 @@ from lap_simulator.practice_session import (
     PracticeSessionOrchestrator,
     SessionFlag,
 )
+from utils.qualifying_session import DEFAULT_QUALIFYING_PHASE_DURATIONS_S
 
 from utils.adapter import (
     game_compound_to_sim,
@@ -107,6 +108,7 @@ BRAKE_WARN_BLINK_WINDOW_S = 3.0
 
 # Session categorization for blue flag policy
 PRACTICE_SESSION_KINDS = {"FP1", "FP2", "FP3", "P1", "P2", "P3", "Q", "QUALI", "QUALIFYING"}
+QUALIFYING_SESSION_KINDS = {"Q", "QUALI", "QUALIFY", "QUALIFYING"}
 RACE_SESSION_KINDS = {"RACE", "GP", "GRAND_PRIX"}
 
 ICE_MODE_TO_ENGINE_MAP = {
@@ -595,7 +597,11 @@ class SessionBridge:
             logger.warning("Unsupported session_type %s, defaulting to FP1 for PSO", session_type)
             st = SessionType.FP1
 
-        self.pso = PracticeSessionOrchestrator(st, duration_s=SESSION_DURATION_S)
+        session_duration_s = SESSION_DURATION_S
+        if st == SessionType.QUALIFYING:
+            session_duration_s = sum(DEFAULT_QUALIFYING_PHASE_DURATIONS_S.values())
+
+        self.pso = PracticeSessionOrchestrator(st, duration_s=session_duration_s)
         if self.circuit_config:
             self.pso.set_circuit_calibration(
                 energy_guidance=self.circuit_config.ers_budget,
@@ -703,6 +709,21 @@ class SessionBridge:
             self._sector_end_m = [third, third * 2, self.circuit_config.circuit_length_m]
 
         self.pso.start_session()
+
+        if self.session_kind in QUALIFYING_SESSION_KINDS:
+            try:
+                from utils.game_logic import get_weekend_orchestrator
+
+                weekend_orchestrator = get_weekend_orchestrator()
+                if weekend_orchestrator is not None:
+                    weekend_orchestrator.start_qualifying(
+                        race_cars,
+                        metadata={"session_kind": self.session_kind},
+                        session_elapsed_s=0.0,
+                    )
+            except Exception as exc:
+                logger.warning("Failed to bootstrap qualifying state: %s", exc)
+
         self.active = True
         self._accumulated_time_s = 0.0
         self._track_states = {}
@@ -805,6 +826,16 @@ class SessionBridge:
         self._schedule_ai_runs()
 
         self.pso.tick(sim_dt)
+
+        if self.session_kind in QUALIFYING_SESSION_KINDS:
+            try:
+                from utils.game_logic import get_weekend_orchestrator
+
+                weekend_orchestrator = get_weekend_orchestrator()
+                if weekend_orchestrator is not None:
+                    weekend_orchestrator.advance_qualifying_phase(self._accumulated_time_s)
+            except Exception as exc:
+                logger.warning("Failed to advance qualifying phase: %s", exc)
 
         if self.pso.is_finished:
             self._finish_session()
@@ -1015,6 +1046,7 @@ class SessionBridge:
                         delta_aero=getattr(entry, 'delta_aero', 0.0),
                         delta_grip=getattr(entry, 'delta_grip', 0.0),
                         apply_baseline_delta=getattr(entry, 'apply_baseline_delta', True),
+                        is_qualifying=is_qualifying_session,
                     )
                 except Exception as e:
                     logger.error("update_section error for %s: %s", car_id, e)
@@ -1537,6 +1569,24 @@ class SessionBridge:
         # Update session bests (only competitive laps)
         if is_competitive:
             update_session_bests(race_car)
+
+        if self.session_kind in QUALIFYING_SESSION_KINDS:
+            try:
+                from utils.game_logic import get_weekend_orchestrator
+
+                weekend_orchestrator = get_weekend_orchestrator()
+                if weekend_orchestrator is not None and weekend_orchestrator.qualifying_state is not None:
+                    weekend_orchestrator.record_qualifying_lap(
+                        car_id=car_id,
+                        lap_time_s=lap_time,
+                        lap_number=ts.lap_number - 1,
+                        phase=weekend_orchestrator.qualifying_state.current_phase,
+                        timestamp_s=self._accumulated_time_s,
+                        sector_times=sectors,
+                        is_competitive=is_competitive,
+                    )
+            except Exception as exc:
+                logger.warning("Failed to record qualifying lap for %s: %s", car_id, exc)
 
         # Reset PU state for next lap (same logic as LapSimulator._run_lap_single)
         pu_state = ts.car_entry.state.pu
@@ -2355,6 +2405,15 @@ class SessionBridge:
             return
 
         session_time = self._accumulated_time_s
+        qualifying_state = None
+        if self.session_kind in QUALIFYING_SESSION_KINDS:
+            try:
+                from utils.game_logic import get_weekend_orchestrator
+
+                weekend_orchestrator = get_weekend_orchestrator()
+                qualifying_state = weekend_orchestrator.qualifying_state if weekend_orchestrator else None
+            except Exception as exc:
+                logger.warning("Failed to inspect qualifying state during dispatch: %s", exc)
 
         for plan in self._team_plans.values():
             for sr in plan.scheduled_runs:
@@ -2364,6 +2423,12 @@ class SessionBridge:
                     continue
 
                 car_id = sr.car_id
+                if qualifying_state is not None and not qualifying_state.is_car_active(car_id):
+                    participant = qualifying_state.get_participant(car_id)
+                    if participant is not None and participant.status == "eliminated":
+                        sr.dispatched = True
+                    continue
+
                 if car_id in self._track_states:
                     continue
                 engine = self.ai_engines.get(car_id)
@@ -2786,6 +2851,7 @@ class SessionBridge:
         session_kind = getattr(self, 'session_kind', 'FP1') or 'FP1'
         session_kind = session_kind.upper()
         is_practice_session = session_kind in PRACTICE_SESSION_KINDS or session_kind.startswith('FP')
+        is_qualifying_session = session_kind in QUALIFYING_SESSION_KINDS
         is_race_session = session_kind in RACE_SESSION_KINDS
 
         for car_id, ts in self._track_states.items():
@@ -3163,6 +3229,15 @@ class SessionBridge:
             self._complete_car_run(car_id)
         for car_id, race_car in self.race_cars_map.items():
             set_racecar_phase(race_car, "box")
+        if self.session_kind in QUALIFYING_SESSION_KINDS:
+            try:
+                from utils.game_logic import get_weekend_orchestrator
+
+                weekend_orchestrator = get_weekend_orchestrator()
+                if weekend_orchestrator is not None and weekend_orchestrator.qualifying_state is not None:
+                    weekend_orchestrator.finalize_qualifying(finished_at_s=self._accumulated_time_s)
+            except Exception as exc:
+                logger.warning("Failed to finalize qualifying state: %s", exc)
         if self._ai_report_enabled:
             self._generate_ai_setup_report()
         self.active = False
