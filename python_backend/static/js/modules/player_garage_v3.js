@@ -4195,7 +4195,6 @@ export class PlayerGarageV3 {
             }
             actionBtn.disabled = true;
             this.pendingSendDrivers.add(driverNumber);
-            this.applyLocalCarState(driverNumber, { state: 'OUT_LAP', is_on_track: true });
             this.render(true);
             const sent = await this.sendPlayerCarOut(driverNumber);
             if (!sent) {
