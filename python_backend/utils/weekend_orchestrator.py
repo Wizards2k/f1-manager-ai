@@ -27,15 +27,21 @@ class WeekendSessionType(str, Enum):
     FP1 = "FP1"
     FP2 = "FP2"
     FP3 = "FP3"
-    QUALIFYING = "QUALIFYING"
+    Q1 = "Q1"
+    Q2 = "Q2"
+    Q3 = "Q3"
     RACE = "RACE"
 
 
 _SESSION_TYPE_ALIASES = {
-    "Q": "QUALIFYING",
-    "QUALI": "QUALIFYING",
-    "QUALY": "QUALIFYING",
-    "QUALIFY": "QUALIFYING",
+    "Q": "Q1",  # Default a Q1 se non specificato
+    "Q1": "Q1",
+    "Q2": "Q2",
+    "Q3": "Q3",
+    "QUALIFYING": "Q1",  # Alias per Q1
+    "QUALI": "Q1",
+    "QUALY": "Q1",
+    "QUALIFY": "Q1",
 }
 
 
@@ -43,7 +49,9 @@ DEFAULT_WEEKEND_SEQUENCE: Tuple[WeekendSessionType, ...] = (
     WeekendSessionType.FP1,
     WeekendSessionType.FP2,
     WeekendSessionType.FP3,
-    WeekendSessionType.QUALIFYING,
+    WeekendSessionType.Q1,
+    WeekendSessionType.Q2,
+    WeekendSessionType.Q3,
     WeekendSessionType.RACE,
 )
 
@@ -244,6 +252,13 @@ class WeekendOrchestrator:
         timestamp: Optional[float] = None,
         merge: bool = True,
     ) -> Optional[WeekendSessionState]:
+        # Applica logica di eliminazione per Q1 e Q2
+        current_type = self.current_session_type
+        if current_type == "Q1":
+            self._apply_q1_elimination(summary)
+        elif current_type == "Q2":
+            self._apply_q2_elimination(summary)
+        
         self.mark_current_session_completed(summary=summary, timestamp=timestamp, merge=merge)
         next_type = self.next_session_type
         if next_type is None:
@@ -251,6 +266,74 @@ class WeekendOrchestrator:
             self._touch(timestamp)
             return None
         return self.set_current_session(next_type, activate=True, timestamp=timestamp)
+
+    def _apply_q1_elimination(self, summary: Optional[Dict[str, Any]] = None) -> None:
+        """
+        Applica eliminazione Q1: 20 auto → 15 ammesse (eliminate ultime 5).
+        
+        La griglia di Q1 determina quali auto avanzano a Q2.
+        Le ultime 5 posizioni (16-20) sono eliminate e non partecipano a Q2/Q3.
+        
+        Args:
+            summary: Dizionario con risultati Q1 (deve contenere 'classification' o 'results')
+        """
+        if not summary:
+            return
+        
+        # Estrai classifiche dai risultati
+        classification = summary.get("classification") or summary.get("results", [])
+        if not classification:
+            return
+        
+        # Ordina per tempo/miglior giro
+        sorted_cars = sorted(classification, key=lambda x: x.get("best_lap_time", float("inf")))
+        
+        # Determina auto eliminate (ultime 5) e ammesse (prime 15)
+        eliminated = sorted_cars[15:]  # Posizioni 16-20
+        admitted = sorted_cars[:15]    # Posizioni 1-15
+        
+        # Aggiungi info eliminazione al summary
+        summary["q1_elimination"] = {
+            "admitted_count": len(admitted),
+            "eliminated_count": len(eliminated),
+            "admitted_car_numbers": [car.get("car_number") for car in admitted],
+            "eliminated_car_numbers": [car.get("car_number") for car in eliminated],
+            "cutoff_position": 15,
+        }
+
+    def _apply_q2_elimination(self, summary: Optional[Dict[str, Any]] = None) -> None:
+        """
+        Applica eliminazione Q2: 15 auto → 10 ammesse (eliminate ultime 5).
+        
+        La griglia di Q2 determina quali auto avanzano a Q3.
+        Le ultime 5 posizioni (11-15) sono eliminate e non partecipano a Q3.
+        
+        Args:
+            summary: Dizionario con risultati Q2 (deve contenere 'classification' o 'results')
+        """
+        if not summary:
+            return
+        
+        # Estrai classifiche dai risultati
+        classification = summary.get("classification") or summary.get("results", [])
+        if not classification:
+            return
+        
+        # Ordina per tempo/miglior giro
+        sorted_cars = sorted(classification, key=lambda x: x.get("best_lap_time", float("inf")))
+        
+        # Determina auto eliminate (ultime 5) e ammesse (prime 10)
+        eliminated = sorted_cars[10:]  # Posizioni 11-15
+        admitted = sorted_cars[:10]    # Posizioni 1-10
+        
+        # Aggiungi info eliminazione al summary
+        summary["q2_elimination"] = {
+            "admitted_count": len(admitted),
+            "eliminated_count": len(eliminated),
+            "admitted_car_numbers": [car.get("car_number") for car in admitted],
+            "eliminated_car_numbers": [car.get("car_number") for car in eliminated],
+            "cutoff_position": 10,
+        }
 
     # ── Transition Machine Integration ──
 
