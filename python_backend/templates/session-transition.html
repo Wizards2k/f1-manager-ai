@@ -45,6 +45,118 @@
             font-size: 1.1rem;
         }
 
+        /* Weekend Timeline */
+        .weekend-timeline {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .weekend-timeline h2 {
+            color: #e94560;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .sessions-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .session-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .session-card.completed {
+            background: rgba(76, 175, 80, 0.15);
+            border-color: #4caf50;
+        }
+
+        .session-card.current {
+            background: rgba(233, 69, 96, 0.15);
+            border-color: #e94560;
+        }
+
+        .session-card.upcoming {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: #4a4a4a;
+            color: #6a6a6a;
+        }
+
+        .session-card .session-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .session-card .session-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+
+        .session-card .session-status {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .session-card.completed .session-status {
+            color: #4caf50;
+        }
+
+        .session-card.current .session-status {
+            color: #e94560;
+        }
+
+        .session-card.upcoming .session-status {
+            color: #4a4a4a;
+        }
+
+        .session-card .session-result {
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #a0a0a0;
+        }
+
+        .session-card.completed .session-result {
+            color: #81c784;
+        }
+
+        /* Timeline connector line */
+        .sessions-list::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 70px;
+            right: 70px;
+            height: 2px;
+            background: #4a4a4a;
+            transform: translateY(-50%);
+            z-index: 0;
+            display: none;
+        }
+
+        @media (min-width: 900px) {
+            .sessions-list {
+                grid-template-columns: repeat(7, 1fr);
+            }
+            
+            .sessions-list::after {
+                display: block;
+            }
+        }
+
         .session-info {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 15px;
@@ -360,6 +472,15 @@
         </div>
 
         <div id="content" style="display: none;">
+            <!-- Weekend Timeline -->
+            <div class="weekend-timeline">
+                <h2>📅 Weekend Timeline</h2>
+                <div class="sessions-list" id="sessions-list">
+                    <!-- Popolato dinamicamente -->
+                </div>
+            </div>
+
+            <!-- Current Session Details -->
             <div class="session-info">
                 <div class="session-header">
                     <div>
@@ -396,7 +517,7 @@
                         ← Torna alla Gara
                     </button>
                     <button class="btn btn-primary" id="btn-advance" onclick="advanceToNextSession()">
-                        ⏭️ Avanza a Sessione Successiva
+                        ⏭️ Avanza Sessione
                     </button>
                 </div>
 
@@ -408,6 +529,15 @@
     <script>
         let currentSession = null;
         let weekendData = null;
+        const SESSION_ICONS = {
+            'FP1': '🆓',
+            'FP2': '🆓',
+            'FP3': '🆓',
+            'Q1': '⏱️',
+            'Q2': '⏱️',
+            'Q3': '⏱️',
+            'RACE': '🏁'
+        };
 
         async function loadWeekendStatus() {
             try {
@@ -418,10 +548,53 @@
                 document.getElementById('circuit-name').textContent = 
                     `Circuito: ${weekendData.circuit_id || 'Non disponibile'}`;
                 
+                renderSessionsTimeline();
                 loadSessionResults(weekendData.current_session);
             } catch (error) {
                 showError('Errore nel caricamento dello stato del weekend: ' + error.message);
             }
+        }
+
+        function renderSessionsTimeline() {
+            const sessionsList = document.getElementById('sessions-list');
+            sessionsList.innerHTML = '';
+            
+            if (!weekendData || !weekendData.sessions) return;
+            
+            const currentIndex = weekendData.current_index;
+            
+            weekendData.sessions.forEach((session, index) => {
+                const isCompleted = index < currentIndex;
+                const isCurrent = index === currentIndex;
+                const isUpcoming = index > currentIndex;
+                
+                const card = document.createElement('div');
+                card.className = `session-card ${isCompleted ? 'completed' : isCurrent ? 'current' : 'upcoming'}`;
+                
+                const statusText = isCompleted ? 'COMPLETED' : isCurrent ? 'ACTIVE' : 'UPCOMING';
+                const icon = SESSION_ICONS[session.session_type] || '📋';
+                
+                // Result summary
+                let resultText = '';
+                if (isCompleted && session.summary) {
+                    if (session.session_type === 'Q1' && session.summary.q1_elimination) {
+                        resultText = `${session.summary.q1_elimination.admitted_count} admitted`;
+                    } else if (session.session_type === 'Q2' && session.summary.q2_elimination) {
+                        resultText = `${session.summary.q2_elimination.admitted_count} admitted`;
+                    } else if (session.summary.best_lap) {
+                        resultText = `Best: ${formatLapTime(session.summary.best_lap.time)}`;
+                    }
+                }
+                
+                card.innerHTML = `
+                    <div class="session-icon">${icon}</div>
+                    <div class="session-name">${session.session_type}</div>
+                    <div class="session-status">${statusText}</div>
+                    ${resultText ? `<div class="session-result">${resultText}</div>` : ''}
+                `;
+                
+                sessionsList.appendChild(card);
+            });
         }
 
         async function loadSessionResults(sessionType) {
@@ -517,11 +690,7 @@
             });
 
             // Abilita/disabilita pulsante advance
-            const canAdvance = weekendData?.current_index < weekendData?.sessions.length - 1;
-            document.getElementById('btn-advance').disabled = !canAdvance;
-            document.getElementById('btn-advance').textContent = canAdvance 
-                ? `⏭️ Avanza a ${getNextSessionName()}`
-                : '✅ Weekend Completato';
+            updateAdvanceButton();
         }
 
         function displayElimination(eliminationData, sessionName) {
@@ -579,6 +748,20 @@
             return 'Fine Weekend';
         }
 
+        function updateAdvanceButton() {
+            const btn = document.getElementById('btn-advance');
+            const canAdvance = weekendData?.current_index < weekendData?.sessions.length - 1;
+            
+            if (canAdvance) {
+                const nextSession = getNextSessionName();
+                btn.disabled = false;
+                btn.textContent = `⏭️ Advance Session ${nextSession}`;
+            } else {
+                btn.disabled = true;
+                btn.textContent = '✅ Weekend Completato';
+            }
+        }
+
         function formatLapTime(timeSeconds) {
             if (!timeSeconds) return '--:--.---';
             const minutes = Math.floor(timeSeconds / 60);
@@ -604,18 +787,22 @@
 
                 if (result.success) {
                     showSuccess(`Transizione completata: ${result.previous_session} → ${result.new_session}`);
-                    setTimeout(() => {
-                        window.location.reload();
+                    
+                    // Ricarica lo stato del weekend dopo 2 secondi
+                    setTimeout(async () => {
+                        await loadWeekendStatus();
+                        const nextSession = result.new_session;
+                        await loadSessionResults(nextSession);
                     }, 2000);
                 } else {
                     showError(result.message || 'Avanzamento fallito');
                     btn.disabled = false;
-                    btn.textContent = '⏭️ Avanza a Sessione Successiva';
+                    updateAdvanceButton();
                 }
             } catch (error) {
                 showError('Errore nell\'avanzamento: ' + error.message);
                 btn.disabled = false;
-                btn.textContent = '⏭️ Avanza a Sessione Successiva';
+                updateAdvanceButton();
             }
         }
 
