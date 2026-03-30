@@ -673,19 +673,27 @@ class PracticeSessionOrchestrator:
 
         # Check session end
         if self.clock.is_finished:
-            # Abort all on-track runs
-            for css in self.cars.values():
-                if css.phase == CarPhase.ON_TRACK:
-                    self._abort_run(css, "Session time expired")
-            self._emit(PracticeEventType.SESSION_END, message=f"{self.session_type.value} finished")
+            if self.session_type == SessionType.RACE:
+                self._emit(PracticeEventType.SESSION_END, message=f"{self.session_type.value} finished")
+            else:
+                # Abort all on-track runs
+                for css in self.cars.values():
+                    if css.phase == CarPhase.ON_TRACK:
+                        self._abort_run(css, "Session time expired")
+                self._emit(PracticeEventType.SESSION_END, message=f"{self.session_type.value} finished")
 
         # Red flag: force all cars back and clear pit queue
         if self.clock.flag == SessionFlag.RED:
-            for css in self.cars.values():
-                if css.phase == CarPhase.ON_TRACK:
-                    self._abort_run(css, "Red flag")
-                elif css.phase == CarPhase.PIT_QUEUE:
-                    css.phase = CarPhase.IN_GARAGE
+            if self.session_type == SessionType.RACE:
+                for css in self.cars.values():
+                    if css.phase == CarPhase.PIT_QUEUE:
+                        css.phase = CarPhase.IN_GARAGE
+            else:
+                for css in self.cars.values():
+                    if css.phase == CarPhase.ON_TRACK:
+                        self._abort_run(css, "Red flag")
+                    elif css.phase == CarPhase.PIT_QUEUE:
+                        css.phase = CarPhase.IN_GARAGE
             self.pitlane.queue.clear()
 
         tick_events = self.events[events_before:]

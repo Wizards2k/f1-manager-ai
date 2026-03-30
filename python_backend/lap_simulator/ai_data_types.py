@@ -24,6 +24,7 @@ class SessionType(str, Enum):
     FP2 = "FP2"
     FP3 = "FP3"
     QUALIFYING = "QUALIFYING"
+    RACE = "RACE"
 
 
 class RunProgram(str, Enum):
@@ -260,6 +261,7 @@ SESSION_PROGRAMS: Dict[SessionType, List[RunProgram]] = {
         RunProgram.QUALI_SIM,
         RunProgram.QUALI_SIM,
     ],
+    SessionType.RACE: [],
 }
 
 

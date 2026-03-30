@@ -12,6 +12,11 @@ from .qualifying_session import (
     QualifyingSessionState,
     normalize_qualifying_phase,
 )
+from .race_session import (
+    RaceDriverState,
+    RaceLapRecord,
+    RaceSessionState,
+)
 
 
 class WeekendSessionType(str, Enum):
@@ -128,6 +133,7 @@ class WeekendOrchestrator:
     current_index: int = 0
     sessions: List[WeekendSessionState] = field(default_factory=_build_default_sessions)
     qualifying_state: Optional[QualifyingSessionState] = None
+    race_state: Optional[RaceSessionState] = None
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -159,6 +165,7 @@ class WeekendOrchestrator:
 
         self.sessions = _build_default_sessions()
         self.qualifying_state = None
+        self.race_state = None
         self.current_index = self._index_for_session(session_type)
         now = time.time()
         self.created_at = now
@@ -334,6 +341,114 @@ class WeekendOrchestrator:
             return False
         return self.qualifying_state.is_car_active(car_id)
 
+    def start_race(
+        self,
+        participants: List[Any],
+        metadata: Optional[Dict[str, Any]] = None,
+        starting_grid: Optional[List[Dict[str, Any]]] = None,
+        session_elapsed_s: float = 0.0,
+    ) -> RaceSessionState:
+        race = RaceSessionState()
+        race.start(
+            participants=participants,
+            circuit_id=self.circuit_id,
+            metadata=metadata,
+            starting_grid=starting_grid,
+            started_at_s=session_elapsed_s,
+        )
+        self.race_state = race
+        self.record_session_snapshot(WeekendSessionType.RACE, race.summary(), merge=False)
+        self._touch(session_elapsed_s)
+        return race
+
+    def record_race_lap(
+        self,
+        car_id: Any,
+        lap_time_s: float,
+        lap_number: int,
+        timestamp_s: Optional[float] = None,
+        sector_times: Optional[Dict[str, Any]] = None,
+        is_competitive: bool = True,
+        tyre_set_id: Optional[str] = None,
+        tyre_compound: Optional[str] = None,
+        tyre_condition_pct: Optional[float] = None,
+        tyre_is_q3_reserve: bool = False,
+        stint_target_laps: Optional[int] = None,
+        stint_laps_remaining: Optional[int] = None,
+        position: Optional[int] = None,
+    ) -> Optional[RaceLapRecord]:
+        if self.race_state is None:
+            return None
+
+        record = self.race_state.record_lap(
+            car_id=car_id,
+            lap_time_s=lap_time_s,
+            lap_number=lap_number,
+            timestamp_s=timestamp_s,
+            sector_times=sector_times,
+            is_competitive=is_competitive,
+            tyre_set_id=tyre_set_id,
+            tyre_compound=tyre_compound,
+            tyre_condition_pct=tyre_condition_pct,
+            tyre_is_q3_reserve=tyre_is_q3_reserve,
+            stint_target_laps=stint_target_laps,
+            stint_laps_remaining=stint_laps_remaining,
+            position=position,
+        )
+        self.record_session_snapshot(WeekendSessionType.RACE, self.race_state.summary(), merge=False)
+        self._touch(timestamp_s)
+        return record
+
+    def record_race_pit_stop(
+        self,
+        car_id: Any,
+        timestamp_s: Optional[float] = None,
+        reason: Optional[str] = None,
+        tyre_set_id: Optional[str] = None,
+        tyre_compound: Optional[str] = None,
+        tyre_condition_pct: Optional[float] = None,
+        tyre_is_q3_reserve: bool = False,
+        stint_target_laps: Optional[int] = None,
+        stint_laps_remaining: Optional[int] = None,
+    ) -> Optional[Dict[str, Any]]:
+        if self.race_state is None:
+            return None
+
+        pit_stop = self.race_state.record_pit_stop(
+            car_id=car_id,
+            timestamp_s=timestamp_s,
+            reason=reason,
+            tyre_set_id=tyre_set_id,
+            tyre_compound=tyre_compound,
+            tyre_condition_pct=tyre_condition_pct,
+            tyre_is_q3_reserve=tyre_is_q3_reserve,
+            stint_target_laps=stint_target_laps,
+            stint_laps_remaining=stint_laps_remaining,
+        )
+        self.record_session_snapshot(WeekendSessionType.RACE, self.race_state.summary(), merge=False)
+        self._touch(timestamp_s)
+        return pit_stop
+
+    def finalize_race(self, finished_at_s: Optional[float] = None) -> List[Dict[str, Any]]:
+        if self.race_state is None:
+            return []
+
+        classification = self.race_state.finalize_session(finished_at_s=finished_at_s)
+        self.record_session_snapshot(WeekendSessionType.RACE, self.race_state.summary(), merge=False)
+        self._touch(finished_at_s)
+        return classification
+
+    def get_race_summary(self) -> Optional[Dict[str, Any]]:
+        if self.race_state is None:
+            return None
+        return self.race_state.summary()
+
+    def is_race_driver_active(self, car_id: Any) -> bool:
+        if self.race_state is None:
+            return False
+        participant = self.race_state.participants.get(str(car_id))
+        return participant is not None and participant.status not in {"retired", "finished"}
+
     def to_dict(self) -> Dict[str, Any]:
         self._ensure_sessions()
         return {
@@ -347,6 +462,7 @@ class WeekendOrchestrator:
             "metadata": self.metadata,
             "sessions": [session.to_dict() for session in self.sessions],
             "qualifying_state": self.qualifying_state.to_dict() if self.qualifying_state else None,
+            "race_state": self.race_state.to_dict() if self.race_state else None,
         }
 
     @classmethod
@@ -370,6 +486,10 @@ class WeekendOrchestrator:
         if qualifying_state_data:
             orchestrator.qualifying_state = QualifyingSessionState.from_dict(qualifying_state_data)
 
+        race_state_data = data.get("race_state")
+        if race_state_data:
+            orchestrator.race_state = RaceSessionState.from_dict(race_state_data)
+
         current_session_type = data.get("current_session_type")
         if current_session_type is not None:
             try:
@@ -391,6 +511,9 @@ __all__ = [
     "QualifyingPhase",
     "QualifyingPhaseState",
     "QualifyingSessionState",
+    "RaceDriverState",
+    "RaceLapRecord",
+    "RaceSessionState",
     "normalize_qualifying_phase",
     "normalize_weekend_session_type",
 ]

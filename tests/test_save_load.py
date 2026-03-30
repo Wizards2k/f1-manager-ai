@@ -84,6 +84,23 @@ def _build_inventory(
     )
 
 
+def _build_race_participants() -> list[dict[str, object]]:
+    return [
+        {
+            "car_id": "7",
+            "driver_name": "Lando Norris",
+            "team_name": "McLaren",
+            "is_player": True,
+        },
+        {
+            "car_id": "81",
+            "driver_name": "Oscar Piastri",
+            "team_name": "McLaren",
+            "is_player": False,
+        },
+    ]
+
+
 def test_save_load_preserves_tyre_condition_after_reentry(tmp_path, monkeypatch):
     bridge = SessionBridge()
     bridge.active = True
@@ -267,6 +284,235 @@ def test_save_load_roundtrip_qualifying_state(tmp_path, monkeypatch):
     assert restored_weekend.qualifying_state.participants["7"].best_lap_tyre_condition_pct == pytest.approx(95.5)
     assert restored_weekend.qualifying_state.participants["7"].best_lap_tyre_is_q3_reserve is False
     assert restored_weekend.qualifying_state.current_phase == "Q1"
+    assert restored_weekend.metadata["round"] == "Spa"
+
+
+def test_save_load_roundtrip_race_state(tmp_path, monkeypatch):
+    bridge = SessionBridge()
+    bridge.active = True
+    bridge.circuit_id = "test-circuit"
+    bridge.session_kind = WeekendSessionType.RACE.value
+    bridge._track_states = {}
+
+    race_car = _build_race_car()
+    inventory_key = bridge.tyre_inventory_service._inventory_key("7", "test-circuit")
+    bridge.tyre_inventory_service._inventory_cache[inventory_key] = _build_inventory()
+
+    weekend = WeekendOrchestrator().start(
+        circuit_id="test-circuit",
+        session_type=WeekendSessionType.RACE,
+        metadata={"round": "Monza"},
+    )
+    weekend.start_race(
+        _build_race_participants(),
+        metadata={"session": "Race"},
+        starting_grid=[
+            {
+                "car_id": "7",
+                "driver_name": "Lando Norris",
+                "team_name": "McLaren",
+                "is_player": True,
+                "position": 1,
+            },
+            {
+                "car_id": "81",
+                "driver_name": "Oscar Piastri",
+                "team_name": "McLaren",
+                "is_player": False,
+                "position": 2,
+            },
+        ],
+        session_elapsed_s=0.0,
+    )
+    weekend.record_race_lap(
+        car_id="7",
+        lap_time_s=81.0,
+        lap_number=1,
+        timestamp_s=12.5,
+        sector_times={"sector1": 26.0, "sector2": 27.0, "sector3": 28.0},
+        is_competitive=True,
+        tyre_set_id="R1",
+        tyre_compound="medium",
+        tyre_condition_pct=93.2,
+        tyre_is_q3_reserve=False,
+        stint_target_laps=20,
+        stint_laps_remaining=19,
+        position=1,
+    )
+    weekend.record_race_lap(
+        car_id="81",
+        lap_time_s=82.0,
+        lap_number=1,
+        timestamp_s=13.0,
+        sector_times={"sector1": 26.2, "sector2": 27.3, "sector3": 28.5},
+        is_competitive=True,
+        tyre_set_id="R2",
+        tyre_compound="medium",
+        tyre_condition_pct=92.8,
+        tyre_is_q3_reserve=False,
+        stint_target_laps=20,
+        stint_laps_remaining=19,
+        position=2,
+    )
+    weekend.record_race_pit_stop(
+        car_id="7",
+        timestamp_s=42.0,
+        reason="strategy",
+        tyre_set_id="S2",
+        tyre_compound="soft",
+        tyre_condition_pct=88.0,
+        tyre_is_q3_reserve=False,
+        stint_target_laps=18,
+        stint_laps_remaining=17,
+    )
+    weekend.finalize_race(finished_at_s=120.0)
+
+    monkeypatch.setattr(save_system_module, "get_session_bridge", lambda: bridge)
+    monkeypatch.setattr(save_system_module, "get_weekend_orchestrator", lambda: weekend)
+    monkeypatch.setattr(save_system_module, "race_cars", [race_car], raising=False)
+    monkeypatch.setattr(gl, "start_session_for_circuit", lambda session_type="FP1": None)
+    monkeypatch.setattr(gl, "get_session_bridge", lambda: bridge)
+    monkeypatch.setattr(gl, "get_car_by_driver_number", lambda driver_number: race_car if int(driver_number) == 7 else None)
+    monkeypatch.setattr(config, "set_current_circuit", lambda circuit_id: None)
+
+    service = SaveGameService(data_root=tmp_path)
+    save_id = service.save_game("race regression")
+    save_path = service.save_dir / f"{save_id}.json"
+
+    with save_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["metadata"]["weekend_session_type"] == WeekendSessionType.RACE.value
+    assert payload["weekend_state"]["current_session_type"] == WeekendSessionType.RACE.value
+    assert payload["weekend_state"]["race_state"] is not None
+    assert payload["weekend_state"]["race_state"]["lap_records"][0]["tyre_set_id"] == "R1"
+    assert payload["weekend_state"]["race_state"]["pit_stops"][0]["reason"] == "strategy"
+    assert payload["weekend_state"]["race_state"]["classification"][0]["car_id"] == "7"
+
+    result = service.load_game(save_id)
+    assert result["success"] is True
+
+    restored_weekend = gl.get_weekend_orchestrator()
+    assert restored_weekend is not None
+    assert restored_weekend.current_session_type == WeekendSessionType.RACE.value
+    assert restored_weekend.race_state is not None
+    assert restored_weekend.race_state.lap_records[0].car_id == "7"
+    assert restored_weekend.race_state.pit_stops[0]["reason"] == "strategy"
+    assert restored_weekend.race_state.participants["7"].pit_stops == 1
+    assert restored_weekend.race_state.participants["7"].current_stint_number == 2
+    assert restored_weekend.race_state.classification[0]["car_id"] == "7"
+    assert restored_weekend.race_state.classification[0]["finish_position"] == 1
+    assert restored_weekend.metadata["round"] == "Monza"
+
+
+def test_save_load_roundtrip_qualifying_to_race_transition(tmp_path, monkeypatch):
+    bridge = SessionBridge()
+    bridge.active = True
+    bridge.circuit_id = "test-circuit"
+    bridge.session_kind = WeekendSessionType.RACE.value
+    bridge._track_states = {}
+
+    race_car = _build_race_car()
+    inventory_key = bridge.tyre_inventory_service._inventory_key("7", "test-circuit")
+    bridge.tyre_inventory_service._inventory_cache[inventory_key] = _build_inventory()
+
+    weekend = WeekendOrchestrator().start(
+        circuit_id="test-circuit",
+        session_type=WeekendSessionType.QUALIFYING,
+        metadata={"round": "Spa"},
+    )
+    weekend.start_qualifying(
+        _build_race_participants(),
+        metadata={"session": "Q1"},
+        session_elapsed_s=0.0,
+    )
+    weekend.record_qualifying_lap(
+        car_id="7",
+        lap_time_s=77.456,
+        lap_number=1,
+        phase="Q1",
+        timestamp_s=12.5,
+        sector_times={"sector1": 25.0, "sector2": 26.0, "sector3": 26.456},
+        is_competitive=True,
+        tyre_set_id="Q1-01",
+        tyre_compound="soft",
+        tyre_condition_pct=95.5,
+        tyre_is_q3_reserve=False,
+    )
+    weekend.record_qualifying_lap(
+        car_id="81",
+        lap_time_s=78.2,
+        lap_number=1,
+        phase="Q1",
+        timestamp_s=13.0,
+        sector_times={"sector1": 25.3, "sector2": 26.4, "sector3": 26.5},
+        is_competitive=True,
+        tyre_set_id="Q1-02",
+        tyre_compound="soft",
+        tyre_condition_pct=94.8,
+        tyre_is_q3_reserve=False,
+    )
+
+    starting_grid = weekend.finalize_qualifying(finished_at_s=90.0)
+    weekend.set_current_session(WeekendSessionType.RACE, timestamp=90.0)
+    weekend.start_race(
+        _build_race_participants(),
+        metadata={"session": "Race"},
+        starting_grid=starting_grid,
+        session_elapsed_s=90.0,
+    )
+    weekend.record_race_lap(
+        car_id="7",
+        lap_time_s=82.1,
+        lap_number=1,
+        timestamp_s=100.0,
+        sector_times={"sector1": 26.4, "sector2": 27.1, "sector3": 28.6},
+        is_competitive=True,
+        tyre_set_id="R1",
+        tyre_compound="medium",
+        tyre_condition_pct=94.1,
+        tyre_is_q3_reserve=False,
+        stint_target_laps=20,
+        stint_laps_remaining=19,
+        position=1,
+    )
+
+    monkeypatch.setattr(save_system_module, "get_session_bridge", lambda: bridge)
+    monkeypatch.setattr(save_system_module, "get_weekend_orchestrator", lambda: weekend)
+    monkeypatch.setattr(save_system_module, "race_cars", [race_car], raising=False)
+    monkeypatch.setattr(gl, "start_session_for_circuit", lambda session_type="FP1": None)
+    monkeypatch.setattr(gl, "get_session_bridge", lambda: bridge)
+    monkeypatch.setattr(gl, "get_car_by_driver_number", lambda driver_number: race_car if int(driver_number) == 7 else None)
+    monkeypatch.setattr(config, "set_current_circuit", lambda circuit_id: None)
+
+    service = SaveGameService(data_root=tmp_path)
+    save_id = service.save_game("qualifying to race regression")
+    save_path = service.save_dir / f"{save_id}.json"
+
+    with save_path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+
+    assert payload["metadata"]["weekend_session_type"] == WeekendSessionType.RACE.value
+    assert payload["weekend_state"]["current_session_type"] == WeekendSessionType.RACE.value
+    assert payload["weekend_state"]["qualifying_state"] is not None
+    assert payload["weekend_state"]["race_state"] is not None
+    assert payload["weekend_state"]["qualifying_state"]["participants"]["7"]["best_lap_s"] == pytest.approx(77.456)
+    assert payload["weekend_state"]["race_state"]["starting_grid"][0]["car_id"] == "7"
+    assert payload["weekend_state"]["race_state"]["lap_records"][0]["car_id"] == "7"
+
+    result = service.load_game(save_id)
+    assert result["success"] is True
+
+    restored_weekend = gl.get_weekend_orchestrator()
+    assert restored_weekend is not None
+    assert restored_weekend.current_session_type == WeekendSessionType.RACE.value
+    assert restored_weekend.qualifying_state is not None
+    assert restored_weekend.qualifying_state.participants["7"].best_lap_s == pytest.approx(77.456)
+    assert restored_weekend.qualifying_state.participants["7"].best_lap_tyre_set_id == "Q1-01"
+    assert restored_weekend.race_state is not None
+    assert restored_weekend.race_state.starting_grid[0]["car_id"] == "7"
+    assert restored_weekend.race_state.lap_records[0].car_id == "7"
+    assert restored_weekend.race_state.participants["7"].laps_completed == 1
     assert restored_weekend.metadata["round"] == "Spa"
 
 
