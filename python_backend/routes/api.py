@@ -1085,4 +1085,168 @@ def register_routes(app):
         except Exception as e:
             return jsonify({'error': f'Failed to list saves: {str(e)}'}), 500
 
+    # WEEKEND MANAGEMENT API (Fase-G Punto 7)
+    # ─────────────────────────────────────────────────────────────────────────
+
+    @app.route('/api/weekend/status')
+    def get_weekend_status():
+        """
+        Restituisce lo stato corrente del weekend.
+        
+        Returns:
+            {
+                "circuit_id": str,
+                "current_session": "FP1|FP2|FP3|Q1|Q2|Q3|RACE",
+                "current_index": int,
+                "sessions": [{"type": str, "status": str, "summary": dict}],
+                "is_complete": bool
+            }
+        """
+        try:
+            from utils.game_logic import get_weekend_orchestrator
+            orchestrator = get_weekend_orchestrator()
+            
+            if not orchestrator:
+                return jsonify({'error': 'Weekend orchestrator not available'}), 404
+            
+            return jsonify({
+                'circuit_id': orchestrator.circuit_id,
+                'current_session': orchestrator.current_session_type,
+                'current_index': orchestrator.current_index,
+                'sessions': [s.to_dict() for s in orchestrator.sessions],
+                'is_complete': orchestrator.is_complete,
+            })
+        except Exception as e:
+            return jsonify({'error': f'Failed to get weekend status: {str(e)}'}), 500
+
+    @app.route('/api/weekend/session/results')
+    def get_session_results():
+        """
+        Restituisce i risultati della sessione corrente o specificata.
+        
+        Query params:
+            - session: opzionale, tipo sessione (FP1, FP2, FP3, Q1, Q2, Q3, RACE)
+        
+        Returns:
+            {
+                "session_type": str,
+                "status": str,
+                "summary": {
+                    "classification": [...],
+                    "best_lap": {...},
+                    "stints": [...],
+                    "q1_elimination": {...},  # Solo per Q1
+                    "q2_elimination": {...},  # Solo per Q2
+                }
+            }
+        """
+        try:
+            from utils.game_logic import get_weekend_orchestrator
+            orchestrator = get_weekend_orchestrator()
+            
+            if not orchestrator:
+                return jsonify({'error': 'Weekend orchestrator not available'}), 404
+            
+            session_type = request.args.get('session')
+            if session_type:
+                session = orchestrator.get_session(session_type)
+            else:
+                session = orchestrator.current_session
+            
+            if not session:
+                return jsonify({'error': 'Session not found'}), 404
+            
+            return jsonify({
+                'session_type': session.session_type.value,
+                'status': session.status,
+                'summary': session.summary,
+            })
+        except Exception as e:
+            return jsonify({'error': f'Failed to get session results: {str(e)}'}), 500
+
+    @app.route('/api/weekend/advance', methods=['POST'])
+    def advance_weekend_session():
+        """
+        Avanza alla sessione successiva del weekend.
+        
+        Richiede che la sessione corrente sia completata (risultati persistiti).
+        
+        Returns:
+            {
+                "success": bool,
+                "previous_session": str,
+                "new_session": str,
+                "message": str
+            }
+        """
+        try:
+            from utils.game_logic import get_weekend_orchestrator
+            orchestrator = get_weekend_orchestrator()
+            
+            if not orchestrator:
+                return jsonify({'error': 'Weekend orchestrator not available'}), 404
+            
+            previous_session = orchestrator.current_session_type
+            if not previous_session:
+                return jsonify({'error': 'No active session'}), 400
+            
+            # Avanza alla sessione successiva
+            next_session = orchestrator.advance_to_next_session()
+            
+            if not next_session:
+                return jsonify({
+                    'success': False,
+                    'message': 'Weekend already completed',
+                })
+            
+            # Resetta la transition machine per la nuova sessione
+            orchestrator.transition_machine.reset()
+            
+            return jsonify({
+                'success': True,
+                'previous_session': previous_session,
+                'new_session': next_session.session_type.value,
+                'message': f'Advanced from {previous_session} to {next_session.session_type.value}',
+            })
+        except Exception as e:
+            import traceback
+            app.logger.error("WEEKEND ADVANCE ERROR: %s", traceback.format_exc())
+            return jsonify({'error': f'Failed to advance session: {str(e)}'}), 500
+
+    @app.route('/api/weekend/transition/state')
+    def get_transition_state():
+        """
+        Restituisce lo stato corrente della transition machine.
+        
+        Returns:
+            {
+                "state": "RUNNING|EXPIRED_GRACE|FINALIZING|NEXT_SESSION",
+                "can_advance": bool,
+                "grace_period_remaining": float,
+                "timeout_remaining": float
+            }
+        """
+        try:
+            from utils.game_logic import get_weekend_orchestrator
+            orchestrator = get_weekend_orchestrator()
+            
+            if not orchestrator:
+                return jsonify({'error': 'Weekend orchestrator not available'}), 404
+            
+            state = orchestrator.get_transition_state()
+            
+            return jsonify({
+                'state': state.value if state else None,
+                'can_advance': orchestrator.can_advance_transition(),
+                'grace_period_remaining': getattr(orchestrator.transition_machine, 'grace_period_remaining', None),
+                'timeout_remaining': getattr(orchestrator.transition_machine, 'timeout_remaining', None),
+            })
+        except Exception as e:
+            return jsonify({'error': f'Failed to get transition state: {str(e)}'}), 500
+
+    @app.route('/session-transition')
+    def session_transition_page():
+        """Pagina UI per la transizione tra sessioni con risultati."""
+        return render_template('session-transition.html')
+
     return app

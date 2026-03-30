@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transizione Sessione - F1 Manager AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #e94560, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: #a0a0a0;
+            font-size: 1.1rem;
+        }
+
+        .session-info {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .session-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e94560;
+        }
+
+        .session-type {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #e94560;
+        }
+
+        .session-status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+
+        .status-completed {
+            background: #4caf50;
+            color: white;
+        }
+
+        .status-finalizing {
+            background: #ff9800;
+            color: white;
+        }
+
+        .classification-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .classification-table th,
+        .classification-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .classification-table th {
+            background: rgba(233, 69, 96, 0.2);
+            color: #e94560;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+
+        .classification-table tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .position {
+            font-weight: bold;
+            width: 50px;
+        }
+
+        .driver-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .driver-number {
+            background: #e94560;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .team-color {
+            width: 4px;
+            height: 100%;
+            border-radius: 2px;
+        }
+
+        .elimination-info {
+            background: rgba(233, 69, 96, 0.1);
+            border-left: 4px solid #e94560;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .elimination-info h3 {
+            color: #e94560;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .elimination-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .elimination-stat {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .elimination-stat .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #e94560;
+        }
+
+        .elimination-stat .label {
+            font-size: 0.85rem;
+            color: #a0a0a0;
+            margin-top: 5px;
+        }
+
+        .eliminated-drivers {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .eliminated-drivers h4 {
+            color: #ff6b6b;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+
+        .driver-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .driver-badge {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid #ff6b6b;
+            color: #ff6b6b;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(233, 69, 96, 0.3);
+        }
+
+        .btn-primary:disabled {
+            background: #4a4a4a;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #a0a0a0;
+            border: 2px solid #4a4a4a;
+        }
+
+        .btn-secondary:hover {
+            border-color: #e94560;
+            color: #e94560;
+        }
+
+        .progress-sections {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .progress-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .progress-item .label {
+            font-size: 0.85rem;
+            color: #a0a0a0;
+            margin-bottom: 8px;
+        }
+
+        .progress-item .value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #4caf50;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #a0a0a0;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #e94560;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: rgba(233, 69, 96, 0.2);
+            border: 1px solid #e94560;
+            color: #ff6b6b;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .success-message {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid #4caf50;
+            color: #81c784;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .session-header {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .classification-table {
+                font-size: 0.85rem;
+            }
+
+            .classification-table th,
+            .classification-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏁 Transizione Sessione</h1>
+            <p id="circuit-name">Caricamento circuito...</p>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Caricamento risultati sessione...</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <div class="session-info">
+                <div class="session-header">
+                    <div>
+                        <div class="session-type" id="session-type">--</div>
+                        <div style="color: #a0a0a0; margin-top: 5px;" id="session-status">--</div>
+                    </div>
+                    <span class="session-status status-completed" id="status-badge">COMPLETED</span>
+                </div>
+
+                <div class="progress-sections" id="progress-sections">
+                    <!-- Popolato dinamicamente -->
+                </div>
+
+                <div id="elimination-container"></div>
+
+                <h3 style="margin: 25px 0 15px; color: #e94560;">📊 Classifica</h3>
+                <table class="classification-table">
+                    <thead>
+                        <tr>
+                            <th>Pos</th>
+                            <th>Pilota</th>
+                            <th>Team</th>
+                            <th>Miglior Giro</th>
+                            <th>Giri</th>
+                        </tr>
+                    </thead>
+                    <tbody id="classification-body">
+                        <!-- Popolato dinamicamente -->
+                    </tbody>
+                </table>
+
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" onclick="window.location.href='/race'">
+                        ← Torna alla Gara
+                    </button>
+                    <button class="btn btn-primary" id="btn-advance" onclick="advanceToNextSession()">
+                        ⏭️ Avanza a Sessione Successiva
+                    </button>
+                </div>
+
+                <div id="message-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSession = null;
+        let weekendData = null;
+
+        async function loadWeekendStatus() {
+            try {
+                const response = await fetch('/api/weekend/status');
+                if (!response.ok) throw new Error('Failed to load weekend status');
+                weekendData = await response.json();
+                
+                document.getElementById('circuit-name').textContent = 
+                    `Circuito: ${weekendData.circuit_id || 'Non disponibile'}`;
+                
+                loadSessionResults(weekendData.current_session);
+            } catch (error) {
+                showError('Errore nel caricamento dello stato del weekend: ' + error.message);
+            }
+        }
+
+        async function loadSessionResults(sessionType) {
+            try {
+                const response = await fetch(`/api/weekend/session/results?session=${sessionType}`);
+                if (!response.ok) throw new Error('Failed to load session results');
+                
+                const data = await response.json();
+                currentSession = data;
+                
+                displaySessionData(data);
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+            } catch (error) {
+                showError('Errore nel caricamento dei risultati: ' + error.message);
+            }
+        }
+
+        function displaySessionData(data) {
+            // Header sessione
+            document.getElementById('session-type').textContent = data.session_type;
+            document.getElementById('session-status').textContent = `Stato: ${data.status}`;
+            
+            const statusBadge = document.getElementById('status-badge');
+            statusBadge.textContent = data.status.toUpperCase();
+            statusBadge.className = 'session-status ' + 
+                (data.status === 'completed' ? 'status-completed' : 'status-finalizing');
+
+            // Progress sections
+            const progressSections = document.getElementById('progress-sections');
+            progressSections.innerHTML = '';
+            
+            if (data.summary) {
+                // Total laps
+                const totalLaps = data.summary.total_laps || 0;
+                progressSections.innerHTML += `
+                    <div class="progress-item">
+                        <div class="label">Giri Totali</div>
+                        <div class="value">${totalLaps}</div>
+                    </div>
+                `;
+
+                // Best lap
+                if (data.summary.best_lap) {
+                    const bestLapTime = formatLapTime(data.summary.best_lap.time);
+                    progressSections.innerHTML += `
+                        <div class="progress-item">
+                            <div class="label">Miglior Giro</div>
+                            <div class="value">${bestLapTime}</div>
+                        </div>
+                    `;
+                }
+
+                // Elimination info per Q1/Q2
+                if (data.session_type === 'Q1' && data.summary.q1_elimination) {
+                    displayElimination(data.summary.q1_elimination, 'Q1');
+                } else if (data.session_type === 'Q2' && data.summary.q2_elimination) {
+                    displayElimination(data.summary.q2_elimination, 'Q2');
+                }
+            }
+
+            // Classification
+            const classification = data.summary?.classification || [];
+            const tbody = document.getElementById('classification-body');
+            tbody.innerHTML = '';
+
+            classification.forEach((driver, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="position">${driver.position || index + 1}</td>
+                    <td>
+                        <div class="driver-info">
+                            <div class="driver-number">${driver.car_number || driver.driver_number}</div>
+                            <div>
+                                <div style="font-weight: 600;">${driver.driver_name || `Driver #${driver.car_number || driver.driver_number}`}</div>
+                                <div style="font-size: 0.85rem; color: #a0a0a0;">${driver.team_name || 'Unknown Team'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="team-color" style="background: ${driver.team_color || '#888'};"></div>
+                            ${driver.team_name || ''}
+                        </div>
+                    </td>
+                    <td style="font-weight: bold; color: #4caf50;">
+                        ${driver.best_lap_time ? formatLapTime(driver.best_lap_time) : '--:--.---'}
+                    </td>
+                    <td>${driver.laps_completed || driver.total_laps || '-'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Abilita/disabilita pulsante advance
+            const canAdvance = weekendData?.current_index < weekendData?.sessions.length - 1;
+            document.getElementById('btn-advance').disabled = !canAdvance;
+            document.getElementById('btn-advance').textContent = canAdvance 
+                ? `⏭️ Avanza a ${getNextSessionName()}`
+                : '✅ Weekend Completato';
+        }
+
+        function displayElimination(eliminationData, sessionName) {
+            const container = document.getElementById('elimination-container');
+            const eliminatedDrivers = eliminationData.eliminated_car_numbers || [];
+            
+            let html = `
+                <div class="elimination-info">
+                    <h3>🎯 Eliminazione ${sessionName}</h3>
+                    <div class="elimination-grid">
+                        <div class="elimination-stat">
+                            <div class="value">${eliminationData.admitted_count}</div>
+                            <div class="label">Ammesse</div>
+                        </div>
+                        <div class="elimination-stat">
+                            <div class="value">${eliminationData.eliminated_count}</div>
+                            <div class="label">Eliminate</div>
+                        </div>
+                        <div class="elimination-stat">
+                            <div class="value">P${eliminationData.cutoff_position}</div>
+                            <div class="label">Cutoff</div>
+                        </div>
+                    </div>
+            `;
+
+            if (eliminatedDrivers.length > 0) {
+                html += `
+                    <div class="eliminated-drivers">
+                        <h4>Piloti Eliminati:</h4>
+                        <div class="driver-list">
+                `;
+                
+                eliminatedDrivers.forEach(carNumber => {
+                    html += `<span class="driver-badge">#${carNumber}</span>`;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                </div>
+                `;
+            } else {
+                html += `</div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function getNextSessionName() {
+            if (!weekendData) return '...';
+            const currentIndex = weekendData.current_index;
+            if (currentIndex + 1 < weekendData.sessions.length) {
+                return weekendData.sessions[currentIndex + 1].session_type;
+            }
+            return 'Fine Weekend';
+        }
+
+        function formatLapTime(timeSeconds) {
+            if (!timeSeconds) return '--:--.---';
+            const minutes = Math.floor(timeSeconds / 60);
+            const seconds = Math.floor(timeSeconds % 60);
+            const milliseconds = Math.floor((timeSeconds % 1) * 1000);
+            return `${minutes}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
+        }
+
+        async function advanceToNextSession() {
+            const btn = document.getElementById('btn-advance');
+            btn.disabled = true;
+            btn.textContent = '⏳ Avanzamento...';
+
+            try {
+                const response = await fetch('/api/weekend/advance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showSuccess(`Transizione completata: ${result.previous_session} → ${result.new_session}`);
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showError(result.message || 'Avanzamento fallito');
+                    btn.disabled = false;
+                    btn.textContent = '⏭️ Avanza a Sessione Successiva';
+                }
+            } catch (error) {
+                showError('Errore nell\'avanzamento: ' + error.message);
+                btn.disabled = false;
+                btn.textContent = '⏭️ Avanza a Sessione Successiva';
+            }
+        }
+
+        function showError(message) {
+            const container = document.getElementById('message-container');
+            container.innerHTML = `<div class="error-message">❌ ${message}</div>`;
+        }
+
+        function showSuccess(message) {
+            const container = document.getElementById('message-container');
+            container.innerHTML = `<div class="success-message">✅ ${message}</div>`;
+        }
+
+        // Init
+        loadWeekendStatus();
+    </script>
+</body>
+</html>
