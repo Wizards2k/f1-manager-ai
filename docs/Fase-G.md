@@ -1,16 +1,18 @@
 ---
 title: Fase G — Weekend di gara completo
 version: 0.1
-last_updated: 2026-03-29
-status: "Punto 3 completato — in progress su Race subsystem"
-scope: "Weekend di gara completo con cleanup architetturale aggressivo, Qualifying e Race"
+last_updated: 2026-03-30
+status: "Punto 3 in analisi — transizione weekend"
+scope: "Weekend di gara completo con cleanup architetturale aggressivo, transizione weekend, Qualifying e Race"
 ---
 
 # Fase G — Weekend di gara completo
 
 Fase G porta il motore da una singola sessione practice a un weekend completo, consolidando anche la nomenclatura dei file e rimuovendo gli ultimi legacy path non più necessari.
 
-## Roadmap in 7 punti
+La transizione tra sessioni non va trattata come un semplice incremento lineare: richiede una state machine dedicata con criteri di avanzamento, persistenza e side effect su UI e backend.
+
+## Roadmap in 8 punti
 
 ### 1) ✅ Cleanup architetturale e nomenclatura — **COMPLETATO**
 
@@ -40,7 +42,42 @@ Deliverable:
 - serializzazione e deserializzazione del weekend completo;
 - propagazione del tipo sessione al runtime e al backend.
 
-### 3) ✅ Qualifying subsystem — **COMPLETATO**
+> Nota: la policy di avanzamento del weekend è trattata come item separato al punto 3.
+
+### 3) Weekend transition state machine — **DA ANALIZZARE**
+
+Obiettivo: definire come il weekend passa da una sessione alla successiva senza assumere un semplice `next_session()`.
+
+Deliverable:
+
+- criteri di avanzamento per FP1→FP2, FP2→FP3, FP3→Qualifying e Qualifying→Race;
+- handshake con garage, persistenza e UI prima del cambio sessione;
+- salvataggio del contesto di sessione, risultati intermedi e lock di fine sessione;
+- eventi di transizione e gestione fallback in caso di pause, abort o restart;
+- test deterministici sulla state machine del weekend;
+
+#### Criteri operativi di transizione
+
+La sessione può passare alla successiva solo quando entra nello stato `READY_TO_ADVANCE`.
+
+- il timer della sessione corrente è a zero, oppure la sessione è stata chiusa da un evento equivalente;
+- tutte le auto risultano ai box oppure sono state finalizzate dopo l’ultimo attraversamento valido del traguardo;
+- un’auto ancora in pista quando scatta il timer può completare **solo un ultimo passaggio** e poi viene forzata ai box;
+- nessuna auto può iniziare un nuovo giro valido dopo lo scadere del timer;
+- risultati, best lap, classifiche, note e telemetry della sessione corrente sono consolidati e persistiti;
+- il runtime è entrato in una fase di finalizzazione che blocca nuove run e nuovi giri;
+- eventuali pause, abort o red flag devono essere risolti o portati in uno stato coerente prima dell’avanzamento;
+- se un’auto resta bloccata in uno stato intermedio, è ammesso un timeout di sicurezza per chiudere la finalizzazione.
+
+Flusso consigliato della state machine:
+
+- `RUNNING`
+- `EXPIRED_GRACE`
+- `FINALIZING`
+- `READY_TO_ADVANCE`
+- `NEXT_SESSION`
+
+### 4) ✅ Qualifying subsystem — **COMPLETATO**
 
 Obiettivo: implementare Q1, Q2 e Q3 come flusso dedicato con regole proprie.
 
@@ -54,7 +91,7 @@ Deliverable:
 - classifica finale di qualifica e griglia provvisoria;
 - eventi e telemetry per UI e QA.
 
-### 4) Race subsystem — **IN PROGRESS**
+### 5) Race subsystem — **IN PROGRESS**
 
 Obiettivo: trasformare il runtime in una vera sessione gara con partenza, stint e arrivo.
 
@@ -68,7 +105,7 @@ Deliverable:
 - integrazione con battle resolver e telemetria;
 - transizione pulita da qualifica a gara.
 
-### 5) Backend/API/UI integration
+### 6) Backend/API/UI integration
 
 Obiettivo: esporre il weekend completo alla UI senza rompere il flusso attuale.
 
@@ -79,18 +116,19 @@ Deliverable:
 - estensione del payload `race_update` con dati weekend;
 - navigazione UI per weekend hub, session selector e viste dedicate.
 
-### 6) Pagina consultazione risultati sessioni
+### 7) Pagina transizione e consultazione risultati sessioni
 
-Obiettivo: offrire una vista read-only per consultare i risultati già registrati durante il weekend.
+Obiettivo: offrire una vista di transizione che mostra i risultati già registrati e porta alla sessione successiva del weekend.
 
 Deliverable:
 
 - overview del weekend con stato di FP1, FP2, FP3, Qualifying e Race;
 - dettaglio sessione con classifiche, best lap, stint, incidenti e note;
+- azione esplicita per avanzare alla sessione successiva quando la sessione è in stato `READY_TO_ADVANCE`;
 - accesso dal weekend hub e dal selettore sessioni;
 - consultazione basata su snapshot persistiti e risultati serializzati dal backend.
 
-### 7) Persistenza, telemetry e QA
+### 8) Persistenza, telemetry e QA
 
 Obiettivo: rendere il weekend verificabile, salvabile e testabile end-to-end.
 
@@ -105,11 +143,12 @@ Deliverable:
 
 1. Cleanup architetturale e nomenclatura.
 2. Weekend Orchestrator e state model.
-3. Qualifying subsystem.
-4. Race subsystem.
-5. Backend/API/UI integration.
-6. Pagina consultazione risultati sessioni.
-7. Persistenza, telemetry e QA.
+3. Weekend transition state machine.
+4. Qualifying subsystem.
+5. Race subsystem.
+6. Backend/API/UI integration.
+7. Pagina consultazione risultati sessioni.
+8. Persistenza, telemetry e QA.
 
 ## Documenti correlati
 
