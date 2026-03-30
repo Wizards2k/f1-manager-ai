@@ -1907,6 +1907,15 @@ class SessionBridge:
             current_run_program=run_program,
         )
         self._sync_ers_mode_state(self._track_states[car_id])
+        
+        # Update race_car state immediately to prevent race condition with main loop
+        # Without this, the main loop would keep sending BOX state until PSO releases the car
+        race_car = self.race_cars_map.get(car_id)
+        if race_car is not None:
+            from utils.adapter import set_racecar_phase
+            set_racecar_phase(race_car, "out_lap")
+            race_car.is_on_track = True  # Mark as on track immediately to prevent UI flicker
+        
         return True
 
     def player_box_now(self, car) -> None:
