@@ -17,6 +17,10 @@ from .race_session import (
     RaceLapRecord,
     RaceSessionState,
 )
+from .weekend_transition_machine import (
+    WeekendTransitionMachine,
+    WeekendTransitionState,
+)
 
 
 class WeekendSessionType(str, Enum):
@@ -134,6 +138,7 @@ class WeekendOrchestrator:
     sessions: List[WeekendSessionState] = field(default_factory=_build_default_sessions)
     qualifying_state: Optional[QualifyingSessionState] = None
     race_state: Optional[RaceSessionState] = None
+    transition_machine: WeekendTransitionMachine = field(default_factory=WeekendTransitionMachine)
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -247,273 +252,146 @@ class WeekendOrchestrator:
             return None
         return self.set_current_session(next_type, activate=True, timestamp=timestamp)
 
-    def record_session_snapshot(
+    # ── Transition Machine Integration ──
+
+    def expire_current_session(self, timestamp: Optional[float] = None) -> None:
+        """
+        Marca la sessione corrente come scaduta (timer = 0).
+        
+        Transizione: RUNNING → EXPIRED_GRACE
+        
+        Args:
+            timestamp: Timestamp dell'evento (default: time.time())
+        """
+        self.transition_machine.expire_session(timestamp)
+        self._touch(timestamp)
+
+    def allow_final_lap(self, car_id: str) -> None:
+        """
+        Autorizza un'auto a completare l'ultimo giro.
+        
+        Da chiamare quando un'auto è in pista allo scadere del timer.
+        
+        Args:
+            car_id: Identificativo dell'auto
+        """
+        self.transition_machine.allow_final_lap(car_id)
+
+    def mark_car_completed_final_lap(self, car_id: str) -> None:
+        """
+        Marca un'auto come avente completato l'ultimo giro.
+        
+        Args:
+            car_id: Identificativo dell'auto
+        """
+        self.transition_machine.mark_car_completed_final_lap(car_id)
+
+    def mark_car_in_pit(self, car_id: str) -> None:
+        """
+        Marca un'auto come rientrata ai box.
+        
+        Args:
+            car_id: Identificativo dell'auto
+        """
+        self.transition_machine.mark_car_in_pit(car_id)
+
+    def update_transition(
         self,
-        session_type: Any,
-        snapshot: Optional[Dict[str, Any]] = None,
-        merge: bool = True,
-    ) -> None:
-        session = self.get_session(session_type)
-        if session is None:
-            return
-        session.record_snapshot(snapshot, merge=merge)
+        timestamp: Optional[float] = None,
+    ) -> WeekendTransitionState:
+        """
+        Aggiorna la state machine delle transizioni.
+        
+        Da chiamare ad ogni tick del loop principale.
+        
+        Args:
+            timestamp: Timestamp corrente (default: time.time())
+        
+        Returns:
+            Stato corrente dopo l'aggiornamento
+        """
+        state = self.transition_machine.update(timestamp)
+        
+        # Se la transizione è completa, avanza automaticamente
+        if state == WeekendTransitionState.NEXT_SESSION:
+            self.advance_to_next_session(timestamp=timestamp)
+            # Resetta la transition machine per la nuova sessione
+            self.transition_machine.reset()
+        
+        self._touch(timestamp)
+        return state
+
+    def get_transition_state(self) -> WeekendTransitionState:
+        """Restituisce lo stato corrente della transizione."""
+        return self.transition_machine.state
+
+    def get_transition_metrics(self) -> Dict[str, Any]:
+        """Restituisce le metriche correnti della transizione."""
+        return self.transition_machine.metrics.to_dict()
+
+    def can_advance_to_next_session(self) -> bool:
+        """
+        Verifica se la sessione corrente può avanzare alla prossima.
+        
+        Returns:
+            True se la state machine permette l'avanzamento
+        """
+        return self.transition_machine.can_advance
+
+    def persist_session_results(self, summary: Optional[Dict[str, Any]] = None) -> None:
+        """
+        Persiste i risultati della sessione corrente e marca come completato.
+        
+        Args:
+            summary: Riepilogo della sessione da persistere
+        """
+        if summary:
+            self.mark_current_session_completed(summary=summary)
+        self.transition_machine.mark_results_persisted()
         self._touch()
 
-    def start_qualifying(
-        self,
-        participants: List[Any],
-        metadata: Optional[Dict[str, Any]] = None,
-        session_elapsed_s: float = 0.0,
-    ) -> QualifyingSessionState:
-        qualifying = QualifyingSessionState()
-        qualifying.start(
-            participants=participants,
-            circuit_id=self.circuit_id,
-            metadata=metadata,
-            started_at_s=session_elapsed_s,
-        )
-        self.qualifying_state = qualifying
-        self.record_session_snapshot(WeekendSessionType.QUALIFYING, qualifying.summary(), merge=False)
-        self._touch(session_elapsed_s)
-        return qualifying
-
-    def record_qualifying_lap(
-        self,
-        car_id: Any,
-        lap_time_s: float,
-        lap_number: int,
-        phase: Optional[Any] = None,
-        timestamp_s: Optional[float] = None,
-        sector_times: Optional[Dict[str, Any]] = None,
-        is_competitive: bool = True,
-        tyre_set_id: Optional[str] = None,
-        tyre_compound: Optional[str] = None,
-        tyre_condition_pct: Optional[float] = None,
-        tyre_is_q3_reserve: bool = False,
-    ) -> Optional[QualifyingLapRecord]:
-        if self.qualifying_state is None:
-            return None
-
-        phase_to_use = phase or self.qualifying_state.current_phase
-        record = self.qualifying_state.record_lap(
-            car_id=car_id,
-            lap_time_s=lap_time_s,
-            lap_number=lap_number,
-            phase=phase_to_use,
-            timestamp_s=timestamp_s,
-            sector_times=sector_times,
-            is_competitive=is_competitive,
-            tyre_set_id=tyre_set_id,
-            tyre_compound=tyre_compound,
-            tyre_condition_pct=tyre_condition_pct,
-            tyre_is_q3_reserve=tyre_is_q3_reserve,
-        )
-        self.record_session_snapshot(WeekendSessionType.QUALIFYING, self.qualifying_state.summary(), merge=False)
-        self._touch(timestamp_s)
-        return record
-
-    def advance_qualifying_phase(self, current_elapsed_s: float) -> List[str]:
-        if self.qualifying_state is None:
-            return []
-
-        completed = self.qualifying_state.advance_if_elapsed(current_elapsed_s)
-        if completed:
-            self.record_session_snapshot(WeekendSessionType.QUALIFYING, self.qualifying_state.summary(), merge=False)
-        self._touch(current_elapsed_s)
-        return completed
-
-    def finalize_qualifying(self, finished_at_s: Optional[float] = None) -> List[Dict[str, Any]]:
-        if self.qualifying_state is None:
-            return []
-
-        grid = self.qualifying_state.finalize_session(finished_at_s=finished_at_s)
-        self.record_session_snapshot(WeekendSessionType.QUALIFYING, self.qualifying_state.summary(), merge=False)
-        self._touch(finished_at_s)
-        return grid
-
-    def get_qualifying_summary(self) -> Optional[Dict[str, Any]]:
-        if self.qualifying_state is None:
-            return None
-        return self.qualifying_state.summary()
-
-    def is_qualifying_driver_active(self, car_id: Any) -> bool:
-        if self.qualifying_state is None:
-            return False
-        return self.qualifying_state.is_car_active(car_id)
-
-    def start_race(
-        self,
-        participants: List[Any],
-        metadata: Optional[Dict[str, Any]] = None,
-        starting_grid: Optional[List[Dict[str, Any]]] = None,
-        session_elapsed_s: float = 0.0,
-    ) -> RaceSessionState:
-        race = RaceSessionState()
-        race.start(
-            participants=participants,
-            circuit_id=self.circuit_id,
-            metadata=metadata,
-            starting_grid=starting_grid,
-            started_at_s=session_elapsed_s,
-        )
-        self.race_state = race
-        self.record_session_snapshot(WeekendSessionType.RACE, race.summary(), merge=False)
-        self._touch(session_elapsed_s)
-        return race
-
-    def record_race_lap(
-        self,
-        car_id: Any,
-        lap_time_s: float,
-        lap_number: int,
-        timestamp_s: Optional[float] = None,
-        sector_times: Optional[Dict[str, Any]] = None,
-        is_competitive: bool = True,
-        tyre_set_id: Optional[str] = None,
-        tyre_compound: Optional[str] = None,
-        tyre_condition_pct: Optional[float] = None,
-        tyre_is_q3_reserve: bool = False,
-        stint_target_laps: Optional[int] = None,
-        stint_laps_remaining: Optional[int] = None,
-        position: Optional[int] = None,
-    ) -> Optional[RaceLapRecord]:
-        if self.race_state is None:
-            return None
-
-        record = self.race_state.record_lap(
-            car_id=car_id,
-            lap_time_s=lap_time_s,
-            lap_number=lap_number,
-            timestamp_s=timestamp_s,
-            sector_times=sector_times,
-            is_competitive=is_competitive,
-            tyre_set_id=tyre_set_id,
-            tyre_compound=tyre_compound,
-            tyre_condition_pct=tyre_condition_pct,
-            tyre_is_q3_reserve=tyre_is_q3_reserve,
-            stint_target_laps=stint_target_laps,
-            stint_laps_remaining=stint_laps_remaining,
-            position=position,
-        )
-        self.record_session_snapshot(WeekendSessionType.RACE, self.race_state.summary(), merge=False)
-        self._touch(timestamp_s)
-        return record
-
-    def record_race_pit_stop(
-        self,
-        car_id: Any,
-        timestamp_s: Optional[float] = None,
-        reason: Optional[str] = None,
-        tyre_set_id: Optional[str] = None,
-        tyre_compound: Optional[str] = None,
-        tyre_condition_pct: Optional[float] = None,
-        tyre_is_q3_reserve: bool = False,
-        stint_target_laps: Optional[int] = None,
-        stint_laps_remaining: Optional[int] = None,
-    ) -> Optional[Dict[str, Any]]:
-        if self.race_state is None:
-            return None
-
-        pit_stop = self.race_state.record_pit_stop(
-            car_id=car_id,
-            timestamp_s=timestamp_s,
-            reason=reason,
-            tyre_set_id=tyre_set_id,
-            tyre_compound=tyre_compound,
-            tyre_condition_pct=tyre_condition_pct,
-            tyre_is_q3_reserve=tyre_is_q3_reserve,
-            stint_target_laps=stint_target_laps,
-            stint_laps_remaining=stint_laps_remaining,
-        )
-        self.record_session_snapshot(WeekendSessionType.RACE, self.race_state.summary(), merge=False)
-        self._touch(timestamp_s)
-        return pit_stop
-
-    def finalize_race(self, finished_at_s: Optional[float] = None) -> List[Dict[str, Any]]:
-        if self.race_state is None:
-            return []
-
-        classification = self.race_state.finalize_session(finished_at_s=finished_at_s)
-        self.record_session_snapshot(WeekendSessionType.RACE, self.race_state.summary(), merge=False)
-        self._touch(finished_at_s)
-        return classification
-
-    def get_race_summary(self) -> Optional[Dict[str, Any]]:
-        if self.race_state is None:
-            return None
-        return self.race_state.summary()
-
-    def is_race_driver_active(self, car_id: Any) -> bool:
-        if self.race_state is None:
-            return False
-        participant = self.race_state.participants.get(str(car_id))
-        return participant is not None and participant.status not in {"retired", "finished"}
-
     def to_dict(self) -> Dict[str, Any]:
-        self._ensure_sessions()
+        """Serializza l'orchestrator per il salvataggio."""
         return {
-            "version": 1,
             "circuit_id": self.circuit_id,
             "status": self.status,
             "current_index": self.current_index,
-            "current_session_type": self.current_session_type,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
-            "metadata": self.metadata,
-            "sessions": [session.to_dict() for session in self.sessions],
+            "sessions": [s.to_dict() for s in self.sessions],
             "qualifying_state": self.qualifying_state.to_dict() if self.qualifying_state else None,
             "race_state": self.race_state.to_dict() if self.race_state else None,
+            "transition_machine": self.transition_machine.to_dict(),
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "metadata": dict(self.metadata),
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "WeekendOrchestrator":
-        sessions_data = data.get("sessions") or []
-        sessions = [WeekendSessionState.from_dict(item) for item in sessions_data]
-        if not sessions:
-            sessions = _build_default_sessions()
-
-        orchestrator = cls(
-            circuit_id=data.get("circuit_id"),
-            status=data.get("status", "idle"),
-            current_index=int(data.get("current_index", 0) or 0),
-            sessions=sessions,
-            created_at=data.get("created_at", time.time()),
-            updated_at=data.get("updated_at", time.time()),
-            metadata=dict(data.get("metadata", {}) or {}),
-        )
-
-        qualifying_state_data = data.get("qualifying_state")
-        if qualifying_state_data:
-            orchestrator.qualifying_state = QualifyingSessionState.from_dict(qualifying_state_data)
-
-        race_state_data = data.get("race_state")
-        if race_state_data:
-            orchestrator.race_state = RaceSessionState.from_dict(race_state_data)
-
-        current_session_type = data.get("current_session_type")
-        if current_session_type is not None:
-            try:
-                orchestrator.current_index = orchestrator._index_for_session(current_session_type)
-            except ValueError:
-                orchestrator.current_index = max(0, min(orchestrator.current_index, len(orchestrator.sessions) - 1))
-        else:
-            orchestrator.current_index = max(0, min(orchestrator.current_index, len(orchestrator.sessions) - 1))
-
+        """Deserializza l'orchestrator da un salvataggio."""
+        orchestrator = cls()
+        orchestrator.circuit_id = data.get("circuit_id")
+        orchestrator.status = data.get("status", "idle")
+        orchestrator.current_index = int(data.get("current_index", 0))
+        orchestrator.sessions = [
+            WeekendSessionState.from_dict(s) for s in data.get("sessions", [])
+        ]
+        
+        # Deserializza stati specializzati
+        qualifying_data = data.get("qualifying_state")
+        if qualifying_data:
+            orchestrator.qualifying_state = QualifyingSessionState.from_dict(qualifying_data)
+        
+        race_data = data.get("race_state")
+        if race_data:
+            orchestrator.race_state = RaceSessionState.from_dict(race_data)
+        
+        # Deserializza transition machine
+        transition_data = data.get("transition_machine")
+        if transition_data:
+            orchestrator.transition_machine = WeekendTransitionMachine.from_dict(transition_data)
+        
+        orchestrator.created_at = float(data.get("created_at", time.time()))
+        orchestrator.updated_at = float(data.get("updated_at", time.time()))
+        orchestrator.metadata = dict(data.get("metadata", {}))
+        
         return orchestrator
-
-
-__all__ = [
-    "DEFAULT_WEEKEND_SEQUENCE",
-    "WeekendOrchestrator",
-    "WeekendSessionState",
-    "WeekendSessionType",
-    "QualifyingLapRecord",
-    "QualifyingPhase",
-    "QualifyingPhaseState",
-    "QualifyingSessionState",
-    "RaceDriverState",
-    "RaceLapRecord",
-    "RaceSessionState",
-    "normalize_qualifying_phase",
-    "normalize_weekend_session_type",
-]

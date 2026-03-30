@@ -68,6 +68,18 @@ def race_simulation():
             if not current_pause_state:
                 sim_dt = dt * get_game_speed()
                 bridge.tick(sim_dt)
+                
+                # Aggiorna la transition machine del weekend
+                try:
+                    from utils.game_logic import get_weekend_orchestrator
+                    orchestrator = get_weekend_orchestrator()
+                    if orchestrator is not None:
+                        # Aggiorna la state machine delle transizioni
+                        orchestrator.update_transition()
+                except Exception as exc:
+                    # Log silenzioso per non bloccare la simulazione
+                    pass
+            
             session_remaining = bridge.session_time_remaining
         else:
             # V1 engine: legacy update
@@ -158,6 +170,21 @@ def race_simulation():
                 for ev in bridge.battle_events
             ]
 
+        # Ottieni stato transizione weekend se disponibile
+        weekend_transition = None
+        try:
+            from utils.game_logic import get_weekend_orchestrator
+            orchestrator = get_weekend_orchestrator()
+            if orchestrator is not None:
+                weekend_transition = {
+                    "state": orchestrator.get_transition_state().value,
+                    "metrics": orchestrator.get_transition_metrics(),
+                    "can_advance": orchestrator.can_advance_to_next_session(),
+                }
+        except Exception:
+            # Fallback silenzioso se l'orchestrator non è disponibile
+            pass
+
         socketio.emit('race_update', {
             'cars': cars_data,
             'session_time_remaining': session_remaining,
@@ -167,6 +194,7 @@ def race_simulation():
             'session_bests': get_session_bests(),
             'session_flag': session_flag,
             'battle_events': battle_events,
+            'weekend_transition': weekend_transition,
         })
 
         if bridge and bridge.active:

@@ -1405,7 +1405,7 @@ class SessionBridge:
                 section_end_m = self._section_end_m[ts.current_section_idx] if ts.current_section_idx < len(self._section_end_m) else 0
                 if ts.current_sector < len(self._sector_end_m) and section_end_m >= self._sector_end_m[ts.current_sector]:
                     sector_key = f"sector{ts.current_sector + 1}"
-                    sector_index = ts.current_sector
+                   
                     sector_time = ts.sector_dt_acc
                     if not hasattr(race_car, 'current_lap_sectors') or race_car.current_lap_sectors is None:
                         race_car.current_lap_sectors = {}
@@ -1687,6 +1687,8 @@ class SessionBridge:
                 "blistering": tyre_state.blistering_level > 0.1,
                 "surface_temp": tyre_state.surface_temp_c,
                 "core_temp": tyre_state.core_temp_c,
+                "heat_cycles": tyre_state.heat_cycles,
+                "age_laps": tyre_state.age_laps,
             }
 
         race_car.tire_temps = temps
@@ -1926,6 +1928,15 @@ class SessionBridge:
         ts = self._track_states.pop(car_id, None)
         if ts is None:
             return
+
+        # Notifica la transition machine che l'auto ha completato l'ultimo giro
+        try:
+            from utils.game_logic import get_weekend_orchestrator
+            weekend_orchestrator = get_weekend_orchestrator()
+            if weekend_orchestrator is not None:
+                weekend_orchestrator.mark_car_completed_final_lap(str(car_id))
+        except Exception:
+            pass
 
         selected_ers_mode = _normalize_ers_mode_name(getattr(ts, "selected_ers_mode", None)) or "STANDARD"
         restored_map = _resolve_engine_map_for_ers_mode(selected_ers_mode)
@@ -2560,7 +2571,7 @@ class SessionBridge:
             "lap_mguh_direct_mj": round(getattr(pu_state, 'lap_mguh_direct_mj', 0.0), 4),
             "mguh_es": round(getattr(pu_state, 'lap_mguh_harvest_mj', 0.0), 4),
             "lap_mguh_harvest_mj": round(getattr(pu_state, 'lap_mguh_harvest_mj', 0.0), 4),
-            "soc_pct": round(pu_state.ers_energy_mj / 4.0 * 100, 2) if pu_state.ers_energy_mj is not None else 0.0,
+            "soc_pct": round(pu_state.ers_energy_mj / 4.0 * 100.0, 2) if pu_state.ers_energy_mj is not None else 0.0,
         }
 
     def _log_pu_section_usage(self, entry, ts: CarTrackState, section: SectionContext) -> None:
@@ -3006,10 +3017,33 @@ class SessionBridge:
                 set_racecar_phase(race_car, pso_car.phase.value)
 
     def _finish_session(self) -> None:
+        # Prima di finalizzare, notifica la transition machine
+        try:
+            from utils.game_logic import get_weekend_orchestrator
+            weekend_orchestrator = get_weekend_orchestrator()
+            if weekend_orchestrator is not None:
+                # Marca la sessione come scaduta
+                weekend_orchestrator.expire_current_session(timestamp=self._accumulated_time_s)
+                
+                # Traccia le auto ancora in pista
+                for car_id, car_state in (self.pso.cars.items() if self.pso else {}):
+                    if car_state.phase == CarPhase.ON_TRACK:
+                        weekend_orchestrator.allow_final_lap(str(car_id))
+        except Exception as exc:
+            logger.warning("Failed to notify transition machine: %s", exc)
+        
         for car_id in list(self._track_states.keys()):
             self._complete_car_run(car_id, record_race_pit_stop=False)
         for car_id, race_car in self.race_cars_map.items():
             set_racecar_phase(race_car, "box")
+            # Marca l'auto come rientrata ai box
+            try:
+                from utils.game_logic import get_weekend_orchestrator
+                weekend_orchestrator = get_weekend_orchestrator()
+                if weekend_orchestrator is not None:
+                    weekend_orchestrator.mark_car_in_pit(str(car_id))
+            except Exception:
+                pass
         if self.session_kind in QUALIFYING_SESSION_KINDS:
             try:
                 from utils.game_logic import get_weekend_orchestrator
@@ -3017,6 +3051,10 @@ class SessionBridge:
                 weekend_orchestrator = get_weekend_orchestrator()
                 if weekend_orchestrator is not None and weekend_orchestrator.qualifying_state is not None:
                     weekend_orchestrator.finalize_qualifying(finished_at_s=self._accumulated_time_s)
+                    # Persisti i risultati
+                    weekend_orchestrator.persist_session_results(
+                        {"summary": weekend_orchestrator.qualifying_state.summary()}
+                    )
             except Exception as exc:
                 logger.warning("Failed to finalize qualifying state: %s", exc)
         if self.session_kind in RACE_SESSION_KINDS:
@@ -3026,6 +3064,10 @@ class SessionBridge:
                 weekend_orchestrator = get_weekend_orchestrator()
                 if weekend_orchestrator is not None and weekend_orchestrator.race_state is not None:
                     weekend_orchestrator.finalize_race(finished_at_s=self._accumulated_time_s)
+                    # Persisti i risultati
+                    weekend_orchestrator.persist_session_results(
+                        {"summary": weekend_orchestrator.race_state.summary()}
+                    )
             except Exception as exc:
                 logger.warning("Failed to finalize race state: %s", exc)
         if self._ai_report_enabled:

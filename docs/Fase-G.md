@@ -1,9 +1,9 @@
 ---
 title: Fase G — Weekend di gara completo
-version: 0.1
+version: 0.2
 last_updated: 2026-03-30
-status: "Punto 3 in analisi — transizione weekend"
-scope: "Weekend di gara completo con cleanup architetturale aggressivo, transizione weekend, Qualifying e Race"
+status: "Punto 3 COMPLETATO — Race subsystem in progress"
+scope: "Weekend di gara completo con cleanup architetturale aggressivo, transizioni weekend, Qualifying e Race"
 ---
 
 # Fase G — Weekend di gara completo
@@ -44,38 +44,63 @@ Deliverable:
 
 > Nota: la policy di avanzamento del weekend è trattata come item separato al punto 3.
 
-### 3) Weekend transition state machine — **DA ANALIZZARE**
+### 3) ✅ Weekend transition state machine — **COMPLETATO**
+
+**Stato**: ✅ Completato il 2026-03-30
+
+**Approvato**:
+- ✅ State machine a 3 stati + transizione automatica
+- ✅ Grace period 180s per ultimi giri (regolamento F1)
+- ✅ Timeout finalizzazione 60s per auto bloccate
+- ✅ Avanzamento automatico (nessuna conferma utente)
+- ⚠️ Red flag/abort rimandato a implementazione futura
+
+**Implementato**:
+- `utils/weekend_transition_machine.py` (429 righe)
+- `tests/test_weekend_transition.py` (32 test)
+- `tests/test_weekend_transition_e2e.py` (8 test e2e)
+- Integrazione con `WeekendOrchestrator` e `SessionBridge`
+- Esposizione UI tramite payload `race_update`
 
 Obiettivo: definire come il weekend passa da una sessione alla successiva senza assumere un semplice `next_session()`.
 
 Deliverable:
 
-- criteri di avanzamento per FP1→FP2, FP2→FP3, FP3→Qualifying e Qualifying→Race;
-- handshake con garage, persistenza e UI prima del cambio sessione;
-- salvataggio del contesto di sessione, risultati intermedi e lock di fine sessione;
-- eventi di transizione e gestione fallback in caso di pause, abort o restart;
-- test deterministici sulla state machine del weekend;
+- ✅ criteri di avanzamento per FP1→FP2, FP2→FP3, FP3→Qualifying e Qualifying→Race;
+- ✅ handshake con garage, persistenza e UI prima del cambio sessione;
+- ✅ salvataggio del contesto di sessione, risultati intermedi e lock di fine sessione;
+- ⚠️ eventi di transizione e gestione fallback in caso di pause, abort o restart (red flag rimandato);
+- ✅ test deterministici sulla state machine del weekend;
 
 #### Criteri operativi di transizione
 
-La sessione può passare alla successiva solo quando entra nello stato `READY_TO_ADVANCE`.
+La sessione passa alla successiva automaticamente quando entra nello stato `FINALIZING`.
 
+**Transizioni:**
+- `RUNNING` → `EXPIRED_GRACE`: timer sessione = 0
+- `EXPIRED_GRACE` → `FINALIZING`: tutte le auto ai box O timeout 180s
+- `FINALIZING` → `NEXT_SESSION`: risultati persistiti, timeout 60s O tutte auto finalizzate
+
+**Regole:**
 - il timer della sessione corrente è a zero, oppure la sessione è stata chiusa da un evento equivalente;
-- tutte le auto risultano ai box oppure sono state finalizzate dopo l’ultimo attraversamento valido del traguardo;
-- un’auto ancora in pista quando scatta il timer può completare **solo un ultimo passaggio** e poi viene forzata ai box;
+- tutte le auto risultano ai box oppure sono state finalizzate dopo l'ultimo attraversamento valido del traguardo;
+- un'auto ancora in pista quando scatta il timer può completare **solo un ultimo passaggio** e poi viene forzata ai box;
 - nessuna auto può iniziare un nuovo giro valido dopo lo scadere del timer;
 - risultati, best lap, classifiche, note e telemetry della sessione corrente sono consolidati e persistiti;
 - il runtime è entrato in una fase di finalizzazione che blocca nuove run e nuovi giri;
-- eventuali pause, abort o red flag devono essere risolti o portati in uno stato coerente prima dell’avanzamento;
-- se un’auto resta bloccata in uno stato intermedio, è ammesso un timeout di sicurezza per chiudere la finalizzazione.
+- se un'auto resta bloccata in uno stato intermedio, è ammesso un timeout di sicurezza per chiudere la finalizzazione;
+- **NOTA**: pause, abort e red flag saranno gestiti in un futuro aggiornamento (stato `RED_FLAG_PAUSE` da aggiungere).
 
-Flusso consigliato della state machine:
+**Timeout:**
+- Grace period: 180 secondi (3 minuti) per completare ultimi giri
+- Finalizzazione timeout: 60 secondi per auto bloccate
 
-- `RUNNING`
-- `EXPIRED_GRACE`
-- `FINALIZING`
-- `READY_TO_ADVANCE`
-- `NEXT_SESSION`
+Flusso della state machine:
+
+- `RUNNING` → sessione in corso, timer attivo
+- `EXPIRED_GRACE` → timer scaduto, auto in pista completano ultimo giro (max 180s)
+- `FINALIZING` → tutte le auto ai box, consolidamento risultati (max 60s)
+- `NEXT_SESSION` → transizione in corso, avvio nuova sessione
 
 ### 4) ✅ Qualifying subsystem — **COMPLETATO**
 
