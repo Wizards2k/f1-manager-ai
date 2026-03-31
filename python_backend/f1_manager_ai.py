@@ -76,6 +76,18 @@ def race_simulation():
                     if orchestrator is not None:
                         # Aggiorna la state machine delle transizioni
                         orchestrator.update_transition()
+                        
+                        # Check se la sessione è finalizzata e triggera redirect
+                        transition_state = orchestrator.get_transition_state()
+                        if transition_state and transition_state.value == 'NEXT_SESSION':
+                            # Notifica il frontend di aprire la pagina di transizione
+                            from flask_socketio import emit
+                            emit('session_ended', {
+                                'current_session': orchestrator.current_session_type,
+                                'next_session': orchestrator.next_session_type,
+                                'redirect_url': '/session-transition'
+                            }, broadcast=True)
+                            app.logger.info(f"Session ended: {orchestrator.current_session_type} → {orchestrator.next_session_type}")
                 except Exception as exc:
                     # Log silenzioso per non bloccare la simulazione
                     pass

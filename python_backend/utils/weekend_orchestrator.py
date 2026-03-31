@@ -38,7 +38,7 @@ _SESSION_TYPE_ALIASES = {
     "Q1": "Q1",
     "Q2": "Q2",
     "Q3": "Q3",
-    "QUALIFYING": "Q1",  # Alias per Q1
+    "QUALIFYING": "Q1",  # Backward compatibility: old saves use QUALIFYING
     "QUALI": "Q1",
     "QUALY": "Q1",
     "QUALIFY": "Q1",

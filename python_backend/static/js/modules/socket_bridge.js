@@ -25,6 +25,26 @@ export class SocketBridge {
         this.socket.on('event_feed', (events) => this.handleEventFeed(events));
         this.socket.on('connect_error', (err) => console.error('Socket connection error:', err));
         this.socket.on('tyre_inventory_update', (payload) => this.handleTyreInventoryUpdate(payload));
+        this.socket.on('session_ended', (payload) => this.handleSessionEnded(payload));
+    }
+
+    handleSessionEnded(payload = {}) {
+        // Session ended - redirect to transition page
+        const redirectUrl = payload.redirect_url || '/session-transition';
+        console.log(`[SocketBridge] Session ended: ${payload.current_session} → ${payload.next_session}`);
+        
+        // Show notification
+        if (window.Notification && Notification.permission === 'granted') {
+            new Notification('Sessione Completata', {
+                body: `${payload.current_session} → ${payload.next_session}`,
+                icon: '/static/favicon.ico'
+            });
+        }
+        
+        // Redirect after 2 seconds
+        setTimeout(() => {
+            window.location.href = redirectUrl;
+        }, 2000);
     }
 
     handleTyreInventoryUpdate(payload = {}) {

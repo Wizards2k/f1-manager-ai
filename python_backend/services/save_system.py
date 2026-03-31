@@ -31,8 +31,9 @@ def _bridge_session_type_from_weekend(session_type: Optional[str]) -> str:
     except ValueError:
         return WeekendSessionType.FP1.value
 
-    if normalized == WeekendSessionType.QUALIFYING:
-        return normalized.value
+    # Backward compatibility: old saves may have QUALIFYING
+    if normalized in {WeekendSessionType.Q1, WeekendSessionType.Q2, WeekendSessionType.Q3}:
+        return 'QUALIFYING'
 
     if normalized == WeekendSessionType.RACE:
         return normalized.value
