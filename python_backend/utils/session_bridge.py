@@ -3038,6 +3038,22 @@ class SessionBridge:
                 for car_id, car_state in (self.pso.cars.items() if self.pso else {}):
                     if car_state.phase == CarPhase.ON_TRACK:
                         weekend_orchestrator.allow_final_lap(str(car_id))
+                
+                # NOTIFICA IL FRONTEND IMMEDIATAMENTE
+                try:
+                    from flask import current_app
+                    from flask_socketio import emit
+                    current_session = weekend_orchestrator.current_session_type
+                    next_session = weekend_orchestrator.next_session_type
+                    emit('session_ended', {
+                        'current_session': current_session,
+                        'next_session': next_session,
+                        'redirect_url': '/session-transition',
+                        'natural_end': True
+                    }, broadcast=True)
+                    logger.info(f"🎯 Session naturally ended: {current_session} → {next_session}")
+                except Exception as e:
+                    logger.warning(f"SocketIO emit failed in _finish_session: {e}")
         except Exception as exc:
             logger.warning("Failed to notify transition machine: %s", exc)
         
