@@ -1039,6 +1039,7 @@ def register_routes(app):
             service = SaveGameService()
             save_id = service.save_game(name)
             
+            app.logger.info(f"💾 Save created: {save_id} - {name}")
             return jsonify({
                 'message': 'Game saved successfully',
                 'save_id': save_id
@@ -1046,8 +1047,12 @@ def register_routes(app):
         except Exception as e:
             import traceback
             err_msg = traceback.format_exc()
-            app.logger.error("!!! SAVE CRASH !!!\n%s", err_msg)
-            return jsonify({'error': f'Failed to save game: {str(e)}'}), 500
+            app.logger.error("❌ SAVE ERROR: %s", err_msg)
+            app.logger.error("❌ Exception: %s", str(e))
+            return jsonify({
+                'error': f'Failed to save game: {str(e)}',
+                'details': err_msg
+            }), 500
 
     @app.route('/api/load', methods=['POST'])
     def load_game():
