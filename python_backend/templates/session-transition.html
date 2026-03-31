@@ -574,16 +574,17 @@
             
             weekendData.sessions.forEach((session, index) => {
                 // Nella pagina di transizione:
-                // - Sessioni < currentIndex: COMPLETED
-                // - Sessione == currentIndex: UPCOMING (sta per iniziare)
-                // - Sessioni > currentIndex: UPCOMING
+                // - Sessioni < currentIndex: COMPLETED (già finite)
+                // - Sessione == currentIndex: NEXT (prossima da avviare)
+                // - Sessioni > currentIndex: UPCOMING (future)
                 const isCompleted = index < currentIndex;
-                const isUpcoming = index >= currentIndex;  // Tutte le future incluso current
+                const isNext = index === currentIndex;  // Sessione corrente = prossima da avviare
+                const isUpcoming = index > currentIndex;
                 
                 const card = document.createElement('div');
-                card.className = `session-card ${isCompleted ? 'completed' : 'upcoming'}`;
+                card.className = `session-card ${isCompleted ? 'completed' : isNext ? 'current' : 'upcoming'}`;
                 
-                const statusText = isCompleted ? 'COMPLETED' : 'UPCOMING';
+                const statusText = isCompleted ? 'COMPLETED' : isNext ? 'NEXT' : 'UPCOMING';
                 const icon = SESSION_ICONS[session.session_type] || '📋';
                 
                 // Result summary per sessioni completate
@@ -765,9 +766,11 @@
             const canAdvance = weekendData?.current_index < weekendData?.sessions.length - 1;
             
             if (canAdvance) {
-                const nextSession = getNextSessionName();
+                // Il bottone deve avviare la sessione CORRENTE (currentIndex), non la prossima
+                // Perché currentIndex è la sessione da avviare, non quella appena completata
+                const sessionToStart = weekendData.sessions[weekendData.current_index].session_type;
                 btn.disabled = false;
-                btn.textContent = `⏭️ Advance Session ${nextSession}`;
+                btn.textContent = `⏭️ ADVANCE SESSION ${sessionToStart}`;
             } else {
                 btn.disabled = true;
                 btn.textContent = '✅ Weekend Completato';
