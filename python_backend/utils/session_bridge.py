@@ -3031,6 +3031,55 @@ class SessionBridge:
             from utils.game_logic import get_weekend_orchestrator
             weekend_orchestrator = get_weekend_orchestrator()
             if weekend_orchestrator is not None:
+                # MARCA SUBITO TUTTE LE AUTO COME IN PIT
+                # Questo è cruciale per far avanzare la transition machine
+                for car_id in list(self._track_states.keys()):
+                    try:
+                        weekend_orchestrator.mark_car_in_pit(str(car_id))
+                    except Exception:
+                        pass
+                
+                # Persisti i risultati per sessioni PRATICA (FP1/FP2/FP3)
+                # DEVE ESSERE FATTO PRIMA DI AVANZARE LA SESSIONE!
+                if self.session_kind == "PRACTICE":
+                    try:
+                        if self.pso:
+                            # Genera summary completo con classifica e giri
+                            leaderboard = self.pso.leaderboard()
+                            total_laps = len(self.pso.run_log)
+                            logger.info(f"📊 Practice session ending: {len(leaderboard)} cars, {total_laps} laps")
+                            
+                            # Mappa i campi del leaderboard per il frontend
+                            classification = []
+                            for i, entry in enumerate(leaderboard):
+                                classification.append({
+                                    'position': i + 1,
+                                    'car_number': entry['car_id'],
+                                    'driver_name': entry['driver'],
+                                    'team_name': entry['team'],
+                                    'best_lap_time': entry['best_lap_s'],  # Frontend si aspetta best_lap_time
+                                    'laps_completed': entry['runs'],
+                                })
+                            
+                            summary_data = {
+                                'total_laps': total_laps,
+                                'session_duration_s': self._accumulated_time_s,
+                                'classification': classification,
+                                'best_lap': {
+                                    'time': classification[0]['best_lap_time'] if classification else None,
+                                    'driver': classification[0]['driver_name'] if classification else None,
+                                    'team': classification[0]['team_name'] if classification else None,
+                                } if classification else None,
+                            }
+                            weekend_orchestrator.persist_session_results(summary_data)
+                            logger.info(f"✅ Practice session results persisted: {len(classification)} cars, {total_laps} laps")
+                            if classification:
+                                logger.info(f"🏆 Best lap: {classification[0]['best_lap_time']:.3f}s by {classification[0]['driver_name']}")
+                        else:
+                            logger.warning(f"⚠️ Cannot persist practice results: pso={self.pso is not None}")
+                    except Exception as exc:
+                        logger.error(f"❌ Failed to persist practice session results: {exc}", exc_info=True)
+                
                 # Marca la sessione come scaduta
                 weekend_orchestrator.expire_current_session(timestamp=self._accumulated_time_s)
                 
@@ -3040,14 +3089,6 @@ class SessionBridge:
                     if car_state.phase == CarPhase.ON_TRACK:
                         weekend_orchestrator.allow_final_lap(str(car_id))
                         cars_on_track.append(str(car_id))
-                
-                # MARCA SUBITO TUTTE LE AUTO COME IN PIT
-                # Questo è cruciale per far avanzare la transition machine
-                for car_id in list(self._track_states.keys()):
-                    try:
-                        weekend_orchestrator.mark_car_in_pit(str(car_id))
-                    except Exception:
-                        pass
                 
                 # Aggiorna IMMEDIATAMENTE la transition machine
                 # Questo forza il passaggio da FINALIZING → NEXT_SESSION
@@ -3092,47 +3133,6 @@ class SessionBridge:
                     weekend_orchestrator.mark_car_in_pit(str(car_id))
             except Exception:
                 pass
-        # Persisti i risultati per sessioni PRATICA (FP1/FP2/FP3)
-        if self.session_kind == "PRACTICE":
-            try:
-                from utils.game_logic import get_weekend_orchestrator
-                weekend_orchestrator = get_weekend_orchestrator()
-                if weekend_orchestrator is not None and self.pso:
-                    # Genera summary completo con classifica e giri
-                    leaderboard = self.pso.leaderboard()
-                    total_laps = len(self.pso.run_log)
-                    logger.info(f"📊 Practice session ending: {len(leaderboard)} cars, {total_laps} laps")
-                    
-                    # Mappa i campi del leaderboard per il frontend
-                    classification = []
-                    for i, entry in enumerate(leaderboard):
-                        classification.append({
-                            'position': i + 1,
-                            'car_number': entry['car_id'],
-                            'driver_name': entry['driver'],
-                            'team_name': entry['team'],
-                            'best_lap_time': entry['best_lap_s'],  # Frontend si aspetta best_lap_time
-                            'laps_completed': entry['runs'],
-                        })
-                    
-                    summary_data = {
-                        'total_laps': total_laps,
-                        'session_duration_s': self._accumulated_time_s,
-                        'classification': classification,
-                        'best_lap': {
-                            'time': classification[0]['best_lap_time'] if classification else None,
-                            'driver': classification[0]['driver_name'] if classification else None,
-                            'team': classification[0]['team_name'] if classification else None,
-                        } if classification else None,
-                    }
-                    weekend_orchestrator.persist_session_results(summary_data)
-                    logger.info(f"✅ Practice session results persisted: {len(classification)} cars, {total_laps} laps")
-                    if classification:
-                        logger.info(f"🏆 Best lap: {classification[0]['best_lap_time']:.3f}s by {classification[0]['driver_name']}")
-                else:
-                    logger.warning(f"⚠️ Cannot persist practice results: orchestrator={weekend_orchestrator is not None}, pso={self.pso is not None}")
-            except Exception as exc:
-                logger.error(f"❌ Failed to persist practice session results: {exc}", exc_info=True)
         
         # Persisti i risultati per sessioni QUALIFY (Q1/Q2/Q3)
         if self.session_kind in QUALIFYING_SESSION_KINDS:
