@@ -549,7 +549,16 @@
                     `Circuito: ${weekendData.circuit_id || 'Non disponibile'}`;
                 
                 renderSessionsTimeline();
-                loadSessionResults(weekendData.current_session);
+                
+                // Carica i risultati della sessione COMPLETATA (precedente), non di quella corrente
+                const completedSessionIndex = weekendData.current_index - 1;
+                if (completedSessionIndex >= 0 && completedSessionIndex < weekendData.sessions.length) {
+                    const completedSession = weekendData.sessions[completedSessionIndex].session_type;
+                    await loadSessionResults(completedSession);
+                } else {
+                    // Prima sessione del weekend? Mostra quella corrente
+                    await loadSessionResults(weekendData.current_session);
+                }
             } catch (error) {
                 showError('Errore nel caricamento dello stato del weekend: ' + error.message);
             }
@@ -564,17 +573,20 @@
             const currentIndex = weekendData.current_index;
             
             weekendData.sessions.forEach((session, index) => {
+                // Nella pagina di transizione:
+                // - Sessioni < currentIndex: COMPLETED
+                // - Sessione == currentIndex: UPCOMING (sta per iniziare)
+                // - Sessioni > currentIndex: UPCOMING
                 const isCompleted = index < currentIndex;
-                const isCurrent = index === currentIndex;
-                const isUpcoming = index > currentIndex;
+                const isUpcoming = index >= currentIndex;  // Tutte le future incluso current
                 
                 const card = document.createElement('div');
-                card.className = `session-card ${isCompleted ? 'completed' : isCurrent ? 'current' : 'upcoming'}`;
+                card.className = `session-card ${isCompleted ? 'completed' : 'upcoming'}`;
                 
-                const statusText = isCompleted ? 'COMPLETED' : isCurrent ? 'ACTIVE' : 'UPCOMING';
+                const statusText = isCompleted ? 'COMPLETED' : 'UPCOMING';
                 const icon = SESSION_ICONS[session.session_type] || '📋';
                 
-                // Result summary
+                // Result summary per sessioni completate
                 let resultText = '';
                 if (isCompleted && session.summary) {
                     if (session.session_type === 'Q1' && session.summary.q1_elimination) {
@@ -615,14 +627,14 @@
         }
 
         function displaySessionData(data) {
-            // Header sessione
-            document.getElementById('session-type').textContent = data.session_type;
-            document.getElementById('session-status').textContent = `Stato: ${data.status}`;
+            // Header sessione - mostra "RISULTATI: FP1" invece di "FP2"
+            const sessionType = data.session_type;
+            document.getElementById('session-type').textContent = `📊 Risultati: ${sessionType}`;
+            document.getElementById('session-status').textContent = `Sessione completata`;
             
             const statusBadge = document.getElementById('status-badge');
-            statusBadge.textContent = data.status.toUpperCase();
-            statusBadge.className = 'session-status ' + 
-                (data.status === 'completed' ? 'status-completed' : 'status-finalizing');
+            statusBadge.textContent = 'COMPLETED';
+            statusBadge.className = 'session-status status-completed';
 
             // Progress sections
             const progressSections = document.getElementById('progress-sections');
