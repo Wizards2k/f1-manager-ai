@@ -3104,6 +3104,30 @@ class SessionBridge:
                     weekend_orchestrator.mark_car_in_pit(str(car_id))
             except Exception:
                 pass
+        # Persisti i risultati per sessioni PRATICA (FP1/FP2/FP3)
+        if self.session_kind == "PRACTICE":
+            try:
+                from utils.game_logic import get_weekend_orchestrator
+                weekend_orchestrator = get_weekend_orchestrator()
+                if weekend_orchestrator is not None and self.pso:
+                    # Genera summary completo con classifica e giri
+                    leaderboard = self.pso.leaderboard()
+                    summary_data = {
+                        'total_laps': len(self.pso.run_log),
+                        'session_duration_s': self._accumulated_time_s,
+                        'classification': leaderboard,
+                        'best_lap': {
+                            'time': min([car['best_lap_s'] for car in leaderboard], default=None),
+                            'driver': leaderboard[0]['driver'] if leaderboard else None,
+                            'team': leaderboard[0]['team'] if leaderboard else None,
+                        } if leaderboard else None,
+                    }
+                    weekend_orchestrator.persist_session_results(summary_data)
+                    logger.info(f"📊 Practice session results persisted: {len(leaderboard)} cars")
+            except Exception as exc:
+                logger.warning(f"Failed to persist practice session results: {exc}")
+        
+        # Persisti i risultati per sessioni QUALIFY (Q1/Q2/Q3)
         if self.session_kind in QUALIFYING_SESSION_KINDS:
             try:
                 from utils.game_logic import get_weekend_orchestrator
@@ -3117,6 +3141,8 @@ class SessionBridge:
                     )
             except Exception as exc:
                 logger.warning("Failed to finalize qualifying state: %s", exc)
+        
+        # Persisti i risultati per sessioni RACE
         if self.session_kind in RACE_SESSION_KINDS:
             try:
                 from utils.game_logic import get_weekend_orchestrator
