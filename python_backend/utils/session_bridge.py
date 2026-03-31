@@ -3076,6 +3076,12 @@ class SessionBridge:
                         weekend_orchestrator.transition_machine.state = WeekendTransitionState.NEXT_SESSION
                         new_state = weekend_orchestrator.get_transition_state()
                         logger.info(f"✅ Forced to: {new_state.value if new_state else 'None'}")
+                        
+                        # Imposta un flag per notificare il main loop
+                        # Questo permette al main loop di emettere l'evento SocketIO
+                        self._session_just_ended = True
+                        self._session_ended_from = weekend_orchestrator.current_session_type
+                        self._session_ended_to = weekend_orchestrator.next_session_type
                 except Exception as exc:
                     logger.warning(f"Failed to update transition machine: {exc}")
                 

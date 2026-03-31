@@ -52,6 +52,20 @@ def handle_connect():
 
 def race_simulation():
     """Loop principale della simulazione"""
+    
+    # Callback per notificare fine sessione (può essere chiamata da _finish_session)
+    def notify_session_end(current_session, next_session):
+        """Notifica al frontend che la sessione è finita"""
+        try:
+            socketio.emit('session_ended', {
+                'current_session': current_session,
+                'next_session': next_session,
+                'redirect_url': '/session-transition'
+            }, broadcast=True)
+            app.logger.info(f"🎯 Session ended: {current_session} → {next_session}")
+        except Exception as e:
+            app.logger.error(f"Failed to emit session_ended: {e}")
+    
     while True:
         dt = 0.1  # 100ms update rate
         time.sleep(dt)
@@ -68,6 +82,16 @@ def race_simulation():
             if not current_pause_state:
                 sim_dt = dt * get_game_speed()
                 bridge.tick(sim_dt)
+                
+                # Check se la sessione è appena finita (flag impostato da _finish_session)
+                if hasattr(bridge, '_session_just_ended') and bridge._session_just_ended:
+                    # Notifica il frontend
+                    notify_session_end(
+                        bridge._session_ended_from,
+                        bridge._session_ended_to
+                    )
+                    # Resetta il flag
+                    bridge._session_just_ended = False
                 
                 # Aggiorna la transition machine del weekend
                 try:
