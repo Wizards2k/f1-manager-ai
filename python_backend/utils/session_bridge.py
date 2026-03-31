@@ -3041,7 +3041,7 @@ class SessionBridge:
                 
                 # Persisti i risultati per sessioni PRATICA (FP1/FP2/FP3)
                 # DEVE ESSERE FATTO PRIMA DI AVANZARE LA SESSIONE!
-                if self.session_kind == "PRACTICE":
+                if self.session_kind in ["PRACTICE", "FP1", "FP2", "FP3"]:
                     try:
                         if self.pso:
                             # Genera summary completo con classifica e giri
