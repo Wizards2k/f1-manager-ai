@@ -61,7 +61,7 @@ def race_simulation():
                 'current_session': current_session,
                 'next_session': next_session,
                 'redirect_url': '/session-transition'
-            }, broadcast=True)
+            })
             app.logger.info(f"🎯 Session ended: {current_session} → {next_session}")
         except Exception as e:
             app.logger.error(f"Failed to emit session_ended: {e}")
