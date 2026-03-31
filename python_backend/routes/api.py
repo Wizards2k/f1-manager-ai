@@ -1207,6 +1207,18 @@ def register_routes(app):
             # Resetta la transition machine per la nuova sessione
             orchestrator.transition_machine.reset()
             
+            # Notifica frontend del redirect (se SocketIO disponibile)
+            try:
+                from flask_socketio import emit
+                emit('session_ended', {
+                    'current_session': previous_session,
+                    'next_session': next_session.session_type.value,
+                    'redirect_url': '/session-transition',
+                    'manual_advance': True
+                }, broadcast=True)
+            except Exception:
+                pass  # SocketIO non disponibile
+            
             return jsonify({
                 'success': True,
                 'previous_session': previous_session,
@@ -1217,6 +1229,60 @@ def register_routes(app):
             import traceback
             app.logger.error("WEEKEND ADVANCE ERROR: %s", traceback.format_exc())
             return jsonify({'error': f'Failed to advance session: {str(e)}'}), 500
+
+    @app.route('/api/weekend/force_end', methods=['POST'])
+    def force_end_session():
+        """
+        Forza la fine della sessione corrente per testare il redirect.
+        
+        Utile per testare la pagina di transizione senza aspettare il timer.
+        
+        Returns:
+            {
+                "success": bool,
+                "message": str,
+                "redirect_url": str
+            }
+        """
+        try:
+            from utils.game_logic import get_weekend_orchestrator
+            from utils.weekend_transition_machine import WeekendTransitionState
+            orchestrator = get_weekend_orchestrator()
+            
+            if not orchestrator:
+                return jsonify({'error': 'Weekend orchestrator not available'}), 404
+            
+            current_session = orchestrator.current_session_type
+            next_session = orchestrator.next_session_type
+            
+            # Forza transizione a NEXT_SESSION
+            orchestrator.transition_machine.expire_session()
+            orchestrator.transition_machine.state = WeekendTransitionState.NEXT_SESSION
+            
+            # Notifica frontend
+            try:
+                from flask_socketio import emit
+                emit('session_ended', {
+                    'current_session': current_session,
+                    'next_session': next_session,
+                    'redirect_url': '/session-transition',
+                    'forced': True
+                }, broadcast=True)
+            except Exception:
+                pass
+            
+            app.logger.info(f"🎯 Session forced to end: {current_session} → {next_session}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Session {current_session} ended (forced)',
+                'redirect_url': '/session-transition',
+                'next_session': next_session,
+            })
+        except Exception as e:
+            import traceback
+            app.logger.error("FORCE END ERROR: %s", traceback.format_exc())
+            return jsonify({'error': f'Failed to force end: {str(e)}'}), 500
 
     @app.route('/api/weekend/transition/state')
     def get_transition_state():

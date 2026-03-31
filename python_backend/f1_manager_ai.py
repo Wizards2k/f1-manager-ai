@@ -77,8 +77,15 @@ def race_simulation():
                         # Aggiorna la state machine delle transizioni
                         orchestrator.update_transition()
                         
-                        # Check se la sessione è finalizzata e triggera redirect
+                        # Debug log per monitoraggio
                         transition_state = orchestrator.get_transition_state()
+                        if transition_state:
+                            # Log solo quando lo stato cambia
+                            if not hasattr(orchestrator, '_last_transition_state') or orchestrator._last_transition_state != transition_state.value:
+                                orchestrator._last_transition_state = transition_state.value
+                                app.logger.info(f"🔄 Transition state: {transition_state.value}")
+                        
+                        # Check se la sessione è finalizzata e triggera redirect
                         if transition_state and transition_state.value == 'NEXT_SESSION':
                             # Notifica il frontend di aprire la pagina di transizione
                             socketio.emit('session_ended', {
@@ -87,8 +94,13 @@ def race_simulation():
                                 'redirect_url': '/session-transition'
                             }, broadcast=True)
                             app.logger.info(f"🎯 Session ended: {orchestrator.current_session_type} → {orchestrator.next_session_type}")
+                            
+                            # Resetta stato per prossima sessione
+                            orchestrator.transition_machine.reset()
+                            orchestrator._last_transition_state = None
                 except Exception as exc:
                     # Log silenzioso per non bloccare la simulazione
+                    app.logger.error(f"❌ Transition error: {exc}")
                     pass
             
             session_remaining = bridge.session_time_remaining
