@@ -207,7 +207,14 @@ class SaveGameService:
         bridge_state = bridge.to_dict()
 
         # 5. RaceCars State
-        cars_state = [car.to_dict() for car in race_cars]
+        # Calcola tempo parziale corrente per auto in pista prima di salvare
+        for car in race_cars:
+            if car.state in [CarState.OUT_LAP, CarState.HOT_LAP, CarState.IN_LAP] and car.current_lap_start:
+                # Calcola tempo parziale accumulato nel giro corrente
+                real_time_elapsed = time.time() - car.current_lap_start
+                car.current_lap_time_partial = real_time_elapsed
+        
+        cars_state = [car.to_dict() if hasattr(car, 'to_dict') else car.__dict__ for car in race_cars]
 
         # 6. Tyre Inventory State
         inventories = {}

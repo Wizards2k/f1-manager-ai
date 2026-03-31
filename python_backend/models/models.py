@@ -428,6 +428,7 @@ class RaceCar:
         self.last_sector_times = {'sector1': None, 'sector2': None, 'sector3': None}
         self.best_sectors = {'sector1': None, 'sector2': None, 'sector3': None}
         self.current_lap_debug: Optional[Dict[str, Any]] = None
+        self.current_lap_time_partial = 0.0  # Tempo parziale accumulato nel giro corrente
         # Telemetry/diagnostics exposed to frontend & tools
         self.pu_stats: Dict[str, Any] = {}
         self.brake_diagnostics: Dict[str, Any] = {}
@@ -606,7 +607,9 @@ class RaceCar:
 
     def complete_lap(self, lap_type):
         """Registra tempo sul giro in base al tipo (tempi reali non influenzati da velocità gioco)"""
-        lap_time = time.time() - self.current_lap_start
+        # Calcola tempo reale trascorso dall'inizio del giro + tempo parziale accumulato
+        real_time_elapsed = time.time() - self.current_lap_start if self.current_lap_start else 0.0
+        total_lap_time = self.current_lap_time_partial + real_time_elapsed
         
         # Tempi realistici in base al tipo di giro (sempre basati su velocità reale)
         if lap_type == CarState.OUT_LAP:
@@ -630,6 +633,9 @@ class RaceCar:
             realistic_lap_time = 80.0 + random.uniform(-3.0, 3.0)
             
         self.lap_times.append(realistic_lap_time)
+        
+        # Reset tempo parziale per il prossimo giro
+        self.current_lap_time_partial = 0.0
         self.total_laps += 1
         self.total_session_laps += 1
         self.last_lap_type = lap_type
@@ -1057,6 +1063,10 @@ class RaceCar:
 
     def load_state(self, data: Dict[str, Any]):
         """Carica lo stato da un salvataggio senza ricreare l'oggetto."""
+        # Salva tempo parziale prima di sovrascriverlo con setattr
+        saved_partial_time = data.get('current_lap_time_partial', 0.0)
+        saved_state = data.get('state')
+        
         for k, v in data.items():
             if k in {"pilot_id", "team_id", "current_gomma", "current_tyre_set"}:
                 continue
@@ -1079,3 +1089,15 @@ class RaceCar:
         
         if "current_gomma" in data:
             self.current_gomma = Gomma.from_dict(data["current_gomma"])
+        
+        # Se c'è tempo parziale e l'auto è in pista, aggiorna current_lap_start
+        # per far continuare il timer correttamente dal momento del save
+        if saved_partial_time > 0:
+            try:
+                saved_state_obj = CarState(saved_state) if saved_state else self.state
+                if saved_state_obj in [CarState.OUT_LAP, CarState.HOT_LAP, CarState.IN_LAP]:
+                    # Imposta current_lap_start in modo che il tempo parziale sia corretto
+                    # time.time() - current_lap_start = saved_partial_time
+                    self.current_lap_start = time.time() - saved_partial_time
+            except Exception:
+                pass
