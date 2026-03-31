@@ -3103,18 +3103,32 @@ class SessionBridge:
                     total_laps = len(self.pso.run_log)
                     logger.info(f"📊 Practice session ending: {len(leaderboard)} cars, {total_laps} laps")
                     
+                    # Mappa i campi del leaderboard per il frontend
+                    classification = []
+                    for i, entry in enumerate(leaderboard):
+                        classification.append({
+                            'position': i + 1,
+                            'car_number': entry['car_id'],
+                            'driver_name': entry['driver'],
+                            'team_name': entry['team'],
+                            'best_lap_time': entry['best_lap_s'],  # Frontend si aspetta best_lap_time
+                            'laps_completed': entry['runs'],
+                        })
+                    
                     summary_data = {
                         'total_laps': total_laps,
                         'session_duration_s': self._accumulated_time_s,
-                        'classification': leaderboard,
+                        'classification': classification,
                         'best_lap': {
-                            'time': leaderboard[0]['best_lap_s'] if leaderboard else None,
-                            'driver': leaderboard[0]['driver'] if leaderboard else None,
-                            'team': leaderboard[0]['team'] if leaderboard else None,
-                        } if leaderboard else None,
+                            'time': classification[0]['best_lap_time'] if classification else None,
+                            'driver': classification[0]['driver_name'] if classification else None,
+                            'team': classification[0]['team_name'] if classification else None,
+                        } if classification else None,
                     }
                     weekend_orchestrator.persist_session_results(summary_data)
-                    logger.info(f"✅ Practice session results persisted: {len(leaderboard)} cars, {total_laps} laps")
+                    logger.info(f"✅ Practice session results persisted: {len(classification)} cars, {total_laps} laps")
+                    if classification:
+                        logger.info(f"🏆 Best lap: {classification[0]['best_lap_time']:.3f}s by {classification[0]['driver_name']}")
                 else:
                     logger.warning(f"⚠️ Cannot persist practice results: orchestrator={weekend_orchestrator is not None}, pso={self.pso is not None}")
             except Exception as exc:
