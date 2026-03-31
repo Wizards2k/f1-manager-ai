@@ -160,7 +160,8 @@ class SaveGameService:
                     })
             except Exception:
                 continue
-        return sorted(saves, key=lambda x: x.get("timestamp", ""), reverse=True)
+        # Ordina per timestamp (i None vanno in fondo)
+        return sorted(saves, key=lambda x: x.get("timestamp") or "", reverse=True)
 
     def save_game(self, name: str) -> str:
         bridge = get_session_bridge()
