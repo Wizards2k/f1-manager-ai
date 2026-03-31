@@ -1181,7 +1181,8 @@ def register_routes(app):
                 "success": bool,
                 "previous_session": str,
                 "new_session": str,
-                "message": str
+                "message": str,
+                "redirect": bool
             }
         """
         try:
@@ -1195,6 +1196,16 @@ def register_routes(app):
             if not previous_session:
                 return jsonify({'error': 'No active session'}), 400
             
+            # Salva info sessione corrente PRIMA di avanzare
+            current_session_data = None
+            current_session = orchestrator.current_session
+            if current_session:
+                current_session_data = {
+                    'session_type': current_session.session_type.value,
+                    'status': current_session.status,
+                    'summary': current_session.summary,
+                }
+            
             # Avanza alla sessione successiva
             next_session = orchestrator.advance_to_next_session()
             
@@ -1207,23 +1218,28 @@ def register_routes(app):
             # Resetta la transition machine per la nuova sessione
             orchestrator.transition_machine.reset()
             
-            # Notifica frontend del redirect (se SocketIO disponibile)
+            # NOTIFICA IL FRONTEND PRIMA DI RITORNARE
+            # Il frontend deve reindirizzare ALLA PAGINA DI TRANSIZIONE
+            # per vedere i risultati della sessione appena conclusa
             try:
                 from flask_socketio import emit
                 emit('session_ended', {
                     'current_session': previous_session,
                     'next_session': next_session.session_type.value,
                     'redirect_url': '/session-transition',
-                    'manual_advance': True
+                    'manual_advance': True,
+                    'session_data': current_session_data,  # Risultati sessione conclusa
                 }, broadcast=True)
-            except Exception:
-                pass  # SocketIO non disponibile
+                app.logger.info(f"📢 Notified frontend: {previous_session} → {next_session.session_type.value}")
+            except Exception as e:
+                app.logger.warning(f"SocketIO emit failed: {e}")
             
             return jsonify({
                 'success': True,
                 'previous_session': previous_session,
                 'new_session': next_session.session_type.value,
                 'message': f'Advanced from {previous_session} to {next_session.session_type.value}',
+                'redirect': True,  # Indica al frontend di reindirizzare
             })
         except Exception as e:
             import traceback

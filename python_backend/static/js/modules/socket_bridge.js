@@ -31,20 +31,74 @@ export class SocketBridge {
     handleSessionEnded(payload = {}) {
         // Session ended - redirect to transition page
         const redirectUrl = payload.redirect_url || '/session-transition';
-        console.log(`[SocketBridge] Session ended: ${payload.current_session} → ${payload.next_session}`);
+        const currentSession = payload.current_session || 'Unknown';
+        const nextSession = payload.next_session || 'Unknown';
+        
+        console.log(`[SocketBridge] 🎯 Session ended: ${currentSession} → ${nextSession}`);
+        console.log(`[SocketBridge] Redirecting to: ${redirectUrl}`);
         
         // Show notification
         if (window.Notification && Notification.permission === 'granted') {
             new Notification('Sessione Completata', {
-                body: `${payload.current_session} → ${payload.next_session}`,
+                body: `${currentSession} → ${nextSession}`,
                 icon: '/static/favicon.ico'
             });
         }
         
-        // Redirect after 2 seconds
+        // Show in-app notification
+        this.showSessionEndNotification(currentSession, nextSession);
+        
+        // Redirect immediately (no delay for manual advance)
+        const delay = payload.forced ? 2000 : 500; // 2s for forced, 0.5s for manual
         setTimeout(() => {
+            console.log(`[SocketBridge] Redirecting now...`);
             window.location.href = redirectUrl;
-        }, 2000);
+        }, delay);
+    }
+
+    showSessionEndNotification(currentSession, nextSession) {
+        // Create in-app notification banner
+        const banner = document.createElement('div');
+        banner.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(233, 69, 96, 0.4);
+            z-index: 10000;
+            font-size: 1.2rem;
+            font-weight: bold;
+            animation: slideDown 0.3s ease;
+        `;
+        banner.innerHTML = `
+            <div style="text-align: center;">
+                <div style="font-size: 1.5rem; margin-bottom: 5px;">🏁 ${currentSession} COMPLETATA</div>
+                <div style="font-size: 0.9rem; opacity: 0.9;">Prossima sessione: ${nextSession}</div>
+                <div style="font-size: 0.8rem; margin-top: 10px; opacity: 0.8;">Reindirizzamento...</div>
+            </div>
+        `;
+        
+        // Add animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideDown {
+                from { transform: translate(-50%, -100px); opacity: 0; }
+                to { transform: translate(-50%, 0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+        document.body.appendChild(banner);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            banner.style.transition = 'opacity 0.3s ease';
+            banner.style.opacity = '0';
+            setTimeout(() => banner.remove(), 300);
+        }, 3000);
     }
 
     handleTyreInventoryUpdate(payload = {}) {
