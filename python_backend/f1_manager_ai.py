@@ -110,6 +110,15 @@ def race_simulation():
                 update_car_position(car, dt)
             session_remaining = get_session_time_remaining()
         
+        # Debug: log tempo rimanente ogni 10 secondi reali (100 tick)
+        if hasattr(bridge, '_debug_tick_counter'):
+            bridge._debug_tick_counter += 1
+        else:
+            bridge._debug_tick_counter = 0
+        
+        if bridge._debug_tick_counter % 100 == 0 and bridge and bridge.active:
+            app.logger.debug(f"⏱️ Session time remaining: {session_remaining:.1f}s ({session_remaining/60:.1f} min)")
+        
         cars_data = []
         for car in race_cars:
             pos = get_car_position(car)

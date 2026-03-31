@@ -3035,9 +3035,11 @@ class SessionBridge:
                 weekend_orchestrator.expire_current_session(timestamp=self._accumulated_time_s)
                 
                 # Traccia le auto ancora in pista
+                cars_on_track = []
                 for car_id, car_state in (self.pso.cars.items() if self.pso else {}):
                     if car_state.phase == CarPhase.ON_TRACK:
                         weekend_orchestrator.allow_final_lap(str(car_id))
+                        cars_on_track.append(str(car_id))
                 
                 # Persisti i risultati della sessione per sbloccare la transizione
                 # Questo è necessario per far avanzare la transition machine a NEXT_SESSION
@@ -3045,10 +3047,28 @@ class SessionBridge:
                     weekend_orchestrator.persist_session_results({
                         'session_duration_s': self._accumulated_time_s,
                         'finished_naturally': True,
+                        'cars_on_track_at_finish': cars_on_track,
                     })
                     logger.info(f"📊 Session results persisted")
                 except Exception as exc:
                     logger.warning(f"Failed to persist session results: {exc}")
+                
+                # MARCA SUBITO TUTTE LE AUTO COME IN PIT
+                # Questo è cruciale per far avanzare la transition machine
+                for car_id in list(self._track_states.keys()):
+                    try:
+                        weekend_orchestrator.mark_car_in_pit(str(car_id))
+                    except Exception:
+                        pass
+                
+                # Aggiorna IMMEDIATAMENTE la transition machine
+                # Questo forza il passaggio da FINALIZING → NEXT_SESSION
+                try:
+                    weekend_orchestrator.update_transition()
+                    new_state = weekend_orchestrator.get_transition_state()
+                    logger.info(f"🔄 Transition state after update: {new_state.value if new_state else 'None'}")
+                except Exception as exc:
+                    logger.warning(f"Failed to update transition machine: {exc}")
                 
                 # Imposta un flag per notificare il frontend al prossimo update
                 # Nota: non possiamo fare emit SocketIO qui perché siamo fuori dal contesto request
