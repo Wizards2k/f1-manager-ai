@@ -3039,21 +3039,21 @@ class SessionBridge:
                     if car_state.phase == CarPhase.ON_TRACK:
                         weekend_orchestrator.allow_final_lap(str(car_id))
                 
-                # NOTIFICA IL FRONTEND IMMEDIATAMENTE
+                # Persisti i risultati della sessione per sbloccare la transizione
+                # Questo è necessario per far avanzare la transition machine a NEXT_SESSION
                 try:
-                    from flask import current_app
-                    from flask_socketio import emit
-                    current_session = weekend_orchestrator.current_session_type
-                    next_session = weekend_orchestrator.next_session_type
-                    emit('session_ended', {
-                        'current_session': current_session,
-                        'next_session': next_session,
-                        'redirect_url': '/session-transition',
-                        'natural_end': True
-                    }, broadcast=True)
-                    logger.info(f"🎯 Session naturally ended: {current_session} → {next_session}")
-                except Exception as e:
-                    logger.warning(f"SocketIO emit failed in _finish_session: {e}")
+                    weekend_orchestrator.persist_session_results({
+                        'session_duration_s': self._accumulated_time_s,
+                        'finished_naturally': True,
+                    })
+                    logger.info(f"📊 Session results persisted")
+                except Exception as exc:
+                    logger.warning(f"Failed to persist session results: {exc}")
+                
+                # Imposta un flag per notificare il frontend al prossimo update
+                # Nota: non possiamo fare emit SocketIO qui perché siamo fuori dal contesto request
+                # Il frontend controllerà lo stato della transition machine
+                logger.info(f"🏁 Session finished naturally: {weekend_orchestrator.current_session_type}")
         except Exception as exc:
             logger.warning("Failed to notify transition machine: %s", exc)
         
