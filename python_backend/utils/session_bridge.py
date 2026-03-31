@@ -3041,18 +3041,6 @@ class SessionBridge:
                         weekend_orchestrator.allow_final_lap(str(car_id))
                         cars_on_track.append(str(car_id))
                 
-                # Persisti i risultati della sessione per sbloccare la transizione
-                # Questo è necessario per far avanzare la transition machine a NEXT_SESSION
-                try:
-                    weekend_orchestrator.persist_session_results({
-                        'session_duration_s': self._accumulated_time_s,
-                        'finished_naturally': True,
-                        'cars_on_track_at_finish': cars_on_track,
-                    })
-                    logger.info(f"📊 Session results persisted")
-                except Exception as exc:
-                    logger.warning(f"Failed to persist session results: {exc}")
-                
                 # MARCA SUBITO TUTTE LE AUTO COME IN PIT
                 # Questo è cruciale per far avanzare la transition machine
                 for car_id in list(self._track_states.keys()):
@@ -3112,20 +3100,25 @@ class SessionBridge:
                 if weekend_orchestrator is not None and self.pso:
                     # Genera summary completo con classifica e giri
                     leaderboard = self.pso.leaderboard()
+                    total_laps = len(self.pso.run_log)
+                    logger.info(f"📊 Practice session ending: {len(leaderboard)} cars, {total_laps} laps")
+                    
                     summary_data = {
-                        'total_laps': len(self.pso.run_log),
+                        'total_laps': total_laps,
                         'session_duration_s': self._accumulated_time_s,
                         'classification': leaderboard,
                         'best_lap': {
-                            'time': min([car['best_lap_s'] for car in leaderboard], default=None),
+                            'time': leaderboard[0]['best_lap_s'] if leaderboard else None,
                             'driver': leaderboard[0]['driver'] if leaderboard else None,
                             'team': leaderboard[0]['team'] if leaderboard else None,
                         } if leaderboard else None,
                     }
                     weekend_orchestrator.persist_session_results(summary_data)
-                    logger.info(f"📊 Practice session results persisted: {len(leaderboard)} cars")
+                    logger.info(f"✅ Practice session results persisted: {len(leaderboard)} cars, {total_laps} laps")
+                else:
+                    logger.warning(f"⚠️ Cannot persist practice results: orchestrator={weekend_orchestrator is not None}, pso={self.pso is not None}")
             except Exception as exc:
-                logger.warning(f"Failed to persist practice session results: {exc}")
+                logger.error(f"❌ Failed to persist practice session results: {exc}", exc_info=True)
         
         # Persisti i risultati per sessioni QUALIFY (Q1/Q2/Q3)
         if self.session_kind in QUALIFYING_SESSION_KINDS:
