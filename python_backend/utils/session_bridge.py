@@ -3067,6 +3067,15 @@ class SessionBridge:
                     weekend_orchestrator.update_transition()
                     new_state = weekend_orchestrator.get_transition_state()
                     logger.info(f"🔄 Transition state after update: {new_state.value if new_state else 'None'}")
+                    
+                    # Se ancora in FINALIZING, forza manualmente a NEXT_SESSION
+                    # Questo è necessario perché le auto potrebbero non essere ancora fisicamente ai box
+                    if new_state and new_state.value == 'finalizing':
+                        logger.info(f"⚠️ Still in FINALIZING, forcing to NEXT_SESSION...")
+                        from utils.weekend_transition_machine import WeekendTransitionState
+                        weekend_orchestrator.transition_machine.state = WeekendTransitionState.NEXT_SESSION
+                        new_state = weekend_orchestrator.get_transition_state()
+                        logger.info(f"✅ Forced to: {new_state.value if new_state else 'None'}")
                 except Exception as exc:
                     logger.warning(f"Failed to update transition machine: {exc}")
                 
