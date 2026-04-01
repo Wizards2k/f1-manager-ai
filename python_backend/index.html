@@ -682,11 +682,27 @@
                                     })()}
                                 </div>
                             </div>
-                            <div class="last-lap ${getLapTimeColorClass(car.last_lap_time, car.best_lap_time, sessionBests.best_lap)}">
-                                ${car.last_lap_time ? formatLapTime(car.last_lap_time) : '--:--.---'}
-                                <small>LAST</small>
-                                ${car.last_lap_type && car.last_lap_type !== 'HOT_LAP' ? `<small style="color: #888;">(${car.last_lap_type})</small>` : ''}
-                            </div>
+                            ${(() => {
+                                // Mostra tempo corrente se l'auto è in pista con giro in corso
+                                const isOnTrack = car.state && ['OUT LAP', 'HOT LAP', 'IN LAP'].includes(car.state);
+                                const hasCurrentLap = car.current_lap_time != null && car.current_lap_time > 0;
+                                if (isOnTrack && hasCurrentLap) {
+                                    return `
+                                        <div class="current-lap" style="color: #fff; font-weight: bold; font-size: 1.1em;">
+                                            ${formatLapTime(car.current_lap_time)}
+                                            <small>CURRENT</small>
+                                        </div>
+                                    `;
+                                }
+                                // Altrimenti mostra ultimo giro
+                                return `
+                                    <div class="last-lap ${getLapTimeColorClass(car.last_lap_time, car.best_lap_time, sessionBests.best_lap)}">
+                                        ${car.last_lap_time ? formatLapTime(car.last_lap_time) : '--:--.---'}
+                                        <small>LAST</small>
+                                        ${car.last_lap_type && car.last_lap_type !== 'HOT_LAP' ? `<small style="color: #888;">(${car.last_lap_type})</small>` : ''}
+                                    </div>
+                                `;
+                            })()}
                         </div>
                         <div class="lap-count">
                             Lap ${car.total_laps}

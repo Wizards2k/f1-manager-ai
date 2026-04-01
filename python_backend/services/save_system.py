@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from lap_simulator.practice_session import PracticeSessionOrchestrator
+from models.models import CarState
 from models.tyre_inventory import DriverTyreInventory
 from utils.game_logic import (
     race_cars, get_session_bridge, get_session_telemetry_store,
@@ -209,10 +210,23 @@ class SaveGameService:
         # 5. RaceCars State
         # Calcola tempo parziale corrente per auto in pista prima di salvare
         for car in race_cars:
-            if car.state in [CarState.OUT_LAP, CarState.HOT_LAP, CarState.IN_LAP] and car.current_lap_start:
-                # Calcola tempo parziale accumulato nel giro corrente
-                real_time_elapsed = time.time() - car.current_lap_start
-                car.current_lap_time_partial = real_time_elapsed
+            if car.state in [CarState.OUT_LAP, CarState.HOT_LAP, CarState.IN_LAP]:
+                if car.current_lap_start:
+                    # Calcola tempo parziale accumulato nel giro corrente
+                    real_time_elapsed = time.time() - car.current_lap_start
+                    car.current_lap_time_partial = real_time_elapsed
+                else:
+                    # Fallback: se current_lap_start è None (es. OUT_LAP senza exit_box()),
+                    # stima il tempo parziale basato sulla distanza percorsa
+                    # Assumiamo velocità media di ~40 m/s e lunghezza giro ~5800m
+                    # Tempo giro completo ~145s, quindi tempo parziale = (distanza / lunghezza_giro) * 145
+                    circuit_length = 5800  # metri (approssimativo per Suzuka)
+                    avg_speed = 40  # m/s
+                    estimated_lap_time = circuit_length / avg_speed  # ~145s
+                    estimated_partial = (car.distance_traveled / circuit_length) * estimated_lap_time
+                    car.current_lap_time_partial = min(estimated_partial, 150.0)  # Cap a 150s
+                    # Imposta current_lap_start coerentemente per il ripristino
+                    car.current_lap_start = time.time() - car.current_lap_time_partial
         
         cars_state = [car.to_dict() if hasattr(car, 'to_dict') else car.__dict__ for car in race_cars]
 

@@ -9,7 +9,7 @@ Reference: docs/lap-physics-spec-v0.5.md §3.3 (Passi 1-8)
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
@@ -721,6 +721,17 @@ class SectionEvent:
     severity: float = 0.0                # 0-1
     message: str = ""                    # human-readable for HUD/radio
 
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> SectionEvent:
+        return cls(
+            event_type=data.get("event_type", ""),
+            severity=data.get("severity", 0.0),
+            message=data.get("message", ""),
+        )
+
 
 @dataclass
 class SectionResult:
@@ -755,6 +766,20 @@ class SectionResult:
     drag_penalty_s: float = 0.0           # drag penalty breakdown
     drag_bonus_s: float = 0.0             # drag bonus breakdown
     ers_bonus_s: float = 0.0             # ERS energy deployment bonus (negative = faster)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> SectionResult:
+        field_names = set(cls.__dataclass_fields__.keys())
+        kwargs = {key: data[key] for key in field_names if key in data}
+        kwargs["telemetry_points"] = list(kwargs.get("telemetry_points", []))
+        kwargs["events"] = [
+            SectionEvent.from_dict(event) if isinstance(event, dict) else event
+            for event in kwargs.get("events", [])
+        ]
+        return cls(**kwargs)
 
 
 # ---------------------------------------------------------------------------

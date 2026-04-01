@@ -199,6 +199,10 @@ class CarTrackState:
             "car_entry": self.car_entry.to_dict() if hasattr(self.car_entry, "to_dict") else None,
             "current_section_idx": self.current_section_idx,
             "section_time_acc": self.section_time_acc,
+            "lap_section_results": [
+                result.to_dict() if hasattr(result, "to_dict") else result
+                for result in self.lap_section_results
+            ],
             "lap_number": self.lap_number,
             "distance_in_lap": self.distance_in_lap,
             "laps_done_in_run": self.laps_done_in_run,
@@ -226,6 +230,10 @@ class CarTrackState:
         ts = cls(car_id=data["car_id"], car_entry=entry)
         ts.current_section_idx = data.get("current_section_idx", 0)
         ts.section_time_acc = data.get("section_time_acc", 0.0)
+        ts.lap_section_results = [
+            SectionResult.from_dict(result) if isinstance(result, dict) else result
+            for result in data.get("lap_section_results", [])
+        ]
         ts.lap_number = data.get("lap_number", 1)
         ts.distance_in_lap = data.get("distance_in_lap", 0.0)
         ts.laps_done_in_run = data.get("laps_done_in_run", 0)
@@ -1479,7 +1487,12 @@ class SessionBridge:
         from models import CarState as GameCarState
         from utils.game_logic import update_session_bests
 
-        lap_time = sum(r.dt_s for r in ts.lap_section_results)
+        entry_state = getattr(getattr(ts, "car_entry", None), "state", None)
+        lap_time = float(getattr(entry_state, "lap_time_acc_s", 0.0) or 0.0)
+        if lap_time <= 0.0:
+            lap_time = sum(r.dt_s for r in ts.lap_section_results)
+        if lap_time <= 0.0 and getattr(race_car, "current_lap_time_partial", 0.0) > 0.0:
+            lap_time = float(race_car.current_lap_time_partial)
         ts.laps_done_in_run += 1
         ts.lap_number += 1
 
@@ -1489,6 +1502,17 @@ class SessionBridge:
         race_car.total_session_laps += 1
         race_car.tire_age += 1
         race_car.stint_laps_remaining = max(0, race_car.stint_laps_remaining - 1)
+
+        # Reset lap-local state so the next lap does not inherit the previous one.
+        if entry_state is not None:
+            entry_state.lap_time_acc_s = 0.0
+            entry_state.section_progress = 0.0
+            entry_state.current_section_idx = 0
+            entry_state.lap_number = ts.lap_number
+            if hasattr(entry_state, "telemetry_points_current_lap"):
+                entry_state.telemetry_points_current_lap = []
+        race_car.current_lap_time_partial = 0.0
+        race_car.current_lap_start = time.time()
 
         is_competitive = (ts.lap_phase == LapPhase.HOT_LAP)
 
@@ -1914,6 +1938,8 @@ class SessionBridge:
         if race_car is not None:
             from utils.adapter import set_racecar_phase
             set_racecar_phase(race_car, "out_lap")
+            race_car.current_lap_start = time.time()
+            race_car.current_lap_time_partial = 0.0
             race_car.is_on_track = True  # Mark as on track immediately to prevent UI flicker
         
         return True
@@ -2812,6 +2838,8 @@ class SessionBridge:
                         current_run_program=getattr(run_plan.program, "value", str(run_plan.program)),
                     )
                     self._track_states[car_id] = car_state
+                    race_car.current_lap_start = time.time()
+                    race_car.current_lap_time_partial = 0.0
                     self._sync_ers_mode_state(car_state)
                     self._emit_run_started_event(
                         car_id,

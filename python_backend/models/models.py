@@ -609,7 +609,7 @@ class RaceCar:
         """Registra tempo sul giro in base al tipo (tempi reali non influenzati da velocità gioco)"""
         # Calcola tempo reale trascorso dall'inizio del giro + tempo parziale accumulato
         real_time_elapsed = time.time() - self.current_lap_start if self.current_lap_start else 0.0
-        total_lap_time = self.current_lap_time_partial + real_time_elapsed
+        total_lap_time = real_time_elapsed if self.current_lap_start else self.current_lap_time_partial
         
         # Tempi realistici in base al tipo di giro (sempre basati su velocità reale)
         if lap_type == CarState.OUT_LAP:
@@ -622,10 +622,32 @@ class RaceCar:
             s1 = self.current_lap_sectors.get('sector1')
             s2 = self.current_lap_sectors.get('sector2')
             s3 = self.current_lap_sectors.get('sector3')
+            
             if s1 is not None and s2 is not None and s3 is not None:
+                # Tutti e 3 i settori presenti
                 realistic_lap_time = (s1 + s2 + s3) + random.uniform(-0.15, 0.15)
+            elif s1 is not None and s2 is not None and s3 is None:
+                # Manca S3 ma ci sono S1 e S2: calcola S3 dal tempo parziale totale
+                # Questo succede quando si ricarica un savegame con auto vicina al traguardo
+                s1_s2_sum = s1 + s2
+                if total_lap_time > s1_s2_sum:
+                    # Calcola S3 come differenza
+                    s3_calcolato = total_lap_time - s1_s2_sum
+                    realistic_lap_time = total_lap_time
+                    # Imposta S3 per coerenza
+                    self.current_lap_sectors['sector3'] = s3_calcolato
+                elif self.current_lap_time_partial > 0:
+                    # Fallback: usa tempo parziale se totale non è affidabile
+                    realistic_lap_time = self.current_lap_time_partial
+                else:
+                    realistic_lap_time = 79.5 + random.uniform(-2.5, 2.5)
             else:
-                realistic_lap_time = 79.5 + random.uniform(-2.5, 2.5)
+                # Manca almeno un settore tra S1 o S2
+                # Se c'è tempo parziale salvato, usa quello
+                if self.current_lap_time_partial > 0:
+                    realistic_lap_time = self.current_lap_time_partial
+                else:
+                    realistic_lap_time = 79.5 + random.uniform(-2.5, 2.5)
         elif lap_type == CarState.IN_LAP:
             # In lap più lento
             realistic_lap_time = 88.0 + random.uniform(-3.0, 3.0)
@@ -671,6 +693,22 @@ class RaceCar:
             update_session_bests(self)
 
         self._persist_lap_debug(lap_type, realistic_lap_time)
+
+    def get_current_lap_time(self) -> Optional[float]:
+        """Restituisce il tempo corrente del giro in corso, inclusi i parziali salvati.
+        
+        Returns:
+            Il tempo totale parziale del giro corrente, o None se l'auto non è in pista.
+        """
+        if self.state not in [CarState.OUT_LAP, CarState.HOT_LAP, CarState.IN_LAP]:
+            return None
+        
+        if not self.current_lap_start:
+            # Se non c'è current_lap_start, restituisci solo il tempo parziale salvato
+            return self.current_lap_time_partial if self.current_lap_time_partial > 0 else None
+        
+        # current_lap_start viene riposizionato al load per includere il parziale salvato
+        return time.time() - self.current_lap_start
 
     @staticmethod
     def _resolve_game_compound(compound_label: Optional[str]) -> TireCompound:

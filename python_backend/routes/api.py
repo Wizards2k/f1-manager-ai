@@ -287,6 +287,7 @@ def register_routes(app):
         cars_data = []
         for car in race_cars:
             pos = get_car_position(car)
+            current_lap_time = car.get_current_lap_time()
             cars_data.append({
                 'driver_number': car.driver_number,
                 'driver_name': car.driver_name,
@@ -294,6 +295,7 @@ def register_routes(app):
                 'team_color': car.team_color,
                 'position': pos,
                 'lap_times': car.lap_times[-5:],  # Ultimi 5 tempi
+                'current_lap_time': current_lap_time,  # Tempo corrente del giro in corso
                 'total_laps': car.total_laps,
                 'current_tire': car.current_tire.value,
                 'tire_age': car.tire_age,
@@ -311,6 +313,10 @@ def register_routes(app):
                 'setup_recommendation': car.setup_feedback if car.is_player_controlled else None,
                 'max_stint_laps': 150,
                 'brake_cooling': getattr(car, 'brake_cooling', {}),
+                'current_lap_sectors': car.current_lap_sectors,
+                'last_sector_times': car.last_sector_times,
+                'best_sectors': car.best_sectors,
+                'state': car.state.value if hasattr(car.state, 'value') else str(car.state),
             })
         return jsonify(cars_data)
 
