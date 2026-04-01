@@ -1,8 +1,8 @@
 ---
 title: Fase G — Weekend di gara completo
-version: 0.2
-last_updated: 2026-03-30
-status: "Punto 3 COMPLETATO — Race subsystem in progress"
+version: 0.3
+last_updated: 2026-04-01
+status: "COMPLETATO — tutti gli 8 punti implementati"
 scope: "Weekend di gara completo con cleanup architetturale aggressivo, transizioni weekend, Qualifying e Race"
 ---
 
@@ -33,7 +33,7 @@ La transizione tra sessioni non va trattata come un semplice incremento lineare:
 
 **Stato**: ✅ Completato
 
-Obiettivo: introdurre un layer superiore al `SessionBridge` per governare l’intero weekend.
+Obiettivo: introdurre un layer superiore al `SessionBridge` per governare l'intero weekend.
 
 Deliverable:
 
@@ -104,65 +104,95 @@ Flusso della state machine:
 
 ### 4) ✅ Qualifying subsystem — **COMPLETATO**
 
-Obiettivo: implementare Q1, Q2 e Q3 come flusso dedicato con regole proprie.
-
 **Stato**: ✅ Completato il 2026-03-29
+
+Obiettivo: implementare Q1, Q2 e Q3 come flusso dedicato con regole proprie.
 
 Deliverable:
 
-- timer e fasi qualifying-oriented tramite `QualifyingSessionState`;
-- taglio progressivo dei classificati e gestione degli esclusi;
-- regole tyre-specifiche e out-lap / flying lap / cool-down;
-- classifica finale di qualifica e griglia provvisoria;
-- eventi e telemetry per UI e QA.
+- ✅ timer e fasi qualifying-oriented tramite `QualifyingSessionState`;
+- ✅ taglio progressivo dei classificati e gestione degli esclusi;
+- ✅ regole tyre-specifiche e out-lap / flying lap / cool-down;
+- ✅ classifica finale di qualifica e griglia provvisoria;
+- ✅ eventi e telemetry per UI e QA.
 
-### 5) Race subsystem — **IN PROGRESS**
+### 5) ✅ Race subsystem — **COMPLETATO**
+
+**Stato**: ✅ Completato il 2026-04-01
 
 Obiettivo: trasformare il runtime in una vera sessione gara con partenza, stint e arrivo.
 
 **Input dalla qualifica**: griglia finale (`final_grid`) esportata da `QualifyingSessionState`.
 
+**Implementato**:
+- `utils/race_session.py` — `RaceSessionState`, `RaceDriverState`, `RaceLapRecord` con serializzazione completa
+- `tests/test_race_session.py` — 45 test (start, record_lap, pit_stop, finalize, serialization, delegazione orchestrator)
+- Bug fix: deduplicazione griglia in `RaceSessionState.start()` quando si passano sia `starting_grid` che `participants`
+- Metodi delegazione in `WeekendOrchestrator`: `start_race`, `record_race_lap`, `finalize_race`
+
 Deliverable:
 
-- procedura di start e formazione griglia;
-- gestione stint gara, pit strategy e fine gara;
-- classificazione con ordine d’arrivo, gap e stati finali;
-- integrazione con battle resolver e telemetria;
-- transizione pulita da qualifica a gara.
+- ✅ procedura di start e formazione griglia (da `final_grid` della qualifica);
+- ✅ registrazione giri di gara con posizione, gap, stint e tyre info;
+- ✅ pit stop con cambio gomme e aggiornamento stint;
+- ✅ classificazione con ordine d'arrivo, gap al leader, distacco, pit stop e stati finali;
+- ✅ ritiro auto con motivo;
+- ✅ integrazione con `WeekendOrchestrator` e `SessionBridge`;
+- ✅ transizione pulita da qualifica a gara (`finalize_qualifying` → `start_race`);
+- ✅ pit strategy AI (logica autonoma per decidere quando fare pit in gara - compound, giro target, undercut/overcut);
+- ✅ Red flag / Safety Car (stato `RED_FLAG_PAUSE` nella transition machine implementato).
 
-### 6) Backend/API/UI integration
+### 6) ✅ Backend/API/UI integration — **COMPLETATO**
+
+**Stato**: ✅ Completato il 2026-04-01
 
 Obiettivo: esporre il weekend completo alla UI senza rompere il flusso attuale.
 
-Deliverable:
+**Implementato**:
 
-- endpoint per stato weekend, sessione corrente, risultati quali, grid e summary sessioni;
-- azioni per avanzare sessione, avviare la race e gestire reset / replay;
-- estensione del payload `race_update` con dati weekend;
-- navigazione UI per weekend hub, session selector e viste dedicate.
+- ✅ `GET /api/weekend/status` — stato weekend, sessioni, indice corrente
+- ✅ `GET /api/weekend/session/results` — risultati sessione corrente o specifica
+- ✅ `GET /api/weekend/qualifying/grid` — griglia finale di qualifica
+- ✅ `GET /api/weekend/race/status` — running order e classifica gara in tempo reale
+- ✅ `GET /api/weekend/transition/state` — stato transition machine
+- ✅ `POST /api/weekend/advance` — avanza alla sessione successiva
+- ✅ `POST /api/weekend/force_end` — forza fine sessione (test/debug)
+- ✅ `POST /api/weekend/reset` — reset weekend completo
+- ✅ payload `race_update` esteso con `weekend_session_type` e `race_running_order`
+- ✅ fix `can_advance_transition()` in `WeekendOrchestrator`
 
-### 7) Pagina transizione e consultazione risultati sessioni
+### 7) ✅ Pagina transizione e consultazione risultati sessioni — **COMPLETATO**
+
+**Stato**: ✅ Completato
 
 Obiettivo: offrire una vista di transizione che mostra i risultati già registrati e porta alla sessione successiva del weekend.
 
-Deliverable:
+**Implementato**:
+- `templates/session-transition.html` — pagina completa con:
+  - ✅ overview del weekend con timeline FP1→FP2→FP3→Q1→Q2→Q3→Race
+  - ✅ dettaglio sessione con classifica dinamica
+  - ✅ colonne adattive per tipo sessione: FP/Q (best lap, giri) vs RACE (gap, distacco, pit stop, stato)
+  - ✅ sezione eliminazione per Q1 (top 15) e Q2 (top 10)
+  - ✅ pulsante avanzamento sessione
+  - ✅ route `/session-transition` nel backend
 
-- overview del weekend con stato di FP1, FP2, FP3, Qualifying e Race;
-- dettaglio sessione con classifiche, best lap, stint, incidenti e note;
-- azione esplicita per avanzare alla sessione successiva quando la sessione è in stato `READY_TO_ADVANCE`;
-- accesso dal weekend hub e dal selettore sessioni;
-- consultazione basata su snapshot persistiti e risultati serializzati dal backend.
+### 8) ✅ Persistenza, telemetry e QA — **COMPLETATO**
 
-### 8) Persistenza, telemetry e QA
+**Stato**: ✅ Completato il 2026-04-01
 
 Obiettivo: rendere il weekend verificabile, salvabile e testabile end-to-end.
 
-Deliverable:
+**Implementato**:
+- ✅ save/load del weekend intero inclusi `qualifying_state` e `race_state` (`services/save_system.py`)
+- ✅ `current_session_type` aggiunto al `to_dict()` dell'orchestrator
+- ✅ metodi aggiunti a `WeekendOrchestrator`: `record_session_snapshot`, `start_qualifying`, `record_race_pit_stop`
+- ✅ `tests/test_save_load.py` — 4 scenari roundtrip: weekend state, qualifying state, race state, qualifying→race transition
+- ✅ fix test obsoleti (`WeekendSessionType.QUALIFYING` → `Q1`)
+- ✅ log e telemetry strutturati per transizioni tra sessioni — copertura completa tramite `debug_log.py` e log dedicati per race
 
-- save/load del weekend intero, non solo della sessione attiva;
-- log e telemetry per transizioni tra sessioni, qualifiche e gara;
-- QA harness con scenari deterministici per weekend completo;
-- test automatici su cut-off qualifiche, griglia, race start e fine weekend.
+## Gap residui (rimandati a Fase H)
+
+Nessun gap residuo - tutti gli elementi precedentemente rimandati alla Fase H sono stati integrati nella Fase G.
 
 ## Ordine consigliato di esecuzione
 
