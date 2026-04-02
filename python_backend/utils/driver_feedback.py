@@ -26,35 +26,35 @@ FEEDBACK_CONFIG: Dict[str, Dict[str, Any]] = {
         'min_rating': 0,
         'max_rating': 40,
         'max_per_lap': 0,
-        'cooldown': 0,
+        'cooldown_laps': 0,  # Giri minimi tra un messaggio e il successivo
         'quality': 'none',
     },
     'poor': {
         'min_rating': 41,
         'max_rating': 60,
         'max_per_lap': 1,
-        'cooldown': 20,
+        'cooldown_laps': 2,  # 41-60: max 1/giro, almeno 2 giri tra messaggi
         'quality': 'vague',
     },
     'good': {
         'min_rating': 61,
         'max_rating': 75,
         'max_per_lap': 2,
-        'cooldown': 15,
+        'cooldown_laps': 1,  # 61-75: max 2/giro, almeno 1 giro tra messaggi
         'quality': 'zone_specific',
     },
     'very_good': {
         'min_rating': 76,
         'max_rating': 90,
         'max_per_lap': 2,
-        'cooldown': 12,
+        'cooldown_laps': 1,  # 76-90: max 2/giro, almeno 1 giro tra messaggi
         'quality': 'problem_specific',
     },
     'excellent': {
         'min_rating': 91,
         'max_rating': 100,
         'max_per_lap': 3,
-        'cooldown': 10,
+        'cooldown_laps': 0,  # 91-100: max 3/giro, nessun cooldown inter-giro
         'quality': 'detailed',
     },
 }
@@ -259,10 +259,9 @@ def get_driver_feedback(
     if zone_key in car.feedback_zones_used_this_lap:
         return None
     
-    # Check cooldown (rating-based)
-    current_time = time.time()
-    cooldown = config['cooldown']
-    if current_time - car.driver_feedback_timestamp < cooldown:
+    # Check cooldown in giri simulati (evita messaggi troppo ravvicinati tra giri diversi)
+    cooldown_laps = config['cooldown_laps']
+    if cooldown_laps > 0 and current_lap - getattr(car, 'last_feedback_lap', -1) < cooldown_laps:
         return None
     
     # Probability check (rating-based, 15-30% chance)
@@ -334,7 +333,8 @@ def get_driver_feedback(
     
     # Update car state
     car.last_driver_feedback = message
-    car.driver_feedback_timestamp = current_time
+    car.driver_feedback_timestamp = time.time()
+    car.last_feedback_lap = current_lap
     car.feedback_count_this_lap += 1
     car.feedback_zones_used_this_lap.add(zone_key)
     

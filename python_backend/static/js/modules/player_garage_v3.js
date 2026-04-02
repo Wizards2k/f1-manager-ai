@@ -3472,15 +3472,21 @@ export class PlayerGarageV3 {
         const catData = eval_.categories || {};
         const fbRow = this.overlayContainer.querySelector('.setup-fb-row-v3');
         if (fbRow && validation.ok) {
+            fbRow.classList.remove('no-feedback');
             const scoreEl = fbRow.querySelector('.setup-fb-score-v3');
             if (scoreEl && catData.overall_score != null) {
-                scoreEl.textContent = catData.overall_score.toFixed(1);
+                const s = catData.overall_score;
+                scoreEl.textContent = s.toFixed(1);
+                ['score-fuchsia', 'score-green', 'score-yellow', 'score-orange', 'score-red']
+                    .forEach(c => scoreEl.classList.remove(c));
+                scoreEl.classList.add(this.scoreColorClass(s));
             }
             const msgEl = fbRow.querySelector('.setup-fb-msg-v3');
             if (msgEl && eval_.message) {
                 const brakeWarnings = this.buildBrakeWarningsFromFeedback(validation);
                 const fullMessage = brakeWarnings ? `${eval_.message}\n${brakeWarnings}` : eval_.message;
-                
+                msgEl.textContent = fullMessage;
+
                 // Auto-resize feedback message if too long
                 const lineHeight = 18;
                 const maxLines = 3;
@@ -3495,6 +3501,20 @@ export class PlayerGarageV3 {
         if (catsEl && catData.categories) {
             catsEl.innerHTML = this.buildCategoryChips(catData.categories);
         }
+
+        // Aggiorna feedback per-campo (status color + delta label su ogni slider)
+        const fields = eval_.fields || {};
+        Object.entries(fields).forEach(([fieldName, fd]) => {
+            const ctrl = this.overlayContainer.querySelector(`.setup-control-v3[data-field="${fieldName}"]`);
+            if (!ctrl) return;
+            const statusClass = fd.status ? `status-${fd.status}` : '';
+            ctrl.className = `setup-control-v3${statusClass ? ' ' + statusClass : ''}`;
+            const deltaEl = ctrl.querySelector('.setup-delta-v3');
+            if (deltaEl) {
+                deltaEl.textContent = fd.delta_label || '';
+                deltaEl.className = `setup-delta-v3${statusClass ? ' ' + statusClass : ''}`;
+            }
+        });
     }
 
     hideSetupFeedback() {
@@ -3503,12 +3523,44 @@ export class PlayerGarageV3 {
         if (fbRow) {
             fbRow.classList.add('no-feedback');
             const scoreEl = fbRow.querySelector('.setup-fb-score-v3');
-            if (scoreEl) scoreEl.remove();
+            if (scoreEl) { scoreEl.textContent = ''; scoreEl.className = 'setup-fb-score-v3'; }
             const msgEl = fbRow.querySelector('.setup-fb-msg-v3');
             if (msgEl) msgEl.textContent = 'Apply and complete a hot lap to see updated feedback.';
         }
         const catsEl = this.overlayContainer.querySelector('.setup-cats-v3');
-        if (catsEl) catsEl.remove();
+        if (catsEl) catsEl.innerHTML = '';
+    }
+
+    maybeRefreshOverlay(car) {
+        if (!this.overlayContainer?.classList.contains('is-visible')) return;
+        const overlayDriver = Number(this.overlayContainer.dataset.driver);
+        if (overlayDriver !== car.driver_number) return;
+        // Non interrompere se ci sono modifiche draft in sospeso
+        const draft = this.setupDrafts.get(car.driver_number) || {};
+        if (Object.keys(draft).length > 0) return;
+        const existing = this.state.getPlayerCar(car.driver_number) || {};
+        const prevReady = !!existing.has_setup_feedback;
+        const newReady = !!car.has_setup_feedback;
+        if (!prevReady && newReady) {
+            // Transizione: feedback appena pronto → rebuild completo
+            this.buildPUModal(car);
+        } else if (!newReady) {
+            // Aggiorna solo la barra di progresso
+            const bar = this.overlayContainer.querySelector('.setup-progress-bar-v3');
+            if (bar) {
+                const pct = Math.min(Math.round(car.setup_info_percent ?? 0), 100);
+                const color = pct >= 67 ? '#63d59f' : pct >= 34 ? '#f5d56a' : '#ff6d6d';
+                bar.style.width = `${pct}%`;
+                bar.style.background = color;
+            }
+            const msgEl = this.overlayContainer.querySelector('.setup-fb-msg-v3');
+            if (msgEl) {
+                const pct = Math.round(car.setup_info_percent ?? 0);
+                if (pct <= 0) msgEl.textContent = 'Send the car out to collect setup data.';
+                else if (pct < 100) msgEl.textContent = `Gathering data… ${pct}%`;
+                else msgEl.textContent = 'Data ready — box the car for engineer feedback.';
+            }
+        }
     }
 
     scoreColorClass(score100) {

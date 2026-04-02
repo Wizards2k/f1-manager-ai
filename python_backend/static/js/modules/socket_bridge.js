@@ -132,6 +132,7 @@ export class SocketBridge {
                 if (isOnTrack && this.playerGarage.pendingSendDrivers.has(car.driver_number)) {
                     this.playerGarage.pendingSendDrivers.delete(car.driver_number);
                 }
+                this.playerGarage.maybeRefreshOverlay(car);
                 this.playerGarage.applyLocalCarState(car.driver_number, car);
                 seenPlayerDrivers.add(car.driver_number);
                 this.state.setPlayerCar(car);

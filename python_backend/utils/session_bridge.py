@@ -1426,6 +1426,18 @@ class SessionBridge:
                         # Update session bests immediately so frontend can show purple/green
                         from utils.game_logic import update_session_bests
                         update_session_bests(race_car)
+                        # Driver setup feedback (throttled by cooldown/lap limits inside)
+                        if ts.is_player:
+                            fb_msg = get_driver_feedback(race_car, sector=sector_key)
+                            logger.info(
+                                "driver_feedback sector=%s driver=%s state=%s skill=%s msg=%r",
+                                sector_key, race_car.driver_number,
+                                getattr(race_car, 'state', None),
+                                getattr(getattr(race_car, 'pilot', None), 'ricerca_assetto', None),
+                                fb_msg,
+                            )
+                            if fb_msg:
+                                race_car.last_driver_feedback = fb_msg
                     ts.current_sector += 1
                     ts.sector_dt_acc = 0.0
 

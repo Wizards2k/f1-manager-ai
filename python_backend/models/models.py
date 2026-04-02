@@ -418,7 +418,7 @@ class RaceCar:
         self.last_lap_type = None
         self.has_completed_hot_lap = False
         self.setup_info_points = 0.0
-        self.setup_baseline: Optional[Dict[str, int]] = None
+        self.setup_baseline: Optional[Dict[str, int]] = None  # inizializzato dopo player_config
         self.setup_info_target = self._compute_setup_info_target()
         
         # Tempi e performance
@@ -475,6 +475,10 @@ class RaceCar:
             "stint_target_laps": self.stint_target_laps,
             "setup": {**DEFAULT_SETUP_CONFIG},
         }
+        # Ora player_config è pronto: inizializziamo setup_baseline e ricalcoliamo target
+        self.setup_baseline = dict(self.player_config.get('setup', {**DEFAULT_SETUP_CONFIG}))
+        self.setup_info_target = self._compute_setup_info_target()
+
         self.setup_feedback: Optional[Dict[str, Any]] = {
             'message': 'Baseline setup ready.',
             'tone': 'info',
@@ -488,7 +492,8 @@ class RaceCar:
         # Driver live feedback state
         self.last_driver_feedback: Optional[str] = None
         self.driver_feedback_timestamp: float = 0.0
-        self.driver_feedback_cooldown: float = 5.0  # Seconds between messages
+        self.driver_feedback_cooldown: float = 5.0  # Seconds between messages (legacy, unused)
+        self.last_feedback_lap: int = -1             # Giro simulato dell'ultimo messaggio
         self.feedback_count_this_lap: int = 0
         self.feedback_zones_used_this_lap: set = set()
         self.current_lap_for_feedback: int = 0
@@ -888,8 +893,9 @@ class RaceCar:
     def _compute_setup_info_target(self):
         """Calcola la soglia di info necessarie.
         Dipende dal numero di slider modificati rispetto al baseline:
-        - 1 slider cambiato → ~30 punti (1 giro con pilota bravo)
-        - tutti 11 → ~150 punti (4-5 giri)
+        - 0 slider cambiati (fresh session) → 30 punti (1 giro)
+        - 1 slider cambiato → 30 punti (1 giro con pilota bravo)
+        - tutti 11 → 330 punti (7-9 giri)
         Più un piccolo bonus per setup molto estremi."""
         current_setup = getattr(self, 'player_config', {}).get('setup', {})
         baseline = getattr(self, 'setup_baseline', None)
