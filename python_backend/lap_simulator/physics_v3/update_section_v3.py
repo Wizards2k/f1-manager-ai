@@ -172,7 +172,6 @@ def update_section_v3(
             dt_s=section.dt_ref_s if hasattr(section, 'dt_ref_s') else 1.0,
             v_kph=section.v_base_kph if hasattr(section, 'v_base_kph') else 200.0,
             aero_setup=aero_setup,
-            circuit_id=circuit_id,
             setup_sliders=setup_sliders,
         )
         mu_base = (mu_grip_front + mu_grip_rear) / 2.0
@@ -280,19 +279,19 @@ def update_section_v3(
             power_kw=(pu_state_updated.ice_power_kw + pu_state_updated.ers_output_kw),
             effective_grip_front=balance.mu_front_eff,
             effective_grip_rear=balance.mu_rear_eff,
-            handling_penalty=0.0,  # TODO: estendi se necessario
-            # Penalties (compatibilità V1, non usati in V3)
+            handling_penalty=0.0,
+            # Penalties (compatibilità V1, non usati in V3 pura)
             fuel_penalty_s=0.0,
             tyre_penalty_s=0.0,
             push_penalty_s=0.0,
             engine_penalty_s=0.0,
             brake_penalty_s=0.0,
             setup_penalty_s=0.0,
-            ers_penalty_s=0.0,
             df_curve_penalty_s=0.0,
             df_curve_bonus_s=0.0,
             drag_penalty_s=0.0,
             drag_bonus_s=0.0,
+            ers_bonus_s=0.0,
         )
 
         return result
