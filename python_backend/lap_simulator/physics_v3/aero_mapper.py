@@ -62,6 +62,7 @@ def map_aero_setup(
     env: EnvContext,
     v_estimate_kph: float = 200.0,
     drs_active: bool = False,
+    config = None,
 ) -> PhysicsAeroParams:
     """
     Converte AeroSetup (UI sliders/aero_points) → PhysicsAeroParams (fisici).
@@ -79,6 +80,7 @@ def map_aero_setup(
         env: Contesto ambientale (temperatura, pressione, umidità)
         v_estimate_kph: Velocità stimata per speed_factor (default 200 kph)
         drs_active: Se DRS attivo (riduce CDA)
+        config: CircuitConfig (optional, for compute_forces)
 
     Returns:
         PhysicsAeroParams con tutti i parametri fisici calcolati
@@ -95,15 +97,42 @@ def map_aero_setup(
     from ..data_types import CarState, DamageState
 
     # Dummy car state per compute_forces se necessario
+    from ..data_types import SectionContext, DamageCoeffs, SectionKind
+
     car_state_for_compute = CarState()
     car_state_for_compute.damage = DamageState()
 
+    # Dummy section context per compute_forces se necessario
+    section_for_compute = SectionContext(
+        section_id="test",
+        name="test",
+        length_m=500.0,
+        v_base_kph=v_estimate_kph,
+        v_entry_kph=v_estimate_kph,
+        v_exit_kph=v_estimate_kph,
+        v_min_kph=v_estimate_kph * 0.8,
+        dt_ref_s=1.0,
+        kind=SectionKind.STRAIGHT,
+        bumpiness_factor=0.0,
+    )
+
+    # Dummy config if not provided
+    if config is None:
+        config = type('DummyConfig', (), {
+            'k_handling': 0.8,
+            'k_df': 0.15,
+            'k_drag': 0.10,
+            'k_drag_curve': 0.05,
+            'k_power': 0.12,
+            'damage_coeffs': DamageCoeffs(),
+        })()
+
     aero_forces: AeroForces = compute_forces(
         aero=aero_setup,
-        section=None,  # v3/aero_mapper non ha sezione specifica
+        section=section_for_compute,
         env=env,
         car_state=car_state_for_compute,
-        config=None,
+        config=config,
         v_kph=v_estimate_kph,
         airflow_penalty=0.0,
         drs_active=drs_active,

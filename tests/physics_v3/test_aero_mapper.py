@@ -30,65 +30,76 @@ class TestAeroMapper:
             water_film_level=0.0,
         )
 
-    def test_aero_mapper_output_type(self, test_env):
+    @pytest.fixture
+    def test_config(self):
+        """Standard test circuit config."""
+        from python_backend.lap_simulator.data_types import CircuitConfig
+        return CircuitConfig(
+            circuit_id="test",
+            k_handling=0.8,
+            k_df=0.15,
+            k_drag=0.10,
+        )
+
+    def test_aero_mapper_output_type(self, test_env, test_config):
         """Verifica che output è PhysicsAeroParams."""
         setup = AeroSetup()
-        result = map_aero_setup(setup, test_env)
+        result = map_aero_setup(setup, test_env, config=test_config)
         assert isinstance(result, PhysicsAeroParams)
 
-    def test_cla_within_range(self, test_env):
+    def test_cla_within_range(self, test_env, test_config):
         """CLA deve essere entro range fisico."""
         setup = AeroSetup()
-        result = map_aero_setup(setup, test_env)
+        result = map_aero_setup(setup, test_env, config=test_config)
         assert constants.CLA_MIN <= result.CLA <= constants.CLA_MAX
 
-    def test_cda_within_range(self, test_env):
+    def test_cda_within_range(self, test_env, test_config):
         """CDA deve essere entro range fisico."""
         setup = AeroSetup()
-        result = map_aero_setup(setup, test_env)
+        result = map_aero_setup(setup, test_env, config=test_config)
         assert constants.CDA_MIN <= result.CDA <= constants.CDA_MAX
 
-    def test_aero_balance(self, test_env):
+    def test_aero_balance(self, test_env, test_config):
         """Aero balance deve essere 0.4-0.6."""
         setup = AeroSetup()
-        result = map_aero_setup(setup, test_env)
+        result = map_aero_setup(setup, test_env, config=test_config)
         assert 0.40 <= result.aero_balance <= 0.60
 
-    def test_cla_front_rear_sum(self, test_env):
+    def test_cla_front_rear_sum(self, test_env, test_config):
         """CLA_front + CLA_rear == CLA."""
         setup = AeroSetup()
-        result = map_aero_setup(setup, test_env)
+        result = map_aero_setup(setup, test_env, config=test_config)
         expected_rear = result.CLA * (1.0 - result.aero_balance)
         assert abs(result.CLA_rear - expected_rear) < 0.01
 
-    def test_ground_effect_bonus_range(self, test_env):
+    def test_ground_effect_bonus_range(self, test_env, test_config):
         """Ground effect bonus 0.85-1.15."""
         setup = AeroSetup()
-        result = map_aero_setup(setup, test_env)
+        result = map_aero_setup(setup, test_env, config=test_config)
         assert 0.85 <= result.ground_effect_bonus <= 1.15
 
-    def test_grip_penalties_range(self, test_env):
+    def test_grip_penalties_range(self, test_env, test_config):
         """Grip penalties 0-1."""
         setup = AeroSetup()
-        result = map_aero_setup(setup, test_env)
+        result = map_aero_setup(setup, test_env, config=test_config)
         assert 0.0 <= result.understeer_grip_penalty <= 1.0
         assert 0.0 <= result.oversteer_grip_penalty <= 1.0
 
-    def test_drs_drag_reduction(self, test_env):
+    def test_drs_drag_reduction(self, test_env, test_config):
         """DRS drag reduction atteso."""
         setup = AeroSetup()
-        result_no_drs = map_aero_setup(setup, test_env, drs_active=False)
-        result_drs = map_aero_setup(setup, test_env, drs_active=True)
+        result_no_drs = map_aero_setup(setup, test_env, drs_active=False, config=test_config)
+        result_drs = map_aero_setup(setup, test_env, drs_active=True, config=test_config)
         # CDA_drs < CDA_normal
         assert result_drs.CDA_drs_open < result_no_drs.CDA
         # Reduction è DRS_DRAG_REDUCTION_FACTOR
         expected_drs = result_no_drs.CDA * (1 - constants.DRS_DRAG_REDUCTION_FACTOR)
         assert abs(result_drs.CDA_drs_open - expected_drs) < 0.05
 
-    def test_analyze_aero_setup(self, test_env):
+    def test_analyze_aero_setup(self, test_env, test_config):
         """Test analisi setup."""
         setup = AeroSetup()
-        physics_aero = map_aero_setup(setup, test_env)
+        physics_aero = map_aero_setup(setup, test_env, config=test_config)
         analysis = analyze_aero_setup(setup, physics_aero)
 
         assert "balance_quality" in analysis
@@ -98,10 +109,10 @@ class TestAeroMapper:
 
         assert 0.0 <= analysis["setup_quality_score"] <= 1.0
 
-    def test_setup_quality_neutral(self, test_env):
+    def test_setup_quality_neutral(self, test_env, test_config):
         """Setup neutro deve avere alta qualità."""
         setup = AeroSetup()
-        physics_aero = map_aero_setup(setup, test_env)
+        physics_aero = map_aero_setup(setup, test_env, config=test_config)
         analysis = analyze_aero_setup(setup, physics_aero)
 
         assert analysis["balance_quality"] == "neutral"

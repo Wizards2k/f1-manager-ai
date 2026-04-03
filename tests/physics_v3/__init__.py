@@ -60,3 +60,23 @@ def test_driver_skills():
         smoothness=60,
         setup_finding=60,
     )
+
+
+@pytest.fixture
+def test_config():
+    """Standard test circuit config with default values."""
+    from python_backend.lap_simulator.data_types import CircuitConfig
+
+    return CircuitConfig(
+        circuit_id="test-circuit",
+        circuit_name="Test Circuit",
+        circuit_length_m=5000.0,
+        k_handling=0.8,
+        k_df=0.15,
+        k_drag=0.10,
+        k_drag_curve=0.05,
+        k_power=0.12,
+        df_ref=70.0,
+        drag_ref=30.0,
+        power_ref_kw=450.0,
+    )
