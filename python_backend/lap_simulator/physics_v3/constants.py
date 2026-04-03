@@ -45,14 +45,14 @@ CLA_MAX = 4.80                      # Monaco high-DF setup
 CLA_NEUTRAL = 3.20                  # Setup medio
 
 # Drag coefficient area [m²] — include telaio + aero
-CDA_BASE_STRUCT = 0.40              # m² baseline telaio + ruote (non aerodinamico) — CALIB: -0.15 (structural only)
-CDA_MIN = 0.65                      # Monza (telaio + minimal aero drag) — CALIB: -0.20
-CDA_MAX = 1.20                      # Monaco (telaio + max aero drag) — CALIB: -0.40
-CDA_NEUTRAL = 0.80                  # Setup medio — CALIB: -0.30
+CDA_BASE_STRUCT = 0.0              # m² baseline telaio + ruote
+CDA_MIN = 1.00                      # Monza low-DF setup
+CDA_MAX = 1.40                      # Monaco high-DF setup
+CDA_NEUTRAL = 1.20                  # Setup medio
 
 # Sensitivity (aero_points → fisico) — da spec Section 3
 CLA_SENSITIVITY = 0.020             # m²/punto aero  (baseline 160 pt = 3.2 m²)
-CDA_SENSITIVITY = 0.008             # m²/punto aero — CALIB: -0.007 (much lower aero contribution)
+CDA_SENSITIVITY = 0.0005            # m²/punto aero (realistic scaling factor)
 
 # DRS (Drag Reduction System)
 DRS_DRAG_REDUCTION_FACTOR = 0.175   # -17.5% CDA quando DRS aperto (rear flap opened)
@@ -62,14 +62,14 @@ DRS_DRAG_REDUCTION_FACTOR = 0.175   # -17.5% CDA quando DRS aperto (rear flap op
 # ============================================================================
 
 MU_BASE = {
-    "C1": 2.10,  # C1 duro — CALIB: +0.58
-    "C2": 2.18,  # C2
-    "C3": 2.27,  # C3 universale — CALIB: +0.62 (baseline)
-    "C4": 2.36,  # C4 soft
-    "C5": 2.45,  # C5 morbido
-    "C6": 2.52,  # C6 ultrasoft — CALIB: +0.67
-    "INTERMEDIATE": 1.50,  # INT umido
-    "WET": 1.10,  # WET bagnato
+    "C1": 1.50,  # C1 duro
+    "C2": 1.60,  # C2
+    "C3": 1.70,  # C3 universale (baseline)
+    "C4": 1.80,  # C4 soft
+    "C5": 1.90,  # C5 morbido
+    "C6": 2.00,  # C6 ultrasoft
+    "INTERMEDIATE": 1.30,  # INT umido
+    "WET": 0.95,  # WET bagnato
 }
 
 # Efficienza in curva — Traction circle (Kamm)

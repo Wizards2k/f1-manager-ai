@@ -96,15 +96,11 @@ def solve_corner_apex_speed(
     rho = env_rho
     cla = aero.CLA
 
-    denominator = (mass_kg / radius_m) - (0.5 * rho * cla * mu_eff)
+    # Correct formula: v = sqrt(mu * g * R)
+    # Centripetal acceleration = v²/R = mu * g
+    # Therefore: v = sqrt(mu * g * R)
 
-    if denominator <= 0:
-        # Caso limite: downforce domina (auto instabile, v_apex → ∞)
-        # Ritorna MAX_LATERAL_G come bound
-        v_max = math.sqrt(constants.MAX_LATERAL_G * constants.G * radius_m)
-        return min(v_max, 100.0)  # Clamp a 100 m/s (~360 kph) per sicurezza
-
-    v_apex_sq = (mu_eff * mass_kg * g_eff) / denominator
+    v_apex_sq = mu_eff * constants.G * radius_m
 
     if v_apex_sq < 0:
         return 0.0

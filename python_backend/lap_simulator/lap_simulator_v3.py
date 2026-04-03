@@ -225,7 +225,7 @@ class LapSimulatorV3:
 
             if self.debug:
                 logger.info(
-                    f"Section {section.id}: dt={result.dt_s:.3f}s, "
+                    f"Section {section.section_id}: dt={result.dt_s:.3f}s, "
                     f"v_exit={result.v_exit_kph:.1f}kph"
                 )
 
