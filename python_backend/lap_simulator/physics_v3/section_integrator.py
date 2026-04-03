@@ -126,12 +126,12 @@ def integrate_section_hd(
                 radius_m=radius_m,
                 is_cornering=is_cornering,
             )
-            # Scale by throttle with strong damping to match real driver behavior
-            # Throttle percentages from telemetry represent driver inputs on curved road,
-            # not full power utilization. Apply non-linear damping: 0.45-1.0 range with
-            # heavy bias toward low throttle regions where turns spend most time.
+            # Scale by throttle with moderate damping
+            # Pure linear scaling (a * throttle%) was too aggressive for turns.
+            # Use slightly damped response: throttle factor ranges 0.70-1.0 instead of 0.0-1.0
+            # This allows turns to build speed while preventing unrealistic power delivery.
             throttle_norm = net_regime / 100.0  # 0.0 to 1.0
-            throttle_factor = 0.45 + 0.55 * (throttle_norm ** 0.5)  # square root damping
+            throttle_factor = 0.70 + 0.30 * throttle_norm  # Linear 0.70-1.0 range
             a_net *= throttle_factor
         else:
             # Frenata — calcola dal coefficiente d'attrito freni (temperatura-dipendente)
@@ -164,12 +164,23 @@ def integrate_section_hd(
         v_new_sq = v_current ** 2 + 2 * a_net * dist_step
         v_new = math.sqrt(max(0, v_new_sq))
 
-        # Clamp to v_ref with 7% margin to enforce sector-level accuracy
-        # v_ref comes from real telemetry. Tighter margin required to keep turns
-        # from exiting too fast and cascading into slow straights.
+        # Speed-dependent v_ref margin to balance low-speed momentum vs high-speed accuracy
+        # Low speeds (0-100 kph): allow 15% margin to build momentum without constraint
+        # Mid speeds (100-250 kph): taper to 5% margin for sector accuracy
+        # High speeds (250+ kph): strict 3% margin to prevent overspeed
         if wp_current.v_ref_kph is not None:
             v_ref_ms = wp_current.v_ref_kph / 3.6
-            v_max_margin = v_ref_ms * 1.07  # 7% margin for sector accuracy
+            v_kph = v_current * 3.6
+
+            if v_kph < 100:
+                margin = 1.15  # 15% at low speed
+            elif v_kph < 250:
+                # Linear taper from 15% to 5%
+                margin = 1.15 - (v_kph - 100) * (0.10 / 150.0)  # decreases by 10% over 150 kph
+            else:
+                margin = 1.03  # 3% at high speed
+
+            v_max_margin = v_ref_ms * margin
             v_new = min(v_new, v_max_margin)
 
         # ====================================================================
