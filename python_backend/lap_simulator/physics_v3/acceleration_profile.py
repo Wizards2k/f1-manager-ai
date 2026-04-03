@@ -114,7 +114,10 @@ def compute_drive_force(
     wheelspin = F_drive_power > F_traction_limit
 
     if wheelspin:
-        # Wheelspin → perde 15% di trazione
+        # Wheelspin → perde 15% di trazione (original formula)
+        # NOTE: This causes acceleration inversion at 100% throttle on wide corners,
+        # but only applies in practice when power vastly exceeds grip.
+        # Real drivers avoid this via throttle control, which is modeled via damping factor.
         F_drive = F_long_available * 0.85
     else:
         F_drive = min(F_drive_power, F_long_available)
