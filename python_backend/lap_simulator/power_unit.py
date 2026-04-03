@@ -33,8 +33,8 @@ PACE_FACTOR_MAX = 1.12
 # Constants
 # ---------------------------------------------------------------------------
 
-ICE_BASE_POWER_KW = 750.0          # F1 2025 ICE ~750kW (1000hp hybrid unit)
-ICE_MAX_POWER_KW = 900.0           # cap after boosts
+ICE_BASE_POWER_KW = 950.0          # F1 2025 ICE ~950kW (calibrated for 2025 realistic)
+ICE_MAX_POWER_KW = 1100.0          # cap after boosts and ERS
 ERS_MAX_ENERGY_MJ = 4.0            # max battery capacity
 ERS_DEPLOY_LIMIT_MJ_PER_LAP = 4.0
 ERS_RECOVERY_LIMIT_MJ_PER_LAP = 2.0

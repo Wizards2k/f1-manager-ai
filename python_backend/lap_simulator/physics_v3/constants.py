@@ -28,10 +28,10 @@ FUEL_DENSITY_KG_L = 0.775           # kg/L benzina Formula 1 (premium fuel)
 # Power Unit — Potenza e Efficienza
 # ============================================================================
 
-ICE_PEAK_POWER_KW = 850.0           # kW motore termico picco (turbo a regime) — CALIB: +100kW 2025
-ICE_BASE_POWER_KW = 850.0           # kW power unit a regime stabile
-ERS_PEAK_POWER_KW = 200.0           # kW MGU-K 2025 (picco discharge) — CALIB: +40kW realistic
-PU_TOTAL_PEAK_KW = 1050.0           # kW ICE + ERS qualifying (1041 hp)
+ICE_PEAK_POWER_KW = 950.0           # kW motore termico picco (turbo a regime) — CALIB: +200kW calibration
+ICE_BASE_POWER_KW = 950.0           # kW power unit a regime stabile
+ERS_PEAK_POWER_KW = 220.0           # kW MGU-K 2025 (picco discharge) — CALIB: +60kW total deploy
+PU_TOTAL_PEAK_KW = 1170.0           # kW ICE + ERS qualifying (1170 kW = 1558 hp)
 DRIVETRAIN_EFFICIENCY = 0.895       # perdite meccaniche (trasmissione, differenziale, semiassi)
 ROLLING_RESISTANCE_COEFF = 0.011    # Crr pneumatici Pirelli F1 (valido su asfalto)
 
@@ -45,14 +45,14 @@ CLA_MAX = 4.80                      # Monaco high-DF setup
 CLA_NEUTRAL = 3.20                  # Setup medio
 
 # Drag coefficient area [m²] — include telaio + aero
-CDA_BASE_STRUCT = 0.50              # m² baseline telaio + ruote (non aerodinamico) — CALIB: -0.05 for 2025 aero
-CDA_MIN = 0.80                      # Monza (telaio + minimal aero drag) — CALIB: -0.05
-CDA_MAX = 1.50                      # Monaco (telaio + max aero drag) — CALIB: -0.10
-CDA_NEUTRAL = 1.00                  # Setup medio — CALIB: -0.10
+CDA_BASE_STRUCT = 0.40              # m² baseline telaio + ruote (non aerodinamico) — CALIB: -0.15 (structural only)
+CDA_MIN = 0.65                      # Monza (telaio + minimal aero drag) — CALIB: -0.20
+CDA_MAX = 1.20                      # Monaco (telaio + max aero drag) — CALIB: -0.40
+CDA_NEUTRAL = 0.80                  # Setup medio — CALIB: -0.30
 
 # Sensitivity (aero_points → fisico) — da spec Section 3
 CLA_SENSITIVITY = 0.020             # m²/punto aero  (baseline 160 pt = 3.2 m²)
-CDA_SENSITIVITY = 0.012             # m²/punto aero — CALIB: -0.003 for aerodynamic improvement
+CDA_SENSITIVITY = 0.008             # m²/punto aero — CALIB: -0.007 (much lower aero contribution)
 
 # DRS (Drag Reduction System)
 DRS_DRAG_REDUCTION_FACTOR = 0.175   # -17.5% CDA quando DRS aperto (rear flap opened)
@@ -62,14 +62,14 @@ DRS_DRAG_REDUCTION_FACTOR = 0.175   # -17.5% CDA quando DRS aperto (rear flap op
 # ============================================================================
 
 MU_BASE = {
-    "C1": 1.52,
-    "C2": 1.58,
-    "C3": 1.65,
-    "C4": 1.72,
-    "C5": 1.80,
-    "C6": 1.85,
-    "INTERMEDIATE": 1.10,
-    "WET": 0.80,
+    "C1": 2.10,  # C1 duro — CALIB: +0.58
+    "C2": 2.18,  # C2
+    "C3": 2.27,  # C3 universale — CALIB: +0.62 (baseline)
+    "C4": 2.36,  # C4 soft
+    "C5": 2.45,  # C5 morbido
+    "C6": 2.52,  # C6 ultrasoft — CALIB: +0.67
+    "INTERMEDIATE": 1.50,  # INT umido
+    "WET": 1.10,  # WET bagnato
 }
 
 # Efficienza in curva — Traction circle (Kamm)
@@ -150,7 +150,7 @@ TYRE_TEMP_HOT_THRESHOLD_C = 130.0   # sopra, penalty aumenta per surriscaldament
 # ============================================================================
 
 # 50Hz integration (dt = 0.02s) per sezioni con look-ahead
-INTEGRATION_DT_HZ = 50              # frequenza integrazione cinematica
+INTEGRATION_DT_HZ = 100             # frequenza integrazione cinematica — CALIB: 50 → 100 Hz (higher fidelity)
 INTEGRATION_DT_S = 1.0 / INTEGRATION_DT_HZ
 
 # V minima per sicurezza numerica (evita divisione per zero)
