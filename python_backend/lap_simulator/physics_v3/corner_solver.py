@@ -88,7 +88,10 @@ def solve_corner_apex_speed(
     # ========================================================================
     # Risolvi quadratica: A*w² + B*w + C = 0 dove w = v²
     # ========================================================================
-    # Formula semplificata (ignorando banking per ora):
+    # Formula con downforce:
+    #   v²/R = μ * (g + 0.5*ρ*v²*CLA/m)
+    #
+    # Riarrangiato:
     #   v_apex² = (μ * m * g) / (m/R - 0.5*ρ*CLA*μ)
     #
     # Ensure denominatore > 0 per soluzione reale
@@ -96,16 +99,19 @@ def solve_corner_apex_speed(
     rho = env_rho
     cla = aero.CLA
 
-    # Correct formula: v = sqrt(mu * g * R)
-    # Centripetal acceleration = v²/R = mu * g
-    # Therefore: v = sqrt(mu * g * R)
+    # Implementa la formula corretta con downforce
+    # Denominatore: m/R - 0.5*ρ*CLA*μ
+    A = mass_kg / radius_m - 0.5 * rho * cla * mu_eff
 
-    v_apex_sq = mu_eff * constants.G * radius_m
-
-    if v_apex_sq < 0:
-        return 0.0
-
-    v_apex = math.sqrt(v_apex_sq)
+    if A > 0:
+        # Numeratore: μ * m * g
+        C = mu_eff * mass_kg * constants.G
+        v_apex_sq = C / A
+        v_apex = math.sqrt(max(0, v_apex_sq))
+    else:
+        # Fallback: formula semplificata senza downforce
+        v_apex_sq = mu_eff * constants.G * radius_m
+        v_apex = math.sqrt(max(0, v_apex_sq))
 
     # ========================================================================
     # Clamp a range fisico

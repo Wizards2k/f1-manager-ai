@@ -32,7 +32,7 @@ ICE_PEAK_POWER_KW = 950.0           # kW motore termico picco (turbo a regime) �
 ICE_BASE_POWER_KW = 950.0           # kW power unit a regime stabile
 ERS_PEAK_POWER_KW = 220.0           # kW MGU-K 2025 (picco discharge) — CALIB: +60kW total deploy
 PU_TOTAL_PEAK_KW = 1170.0           # kW ICE + ERS qualifying (1170 kW = 1558 hp)
-DRIVETRAIN_EFFICIENCY = 0.895       # perdite meccaniche (trasmissione, differenziale, semiassi)
+DRIVETRAIN_EFFICIENCY = 0.85        # perdite meccaniche (trasmissione, differenziale, semiassi) — Increased to 15% losses for realistic acceleration
 ROLLING_RESISTANCE_COEFF = 0.011    # Crr pneumatici Pirelli F1 (valido su asfalto)
 
 # ============================================================================

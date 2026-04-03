@@ -31,6 +31,7 @@ def compute_drive_force(
     pu_state: PUState,
     radius_m: float = 0.0,
     is_cornering: bool = False,
+    env_rho: float = constants.RHO_SEA_LEVEL,
 ) -> Tuple[float, float, bool]:
     """
     Calcola la forza di trazione disponibile considerando il cerchio di trazione.
@@ -67,9 +68,11 @@ def compute_drive_force(
     F_grip_max = balance.mu_rear_eff * balance.Fz_rear
 
     # ========================================================================
-    # STEP 2: Forza laterale richiesta (in curva)
+    # STEP 2: Forza laterale richiesta (in curva vera, non corner largo)
     # ========================================================================
-    if is_cornering and radius_m > 0.1:
+    # Apply Kamm circle ONLY for real corners (radius < 200m)
+    # Wide turns (e.g. Parabolica 668m) are essentially straights for traction circle
+    if is_cornering and radius_m > 0.1 and radius_m < 200.0:
         F_lat_required = mass_kg * (v_ms ** 2) / radius_m
         F_lat_required = min(F_lat_required, F_grip_max * 0.95)  # Non può superare grip
     else:
@@ -120,7 +123,7 @@ def compute_drive_force(
     # STEP 6: Forza di resistenza (aero drag + rolling resistance)
     # ========================================================================
     # F_drag = 0.5 * ρ * v² * CDA + Crr * Fz
-    rho = 1.225  # Default air density
+    rho = env_rho  # Air density from environment (or default sea level)
     F_drag_aero = 0.5 * rho * (v_ms ** 2) * aero.CDA
     F_drag_rolling = constants.ROLLING_RESISTANCE_COEFF * balance.Fz_rear
     F_drag_total = F_drag_aero + F_drag_rolling
@@ -190,6 +193,7 @@ def estimate_max_acceleration(
     aero: PhysicsAeroParams,
     mass_kg: float,
     pu_state: PUState,
+    env_rho: float = constants.RHO_SEA_LEVEL,
 ) -> float:
     """
     Stima l'accelerazione massima in rettilineo (no traction circle limit).
@@ -212,7 +216,7 @@ def estimate_max_acceleration(
     P_total_w = P_total_kw * 1000.0
 
     # Drag
-    rho = 1.225
+    rho = env_rho  # Air density from environment (or default sea level)
     F_drag = 0.5 * rho * (v_ms ** 2) * aero.CDA + constants.ROLLING_RESISTANCE_COEFF * mass_kg * constants.G
 
     # Force

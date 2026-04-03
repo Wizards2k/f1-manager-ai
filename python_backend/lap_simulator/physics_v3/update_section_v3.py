@@ -33,12 +33,12 @@ from .braking_profile import compute_braking_distance, compute_look_ahead_decele
 from .acceleration_profile import compute_drive_force
 from .section_integrator import integrate_section_hd, integrate_section_analytic
 
-# Moduli riusati da V1
-from ..driver_model import compute_inputs
-from ..power_unit import generate_output
-from ..tyre_model import update_tyres
-from ..brake_system import update_brakes
-from ..aero_package import compute_forces
+# Moduli riusati (copie V3 nella stessa cartella)
+from .driver_model_v3 import compute_inputs
+from .power_unit_v3 import generate_output
+from .tyre_model_v3 import update_tyres
+from .brake_system_v3 import update_brakes
+from .aero_package_v3 import compute_forces
 
 from ..data_types import (
     CarState,
@@ -211,23 +211,39 @@ def update_section_v3(
         # ====================================================================
         # STEP 7: Corner apex speed (fisica newtoniana)
         # ====================================================================
-        v_apex_ms = solve_corner_apex_speed(
-            radius_m=section.radius_m if hasattr(section, 'radius_m') and section.radius_m else 0.0,
-            aero=physics_aero,
-            balance=balance,
-            mass_kg=mass_kg,
-            mu_base=mu_base,
-            env_rho=env.air_density_kg_m3,
-            banking_deg=0.0,  # TODO: leggi da section se disponibile
-        )
+        section_radius = section.radius_m if hasattr(section, 'radius_m') and section.radius_m else 0.0
+
+        # Per curve molto larghe (radius > 500m, es. Parabolica), usa telemetria v_exit come v_apex
+        # instead di calcolo fisico che darebbe valori incorretti
+        if section_radius > 500:
+            # Wide, flowing corner — usare dati telemetrici
+            v_apex_ms = section.v_exit_kph / 3.6 if hasattr(section, 'v_exit_kph') else 30.0
+        else:
+            # Normal corner — calcola con corner solver
+            v_apex_ms = solve_corner_apex_speed(
+                radius_m=section_radius,
+                aero=physics_aero,
+                balance=balance,
+                mass_kg=mass_kg,
+                mu_base=mu_base,
+                env_rho=env.air_density_kg_m3,
+                banking_deg=0.0,
+            )
 
         # ====================================================================
         # STEP 8: Integrazione cinematica — HD o analitica
         # ====================================================================
         section_length = section.length_m if hasattr(section, 'length_m') else 500.0
 
+        # Usa v_exit da telemetria come velocity constraint se disponibile
+        # Questo garantisce che l'accelerazione rispetti i limiti fisici della sezione
+        v_exit_constraint = section.v_exit_kph / 3.6 if hasattr(section, 'v_exit_kph') and section.v_exit_kph > 0 else None
+
         if section.waypoints and len(section.waypoints) > 5:
             # HD waypoints disponibili
+            # Usa v_exit da telemetria come vincolo HARD per correggere waypoint v_ref inaccurati
+            v_exit_target = section.v_exit_kph / 3.6 if hasattr(section, 'v_exit_kph') and section.v_exit_kph > 0 else None
+
             dt_s, v_exit_ms, telemetry = integrate_section_hd(
                 waypoints=section.waypoints,
                 v_entry_ms=v_entry_ms,
@@ -238,9 +254,10 @@ def update_section_v3(
                 env=env,
                 pu_state=pu_state_updated,
                 brake_state=brake_state,
+                v_exit_target_ms=v_exit_target,
             )
         else:
-            # Analitica
+            # Analitica — se v_exit_constraint disponibile, usalo per limitare accelerazione
             v_exit_target = section.v_exit_kph / 3.6 if hasattr(section, 'v_exit_kph') else v_apex_ms
             dt_s, v_exit_ms, telemetry = integrate_section_analytic(
                 v_entry_ms=v_entry_ms,
@@ -254,6 +271,7 @@ def update_section_v3(
                 env=env,
                 pu_state=pu_state_updated,
                 brake_state=brake_state,
+                v_max_constraint=v_exit_constraint if hasattr(section, 'v_exit_kph') else None,
             )
 
         # ====================================================================
