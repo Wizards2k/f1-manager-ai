@@ -28,10 +28,10 @@ FUEL_DENSITY_KG_L = 0.775           # kg/L benzina Formula 1 (premium fuel)
 # Power Unit — Potenza e Efficienza
 # ============================================================================
 
-ICE_PEAK_POWER_KW = 750.0           # kW motore termico picco (turbo a regime)
-ICE_BASE_POWER_KW = 750.0           # kW power unit a regime stabile
-ERS_PEAK_POWER_KW = 160.0           # kW MGU-K 2025 (picco discharge)
-PU_TOTAL_PEAK_KW = 910.0            # kW ICE + ERS qualifying (1000 hp)
+ICE_PEAK_POWER_KW = 850.0           # kW motore termico picco (turbo a regime) — CALIB: +100kW 2025
+ICE_BASE_POWER_KW = 850.0           # kW power unit a regime stabile
+ERS_PEAK_POWER_KW = 200.0           # kW MGU-K 2025 (picco discharge) — CALIB: +40kW realistic
+PU_TOTAL_PEAK_KW = 1050.0           # kW ICE + ERS qualifying (1041 hp)
 DRIVETRAIN_EFFICIENCY = 0.895       # perdite meccaniche (trasmissione, differenziale, semiassi)
 ROLLING_RESISTANCE_COEFF = 0.011    # Crr pneumatici Pirelli F1 (valido su asfalto)
 
@@ -45,14 +45,14 @@ CLA_MAX = 4.80                      # Monaco high-DF setup
 CLA_NEUTRAL = 3.20                  # Setup medio
 
 # Drag coefficient area [m²] — include telaio + aero
-CDA_BASE_STRUCT = 0.55              # m² baseline telaio + ruote (non aerodinamico)
-CDA_MIN = 0.85                      # Monza (telaio + minimal aero drag)
-CDA_MAX = 1.60                      # Monaco (telaio + max aero drag)
-CDA_NEUTRAL = 1.10                  # Setup medio
+CDA_BASE_STRUCT = 0.50              # m² baseline telaio + ruote (non aerodinamico) — CALIB: -0.05 for 2025 aero
+CDA_MIN = 0.80                      # Monza (telaio + minimal aero drag) — CALIB: -0.05
+CDA_MAX = 1.50                      # Monaco (telaio + max aero drag) — CALIB: -0.10
+CDA_NEUTRAL = 1.00                  # Setup medio — CALIB: -0.10
 
 # Sensitivity (aero_points → fisico) — da spec Section 3
 CLA_SENSITIVITY = 0.020             # m²/punto aero  (baseline 160 pt = 3.2 m²)
-CDA_SENSITIVITY = 0.015             # m²/punto aero
+CDA_SENSITIVITY = 0.012             # m²/punto aero — CALIB: -0.003 for aerodynamic improvement
 
 # DRS (Drag Reduction System)
 DRS_DRAG_REDUCTION_FACTOR = 0.175   # -17.5% CDA quando DRS aperto (rear flap opened)
