@@ -106,7 +106,7 @@ def update_section_v3(
         # ====================================================================
         # STEP 1: Input — velocità entry, massa con fuel
         # ====================================================================
-        v_entry_ms = car_state.v_current_kph / 3.6 if car_state.v_current_kph > 0 else 1.0
+        v_entry_ms = car_state.v_current_ms if car_state.v_current_ms > 0 else 1.0
         mass_kg = constants.MASS_DRY_KG + car_state.pu.fuel_kg
 
         # ====================================================================

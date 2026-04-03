@@ -213,7 +213,7 @@ def test_save_load_roundtrip_qualifying_state(tmp_path, monkeypatch):
 
     weekend = WeekendOrchestrator().start(
         circuit_id="test-circuit",
-        session_type=WeekendSessionType.QUALIFYING,
+        session_type=WeekendSessionType.Q1,
         metadata={"round": "Spa"},
     )
     weekend.start_qualifying(
@@ -263,7 +263,8 @@ def test_save_load_roundtrip_qualifying_state(tmp_path, monkeypatch):
     with save_path.open("r", encoding="utf-8") as handle:
         payload = json.load(handle)
 
-    assert payload["metadata"]["weekend_session_type"] == WeekendSessionType.QUALIFYING.value
+    assert payload["metadata"]["weekend_session_type"] == WeekendSessionType.Q1.value
+    assert payload["weekend_state"]["current_session_type"] == WeekendSessionType.Q1.value
     assert payload["weekend_state"]["qualifying_state"] is not None
     assert payload["weekend_state"]["qualifying_state"]["participants"]["7"]["best_lap_s"] == pytest.approx(77.456)
     assert payload["weekend_state"]["qualifying_state"]["participants"]["7"]["best_lap_tyre_set_id"] == "Q1-01"
@@ -276,7 +277,7 @@ def test_save_load_roundtrip_qualifying_state(tmp_path, monkeypatch):
 
     restored_weekend = gl.get_weekend_orchestrator()
     assert restored_weekend is not None
-    assert restored_weekend.current_session_type == WeekendSessionType.QUALIFYING.value
+    assert restored_weekend.current_session_type == WeekendSessionType.Q1.value
     assert restored_weekend.qualifying_state is not None
     assert restored_weekend.qualifying_state.participants["7"].best_lap_s == pytest.approx(77.456)
     assert restored_weekend.qualifying_state.participants["7"].best_lap_tyre_set_id == "Q1-01"
@@ -418,7 +419,7 @@ def test_save_load_roundtrip_qualifying_to_race_transition(tmp_path, monkeypatch
 
     weekend = WeekendOrchestrator().start(
         circuit_id="test-circuit",
-        session_type=WeekendSessionType.QUALIFYING,
+        session_type=WeekendSessionType.Q1,
         metadata={"round": "Spa"},
     )
     weekend.start_qualifying(

@@ -498,7 +498,7 @@
 
                 <h3 style="margin: 25px 0 15px; color: #e94560;">📊 Classifica</h3>
                 <table class="classification-table">
-                    <thead>
+                    <thead id="classification-head">
                         <tr>
                             <th>Pos</th>
                             <th>Pilota</th>
@@ -671,34 +671,77 @@
             }
 
             // Classification
+            const sessionType = data.session_type;
+            const isRace = sessionType === 'RACE';
             const classification = data.summary?.classification || [];
+
+            // Intestazione colonne dinamica
+            const thead = document.getElementById('classification-head');
+            if (isRace) {
+                thead.innerHTML = `<tr>
+                    <th>Pos</th><th>Pilota</th><th>Team</th>
+                    <th>Tempo Totale</th><th>Gap</th><th>Distacco</th>
+                    <th>Giri</th><th>Pit</th><th>Stato</th>
+                </tr>`;
+            } else {
+                thead.innerHTML = `<tr>
+                    <th>Pos</th><th>Pilota</th><th>Team</th>
+                    <th>Miglior Giro</th><th>Giri</th>
+                </tr>`;
+            }
+
             const tbody = document.getElementById('classification-body');
             tbody.innerHTML = '';
 
             classification.forEach((driver, index) => {
+                const pos = driver.position || index + 1;
+                const carId = driver.car_id || driver.car_number || driver.driver_number;
+                const driverName = driver.driver_name || `#${carId}`;
+                const teamName = driver.team_name || '';
+                const isRetired = driver.status === 'retired';
+
+                let cells = '';
+                if (isRace) {
+                    const totalTime = driver.total_time_s > 0 ? formatLapTime(driver.total_time_s) : '--';
+                    const gap = pos === 1 ? 'Leader'
+                        : driver.gap_to_leader_laps > 0 ? `+${driver.gap_to_leader_laps} giro/i`
+                        : driver.gap_to_leader_s != null ? `+${driver.gap_to_leader_s.toFixed(3)}s`
+                        : '--';
+                    const interval = pos === 1 ? '--'
+                        : driver.interval_to_ahead_s != null ? `+${driver.interval_to_ahead_s.toFixed(3)}s`
+                        : '--';
+                    const statusLabel = isRetired
+                        ? `<span style="color:#ff6b6b">RIT (${driver.retirement_reason || ''})</span>`
+                        : driver.status || '';
+                    cells = `
+                        <td style="font-family:monospace">${totalTime}</td>
+                        <td style="color:${pos===1?'#ffd700':'#ccc'}">${gap}</td>
+                        <td style="color:#aaa">${interval}</td>
+                        <td>${driver.laps_completed ?? '-'}</td>
+                        <td>${driver.pit_stops ?? 0}</td>
+                        <td>${statusLabel}</td>`;
+                } else {
+                    const bestLap = driver.best_lap_s || driver.best_lap_time;
+                    cells = `
+                        <td style="font-weight:bold;color:#4caf50">${bestLap ? formatLapTime(bestLap) : '--:--.---'}</td>
+                        <td>${driver.laps_completed ?? driver.total_laps ?? '-'}</td>`;
+                }
+
                 const row = document.createElement('tr');
+                if (isRetired) row.style.opacity = '0.55';
                 row.innerHTML = `
-                    <td class="position">${driver.position || index + 1}</td>
+                    <td class="position">${pos}</td>
                     <td>
                         <div class="driver-info">
-                            <div class="driver-number">${driver.car_number || driver.driver_number}</div>
+                            <div class="driver-number">${carId}</div>
                             <div>
-                                <div style="font-weight: 600;">${driver.driver_name || `Driver #${driver.car_number || driver.driver_number}`}</div>
-                                <div style="font-size: 0.85rem; color: #a0a0a0;">${driver.team_name || 'Unknown Team'}</div>
+                                <div style="font-weight:600">${driverName}</div>
+                                <div style="font-size:0.85rem;color:#a0a0a0">${teamName}</div>
                             </div>
                         </div>
                     </td>
-                    <td>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <div class="team-color" style="background: ${driver.team_color || '#888'};"></div>
-                            ${driver.team_name || ''}
-                        </div>
-                    </td>
-                    <td style="font-weight: bold; color: #4caf50;">
-                        ${driver.best_lap_time ? formatLapTime(driver.best_lap_time) : '--:--.---'}
-                    </td>
-                    <td>${driver.laps_completed || driver.total_laps || '-'}</td>
-                `;
+                    <td>${teamName}</td>
+                    ${cells}`;
                 tbody.appendChild(row);
             });
 

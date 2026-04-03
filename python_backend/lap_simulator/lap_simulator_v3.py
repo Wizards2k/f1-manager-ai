@@ -181,7 +181,7 @@ class LapSimulatorV3:
         car_state = CarState(
             car_id=entry.car_id,
             team_code="TST",
-            v_current_kph=0.0,
+            v_current_ms=0.0,  # m/s, not kph
         )
 
         # Loop sezioni
@@ -218,7 +218,7 @@ class LapSimulatorV3:
             v_min_kph = min(v_min_kph, result.v_exit_kph)
 
             # Update car state per sezione successiva
-            car_state.v_current_kph = result.v_exit_kph
+            car_state.v_current_ms = result.v_exit_kph / 3.6  # Convert kph to m/s
 
             # Track sector time (semplificato: ogni 3-4 sezioni = 1 settore)
             # TODO: implementare logica settore corretta da circuito

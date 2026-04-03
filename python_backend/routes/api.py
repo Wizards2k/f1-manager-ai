@@ -1337,6 +1337,92 @@ def register_routes(app):
         except Exception as e:
             return jsonify({'error': f'Failed to get transition state: {str(e)}'}), 500
 
+    @app.route('/api/weekend/qualifying/grid')
+    def get_qualifying_grid():
+        """
+        Restituisce la griglia finale di qualifica.
+
+        Returns:
+            {
+                "final_grid": [{"position": int, "car_id": str, "driver_name": str, ...}],
+                "status": str
+            }
+        """
+        try:
+            from utils.game_logic import get_weekend_orchestrator
+            orchestrator = get_weekend_orchestrator()
+            if not orchestrator:
+                return jsonify({'error': 'Weekend orchestrator not available'}), 404
+            if not orchestrator.qualifying_state:
+                return jsonify({'error': 'No qualifying session available'}), 404
+            return jsonify({
+                'final_grid': list(orchestrator.qualifying_state.final_grid or []),
+                'status': orchestrator.qualifying_state.status,
+            })
+        except Exception as e:
+            return jsonify({'error': f'Failed to get qualifying grid: {str(e)}'}), 500
+
+    @app.route('/api/weekend/race/status')
+    def get_race_status():
+        """
+        Restituisce lo stato corrente della sessione di gara.
+
+        Returns:
+            {
+                "status": str,
+                "running_order": [...],
+                "classification": [...],
+                "is_complete": bool
+            }
+        """
+        try:
+            from utils.game_logic import get_weekend_orchestrator
+            orchestrator = get_weekend_orchestrator()
+            if not orchestrator:
+                return jsonify({'error': 'Weekend orchestrator not available'}), 404
+            if not orchestrator.race_state:
+                return jsonify({'error': 'No race session available'}), 404
+            rs = orchestrator.race_state
+            return jsonify({
+                'status': rs.status,
+                'running_order': list(rs.running_order),
+                'classification': list(rs.classification),
+                'is_complete': rs.is_complete,
+                'leader_car_id': rs.leader_car_id,
+            })
+        except Exception as e:
+            return jsonify({'error': f'Failed to get race status: {str(e)}'}), 500
+
+    @app.route('/api/weekend/reset', methods=['POST'])
+    def reset_weekend():
+        """
+        Resetta l'intero weekend ricominciando da FP1.
+
+        Body JSON opzionale:
+            { "circuit_id": str, "session_type": str }
+
+        Returns:
+            { "success": bool, "session_type": str }
+        """
+        try:
+            from utils.game_logic import get_weekend_orchestrator, set_weekend_orchestrator
+            from utils.weekend_orchestrator import WeekendOrchestrator
+            data = request.get_json(silent=True) or {}
+            circuit_id = data.get('circuit_id')
+            session_type = data.get('session_type', 'FP1')
+
+            # Crea un nuovo orchestrator pulito
+            orchestrator = WeekendOrchestrator()
+            orchestrator.start(circuit_id=circuit_id, session_type=session_type)
+            set_weekend_orchestrator(orchestrator)
+
+            app.logger.info(f"🔄 Weekend reset: circuit={circuit_id}, session={session_type}")
+            return jsonify({'success': True, 'session_type': session_type})
+        except Exception as e:
+            import traceback
+            app.logger.error("WEEKEND RESET ERROR: %s", traceback.format_exc())
+            return jsonify({'error': f'Failed to reset weekend: {str(e)}'}), 500
+
     @app.route('/session-transition')
     def session_transition_page():
         """Pagina UI per la transizione tra sessioni con risultati."""

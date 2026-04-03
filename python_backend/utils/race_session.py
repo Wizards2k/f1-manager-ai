@@ -207,11 +207,14 @@ class RaceSessionState:
                 "team_name": str(self._get_field(participant, "team_name", "") or ""),
                 "is_player": bool(self._get_field(participant, "is_player", False)),
             }
+            already_in_grid = car_id in grid_lookup
             grid_row = dict(grid_lookup.get(car_id, {}))
             grid_row.update(participant_row)
             if "position" not in grid_row:
                 grid_row["position"] = index
-            ordered_grid.append(grid_row)
+            grid_lookup[car_id] = grid_row
+            if not already_in_grid:
+                ordered_grid.append(grid_row)
 
             state = RaceDriverState(
                 car_id=car_id,

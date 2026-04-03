@@ -89,12 +89,20 @@ def map_aero_setup(
     # ========================================================================
     # Questo chiama il compute_forces di aero_package che produce df_total,
     # drag_total in unità "aero_points" (scala 0-70).
+    #
+    # Per il test, se car_state è None, usiamo un dummy state con damage=0
+
+    from ..data_types import CarState, DamageState
+
+    # Dummy car state per compute_forces se necessario
+    car_state_for_compute = CarState()
+    car_state_for_compute.damage = DamageState()
 
     aero_forces: AeroForces = compute_forces(
         aero=aero_setup,
         section=None,  # v3/aero_mapper non ha sezione specifica
         env=env,
-        car_state=None,
+        car_state=car_state_for_compute,
         config=None,
         v_kph=v_estimate_kph,
         airflow_penalty=0.0,

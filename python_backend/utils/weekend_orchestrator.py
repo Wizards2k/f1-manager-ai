@@ -415,11 +415,15 @@ class WeekendOrchestrator:
     def can_advance_to_next_session(self) -> bool:
         """
         Verifica se la sessione corrente può avanzare alla prossima.
-        
+
         Returns:
             True se la state machine permette l'avanzamento
         """
         return self.transition_machine.can_advance
+
+    def can_advance_transition(self) -> bool:
+        """Alias di can_advance_to_next_session per compatibilità con le route API."""
+        return self.can_advance_to_next_session()
 
     def persist_session_results(self, summary: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -433,12 +437,175 @@ class WeekendOrchestrator:
         self.transition_machine.mark_results_persisted()
         self._touch()
 
+    # ── Qualifying delegation ──
+
+    def get_qualifying_summary(self) -> Optional[Dict[str, Any]]:
+        """Restituisce il summary della sessione di qualifica, o None se non disponibile."""
+        if self.qualifying_state is None:
+            return None
+        return self.qualifying_state.summary()
+
+    def record_qualifying_lap(
+        self,
+        car_id: Any,
+        lap_time_s: float,
+        lap_number: int,
+        phase: Optional[Any] = None,
+        timestamp_s: Optional[float] = None,
+        sector_times: Optional[Dict[str, float]] = None,
+        is_competitive: bool = True,
+        tyre_set_id: Optional[str] = None,
+        tyre_compound: Optional[str] = None,
+        tyre_condition_pct: Optional[float] = None,
+        tyre_is_q3_reserve: bool = False,
+    ) -> Any:
+        """Registra un giro di qualifica delegando a QualifyingSessionState."""
+        if self.qualifying_state is None:
+            return None
+        return self.qualifying_state.record_lap(
+            car_id=car_id,
+            lap_time_s=lap_time_s,
+            lap_number=lap_number,
+            phase=phase,
+            timestamp_s=timestamp_s,
+            sector_times=sector_times,
+            is_competitive=is_competitive,
+            tyre_set_id=tyre_set_id,
+            tyre_compound=tyre_compound,
+            tyre_condition_pct=tyre_condition_pct,
+            tyre_is_q3_reserve=tyre_is_q3_reserve,
+        )
+
+    def finalize_qualifying(self, finished_at_s: Optional[float] = None) -> List[Dict[str, Any]]:
+        """Finalizza la sessione di qualifica e costruisce la griglia finale."""
+        if self.qualifying_state is None:
+            return []
+        return self.qualifying_state.finalize_session(finished_at_s=finished_at_s)
+
+    # ── Race delegation ──
+
+    def start_race(
+        self,
+        participants: List[Any],
+        metadata: Optional[Dict[str, Any]] = None,
+        starting_grid: Optional[List[Dict[str, Any]]] = None,
+        session_elapsed_s: float = 0.0,
+    ) -> "WeekendOrchestrator":
+        """Inizializza e avvia la RaceSessionState con la griglia di partenza."""
+        self.race_state = RaceSessionState()
+        self.race_state.start(
+            participants=participants,
+            circuit_id=self.circuit_id,
+            metadata=metadata,
+            starting_grid=starting_grid,
+            started_at_s=session_elapsed_s,
+        )
+        self._touch()
+        return self
+
+    def record_race_lap(
+        self,
+        car_id: Any,
+        lap_time_s: float,
+        lap_number: int,
+        timestamp_s: Optional[float] = None,
+        sector_times: Optional[Dict[str, float]] = None,
+        is_competitive: bool = True,
+        tyre_set_id: Optional[str] = None,
+        tyre_compound: Optional[str] = None,
+        tyre_condition_pct: Optional[float] = None,
+        tyre_is_q3_reserve: bool = False,
+        stint_target_laps: Optional[int] = None,
+        stint_laps_remaining: Optional[int] = None,
+        position: Optional[int] = None,
+    ) -> Any:
+        """Registra un giro di gara delegando a RaceSessionState."""
+        if self.race_state is None:
+            return None
+        return self.race_state.record_lap(
+            car_id=car_id,
+            lap_time_s=lap_time_s,
+            lap_number=lap_number,
+            timestamp_s=timestamp_s,
+            sector_times=sector_times,
+            is_competitive=is_competitive,
+            tyre_set_id=tyre_set_id,
+            tyre_compound=tyre_compound,
+            tyre_condition_pct=tyre_condition_pct,
+            tyre_is_q3_reserve=tyre_is_q3_reserve,
+            stint_target_laps=stint_target_laps,
+            stint_laps_remaining=stint_laps_remaining,
+            position=position,
+        )
+
+    def finalize_race(self, finished_at_s: Optional[float] = None) -> List[Dict[str, Any]]:
+        """Finalizza la sessione di gara e produce la classifica finale."""
+        if self.race_state is None:
+            return []
+        classification = self.race_state.finalize_session(finished_at_s=finished_at_s)
+        self._touch(finished_at_s)
+        return classification
+
+    # ── Utility ──
+
+    def record_session_snapshot(self, session_type: Any, snapshot: Optional[Dict[str, Any]] = None) -> None:
+        """Salva uno snapshot di risultati per una sessione già completata."""
+        session = self.get_session(session_type)
+        if session is not None:
+            session.record_snapshot(snapshot)
+            self._touch()
+
+    def start_qualifying(
+        self,
+        participants: List[Any],
+        metadata: Optional[Dict[str, Any]] = None,
+        session_elapsed_s: float = 0.0,
+    ) -> "WeekendOrchestrator":
+        """Inizializza e avvia la QualifyingSessionState."""
+        from utils.qualifying_session import QualifyingSessionState
+        self.qualifying_state = QualifyingSessionState().start(
+            participants=participants,
+            circuit_id=self.circuit_id,
+            metadata=metadata,
+            started_at_s=session_elapsed_s,
+        )
+        self._touch()
+        return self
+
+    def record_race_pit_stop(
+        self,
+        car_id: Any,
+        timestamp_s: Optional[float] = None,
+        reason: Optional[str] = None,
+        tyre_set_id: Optional[str] = None,
+        tyre_compound: Optional[str] = None,
+        tyre_condition_pct: Optional[float] = None,
+        tyre_is_q3_reserve: bool = False,
+        stint_target_laps: Optional[int] = None,
+        stint_laps_remaining: Optional[int] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Registra un pit stop di gara delegando a RaceSessionState."""
+        if self.race_state is None:
+            return None
+        return self.race_state.record_pit_stop(
+            car_id=car_id,
+            timestamp_s=timestamp_s,
+            reason=reason,
+            tyre_set_id=tyre_set_id,
+            tyre_compound=tyre_compound,
+            tyre_condition_pct=tyre_condition_pct,
+            tyre_is_q3_reserve=tyre_is_q3_reserve,
+            stint_target_laps=stint_target_laps,
+            stint_laps_remaining=stint_laps_remaining,
+        )
+
     def to_dict(self) -> Dict[str, Any]:
         """Serializza l'orchestrator per il salvataggio."""
         return {
             "circuit_id": self.circuit_id,
             "status": self.status,
             "current_index": self.current_index,
+            "current_session_type": self.current_session_type,
             "sessions": [s.to_dict() for s in self.sessions],
             "qualifying_state": self.qualifying_state.to_dict() if self.qualifying_state else None,
             "race_state": self.race_state.to_dict() if self.race_state else None,

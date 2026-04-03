@@ -227,8 +227,10 @@ def race_simulation():
                 for ev in bridge.battle_events
             ]
 
-        # Ottieni stato transizione weekend se disponibile
+        # Ottieni stato weekend se disponibile
         weekend_transition = None
+        weekend_session_type = None
+        race_running_order = None
         try:
             from utils.game_logic import get_weekend_orchestrator
             orchestrator = get_weekend_orchestrator()
@@ -238,8 +240,10 @@ def race_simulation():
                     "metrics": orchestrator.get_transition_metrics(),
                     "can_advance": orchestrator.can_advance_to_next_session(),
                 }
+                weekend_session_type = orchestrator.current_session_type
+                if orchestrator.race_state is not None and orchestrator.race_state.status == "active":
+                    race_running_order = list(orchestrator.race_state.running_order)
         except Exception:
-            # Fallback silenzioso se l'orchestrator non è disponibile
             pass
 
         socketio.emit('race_update', {
@@ -252,6 +256,8 @@ def race_simulation():
             'session_flag': session_flag,
             'battle_events': battle_events,
             'weekend_transition': weekend_transition,
+            'weekend_session_type': weekend_session_type,
+            'race_running_order': race_running_order,
         })
 
         if bridge and bridge.active:
