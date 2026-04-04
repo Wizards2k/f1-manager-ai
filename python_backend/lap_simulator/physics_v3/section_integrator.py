@@ -47,6 +47,7 @@ def integrate_section_hd(
     pu_state: PUState,
     brake_state: BrakeState,
     v_exit_target_ms: Optional[float] = None,
+    is_corner_section: bool = False,
 ) -> Tuple[float, float, List[Dict[str, Any]]]:
     """
     Integrazione cinematica su waypoints HD (5m passo).
@@ -94,8 +95,11 @@ def integrate_section_hd(
         # Parametri geometrici dal waypoint
         radius_m = wp_current.radius_m if wp_current.radius_m is not None else 0.0
         radius_m = max(0.0, radius_m)
-        # Raggi molto grandi (999999) = rettilineo
-        if radius_m > 5000.0:
+        # Raggi > 500m = praticamente rettilineo dal punto di vista della trazione.
+        # Soglia 500m coerente con compute_drive_force (Kamm circle solo < 500m).
+        # Monaco ha raccordi a 700-5000m classificati come "rettilinei" dal tracciato:
+        # trattarli come curve causerebbe il v_ref cap sull'accelerazione di rettilineo.
+        if radius_m > 500.0:
             radius_m = 0.0
 
         slope_deg = wp_current.slope_deg if wp_current.slope_deg is not None else 0.0
@@ -108,7 +112,18 @@ def integrate_section_hd(
         # anche con piccola dose di gas (trail-braking, bilanciamento curva).
         # La dose di throttle è ignorata quando brake=1 (la fisica usa v_ref target).
         is_braking = brake_flag
-        is_cornering = (0 < radius_m <= 5000.0)
+        # is_cornering controls:
+        #   1. Kamm circle (reduces longitudinal grip in turns)
+        #   2. v_ref cap during acceleration (prevents over-speed at corner exits)
+        # For CORNER sections (SectionKind not Straight/MediumStraight), always treat
+        # as cornering so exit speeds are constrained by v_ref — Monaco HD radii are
+        # unreliable (Turn 2 r=514m is barely above the 500m threshold but IS a corner).
+        # For STRAIGHT sections, never apply cornering logic: straight waypoints with
+        # r=700-5000m are just road curvature, not grip-limited turns.
+        if is_corner_section:
+            is_cornering = True
+        else:
+            is_cornering = (0 < radius_m <= 500.0)
 
         # =================================================================
         # Balance: carico verticale e grip effettivo
@@ -251,7 +266,11 @@ def integrate_section_hd(
         # velocità reale raggiunta dal pilota in queste condizioni.
         if throttle_pct > 0 and not brake_flag and is_cornering:
             if wp_next.v_ref_kph is not None and wp_next.v_ref_kph > 0:
-                v_ref_cap_ms = wp_next.v_ref_kph / 3.6
+                # 5% tolerance: real cars continue accelerating slightly beyond the last
+                # HD waypoint, so the v_ref at section end under-reads the true exit speed.
+                # The tolerance prevents the cap from artificially truncating corner exits
+                # (e.g. Turn 6 last v_ref=97.2 kph, real exit=101 kph, 3.9% above).
+                v_ref_cap_ms = wp_next.v_ref_kph / 3.6 * 1.02
                 v_new = min(v_new, v_ref_cap_ms)
 
         # =================================================================

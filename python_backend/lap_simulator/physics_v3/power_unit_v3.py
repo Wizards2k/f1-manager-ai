@@ -166,6 +166,14 @@ def generate_output(
     deploy_remaining = None
 
     bucket_section_cap_mj = _compute_bucket_section_cap(pu_state, bucket_key)
+
+    # In QUALIFY mode, primary (straight) sections deploy full ERS power limited
+    # only by battery charge. The equal-split bucket cap is designed for RACE mode
+    # strategic deployment; in qualifying, the driver pushes flat-out every section.
+    if pu_state.active_map == EngineMapName.QUALIFY and bucket_key == "primary":
+        qualify_cap_mj = map_params.ers_output_kw * dt_safe / 1000.0
+        bucket_section_cap_mj = min(qualify_cap_mj, pu_state.ers_energy_mj)
+
     bucket_es_deploy_pct = _resolve_bucket_es_deploy_pct(map_budget, bucket_key)
 
     ers_energy_requested_raw_mj = (ers_output_raw * dt_safe) / 1000.0
@@ -193,7 +201,9 @@ def generate_output(
         available_for_deploy = max(pu_state.ers_energy_mj - min_soc_mj, 0.0)
         battery_energy_needed_mj = min(battery_energy_needed_mj, available_for_deploy + 1e-4)
 
-    if deploy_budget is not None:
+    # In QUALIFY mode, deploy is limited only by battery charge.
+    # Lap-budget caps are race strategy tools, not physical limits.
+    if pu_state.active_map != EngineMapName.QUALIFY and deploy_budget is not None:
         deploy_remaining = max(deploy_budget - pu_state.lap_deploy_mj, 0.0)
         if deploy_remaining < battery_energy_needed_mj:
             battery_energy_needed_mj = deploy_remaining
@@ -201,12 +211,17 @@ def generate_output(
                 pu_state.runtime_warnings.append("deploy_limit_hit")
                 pu_state.runtime_warnings.append("bucket_exhausted")
 
-    battery_energy_needed_mj = _apply_bucket_allocation(
-        pu_state,
-        bucket_key,
-        battery_energy_needed_mj,
-        driver_intent,
-    )
+    # In QUALIFY mode, primary sections bypass the bucket accounting — the driver
+    # deploys all available ERS on every straight. Bucket tracking is race-mode only.
+    if pu_state.active_map == EngineMapName.QUALIFY and bucket_key == "primary":
+        battery_energy_needed_mj = min(battery_energy_needed_mj, pu_state.ers_energy_mj)
+    else:
+        battery_energy_needed_mj = _apply_bucket_allocation(
+            pu_state,
+            bucket_key,
+            battery_energy_needed_mj,
+            driver_intent,
+        )
 
     pu_state.last_push_mode = bool(driver_intent.ers_push_mode)
     pu_state.last_defense_mode = bool(driver_intent.ers_defense_mode)
@@ -302,7 +317,9 @@ def generate_output(
         per_section_remaining = max(regen_cap - pu_state.lap_harvest_mj, 0.0)
         if per_section_remaining < ers_recovery_mj:
             ers_recovery_mj = per_section_remaining
-    if harvest_budget is not None:
+    # In QUALIFY mode, regen is limited only by battery capacity and physical max.
+    # The per-lap harvest budget is a race strategy parameter, not a physics limit.
+    if pu_state.active_map != EngineMapName.QUALIFY and harvest_budget is not None:
         harvest_remaining = max(harvest_budget - pu_state.lap_harvest_mj, 0.0)
         if harvest_remaining < ers_recovery_mj:
             ers_recovery_mj = harvest_remaining

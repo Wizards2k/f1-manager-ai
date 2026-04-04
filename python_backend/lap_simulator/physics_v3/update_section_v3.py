@@ -258,6 +258,12 @@ def update_section_v3(
             # Usa v_exit da telemetria come vincolo HARD per correggere waypoint v_ref inaccurati
             v_exit_target = section.v_exit_kph / 3.6 if hasattr(section, 'v_exit_kph') and section.v_exit_kph > 0 else None
 
+            # Corner sections need v_ref cap during acceleration to constrain exit speed.
+            # Straight sections should never apply v_ref cap (HD radii in Monaco are unreliable).
+            from ..data_types import SectionKind
+            _straight_kinds = {SectionKind.STRAIGHT, SectionKind.MEDIUM_STRAIGHT}
+            is_corner_section = getattr(section, 'kind', None) not in _straight_kinds
+
             dt_s, v_exit_ms, telemetry = integrate_section_hd(
                 waypoints=section.waypoints,
                 v_entry_ms=v_entry_ms,
@@ -269,6 +275,7 @@ def update_section_v3(
                 pu_state=pu_state_updated,
                 brake_state=brake_state,
                 v_exit_target_ms=v_exit_target,
+                is_corner_section=is_corner_section,
             )
         else:
             # Analitica — se v_exit_constraint disponibile, usalo per limitare accelerazione
