@@ -1,0 +1,602 @@
+[
+  {
+    "circuit_id": "ae-2009_yas_marina",
+    "status": "OK",
+    "waypoints": 1071,
+    "corners": 284,
+    "straights": 787,
+    "radius_stats": {
+      "min": 24.24669544388652,
+      "max": 996.16,
+      "avg": 298.9793256843654
+    },
+    "tightest_corner": {
+      "radius": 24.24669544388652,
+      "dist_m": 2532.6,
+      "speed_kph": 289.963,
+      "section_kind": "VerySlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 996.16,
+      "dist_m": 855.0,
+      "speed_kph": 274.49,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "at-1969_spielberg",
+    "status": "OK",
+    "waypoints": 885,
+    "corners": 199,
+    "straights": 686,
+    "radius_stats": {
+      "min": 28.71429590197287,
+      "max": 985.623,
+      "avg": 188.60718004137888
+    },
+    "tightest_corner": {
+      "radius": 28.71429590197287,
+      "dist_m": 1260.1,
+      "speed_kph": 304.432,
+      "section_kind": "VerySlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 985.623,
+      "dist_m": 2760.0,
+      "speed_kph": 216.746,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "au-1953_melbourne",
+    "status": "OK",
+    "waypoints": 1070,
+    "corners": 238,
+    "straights": 832,
+    "radius_stats": {
+      "min": 50.36013474115184,
+      "max": 999.998,
+      "avg": 324.06911554975267
+    },
+    "tightest_corner": {
+      "radius": 50.36013474115184,
+      "dist_m": 4498.9,
+      "speed_kph": 253.877,
+      "section_kind": "SlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 999.998,
+      "dist_m": 4735.0,
+      "speed_kph": 192.909,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "az-2016_baku",
+    "status": "OK",
+    "waypoints": 1229,
+    "corners": 296,
+    "straights": 933,
+    "radius_stats": {
+      "min": 27.183146449201494,
+      "max": 964.464,
+      "avg": 98.48619887385122
+    },
+    "tightest_corner": {
+      "radius": 27.183146449201494,
+      "dist_m": 2411.3,
+      "speed_kph": 254.909,
+      "section_kind": "VerySlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 964.464,
+      "dist_m": 4645.0,
+      "speed_kph": 298.0,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "be-1925_spa_francorchamps",
+    "status": "OK",
+    "waypoints": 1417,
+    "corners": 297,
+    "straights": 1120,
+    "radius_stats": {
+      "min": 29.495601615887036,
+      "max": 990.538,
+      "avg": 262.9838782941051
+    },
+    "tightest_corner": {
+      "radius": 29.495601615887036,
+      "dist_m": 6599.2,
+      "speed_kph": 303.293,
+      "section_kind": "VerySlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 990.538,
+      "dist_m": 5160.0,
+      "speed_kph": 261.978,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "bh-2002_sakhir",
+    "status": "OK",
+    "waypoints": 1107,
+    "corners": 291,
+    "straights": 816,
+    "radius_stats": {
+      "min": 23.538801005105228,
+      "max": 997.011,
+      "avg": 140.9250190542223
+    },
+    "tightest_corner": {
+      "radius": 23.538801005105228,
+      "dist_m": 604.2,
+      "speed_kph": 308.262,
+      "section_kind": "VerySlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 997.011,
+      "dist_m": 4140.0,
+      "speed_kph": 167.586,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "br-1940_sao_paulo",
+    "status": "OK",
+    "waypoints": 871,
+    "corners": 246,
+    "straights": 625,
+    "radius_stats": {
+      "min": 37.88546163107268,
+      "max": 984.062,
+      "avg": 159.74892005953808
+    },
+    "tightest_corner": {
+      "radius": 37.88546163107268,
+      "dist_m": 2628.0,
+      "speed_kph": 200.385,
+      "section_kind": "SlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 984.062,
+      "dist_m": 2970.0,
+      "speed_kph": 245.058,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "ca-1978_montreal",
+    "status": "OK",
+    "waypoints": 890,
+    "corners": 213,
+    "straights": 677,
+    "radius_stats": {
+      "min": 22.154474102599593,
+      "max": 987.359,
+      "avg": 198.32846814843757
+    },
+    "tightest_corner": {
+      "radius": 22.154474102599593,
+      "dist_m": 2582.3,
+      "speed_kph": 238.233,
+      "section_kind": "VerySlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 987.359,
+      "dist_m": 1330.0,
+      "speed_kph": 182.463,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "cn-2004_shanghai",
+    "status": "OK",
+    "waypoints": 1109,
+    "corners": 357,
+    "straights": 752,
+    "radius_stats": {
+      "min": 22.154474102599593,
+      "max": 998.844,
+      "avg": 242.07145498482325
+    },
+    "tightest_corner": {
+      "radius": 22.154474102599593,
+      "dist_m": 4624.2,
+      "speed_kph": 315.634,
+      "section_kind": "VerySlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 998.844,
+      "dist_m": 2045.0,
+      "speed_kph": 276.114,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "es-1991_barcelona",
+    "status": "OK",
+    "waypoints": 954,
+    "corners": 309,
+    "straights": 645,
+    "radius_stats": {
+      "min": 60.03469207116279,
+      "max": 999.952,
+      "avg": 341.13594361093624
+    },
+    "tightest_corner": {
+      "radius": 60.03469207116279,
+      "dist_m": 2006.2,
+      "speed_kph": 251.625,
+      "section_kind": "SlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 999.952,
+      "dist_m": 3985.0,
+      "speed_kph": 237.858,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "gb-1948_silverstone",
+    "status": "OK",
+    "waypoints": 1192,
+    "corners": 251,
+    "straights": 941,
+    "radius_stats": {
+      "min": 41.53505073767844,
+      "max": 981.376,
+      "avg": 184.44952883408556
+    },
+    "tightest_corner": {
+      "radius": 41.53505073767844,
+      "dist_m": 965.5,
+      "speed_kph": 150.376,
+      "section_kind": "SlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 981.376,
+      "dist_m": 2225.0,
+      "speed_kph": 153.436,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "hu-1986_budapest",
+    "status": "OK",
+    "waypoints": 913,
+    "corners": 319,
+    "straights": 594,
+    "radius_stats": {
+      "min": 50.36013474115184,
+      "max": 999.513,
+      "avg": 217.79711924909037
+    },
+    "tightest_corner": {
+      "radius": 50.36013474115184,
+      "dist_m": 504.2,
+      "speed_kph": 312.643,
+      "section_kind": "SlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 999.513,
+      "dist_m": 2110.0,
+      "speed_kph": 179.814,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "it-1922_monza",
+    "status": "OK",
+    "waypoints": 1176,
+    "corners": 252,
+    "straights": 924,
+    "radius_stats": {
+      "min": 27.943477513077696,
+      "max": 997.993,
+      "avg": 278.55953772399005
+    },
+    "tightest_corner": {
+      "radius": 27.943477513077696,
+      "dist_m": 784.5,
+      "speed_kph": 345.855,
+      "section_kind": "VerySlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 997.993,
+      "dist_m": 2175.0,
+      "speed_kph": 138.5,
+      "section_kind": "MediumStraight"
+    },
+    "critical_check": {
+      "type": "Parabolica",
+      "expected_min": 350.0,
+      "expected_max": 550.0,
+      "actual": 997.993,
+      "status": "WARNING",
+      "message": "Parabolica troppo stretto: 998.0m (dovrebbe essere 350.0-550.0m)"
+    }
+  },
+  {
+    "circuit_id": "it-1953_imola",
+    "status": "OK",
+    "waypoints": 1007,
+    "corners": 235,
+    "straights": 772,
+    "radius_stats": {
+      "min": 56.71545370265497,
+      "max": 991.068,
+      "avg": 279.187328429336
+    },
+    "tightest_corner": {
+      "radius": 56.71545370265497,
+      "dist_m": 3481.1,
+      "speed_kph": 220.89,
+      "section_kind": "SlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 991.068,
+      "dist_m": 2910.0,
+      "speed_kph": 286.092,
+      "section_kind": "Straight"
+    }
+  },
+  {
+    "circuit_id": "jp-1962_suzuka",
+    "status": "OK",
+    "waypoints": 1185,
+    "corners": 407,
+    "straights": 778,
+    "radius_stats": {
+      "min": 31.08967501877231,
+      "max": 997.569,
+      "avg": 450.6199083856244
+    },
+    "tightest_corner": {
+      "radius": 31.08967501877231,
+      "dist_m": 2801.4,
+      "speed_kph": 256.893,
+      "section_kind": "VerySlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 997.569,
+      "dist_m": 2740.0,
+      "speed_kph": 263.856,
+      "section_kind": "MediumStraight"
+    },
+    "critical_check": {
+      "type": "130R",
+      "expected_min": 750.0,
+      "expected_max": 900.0,
+      "actual": 997.569,
+      "status": "WARNING",
+      "message": "130R troppo stretto: 997.6m (dovrebbe essere 750.0-900.0m)"
+    }
+  },
+  {
+    "circuit_id": "mc-1929_monaco",
+    "status": "OK",
+    "waypoints": 696,
+    "corners": 328,
+    "straights": 368,
+    "radius_stats": {
+      "min": 11.095589870083018,
+      "max": 975.384,
+      "avg": 180.14337991544744
+    },
+    "tightest_corner": {
+      "radius": 11.095589870083018,
+      "dist_m": 1175.9,
+      "speed_kph": 135.343,
+      "section_kind": "VerySlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 975.384,
+      "dist_m": 2990.0,
+      "speed_kph": 123.924,
+      "section_kind": "MediumStraight"
+    },
+    "critical_check": {
+      "type": "Hairpin",
+      "expected_min": 11.0,
+      "expected_max": 18.0,
+      "actual": 11.095589870083018,
+      "status": "OK",
+      "message": "Hairpin corretto: 11.1m"
+    }
+  },
+  {
+    "circuit_id": "mx-1962_mexico_city",
+    "status": "OK",
+    "waypoints": 880,
+    "corners": 284,
+    "straights": 596,
+    "radius_stats": {
+      "min": 24.24669544388652,
+      "max": 968.58,
+      "avg": 131.41137331039633
+    },
+    "tightest_corner": {
+      "radius": 24.24669544388652,
+      "dist_m": 3690.1,
+      "speed_kph": 178.384,
+      "section_kind": "VerySlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 968.58,
+      "dist_m": 2780.0,
+      "speed_kph": 246.263,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "nl-1948_zandvoort",
+    "status": "OK",
+    "waypoints": 884,
+    "corners": 293,
+    "straights": 591,
+    "radius_stats": {
+      "min": 53.490601259317984,
+      "max": 997.911,
+      "avg": 243.93045784433923
+    },
+    "tightest_corner": {
+      "radius": 53.490601259317984,
+      "dist_m": 3002.9,
+      "speed_kph": 289.0,
+      "section_kind": "SlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 997.911,
+      "dist_m": 3510.0,
+      "speed_kph": 213.214,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "qa-2004_lusail",
+    "status": "OK",
+    "waypoints": 1105,
+    "corners": 303,
+    "straights": 802,
+    "radius_stats": {
+      "min": 51.393136255521576,
+      "max": 990.448,
+      "avg": 341.5279831416144
+    },
+    "tightest_corner": {
+      "radius": 51.393136255521576,
+      "dist_m": 2091.8,
+      "speed_kph": 242.501,
+      "section_kind": "SlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 990.448,
+      "dist_m": 3190.0,
+      "speed_kph": 176.846,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "sa-2021_jeddah",
+    "status": "OK",
+    "waypoints": 1247,
+    "corners": 258,
+    "straights": 989,
+    "radius_stats": {
+      "min": 40.60692247349853,
+      "max": 993.632,
+      "avg": 292.89642431159257
+    },
+    "tightest_corner": {
+      "radius": 40.60692247349853,
+      "dist_m": 389.2,
+      "speed_kph": 321.16,
+      "section_kind": "SlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 993.632,
+      "dist_m": 1660.0,
+      "speed_kph": 246.534,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "sg-2008_singapore",
+    "status": "OK",
+    "waypoints": 1022,
+    "corners": 330,
+    "straights": 692,
+    "radius_stats": {
+      "min": 22.154474102599593,
+      "max": 960.386,
+      "avg": 172.098616636813
+    },
+    "tightest_corner": {
+      "radius": 22.154474102599593,
+      "dist_m": 2934.7,
+      "speed_kph": 218.606,
+      "section_kind": "VerySlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 960.386,
+      "dist_m": 2100.0,
+      "speed_kph": 195.014,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "us-2012_austin",
+    "status": "OK",
+    "waypoints": 1127,
+    "corners": 329,
+    "straights": 798,
+    "radius_stats": {
+      "min": 33.55944006074259,
+      "max": 988.88,
+      "avg": 249.01920521581016
+    },
+    "tightest_corner": {
+      "radius": 33.55944006074259,
+      "dist_m": 2450.2,
+      "speed_kph": 239.545,
+      "section_kind": "SlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 988.88,
+      "dist_m": 4035.0,
+      "speed_kph": 147.715,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "us-2022_miami",
+    "status": "OK",
+    "waypoints": 1096,
+    "corners": 289,
+    "straights": 807,
+    "radius_stats": {
+      "min": 24.965077207686793,
+      "max": 998.197,
+      "avg": 258.665462454194
+    },
+    "tightest_corner": {
+      "radius": 24.965077207686793,
+      "dist_m": 4739.0,
+      "speed_kph": 283.003,
+      "section_kind": "VerySlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 998.197,
+      "dist_m": 500.0,
+      "speed_kph": 182.198,
+      "section_kind": "MediumStraight"
+    }
+  },
+  {
+    "circuit_id": "us-2023_las_vegas",
+    "status": "OK",
+    "waypoints": 1252,
+    "corners": 351,
+    "straights": 901,
+    "radius_stats": {
+      "min": 24.965077207686793,
+      "max": 988.774,
+      "avg": 67.15465695809272
+    },
+    "tightest_corner": {
+      "radius": 24.965077207686793,
+      "dist_m": 4946.8,
+      "speed_kph": 301.911,
+      "section_kind": "VerySlowCorner"
+    },
+    "fastest_corner": {
+      "radius": 988.774,
+      "dist_m": 585.0,
+      "speed_kph": 175.395,
+      "section_kind": "MediumStraight"
+    }
+  }
+]

@@ -1,0 +1,122 @@
+[
+  {
+    "circuit_id": "ae-2009_yas_marina",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "at-1969_spielberg",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "au-1953_melbourne",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "az-2016_baku",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "be-1925_spa_francorchamps",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "bh-2002_sakhir",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "br-1940_sao_paulo",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "ca-1978_montreal",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "cn-2004_shanghai",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "es-1991_barcelona",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "gb-1948_silverstone",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "hu-1986_budapest",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "it-1922_monza",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "it-1953_imola",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "jp-1962_suzuka",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "mc-1929_monaco",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "mx-1962_mexico_city",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "nl-1948_zandvoort",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "qa-2004_lusail",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "sa-2021_jeddah",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "sg-2008_singapore",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "us-2012_austin",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "us-2022_miami",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  },
+  {
+    "circuit_id": "us-2023_las_vegas",
+    "status": "MISSING",
+    "error": "File HD non trovato"
+  }
+]

@@ -1,0 +1,194 @@
+"""
+Aerodinamica: Ala Anteriore
+
+Modello fisico completo dell'ala anteriore F1 2025:
+- Coefficiente portanza (CL) vs angolo attacco
+- Coefficiente drag (CD) vs CL
+- Effetto DRS (Drag Reduction System)
+- Sensibilità al ground effect (altezza da suolo)
+- Effetto di interferenza con sidepods
+"""
+
+import numpy as np
+
+
+class FrontWing:
+    """
+    Ala anteriore F1 2025 - Modello Fisico Dettagliato
+    
+    Parametri fisici:
+    - Area frontale (A_ref)
+    - Coefficiente portanza (CL)
+    - Coefficiente drag (CD)
+    - Angolo attacco (AoA)
+    - Effetto DRS
+    - Ground effect
+    """
+    
+    def __init__(self, config=None):
+        """
+        Inizializza ala anteriore con configurazione
+        
+        Args:
+            config: dict con parametri personalizzati
+                - aoa: angolo attacco (gradi)
+                - drs_active: DRS attivo (bool)
+                - ground_effect: altezza da suolo (m)
+        """
+        defaults = {
+            'aoa': 20.0,           # Angolo attacco base (gradi)
+            'drs_active': False,   # DRS disattivato
+            'ground_effect': 0.05, # Altezza da suolo (m)
+            'width': 1.80,         # Larghezza ala (m)
+            'height': 0.15,        # Altezza profilo (m)
+            'span_efficiency': 0.92, # Efficienza spanwise
+        }
+        
+        self.config = {**defaults, **(config or {})}
+        
+        # Area riferimento (larghezza × altezza profilo)
+        self.A_REF = self.config['width'] * self.config['height']
+        
+        # Area riferimento comune per confronto (area frontale auto)
+        self.A_REF_COMMON = 1.60  # m²
+        self.SPAN = self.config['width']
+        self.ASPECT_RATIO = (self.SPAN ** 2) / self.A_REF
+        
+        # Parametri aerodinamici base (senza DRS)
+        self.CL_MAX = 2.80        # Portanza massima (stallo)
+        self.CL_MIN = -0.50       # Portanza negativa (inverted wing)
+        self.CD_MIN = 0.030       # Drag minimo (profili ottimizzati)
+        self.K_FACTOR = 0.055     # Induced drag factor
+        
+        # Parametri DRS
+        self.DRS_CL_BOOST = 0.35  # Incremento portanza con DRS
+        self.DRS_CD_BOOST = 0.020 # Incremento drag con DRS
+        
+        # Sensibilità ground effect
+        self.GROUND_EFFECT_SENSITIVITY = 0.15  # +15% CL per ogni mm sotto ottimale
+        
+        # Interferenza con sidepods (riduzione efficienza)
+        self.SIDEPODS_INTERFERENCE = 0.96  # -4% efficienza
+        
+    def calculate_forces(self, rho, v):
+        """
+        Calcola forze aerodinamiche ala anteriore
+        
+        Args:
+            rho: Densità aria (kg/m³)
+            v: Velocità (m/s)
+            
+        Returns:
+            dict con lift, drag, CL, CD
+        """
+        # Angolo attacco effettivo (DRS modifica AoA)
+        aoa = self.config['aoa']
+        if self.config['drs_active']:
+            aoa -= 3.0  # DRS riduce AoA di 3 gradi
+        
+        # Clamp AoA
+        aoa = np.clip(aoa, 0, 30)
+        
+        # Calcola CL (lineare fino a stallo)
+        # CL = CL_alpha * aoa + CL_ground_effect
+        cl_alpha = 0.12  # Pendenza CL vs aoa (per grado)
+        cl_base = cl_alpha * aoa
+        
+        # Ground effect (se altezza < ottimale)
+        ground_effect_factor = 1.0
+        if self.config['ground_effect'] < 0.07:  # < 70mm
+            deficit = (0.07 - self.config['ground_effect']) * 1000  # mm
+            ground_effect_factor = 1.0 + (deficit * self.GROUND_EFFECT_SENSITIVITY / 10)
+        
+        cl = cl_base * ground_effect_factor * self.SIDEPODS_INTERFERENCE
+        
+        # Clamp CL
+        cl = np.clip(cl, self.CL_MIN, self.CL_MAX)
+        
+        # Calcola CD (drag parassita + indotto)
+        cd = self.CD_MIN + self.K_FACTOR * (cl ** 2)
+        
+        # DRS aumenta sia CL che CD
+        if self.config['drs_active']:
+            cl += self.DRS_CL_BOOST
+            cd += self.DRS_CD_BOOST
+        
+        # Forze
+        q = 0.5 * rho * (v ** 2)  # Pressione dinamica
+        lift = cl * q * self.A_REF
+        drag = cd * q * self.A_REF
+        
+        return {
+            'lift': lift,
+            'drag': drag,
+            'CL': cl,
+            'CD': cd,
+            'L/D': lift / drag if drag > 0 else 0,
+        }
+    
+    def set_aoa(self, angle_deg):
+        """Imposta angolo attacco"""
+        self.config['aoa'] = np.clip(angle_deg, 0, 30)
+    
+    def set_drs(self, active):
+        """Attiva/disattiva DRS"""
+        self.config['drs_active'] = active
+    
+    def set_ground_effect(self, height_m):
+        """Imposta altezza da suolo"""
+        self.config['ground_effect'] = np.clip(height_m, 0.02, 0.15)
+    
+    def get_summary(self):
+        """Riepilogo configurazione"""
+        return {
+            'aoa': self.config['aoa'],
+            'drs': self.config['drs_active'],
+            'ground_effect_mm': self.config['ground_effect'] * 1000,
+            'width_mm': self.config['width'] * 1000,
+            'height_mm': self.config['height'] * 1000,
+        }
+
+
+def create_front_wing_from_setup(setup_config):
+    """
+    Crea ala anteriore da setup UI
+    
+    Args:
+        setup_config: dict da UI (slider values)
+            - front_wing_angle: 0-30 (angolo)
+            - front_wing_drs: bool (DRS)
+            - front_wing_ground_effect: 20-70 (mm)
+    
+    Returns:
+        FrontWing instance
+    """
+    config = {
+        'aoa': setup_config.get('front_wing_angle', 20.0),
+        'drs_active': setup_config.get('front_wing_drs', False),
+        'ground_effect': setup_config.get('front_wing_ground_effect', 50) / 1000,
+    }
+    return FrontWing(config)
+
+
+# Test
+if __name__ == '__main__':
+    fw = FrontWing()
+    
+    # Test conditions
+    rho = 1.225  # Sea level
+    v = 100      # 100 m/s = 360 kph
+    
+    forces = fw.calculate_forces(rho, v)
+    print("Front Wing Forces:")
+    print(f"  CL: {forces['CL']:.3f}")
+    print(f"  CD: {forces['CD']:.3f}")
+    print(f"  Lift: {forces['lift']:.1f} N")
+    print(f"  Drag: {forces['drag']:.1f} N")
+    print(f"  L/D: {forces['L/D']:.2f}")
+    
+    # Test DRS
+    fw.set_drs(True)
+    forces_drs = fw.calculate_forces(rho, v)
+    print("\nWith DRS:")
+    print(f"  CL: {forces_drs['CL']:.3f} (+{forces_drs['CL']-forces['CL']:.3f})")
+    print(f"  CD: {forces_drs['CD']:.3f} (+{forces_drs['CD']-forces['CD']:.3f})")

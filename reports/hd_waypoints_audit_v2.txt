@@ -1,0 +1,167 @@
+================================================================================
+AUDIT HD WAYPOINTS - F1 2025
+================================================================================
+
+📊 RIEPILOGO:
+  Circuiti totali: 24
+  ✅ OK: 24
+  ⚠️  Con avvisi: 2
+
+🚨 CIRCUITI CON PROBLEMI:
+--------------------------------------------------------------------------------
+  it-1922_monza (Monza)
+    Parabolica troppo stretto: 998.0m (dovrebbe essere 350.0-550.0m)
+  jp-1962_suzuka (Suzuka)
+    130R troppo stretto: 997.6m (dovrebbe essere 750.0-900.0m)
+
+📋 DETTAGLIO CIRCUITI:
+--------------------------------------------------------------------------------
+
+✅ ae-2009_yas_marina ()
+    Waypoints: 1071 (curve: 284, rettilinei: 787)
+    Curve: min=24.2m, max=996.2m, avg=299.0m
+    Curva + stretta: 24.2m @ 290.0 kph (VerySlowCorner)
+    Curva + veloce: 996.2m @ 274.5 kph (MediumStraight)
+
+✅ at-1969_spielberg ()
+    Waypoints: 885 (curve: 199, rettilinei: 686)
+    Curve: min=28.7m, max=985.6m, avg=188.6m
+    Curva + stretta: 28.7m @ 304.4 kph (VerySlowCorner)
+    Curva + veloce: 985.6m @ 216.7 kph (MediumStraight)
+
+✅ au-1953_melbourne ()
+    Waypoints: 1070 (curve: 238, rettilinei: 832)
+    Curve: min=50.4m, max=1000.0m, avg=324.1m
+    Curva + stretta: 50.4m @ 253.9 kph (SlowCorner)
+    Curva + veloce: 1000.0m @ 192.9 kph (MediumStraight)
+
+✅ az-2016_baku ()
+    Waypoints: 1229 (curve: 296, rettilinei: 933)
+    Curve: min=27.2m, max=964.5m, avg=98.5m
+    Curva + stretta: 27.2m @ 254.9 kph (VerySlowCorner)
+    Curva + veloce: 964.5m @ 298.0 kph (MediumStraight)
+
+✅ be-1925_spa_francorchamps (Spa)
+    Waypoints: 1417 (curve: 297, rettilinei: 1120)
+    Curve: min=29.5m, max=990.5m, avg=263.0m
+    Curva + stretta: 29.5m @ 303.3 kph (VerySlowCorner)
+    Curva + veloce: 990.5m @ 262.0 kph (MediumStraight)
+
+✅ bh-2002_sakhir ()
+    Waypoints: 1107 (curve: 291, rettilinei: 816)
+    Curve: min=23.5m, max=997.0m, avg=140.9m
+    Curva + stretta: 23.5m @ 308.3 kph (VerySlowCorner)
+    Curva + veloce: 997.0m @ 167.6 kph (MediumStraight)
+
+✅ br-1940_sao_paulo ()
+    Waypoints: 871 (curve: 246, rettilinei: 625)
+    Curve: min=37.9m, max=984.1m, avg=159.7m
+    Curva + stretta: 37.9m @ 200.4 kph (SlowCorner)
+    Curva + veloce: 984.1m @ 245.1 kph (MediumStraight)
+
+✅ ca-1978_montreal ()
+    Waypoints: 890 (curve: 213, rettilinei: 677)
+    Curve: min=22.2m, max=987.4m, avg=198.3m
+    Curva + stretta: 22.2m @ 238.2 kph (VerySlowCorner)
+    Curva + veloce: 987.4m @ 182.5 kph (MediumStraight)
+
+✅ cn-2004_shanghai ()
+    Waypoints: 1109 (curve: 357, rettilinei: 752)
+    Curve: min=22.2m, max=998.8m, avg=242.1m
+    Curva + stretta: 22.2m @ 315.6 kph (VerySlowCorner)
+    Curva + veloce: 998.8m @ 276.1 kph (MediumStraight)
+
+✅ es-1991_barcelona ()
+    Waypoints: 954 (curve: 309, rettilinei: 645)
+    Curve: min=60.0m, max=1000.0m, avg=341.1m
+    Curva + stretta: 60.0m @ 251.6 kph (SlowCorner)
+    Curva + veloce: 1000.0m @ 237.9 kph (MediumStraight)
+
+✅ gb-1948_silverstone (Silverstone)
+    Waypoints: 1192 (curve: 251, rettilinei: 941)
+    Curve: min=41.5m, max=981.4m, avg=184.4m
+    Curva + stretta: 41.5m @ 150.4 kph (SlowCorner)
+    Curva + veloce: 981.4m @ 153.4 kph (MediumStraight)
+
+✅ hu-1986_budapest ()
+    Waypoints: 913 (curve: 319, rettilinei: 594)
+    Curve: min=50.4m, max=999.5m, avg=217.8m
+    Curva + stretta: 50.4m @ 312.6 kph (SlowCorner)
+    Curva + veloce: 999.5m @ 179.8 kph (MediumStraight)
+
+✅ it-1922_monza (Monza)
+    Waypoints: 1176 (curve: 252, rettilinei: 924)
+    Curve: min=27.9m, max=998.0m, avg=278.6m
+    Curva + stretta: 27.9m @ 345.9 kph (VerySlowCorner)
+    Curva + veloce: 998.0m @ 138.5 kph (MediumStraight)
+    ⚠️ Parabolica troppo stretto: 998.0m (dovrebbe essere 350.0-550.0m)
+
+✅ it-1953_imola ()
+    Waypoints: 1007 (curve: 235, rettilinei: 772)
+    Curve: min=56.7m, max=991.1m, avg=279.2m
+    Curva + stretta: 56.7m @ 220.9 kph (SlowCorner)
+    Curva + veloce: 991.1m @ 286.1 kph (Straight)
+
+✅ jp-1962_suzuka (Suzuka)
+    Waypoints: 1185 (curve: 407, rettilinei: 778)
+    Curve: min=31.1m, max=997.6m, avg=450.6m
+    Curva + stretta: 31.1m @ 256.9 kph (VerySlowCorner)
+    Curva + veloce: 997.6m @ 263.9 kph (MediumStraight)
+    ⚠️ 130R troppo stretto: 997.6m (dovrebbe essere 750.0-900.0m)
+
+✅ mc-1929_monaco (Monaco)
+    Waypoints: 696 (curve: 328, rettilinei: 368)
+    Curve: min=11.1m, max=975.4m, avg=180.1m
+    Curva + stretta: 11.1m @ 135.3 kph (VerySlowCorner)
+    Curva + veloce: 975.4m @ 123.9 kph (MediumStraight)
+    ✅ Hairpin corretto: 11.1m
+
+✅ mx-1962_mexico_city ()
+    Waypoints: 880 (curve: 284, rettilinei: 596)
+    Curve: min=24.2m, max=968.6m, avg=131.4m
+    Curva + stretta: 24.2m @ 178.4 kph (VerySlowCorner)
+    Curva + veloce: 968.6m @ 246.3 kph (MediumStraight)
+
+✅ nl-1948_zandvoort ()
+    Waypoints: 884 (curve: 293, rettilinei: 591)
+    Curve: min=53.5m, max=997.9m, avg=243.9m
+    Curva + stretta: 53.5m @ 289.0 kph (SlowCorner)
+    Curva + veloce: 997.9m @ 213.2 kph (MediumStraight)
+
+✅ qa-2004_lusail ()
+    Waypoints: 1105 (curve: 303, rettilinei: 802)
+    Curve: min=51.4m, max=990.4m, avg=341.5m
+    Curva + stretta: 51.4m @ 242.5 kph (SlowCorner)
+    Curva + veloce: 990.4m @ 176.8 kph (MediumStraight)
+
+✅ sa-2021_jeddah (Jeddah)
+    Waypoints: 1247 (curve: 258, rettilinei: 989)
+    Curve: min=40.6m, max=993.6m, avg=292.9m
+    Curva + stretta: 40.6m @ 321.2 kph (SlowCorner)
+    Curva + veloce: 993.6m @ 246.5 kph (MediumStraight)
+
+✅ sg-2008_singapore ()
+    Waypoints: 1022 (curve: 330, rettilinei: 692)
+    Curve: min=22.2m, max=960.4m, avg=172.1m
+    Curva + stretta: 22.2m @ 218.6 kph (VerySlowCorner)
+    Curva + veloce: 960.4m @ 195.0 kph (MediumStraight)
+
+✅ us-2012_austin ()
+    Waypoints: 1127 (curve: 329, rettilinei: 798)
+    Curve: min=33.6m, max=988.9m, avg=249.0m
+    Curva + stretta: 33.6m @ 239.5 kph (SlowCorner)
+    Curva + veloce: 988.9m @ 147.7 kph (MediumStraight)
+
+✅ us-2022_miami ()
+    Waypoints: 1096 (curve: 289, rettilinei: 807)
+    Curve: min=25.0m, max=998.2m, avg=258.7m
+    Curva + stretta: 25.0m @ 283.0 kph (VerySlowCorner)
+    Curva + veloce: 998.2m @ 182.2 kph (MediumStraight)
+
+✅ us-2023_las_vegas ()
+    Waypoints: 1252 (curve: 351, rettilinei: 901)
+    Curve: min=25.0m, max=988.8m, avg=67.2m
+    Curva + stretta: 25.0m @ 301.9 kph (VerySlowCorner)
+    Curva + veloce: 988.8m @ 175.4 kph (MediumStraight)
+
+================================================================================
