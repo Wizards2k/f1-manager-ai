@@ -12,12 +12,78 @@ Fonte: spec physics-engine-v3-spec.md Section 3
 """
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple
 import math
 
 from . import constants
 from ..data_types import AeroSetup, EnvContext, AeroForces
 from ..aero_package import compute_forces
+
+
+def _clamp(v: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, v))
+
+
+def _compute_balance_penalties(
+    aero_balance: float,
+    fw_angle: float = 0.0,      # reserved for future components
+    rw_angle: float = 0.0,      # reserved for future components
+    aero_setup: AeroSetup = None,  # reserved for future components
+    fuel_kg: float = 0.0,       # reserved for future components
+) -> Tuple[float, float, float]:
+    """
+    Calcola understeer/oversteer grip penalty dal bilanciamento aerodinamico.
+
+    Il valore aero_balance (CLA_fw / CLA_total) è il singolo indicatore di
+    bilanciamento. Attualmente è movimentato solo dalle ali; in futuro
+    includerà floor, bwing, sidepods, fuel load, ARB.
+
+    Target neutro: WEIGHT_DIST_FRONT = 0.455
+      Il downforce anteriore deve corrispondere alla distribuzione peso statica.
+      Se l'auto pesa 45.5% sull'anteriore, anche il DF deve bilanciarsi lì.
+
+      aero_balance > 0.455 → DF anteriore in eccesso → sottosterzo
+      aero_balance < 0.455 → DF posteriore in eccesso → sovrasterzo
+
+    Zona neutra ±0.02 (range 0.435–0.475): nessuna penalità.
+    Oltre la zona neutra: penalità lineare che scala fino a 1.0 a ±0.10.
+
+    Returns:
+        (understeer_grip_penalty, oversteer_grip_penalty, setup_quality_score)
+    """
+    # Target fisico: distribuzione peso statica anteriore F1 2025
+    BALANCE_TARGET = 0.455
+    NEUTRAL_BAND = 0.020    # ±2% → zona neutra senza penalità
+    MAX_DEVIATION = 0.10    # ±10% → penalità massima (1.0)
+
+    deviation = aero_balance - BALANCE_TARGET
+
+    if abs(deviation) <= NEUTRAL_BAND:
+        # Zona neutra: setup bilanciato, nessuna penalità
+        understeer_penalty = 0.0
+        oversteer_penalty = 0.0
+    elif deviation > 0:
+        # DF anteriore eccedente → sottosterzo
+        understeer_penalty = _clamp(
+            (deviation - NEUTRAL_BAND) / (MAX_DEVIATION - NEUTRAL_BAND),
+            0.0, 1.0
+        )
+        oversteer_penalty = 0.0
+    else:
+        # DF posteriore eccedente → sovrasterzo
+        oversteer_penalty = _clamp(
+            (-deviation - NEUTRAL_BAND) / (MAX_DEVIATION - NEUTRAL_BAND),
+            0.0, 1.0
+        )
+        understeer_penalty = 0.0
+
+    # Setup quality: 1.0 al centro della zona neutra, scende linearmente
+    quality_score = _clamp(
+        1.0 - max(0.0, abs(deviation) - NEUTRAL_BAND) / (MAX_DEVIATION - NEUTRAL_BAND),
+        0.0, 1.0
+    )
+
+    return understeer_penalty, oversteer_penalty, quality_score
 
 
 # ============================================================================
@@ -63,6 +129,7 @@ def map_aero_setup(
     v_estimate_kph: float = 200.0,
     drs_active: bool = False,
     config = None,
+    fuel_kg: float = 0.0,
 ) -> PhysicsAeroParams:
     """
     Converte AeroSetup (UI sliders/aero_points) → PhysicsAeroParams (fisici).
@@ -137,21 +204,14 @@ def map_aero_setup(
         rh_delta_n = (rh_avg - rh_opt) / max(rh_opt, 1.0)
         ge_phys = max(0.85, min(1.15, 1.0 + 0.15 * (1.0 - rh_delta_n ** 2)))
 
-        # Grip penalties from aero_balance deviation
-        bal_dev = abs(aero_bal_phys - 0.50)
-        grip_pen = min(1.0, bal_dev * 2.0)
-        if aero_bal_phys < 0.45:
-            us_pen, os_pen = 0.0, grip_pen
-        elif aero_bal_phys > 0.55:
-            us_pen, os_pen = grip_pen, 0.0
-        else:
-            us_pen, os_pen = 0.0, 0.0
-
-        # Setup quality
-        rh_delta_mm_abs = abs(rh_avg - rh_opt)
-        q_score = max(0.0, min(1.0,
-            1.0 - max(0.0, bal_dev - 0.05) * 0.5 - max(0.0, rh_delta_mm_abs - 5.0) / 100.0
-        ))
+        # Grip penalties — modello multi-fattore (V1 ported)
+        us_pen, os_pen, q_score = _compute_balance_penalties(
+            aero_balance=aero_bal_phys,
+            fw_angle=fw_angle,
+            rw_angle=rw_angle,
+            aero_setup=aero_setup,
+            fuel_kg=fuel_kg,
+        )
 
         return PhysicsAeroParams(
             CLA=cla_phys,
@@ -303,56 +363,25 @@ def map_aero_setup(
     ge_bonus = max(0.85, min(1.15, ge_bonus))
 
     # ========================================================================
-    # STEP 5: Understeer/oversteer grip penalty da aero_balance
+    # STEP 5: DRS drag reduction
     # ========================================================================
-    # Se aero_balance devia da 0.50 (neutro):
-    #   - Verso 0.40 (ali posteriori): oversteer grip penalty su rear
-    #   - Verso 0.60 (ali anteriori): understeer grip penalty su front
-    # Penalty monotona da aero_balance deviazione.
-
-    aero_balance_deviation = abs(aero_balance_from_forces - 0.50)  # |balance - 0.5|
-    grip_penalty_magnitude = aero_balance_deviation * 2.0  # scala [0, 1]
-    grip_penalty_magnitude = min(1.0, grip_penalty_magnitude)
-
-    if aero_balance_from_forces < 0.45:
-        # Ali posteriori → oversteer
-        understeer_penalty = 0.0
-        oversteer_penalty = grip_penalty_magnitude
-    elif aero_balance_from_forces > 0.55:
-        # Ali anteriori → understeer
-        understeer_penalty = grip_penalty_magnitude
-        oversteer_penalty = 0.0
-    else:
-        # Neutro
-        understeer_penalty = 0.0
-        oversteer_penalty = 0.0
-
-    # ========================================================================
-    # STEP 6: DRS drag reduction
-    # ========================================================================
-    # Se DRS attivo: applica riduzione drag direttamente al CDA base.
-    # CDA_drs_open memorizza il valore DRS per riferimento.
-    # Quando DRS è attivo, la fisica usa CDA ridotto (non quello base).
-
     cda_drs_open = cda * (1.0 - constants.DRS_DRAG_REDUCTION_FACTOR)
     if drs_active:
-        cda = cda_drs_open  # Applica riduzione DRS al CDA base
+        cda = cda_drs_open
 
     # ========================================================================
-    # STEP 7: Setup quality score (optional, per feedback)
+    # STEP 6: Understeer/oversteer penalty + quality — modello multi-fattore
     # ========================================================================
-    # Semplice metrica: quanto è vicino il setup alla configurazione "neutra"
-    # Neutra = aero_balance ~0.50, ride_height ~optimal, moderate wing angles
-
-    quality_score = 1.0  # Default perfect
-    # Ridotto se aero_balance troppo sbilanciato
-    if aero_balance_deviation > 0.05:
-        quality_score -= (aero_balance_deviation - 0.05) * 0.5
-    # Ridotto se ride_height fuori dalla finestra
-    if abs(rh_delta_mm) > 5.0:
-        quality_score -= abs(rh_delta_mm) / 100.0
-
-    quality_score = max(0.0, min(1.0, quality_score))
+    # Usa angoli ali dal setup (0 se non impostati → fallback neutro)
+    _fw_angle = aero_setup.front_wing.angle_deg or 0.0
+    _rw_angle = aero_setup.rear_wing.angle_deg or 0.0
+    understeer_penalty, oversteer_penalty, quality_score = _compute_balance_penalties(
+        aero_balance=aero_balance_from_forces,
+        fw_angle=_fw_angle,
+        rw_angle=_rw_angle,
+        aero_setup=aero_setup,
+        fuel_kg=fuel_kg,
+    )
 
     # ========================================================================
     # STEP 8: Assembla PhysicsAeroParams

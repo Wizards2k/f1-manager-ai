@@ -132,6 +132,7 @@ def update_section_v3(
             v_estimate_kph=section.v_base_kph if hasattr(section, 'v_base_kph') else 200.0,
             drs_active=section.drs_available if hasattr(section, 'drs_available') else False,
             config=config,
+            fuel_kg=car_state.pu.fuel_kg if car_state.pu else 0.0,
         )
 
         # ====================================================================
