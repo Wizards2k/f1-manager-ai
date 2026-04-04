@@ -127,9 +127,13 @@ def create_driver_skills_norris() -> DriverSkills:
 
 
 def create_aero_setup_monza() -> AeroSetup:
-    """Crea AeroSetup Monza qualifica."""
+    """Crea AeroSetup Monza qualifica con angoli ali reali McLaren."""
     setup_data = load_monza_setup()
     setup = AeroSetup()
+
+    # Carica modificatori aero McLaren dal team config
+    mclaren = load_mclaren_config()
+    aero_mods = mclaren.get('base_aero', {}) if mclaren else {}
 
     if setup_data:
         setup.ride_height_front_mm = setup_data.get('rh_f', 25.0)
@@ -138,9 +142,26 @@ def create_aero_setup_monza() -> AeroSetup:
         setup.suspension_rear.spring_rate_n_mm = setup_data.get('susp_r', 0.5)
         setup.antiroll_front_rigidity = setup_data.get('arb_f', 0.5)
         setup.antiroll_rear_rigidity = setup_data.get('arb_r', 0.5)
+
+        # Slider → angolo ala (spec range 4°-35°, linearizzato)
+        # Slider 0-100 → angolo 4°-35° (formula: angle = 4 + slider * 0.31)
+        fw_slider = setup_data.get('best_fw', 50)
+        rw_slider = setup_data.get('best_rw', 50)
+        setup.front_wing.angle_deg = 4.0 + fw_slider * 0.31   # FW=31 → 13.61°
+        setup.rear_wing.angle_deg = 4.0 + rw_slider * 0.31    # RW=21 → 10.51°
     else:
         setup.ride_height_front_mm = 25.0
         setup.ride_height_rear_mm = 40.0
+        setup.front_wing.angle_deg = 13.6   # Monza low-DF default
+        setup.rear_wing.angle_deg = 10.5
+
+    # Modificatori DF McLaren → efficiency_factor (usato in aero_mapper)
+    setup.front_wing.efficiency_factor = aero_mods.get('front_wing_df_modifier', 1.0)
+    setup.rear_wing.efficiency_factor = aero_mods.get('rear_wing_df_modifier', 1.0)
+
+    # Modificatori drag McLaren → base_drag (usato in aero_mapper per CDA)
+    setup.front_wing.base_drag = aero_mods.get('front_wing_drag_modifier', 1.0)
+    setup.rear_wing.base_drag = aero_mods.get('rear_wing_drag_modifier', 1.0)
 
     setup.ride_height_optimal_front_mm = setup.ride_height_front_mm
     setup.ride_height_optimal_rear_mm = setup.ride_height_rear_mm
@@ -185,8 +206,8 @@ def create_car_state_initial() -> CarState:
     # Power Unit — QUALIFY map
     car_state.pu.active_map = EngineMapName.QUALIFY
     car_state.pu.ers_mode = ERSModeName.QUALIFY
-    car_state.pu.ice_power_kw = 950.0
-    car_state.pu.ers_output_kw = 160.0
+    car_state.pu.ice_power_kw = 550.0   # F1 2025 ICE peak (FIA homologated)
+    car_state.pu.ers_output_kw = 120.0  # FIA limit 120 kW
     car_state.pu.ers_energy_mj = 4.0   # Battery PIENA (non 2 MJ!)
     car_state.pu.fuel_kg = 12.0        # Circa 12 kg per giro (non 5 per ritorno!)
 
@@ -280,6 +301,18 @@ def main():
                         if i in [1, 5]:  # Stampa solo Turn 1 e Turn 3
                             print(f"  Sezione {i} ({section.name}): {old_radius:.1f}m → {telem_radius:.1f}m")
     print()
+
+    # FIX: Abilita DRS per le zone DRS di Monza (qualifica).
+    # Monza ha 2 zone DRS:
+    #   Zone 1: rettilineo principale (Straight 1, indice 0) → dopo Parabolica fino a T1
+    #   Zone 2: rettilineo Curva Grande (Straight 2, indice 2) → dopo T1 fino a T2
+    #   (In gara si chiama "DRS zona 2"; in qualifica è sempre aperto nelle zone)
+    # Straight 5 (indice 8) ha anche DRS parziale (rettilineo dopo Lesmo 2 → Ascari).
+    # Reference: telemetria raw mostra drs=8/12 su questi settori.
+    if len(config.sections) > 0:
+        config.sections[0].drs_available = True   # Straight 1: main straight DRS
+    if len(config.sections) > 2:
+        config.sections[2].drs_available = True   # Straight 2: back straight DRS (zona 2)
 
     print()
     print("[RUNNING SIMULATION]")

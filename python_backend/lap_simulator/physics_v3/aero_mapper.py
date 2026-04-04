@@ -86,6 +86,86 @@ def map_aero_setup(
         PhysicsAeroParams con tutti i parametri fisici calcolati
     """
 
+    fw = aero_setup.front_wing
+    rw = aero_setup.rear_wing
+
+    # ========================================================================
+    # FAST PATH: Wing angle → Cl/Cd physics (spec Section 3 — Gemini)
+    # When wing angles are explicitly set, compute CLA/CDA directly from the
+    # spec anchor points (4°→Cl=2.8/Cd=0.7; 30°→Cl=5.2/Cd=1.4).
+    # Team df/drag modifiers are stored in base_downforce / base_drag fields.
+    # This makes setup physics-driven: the optimal setup emerges from the physics.
+    # ========================================================================
+    if fw.angle_deg > 0 or rw.angle_deg > 0:
+        fw_angle = max(4.0, fw.angle_deg)
+        rw_angle = max(4.0, rw.angle_deg)
+
+        # McLaren team modifiers: efficiency_factor=df modifier, base_drag=drag modifier
+        fw_df_mod = fw.efficiency_factor if fw.efficiency_factor > 0 else 1.0
+        fw_drag_mod = fw.base_drag if fw.base_drag > 0 else 1.0
+        rw_df_mod = rw.efficiency_factor if rw.efficiency_factor > 0 else 1.0
+        rw_drag_mod = rw.base_drag if rw.base_drag > 0 else 1.0
+
+        # Interpolation [0=4°, 1=30°]
+        t_fw = max(0.0, min(1.0, (fw_angle - 4.0) / 26.0))
+        t_rw = max(0.0, min(1.0, (rw_angle - 4.0) / 26.0))
+
+        # Per-wing CLA (spec: total 2.80 at 4°, 5.20 at 30°; FW≈45%, RW≈55%)
+        cla_fw_phys = (1.27 + t_fw * 0.96) * fw_df_mod
+        cla_rw_phys = (1.53 + t_rw * 1.44) * rw_df_mod
+        cla_phys = max(constants.CLA_MIN, min(constants.CLA_MAX, cla_fw_phys + cla_rw_phys))
+
+        # Per-wing CDA (spec: wings 0.70 at 4°, 1.40 at 30°; FW≈35%, RW≈65%)
+        cda_fw_phys = (0.245 + t_fw * 0.245) * fw_drag_mod
+        cda_rw_phys = (0.455 + t_rw * 0.455) * rw_drag_mod
+        cda_phys = max(constants.CDA_MIN, min(constants.CDA_MAX,
+                       cda_fw_phys + cda_rw_phys + constants.CDA_FLOOR_WHEELS))
+
+        # DRS
+        cda_drs_phys = cda_phys * (1.0 - constants.DRS_DRAG_REDUCTION_FACTOR)
+        if drs_active:
+            cda_phys = cda_drs_phys
+
+        # Aero balance from actual per-wing downforce
+        aero_bal_phys = cla_fw_phys / max(cla_phys, 0.01)
+        cla_front_phys = cla_phys * aero_bal_phys
+        cla_rear_phys = cla_phys * (1.0 - aero_bal_phys)
+
+        # Ground effect
+        rh_avg = (aero_setup.ride_height_front_mm + aero_setup.ride_height_rear_mm) / 2.0
+        rh_opt = (aero_setup.ride_height_optimal_front_mm + aero_setup.ride_height_optimal_rear_mm) / 2.0
+        rh_delta_n = (rh_avg - rh_opt) / max(rh_opt, 1.0)
+        ge_phys = max(0.85, min(1.15, 1.0 + 0.15 * (1.0 - rh_delta_n ** 2)))
+
+        # Grip penalties from aero_balance deviation
+        bal_dev = abs(aero_bal_phys - 0.50)
+        grip_pen = min(1.0, bal_dev * 2.0)
+        if aero_bal_phys < 0.45:
+            us_pen, os_pen = 0.0, grip_pen
+        elif aero_bal_phys > 0.55:
+            us_pen, os_pen = grip_pen, 0.0
+        else:
+            us_pen, os_pen = 0.0, 0.0
+
+        # Setup quality
+        rh_delta_mm_abs = abs(rh_avg - rh_opt)
+        q_score = max(0.0, min(1.0,
+            1.0 - max(0.0, bal_dev - 0.05) * 0.5 - max(0.0, rh_delta_mm_abs - 5.0) / 100.0
+        ))
+
+        return PhysicsAeroParams(
+            CLA=cla_phys,
+            CDA=cda_phys,
+            CLA_front=cla_front_phys,
+            CLA_rear=cla_rear_phys,
+            aero_balance=aero_bal_phys,
+            ground_effect_bonus=ge_phys,
+            understeer_grip_penalty=us_pen,
+            oversteer_grip_penalty=os_pen,
+            CDA_drs_open=cda_drs_phys,
+            setup_quality_score=q_score,
+        )
+
     # ========================================================================
     # STEP 1: Compute aero forces via existing V1 function
     # ========================================================================
@@ -142,19 +222,56 @@ def map_aero_setup(
     drag_total_aero_points = aero_forces.drag_eff
     aero_balance_from_forces = aero_forces.aero_balance  # df_front / df_total
 
+    # Guard: aero_balance=0.0 means compute_forces had no wing data → neutral fallback
+    if aero_balance_from_forces <= 0.01:
+        aero_balance_from_forces = 0.42
+
     # ========================================================================
     # STEP 2: Converti aero_points → CLA, CDA fisici (calibration)
     # ========================================================================
     # Formula baseline (spec Section 3):
     #   CLA = CLA_BASE + (df_total - 160) * CLA_SENSITIVITY
     #   CDA = CDA_BASE_STRUCT + drag_total * CDA_SENSITIVITY
+    #
+    # FALLBACK: Se compute_forces() ritorna 0 (AeroComponent.base_downforce non
+    # configurato), usa il setup NEUTRO come stima conservativa invece di CDA_MIN.
+    # CDA_NEUTRAL (1.05 m²) dà v_max ≈ 348 kph a Monza con P=600kW, coerente
+    # con la telemetria di riferimento.
 
-    cla = constants.CLA_NEUTRAL + (df_total_aero_points - 160.0) * constants.CLA_SENSITIVITY
-    cda = constants.CDA_BASE_STRUCT + drag_total_aero_points * constants.CDA_SENSITIVITY
+    if df_total_aero_points == 0 and drag_total_aero_points == 0:
+        # Nessun dato aero_points → calcola da angoli ali (spec Gemini Section 3)
+        fw_angle = aero_setup.front_wing.angle_deg
+        rw_angle = aero_setup.rear_wing.angle_deg
+        fw_eff = aero_setup.front_wing.efficiency_factor    # McLaren df modifier
+        rw_eff = aero_setup.rear_wing.efficiency_factor
 
-    # Clamp a range fisico
-    cla = max(constants.CLA_MIN, min(constants.CLA_MAX, cla))
-    cda = max(constants.CDA_MIN, min(constants.CDA_MAX, cda))
+        if fw_angle > 0 or rw_angle > 0:
+            # CLA per ala: 1.40 m² a 4°, 2.60 m² a 30° (spec Gemini quadratica linearizzata)
+            cla_fw_base = max(0.5, 1.40 + (fw_angle - 4.0) / 26.0 * 1.20)
+            cla_rw_base = max(0.5, 1.40 + (rw_angle - 4.0) / 26.0 * 1.20)
+            cla_fw = cla_fw_base * fw_eff
+            cla_rw = cla_rw_base * rw_eff
+            cla = max(constants.CLA_MIN, min(constants.CLA_MAX, cla_fw + cla_rw))
+            aero_balance_from_forces = cla_fw / max(cla, 0.01)
+
+            # CDA: drag quadratico spec + drag carrozzeria
+            fw_drag_mod = aero_setup.front_wing.base_drag if aero_setup.front_wing.base_drag else 1.0
+            rw_drag_mod = aero_setup.rear_wing.base_drag if aero_setup.rear_wing.base_drag else 1.0
+            avg_drag_mod = (fw_drag_mod + rw_drag_mod) / 2.0
+            cla_total_for_drag = cla_fw_base + cla_rw_base
+            cda_wings = (0.414 + 0.0365 * cla_total_for_drag ** 2) * avg_drag_mod
+            cda = max(constants.CDA_MIN, min(constants.CDA_MAX, cda_wings + constants.CDA_BODY_DRAG))
+        else:
+            # Nessun angolo configurato → fallback al setup neutro con balance neutro
+            cla = constants.CLA_NEUTRAL
+            cda = constants.CDA_NEUTRAL
+            aero_balance_from_forces = 0.5  # FIXED: era 0.0 → causava oversteer_penalty=1.0
+    else:
+        cla = constants.CLA_NEUTRAL + (df_total_aero_points - 160.0) * constants.CLA_SENSITIVITY
+        cda = constants.CDA_BASE_STRUCT + drag_total_aero_points * constants.CDA_SENSITIVITY
+        # Clamp a range fisico
+        cla = max(constants.CLA_MIN, min(constants.CLA_MAX, cla))
+        cda = max(constants.CDA_MIN, min(constants.CDA_MAX, cda))
 
     # ========================================================================
     # STEP 3: Distribuzione front/rear di downforce
@@ -213,12 +330,13 @@ def map_aero_setup(
     # ========================================================================
     # STEP 6: DRS drag reduction
     # ========================================================================
-    # Se DRS attivo: CDA_drs = CDA * (1 - DRS_DRAG_REDUCTION_FACTOR)
+    # Se DRS attivo: applica riduzione drag direttamente al CDA base.
+    # CDA_drs_open memorizza il valore DRS per riferimento.
+    # Quando DRS è attivo, la fisica usa CDA ridotto (non quello base).
 
+    cda_drs_open = cda * (1.0 - constants.DRS_DRAG_REDUCTION_FACTOR)
     if drs_active:
-        cda_drs_open = cda * (1.0 - constants.DRS_DRAG_REDUCTION_FACTOR)
-    else:
-        cda_drs_open = cda
+        cda = cda_drs_open  # Applica riduzione DRS al CDA base
 
     # ========================================================================
     # STEP 7: Setup quality score (optional, per feedback)

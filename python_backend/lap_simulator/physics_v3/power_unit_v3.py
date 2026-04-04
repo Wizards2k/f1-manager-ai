@@ -33,8 +33,8 @@ PACE_FACTOR_MAX = 1.12
 # Constants
 # ---------------------------------------------------------------------------
 
-ICE_BASE_POWER_KW = 950.0          # F1 2025 ICE ~950kW (calibrated for 2025 realistic)
-ICE_MAX_POWER_KW = 1100.0          # cap after boosts and ERS
+ICE_BASE_POWER_KW = 550.0          # F1 2025 ICE peak (FIA homologated - real value)
+ICE_MAX_POWER_KW = 670.0           # cap: ICE(550) + ERS(120) peak
 ERS_MAX_ENERGY_MJ = 4.0            # max battery capacity
 ERS_DEPLOY_LIMIT_MJ_PER_LAP = 4.0
 ERS_RECOVERY_LIMIT_MJ_PER_LAP = 2.0
@@ -222,7 +222,8 @@ def generate_output(
     mguh_direct_kw = (mguh_direct_section_mj * 1000.0) / dt_safe
     ers_output_pre_derate_kw = battery_output_kw + mguh_direct_kw
 
-    ers_output_kw = ers_output_pre_derate_kw * ers_derating_factor
+    ERS_POWER_FIA_LIMIT_KW = 120.0  # FIA 2025 hard limit (MGU-K max discharge)
+    ers_output_kw = min(ers_output_pre_derate_kw * ers_derating_factor, ERS_POWER_FIA_LIMIT_KW)
     if ers_output_pre_derate_kw > 1e-5:
         derate_scale = ers_output_kw / ers_output_pre_derate_kw
         battery_output_kw *= derate_scale

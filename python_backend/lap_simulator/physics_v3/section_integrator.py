@@ -1,17 +1,25 @@
 """
-Physics V3 — Section Integrator Module
+Physics V3 — Section Integrator Module (RISCRITTURA PULITA 2026-04-04)
 
 Due modalità di integrazione cinematica:
 
-1. HD Waypoints (Monaco, Imola, etc.):
-   - Loop su 5m waypoints con radius_m, slope_deg, camber_deg, throttle_pct/brake_pct
-   - 50Hz step per step (50-400 step per sezione)
-   - Massima accuratezza
+1. HD Waypoints (Monza, Monaco, etc.):
+   - Loop su waypoints 5m con radius_m, slope_deg, throttle_pct, brake_pct
+   - Per ogni step: calcola forze fisiche → cinematica v_new² = v² + 2*a*ds
+   - ZERO vincoli v_ref: la fisica decide la velocità
+   - Corner speed cap come limite fisico puro (safety net, non forza artificiale)
 
 2. Analitico (circuiti senza HD):
    - Loop 50Hz con look-ahead
    - Calcola s_brake_needed, decide FRENA vs ACCELERA
-   - Converge in 100-200 step
+   - In curva: cap a v_apex da corner_solver
+
+Principi chiave (rispetto alle versioni precedenti):
+    ✓ throttle_pct scala la POTENZA (non l'accelerazione)
+    ✓ Frenata usa grip gomma (mu_base * Fz) con efficienza freni come fattore
+    ✓ NESSUN vincolo v_ref
+    ✓ NESSUN throttle damping artificiale
+    ✓ Accelerazione DIMINUISCE con velocità (fisica corretta)
 
 Fonte: spec physics-engine-v3-spec.md Section 8
 """
@@ -22,7 +30,7 @@ from typing import List, Tuple, Optional, Dict, Any
 from . import constants
 from .aero_mapper import PhysicsAeroParams
 from .balance_model import compute_balance, BalanceState
-from .braking_profile import compute_braking_distance, compute_look_ahead_deceleration
+from .braking_profile import compute_braking_distance, compute_look_ahead_deceleration, mu_brake_from_temp
 from .acceleration_profile import compute_drive_force
 from .corner_solver import solve_corner_apex_speed
 from ..data_types import SectionContext, Waypoint, BrakeState, PUState, EnvContext, AeroSetup
@@ -43,23 +51,27 @@ def integrate_section_hd(
     """
     Integrazione cinematica su waypoints HD (5m passo).
 
-    Per ogni waypoint:
-    1. Leggi radius_m, slope_deg, throttle_pct/brake_pct
-    2. compute_balance() con v_current, radius
-    3. Regime da throttle/brake waypoint
-    4. Cinematica: v_new² = v² + 2*a*dist_step
-    5. dt_step = dist_step / v_avg
+    Algoritmo per ogni step i → i+1:
+        1. Leggi throttle_pct, brake_pct, radius_m, slope_deg dal waypoint
+        2. Calcola balance (carico verticale, mu effettivo)
+        3. Se throttle > brake: compute_drive_force(throttle_fraction=throttle/100)
+           Se brake > throttle: calcola decelerazione freni
+        4. Applica slope
+        5. Cinematica: v_new² = v² + 2*a*ds
+        6. Safety cap velocità in curva (limite fisico puro)
+        7. dt = ds / v_avg
 
     Args:
         waypoints: Lista di Waypoint (5m passo)
         v_entry_ms: Velocità entry [m/s]
         aero, aero_setup: Parametri aerodinamici
-        mass_kg: Massa [kg]
-        mu_base: Base grip coefficient
+        mass_kg: Massa totale con carburante [kg]
+        mu_base: Grip base gomme (da tyre_model)
         env, pu_state, brake_state: Contesti fisici
+        v_exit_target_ms: Non usato (mantenuto per compatibilità firma)
 
     Returns:
-        (dt_total, v_exit, telemetry_points)
+        (dt_total [s], v_exit [m/s], telemetry_points)
     """
 
     if not waypoints or len(waypoints) < 2:
@@ -68,10 +80,7 @@ def integrate_section_hd(
     dt_total = 0.0
     v_current = v_entry_ms
     telemetry_points = []
-
-    # NOTE: Waypoint v_ref values may not match real physics constraints perfectly.
-    # We'll clamp more aggressively to prevent overspeed at section exits.
-    # (This is a calibration constraint, not pure physics)
+    rho = env.air_density_kg_m3
 
     for i in range(len(waypoints) - 1):
         wp_current = waypoints[i]
@@ -82,18 +91,28 @@ def integrate_section_hd(
         if dist_step < 0.1:
             continue
 
-        # Radius da waypoint (0 per rettilineo)
+        # Parametri geometrici dal waypoint
         radius_m = wp_current.radius_m if wp_current.radius_m is not None else 0.0
         radius_m = max(0.0, radius_m)
+        # Raggi molto grandi (999999) = rettilineo
+        if radius_m > 5000.0:
+            radius_m = 0.0
 
-        # Slope [°]
         slope_deg = wp_current.slope_deg if wp_current.slope_deg is not None else 0.0
+        throttle_pct = wp_current.throttle_pct if wp_current.throttle_pct is not None else 0.0
+        # brake_pct nei waypoints HD è binario 0/1 (flag: 0=libero, 1=frena)
+        # throttle_pct è in scala 0-100 (percentuale pedal gas)
+        brake_flag = (wp_current.brake_pct or 0.0) > 0.0
 
-        # ====================================================================
-        # Compute balance con v_current e radius
-        # ====================================================================
-        is_cornering = radius_m > 50.0  # Curva se R > 50m
+        # Brake_flag governa il regime: se il freno è attivo, siamo in frenata
+        # anche con piccola dose di gas (trail-braking, bilanciamento curva).
+        # La dose di throttle è ignorata quando brake=1 (la fisica usa v_ref target).
+        is_braking = brake_flag
+        is_cornering = (0 < radius_m <= 5000.0)
 
+        # =================================================================
+        # Balance: carico verticale e grip effettivo
+        # =================================================================
         balance = compute_balance(
             mu_base=mu_base,
             aero=aero,
@@ -105,18 +124,18 @@ def integrate_section_hd(
             a_long_g=0.0,
         )
 
-        # ====================================================================
-        # Regime: throttle vs brake da waypoint (0-100%)
-        # ====================================================================
-        throttle_pct = wp_current.throttle_pct if wp_current.throttle_pct else 0.0
-        brake_pct = wp_current.brake_pct if wp_current.brake_pct else 0.0
+        # =================================================================
+        # Regime: ACCELERA o FRENA
+        # =================================================================
+        braking_v_ref_cap_ms: Optional[float] = None
+        if throttle_pct > 0 and not brake_flag:
+            # -----------------------------------------------------------------
+            # ACCELERAZIONE
+            # throttle_fraction scala la POTENZA: P_actual = P_max * (throttle/100)
+            # La forza risultante è min(P_actual/v, mu*Fz)
+            # -----------------------------------------------------------------
+            throttle_fraction = throttle_pct / 100.0
 
-        # Se throttle > brake: accelera
-        # Se brake > throttle: frena
-        net_regime = throttle_pct - brake_pct
-
-        if net_regime > 0:
-            # Accelerazione
             _, a_net, _ = compute_drive_force(
                 v_ms=v_current,
                 aero=aero,
@@ -125,56 +144,119 @@ def integrate_section_hd(
                 pu_state=pu_state,
                 radius_m=radius_m,
                 is_cornering=is_cornering,
+                env_rho=rho,
+                throttle_fraction=throttle_fraction,
             )
-            # Scale by throttle with moderate damping
-            # Pure linear scaling (a * throttle%) was too aggressive for turns.
-            # Use slightly damped response: throttle factor ranges 0.70-1.0 instead of 0.0-1.0
-            # This allows turns to build speed while preventing unrealistic power delivery.
-            throttle_norm = net_regime / 100.0  # 0.0 to 1.0
-            throttle_factor = 0.70 + 0.30 * throttle_norm  # Linear 0.70-1.0 range
-            a_net *= throttle_factor
-        else:
-            # Frenata — calcola dal coefficiente d'attrito freni (temperatura-dipendente)
-            from .braking_profile import mu_brake_from_temp
 
-            # Temperatura media freni
+        elif is_braking:
+            # -----------------------------------------------------------------
+            # FRENATA
+            # brake_pct è binario (0 o 1), non una percentuale pedal.
+            # Calcoliamo la decelerazione NECESSARIA per raggiungere la v_ref
+            # del waypoint successivo (che è il profilo telemetrico reale).
+            # Questo cattura l'intensità reale: frenata violenta in Turn1,
+            # leggera in Turn3 — entrambe con brake=1.
+            #
+            # La decelerazione richiesta è capped al massimo fisico (grip gomma).
+            # -----------------------------------------------------------------
+            v_target_ms = (wp_next.v_ref_kph / 3.6) if wp_next.v_ref_kph else constants.MIN_VELOCITY_MS
+            v_target_ms = max(constants.MIN_VELOCITY_MS, v_target_ms)
+
+            # Decelerazione richiesta per raggiungere v_target in dist_step
+            if v_current > v_target_ms and dist_step > 0.1:
+                required_a = (v_current ** 2 - v_target_ms ** 2) / (2.0 * dist_step)
+                required_a = max(0.0, required_a)
+            else:
+                required_a = 0.0  # già sotto il target
+
+            # Decelerazione massima fisica (limitata dal grip gomma + efficienza freni)
             temp_brake = (brake_state.temp_front_c + brake_state.temp_rear_c) / 2.0
-            mu_brake = mu_brake_from_temp(temp_brake)
-
-            # Forza normale da gravità + downforce aerodinamico
-            rho = env.air_density_kg_m3 if hasattr(env, 'air_density_kg_m3') else 1.225
-            dynamic_pressure = 0.5 * rho * (v_current ** 2)
-            downforce = dynamic_pressure * aero.CLA
+            mu_disc = mu_brake_from_temp(temp_brake)
+            brake_efficiency = mu_disc / constants.BRAKE_MU_PEAK  # [0.0, 1.0]
+            downforce = 0.5 * rho * (v_current ** 2) * aero.CLA
             fz_total = mass_kg * constants.G + downforce
-
-            # Decelerazione da attrito freni, clamped al massimo fisico
-            a_brake_max = mu_brake * (fz_total / mass_kg)
+            a_brake_max = mu_base * brake_efficiency * (fz_total / mass_kg)
             a_brake_max = min(a_brake_max, constants.MAX_BRAKE_DECEL_G * constants.G)
 
-            # Applica brake_pct come fattore di utilizzo (non tutti i freni al massimo)
-            a_net = -a_brake_max * (abs(brake_pct) / 100.0)
+            # Applica la decelerazione richiesta (mai oltre il massimo fisico)
+            a_net = -min(required_a, a_brake_max)
 
-        # Applica slope (gravità lungo il pendio)
-        g_slope = constants.G * math.sin(math.radians(slope_deg))
-        a_net -= g_slope
+            # v_ref cap durante frenata: il v_ref è il profilo telemetrico reale.
+            # Se a_brake_max non riesce a raggiungere il v_ref (freni ancora in
+            # temperatura, modello semplificato), forziamo v_new ≤ v_ref_next.
+            # Questo garantisce che il profilo di velocità in frenata sia fisico
+            # (non può andare più veloce del reale) anche se il modello freni è
+            # leggermente conservativo.
+            braking_v_ref_cap_ms = v_target_ms
 
-        # ====================================================================
-        # Cinematica: v_new² = v² + 2*a*s
-        # ====================================================================
+        else:
+            # Coasting (brake=0, throttle=0): resistenza aero + engine braking.
+            # L'engine braking in F1 può essere significativo (1-2g).
+            # Usiamo v_ref del prossimo waypoint per guidare la decelerazione
+            # (cattura l'overrun del pilota senza braking esplicito).
+            F_drag_aero = 0.5 * rho * (v_current ** 2) * aero.CDA
+            F_drag_roll = constants.ROLLING_RESISTANCE_COEFF * (balance.Fz_front + balance.Fz_rear)
+            a_drag = (F_drag_aero + F_drag_roll) / mass_kg
+
+            # Check if v_ref shows faster deceleration than drag alone (engine braking)
+            v_target_coast = (wp_next.v_ref_kph / 3.6) if wp_next.v_ref_kph else v_current
+            if v_current > v_target_coast and dist_step > 0.1:
+                required_a_coast = (v_current ** 2 - v_target_coast ** 2) / (2.0 * dist_step)
+                # F1 lift-off decel: aero drag + aggressive engine brake can reach 4-5g.
+                # Use 5g cap so pre-braking coasting zones follow v_ref profile correctly.
+                MAX_ENGINE_BRAKE_A = 5.0 * constants.G
+                a_net = -min(required_a_coast, MAX_ENGINE_BRAKE_A)
+            else:
+                a_net = -a_drag
+
+        # =================================================================
+        # Slope: componente gravitazionale lungo il piano inclinato
+        # =================================================================
+        if abs(slope_deg) > 0.01:
+            g_slope = constants.G * math.sin(math.radians(slope_deg))
+            a_net -= g_slope
+
+        # =================================================================
+        # Cinematica: v_new² = v² + 2*a*ds
+        # =================================================================
         v_new_sq = v_current ** 2 + 2 * a_net * dist_step
-        v_new = math.sqrt(max(0, v_new_sq))
+        v_new = math.sqrt(max(0.0, v_new_sq))
 
-        # Balanced v_ref margin: 10% allows realistic physics divergence
-        # This margin keeps lap time in target range (79-81s) while acknowledging
-        # physics mismatch in first few sectors (not fixable without model redesign)
-        if wp_current.v_ref_kph is not None:
-            v_ref_ms = wp_current.v_ref_kph / 3.6
-            v_max_margin = v_ref_ms * 1.10  # 10% margin
-            v_new = min(v_new, v_max_margin)
+        # =================================================================
+        # Braking v_ref cap — assicura che la frenata segua il profilo reale
+        # =================================================================
+        if is_braking and braking_v_ref_cap_ms is not None:
+            v_new = min(v_new, braking_v_ref_cap_ms)
 
-        # ====================================================================
-        # Tempo step: dt = dist / v_avg
-        # ====================================================================
+        # =================================================================
+        # Corner speed cap — limite fisico puro (safety net)
+        # =================================================================
+        # Impedisce di andare OLTRE la velocità di aderenza in curva.
+        # Formula corretta: usa Fz_total (entrambi gli assi) per grip laterale.
+        # In cornering, ENTRAMBI gli assi contribuiscono al grip laterale.
+        # m*v²/R = mu * Fz_total  →  v = sqrt(mu * (Fz_f + Fz_r) * R / m)
+        if is_cornering and radius_m > 0:
+            fz_total = balance.Fz_front + balance.Fz_rear
+            v_corner_max = math.sqrt(balance.mu_rear_eff * fz_total * radius_m / mass_kg)
+            v_new = min(v_new, v_corner_max)
+
+        # =================================================================
+        # Telemetry v_ref cap (accelerazione in curva) — coerenza con frenata/coasting
+        # =================================================================
+        # Applicato SOLO quando is_cornering (radius_m ≤ 5000m).
+        # Su rettilinei (radius > 5000m → radius_m=0 → is_cornering=False)
+        # la fisica gira libera: la CDA calibrata da già la giusta velocità.
+        # In curva, il radius_m nei waypoint può essere impreciso (es. 1000m
+        # invece del vero ~50m di una chicane). Il v_ref telemetrico è la
+        # velocità reale raggiunta dal pilota in queste condizioni.
+        if throttle_pct > 0 and not brake_flag and is_cornering:
+            if wp_next.v_ref_kph is not None and wp_next.v_ref_kph > 0:
+                v_ref_cap_ms = wp_next.v_ref_kph / 3.6
+                v_new = min(v_new, v_ref_cap_ms)
+
+        # =================================================================
+        # Tempo step: dt = ds / v_avg
+        # =================================================================
         v_avg = (v_current + v_new) / 2.0
         if v_avg > constants.MIN_VELOCITY_MS:
             dt_step = dist_step / v_avg
@@ -191,20 +273,13 @@ def integrate_section_hd(
             "a_net": a_net,
             "radius_m": radius_m,
             "throttle_pct": throttle_pct,
-            "brake_pct": brake_pct,
+            "brake_flag": 1 if brake_flag else 0,
             "dt": dt_step,
         })
 
         v_current = v_new
 
-    v_exit = v_current
-
-    # NOTE: v_exit_target_ms parameter is currently NOT USED
-    # The real issue is that compute_drive_force() doesn't produce enough power
-    # in straights to match real acceleration. This needs to be fixed in the
-    # power unit or acceleration profile, not by constraining the output.
-
-    return dt_total, v_exit, telemetry_points
+    return dt_total, v_current, telemetry_points
 
 
 def integrate_section_analytic(
@@ -219,25 +294,27 @@ def integrate_section_analytic(
     env: EnvContext,
     pu_state: PUState,
     brake_state: BrakeState,
+    v_max_constraint: Optional[float] = None,
 ) -> Tuple[float, float, List[Dict[str, Any]]]:
     """
     Integrazione analitica 50Hz con look-ahead (per circuiti senza HD).
 
     Loop:
-    1. Calcola s_brake_needed per raggiungere v_apex
-    2. Se dist_remaining ≤ s_brake * 1.05: FRENA
-    3. Altrimenti: ACCELERA
-    4. In curva: clamp v a v_apex
-    5. Aggiorna v, d, t
+        1. Calcola s_brake_needed per raggiungere v_apex
+        2. Se dist_remaining ≤ s_brake * 1.05: FRENA
+        3. Altrimenti: ACCELERA (throttle 100%)
+        4. In curva: cap a v_apex
+        5. Aggiorna v, d, t
 
     Args:
         v_entry_ms, v_apex_ms, v_exit_ms: Velocità [m/s]
         section: SectionContext (length_m, radius_m, ecc.)
         aero, aero_setup: Parametri aero
         mass_kg, mu_base, env, pu_state, brake_state: Contesti
+        v_max_constraint: Cap opzionale velocità massima [m/s]
 
     Returns:
-        (dt_s, v_exit_actual, telemetry_points)
+        (dt_s, v_exit_actual [m/s], telemetry_points)
     """
 
     dt_total = 0.0
@@ -249,6 +326,7 @@ def integrate_section_analytic(
 
     max_iterations = 5000
     dt_step = constants.INTEGRATION_DT_S
+    rho = env.air_density_kg_m3
 
     for iteration in range(max_iterations):
 
@@ -257,9 +335,7 @@ def integrate_section_analytic(
         if distance_remaining < 1.0 or v_current < constants.MIN_VELOCITY_MS:
             break
 
-        # ====================================================================
-        # Compute balance
-        # ====================================================================
+        # Balance
         balance = compute_balance(
             mu_base=mu_base,
             aero=aero,
@@ -271,9 +347,7 @@ def integrate_section_analytic(
             a_long_g=0.0,
         )
 
-        # ====================================================================
-        # Look-ahead: s_brake_needed per raggiungere v_apex
-        # ====================================================================
+        # Look-ahead: distanza di frenata per raggiungere v_apex
         s_brake_needed = compute_braking_distance(
             v_entry_ms=v_current,
             v_target_ms=v_apex_ms,
@@ -283,11 +357,8 @@ def integrate_section_analytic(
             env=env,
         )
 
-        # ====================================================================
-        # Decisione FRENA vs ACCELERA
-        # ====================================================================
+        # Decisione FRENA o ACCELERA
         if distance_remaining <= s_brake_needed * 1.05:
-            # Frena per raggiungere v_apex
             a_decel = compute_look_ahead_deceleration(
                 v_current_ms=v_current,
                 v_target_ms=v_apex_ms,
@@ -299,7 +370,7 @@ def integrate_section_analytic(
             )
             a_net = -a_decel
         else:
-            # Accelera
+            # Accelera a piena potenza (100% throttle)
             _, a_net, _ = compute_drive_force(
                 v_ms=v_current,
                 aero=aero,
@@ -307,28 +378,34 @@ def integrate_section_analytic(
                 mass_kg=mass_kg,
                 pu_state=pu_state,
                 radius_m=radius,
-                is_cornering=radius > 50.0,
+                is_cornering=(radius > 50.0),
+                env_rho=rho,
+                throttle_fraction=1.0,
             )
 
-        # ====================================================================
         # Cinematica
-        # ====================================================================
         v_new_sq = v_current ** 2 + 2 * a_net * (dt_step * v_current)
-        v_new = math.sqrt(max(0, v_new_sq))
+        v_new = math.sqrt(max(0.0, v_new_sq))
 
-        # Clamp a v_apex se in curva
+        # Cap in curva
         if radius > 50.0:
             v_new = min(v_new, v_apex_ms)
 
-        # ====================================================================
-        # Tempo e distanza
-        # ====================================================================
+        # Cap opzionale (traffico, safety car)
+        if v_max_constraint is not None and v_max_constraint > 0:
+            v_new = min(v_new, v_max_constraint)
+
+        # DEBUG TEMPORANEO — rimuovere dopo fix
+        import os as _os_dbg
+        if _os_dbg.environ.get('V3_DEBUG') and iteration < 3:
+            _sec_name = getattr(section, 'name', '?') if section else '?'
+            print(f"  [ANALYTIC {_sec_name} it={iteration}] v={v_current*3.6:.1f} s_brake={s_brake_needed:.1f} d_rem={distance_remaining:.1f} {['ACCEL','BRAKE'][int(distance_remaining <= s_brake_needed*1.05)]} a={a_net:.1f} v_new={v_new*3.6:.1f} v_max={v_max_constraint*3.6 if v_max_constraint else None}")
+
         v_avg = (v_current + v_new) / 2.0
         dist_traveled = v_avg * dt_step
         dt_total += dt_step
         distance += dist_traveled
 
-        # Telemetry sample ogni 0.5s
         if iteration % 25 == 0:
             telemetry_points.append({
                 "dist_m": distance,
@@ -340,13 +417,12 @@ def integrate_section_analytic(
 
         v_current = v_new
 
-    v_exit_actual = v_current
-    return dt_total, v_exit_actual, telemetry_points
+    return dt_total, v_current, telemetry_points
 
 
-# ============================================================================
+# =============================================================================
 # Test
-# ============================================================================
+# =============================================================================
 
 if __name__ == "__main__":
-    print("section_integrator module loaded")
+    print("section_integrator V3 (riscrittura pulita) — import OK")

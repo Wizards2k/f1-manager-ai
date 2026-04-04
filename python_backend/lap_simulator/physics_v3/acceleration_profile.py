@@ -1,15 +1,34 @@
 """
-Physics V3 — Acceleration Profile Module
+Physics V3 — Acceleration Profile Module (RISCRITTURA PULITA 2026-04-04)
 
-Modella l'accelerazione usando il cerchio di trazione (Kamm circle):
-    F_total_available = μ * Fz (grip limit)
-    F_lat_required = m * v²/R (in curva)
-    F_long_available = sqrt(F_total² - F_lat²)  [traction circle]
+Formula fondamentale (Gemini spec + fisica Newtoniana):
 
-    F_drive = min(P/v, F_long_available)
-    a_net = (F_drive - F_drag) / m
+    F_down    = 0.5 * ρ * v² * CLA                  [downforce aerodinamico]
+    Fz_rear   = peso_statico_post + F_down_post       [carico verticale posteriore]
+    F_grip    = μ_rear * Fz_rear                      [limite grip asse posteriore]
 
-Gestisce anche wheelspin e ERS deployment.
+    Cerchio di Kamm (in curva reale, R < 500m):
+        F_lat  = m * v²/R                             [forza laterale centripeta]
+        F_long = sqrt(F_grip² - F_lat²)               [trazione longitudinale disponibile]
+
+    Potenza (scalata per throttle del pilota):
+        P_wheels = (ICE + ERS) * eff * throttle_frac  [potenza alle ruote]
+        F_power  = P_wheels / v                        [F = P/v]
+
+    Trazione effettiva (la minore tra potenza e grip):
+        F_drive = min(F_power, F_long)
+
+    Forze resistive:
+        F_drag = 0.5 * ρ * v² * CDA + Crr * Fz_rear
+
+    Accelerazione netta:
+        a_net = (F_drive - F_drag) / m
+
+Perché è corretto:
+    - A bassa velocità: F_power >> F_grip → grip limita (gomme, non motore)
+    - Ad alta velocità: F_power decresce (P/v), drag aumenta → potenza limita
+    - L'accelerazione DIMINUISCE con la velocità (fisica corretta!)
+    - Throttle scala la POTENZA (non l'accelerazione post-hoc)
 
 Fonte: spec physics-engine-v3-spec.md Section 7
 """
@@ -32,112 +51,84 @@ def compute_drive_force(
     radius_m: float = 0.0,
     is_cornering: bool = False,
     env_rho: float = constants.RHO_SEA_LEVEL,
+    throttle_fraction: float = 1.0,
 ) -> Tuple[float, float, bool]:
     """
-    Calcola la forza di trazione disponibile considerando il cerchio di trazione.
-
-    Algoritmo:
-    1. F_total = μ_rear * Fz_rear (grip limit posteriore, quello che limita)
-    2. Se in curva: F_lat = m * v²/R (forza laterale richiesta)
-    3. F_long_available = sqrt(F_total² - F_lat²)  [Kamm circle]
-    4. P_total = (ICE + ERS) * drivetrain_efficiency
-    5. F_drive_power = P_total / v
-    6. F_drive = min(F_drive_power, F_long_available)
-    7. Check wheelspin: se F_drive > limit → loss 15%
+    Calcola la forza di trazione e l'accelerazione netta.
 
     Args:
-        v_ms: Velocità [m/s]
-        aero: PhysicsAeroParams
-        balance: BalanceState (mu_rear_eff)
-        mass_kg: Massa [kg]
-        pu_state: Stato power unit (potenza ICE + ERS in kW)
+        v_ms: Velocità corrente [m/s]
+        aero: Parametri aerodinamici (CLA, CDA)
+        balance: Stato bilancio auto (mu_rear_eff, Fz_rear, Fz_front)
+        mass_kg: Massa totale con carburante [kg]
+        pu_state: Stato power unit (ICE kW, ERS kW)
         radius_m: Raggio curva [m] (0 per rettilineo)
-        is_cornering: Se true, applica Kamm circle
+        is_cornering: True se in curva (applica cerchio di Kamm)
+        env_rho: Densità aria [kg/m³]
+        throttle_fraction: Throttle pilota [0.0, 1.0] — scala la potenza
 
     Returns:
-        (F_drive_actual, a_net, wheelspin_flag)
+        (F_drive [N], a_net [m/s²], wheelspin_flag)
     """
 
     if v_ms < constants.MIN_VELOCITY_MS:
         return 0.0, 0.0, False
 
-    # ========================================================================
-    # STEP 1: Grip limit (forza verticale asse posteriore)
-    # ========================================================================
-    # Il grip è limitato dall'asse posteriore (rear wheels sono quelli che spingono)
+    # =========================================================================
+    # STEP 1: Grip disponibile (asse posteriore — quello che traziona)
+    # =========================================================================
     F_grip_max = balance.mu_rear_eff * balance.Fz_rear
 
-    # ========================================================================
-    # STEP 2: Forza laterale richiesta (in curva vera, non corner largo)
-    # ========================================================================
-    # Apply Kamm circle ONLY for real corners (radius < 200m)
-    # Wide turns (e.g. Parabolica 668m) are essentially straights for traction circle
-    if is_cornering and radius_m > 0.1 and radius_m < 200.0:
-        F_lat_required = mass_kg * (v_ms ** 2) / radius_m
-        F_lat_required = min(F_lat_required, F_grip_max * 0.95)  # Non può superare grip
-    else:
-        F_lat_required = 0.0
-
-    # ========================================================================
-    # STEP 3: Traction circle (Kamm) — forza longitudinale disponibile
-    # ========================================================================
-    if F_lat_required > 0:
-        # sqrt(F_total² - F_lat²)
-        if F_lat_required >= F_grip_max * 0.99:
-            # Saturo in laterale, niente spinta longitudinale
-            F_long_available = 0.0
-        else:
-            F_long_available_sq = F_grip_max ** 2 - F_lat_required ** 2
-            F_long_available = math.sqrt(max(0, F_long_available_sq))
+    # =========================================================================
+    # STEP 2: Cerchio di Kamm — curve reali (R < 500m)
+    # =========================================================================
+    # Non si applica a curve larghissime (Parabolica Monza R=668m, praticamente rettilineo
+    # dal punto di vista della trazione). Soglia 500m è fisicamente ragionevole:
+    # una curva F1 "vera" che assorbe grip laterale significativo è R < 500m.
+    if is_cornering and 0 < radius_m < 500.0:
+        F_lat = mass_kg * (v_ms ** 2) / radius_m
+        F_lat = min(F_lat, F_grip_max * 0.95)  # non può superare il grip totale
+        F_long_available = math.sqrt(max(0.0, F_grip_max ** 2 - F_lat ** 2))
     else:
         F_long_available = F_grip_max
 
-    # ========================================================================
-    # STEP 4: Potenza disponibile da motore
-    # ========================================================================
-    # P_total = (ICE_kw + ERS_kw) * drivetrain_efficiency
+    # =========================================================================
+    # STEP 3: Potenza alle ruote (scalata per throttle pilota)
+    # =========================================================================
+    # throttle_fraction scalata la POTENZA, non l'accelerazione.
+    # Questo è fisicamente corretto: l'ECU scala la coppia del motore.
     P_ice = pu_state.ice_power_kw
-    P_ers = pu_state.ers_output_kw if pu_state.ers_output_kw > 0 else 0
-    P_total_kw = (P_ice + P_ers) * constants.DRIVETRAIN_EFFICIENCY
-    P_total_w = P_total_kw * 1000.0
+    P_ers = max(0.0, pu_state.ers_output_kw)
+    P_wheels_max = (P_ice + P_ers) * constants.DRIVETRAIN_EFFICIENCY * 1000.0  # [W]
+    P_actual = P_wheels_max * max(0.0, min(1.0, throttle_fraction))
 
-    # F_drive da potenza: P = F * v => F = P / v
-    if v_ms > constants.MIN_VELOCITY_MS:
-        F_drive_power = P_total_w / v_ms
-    else:
-        F_drive_power = 0.0
+    F_drive_power = P_actual / v_ms  # F = P/v
 
-    # ========================================================================
-    # STEP 5: Forza di trazione attuale (minore tra potenza e grip)
-    # ========================================================================
-    F_traction_limit = F_long_available * 1.05  # 5% buffer per wheelspin detection
-    wheelspin = F_drive_power > F_traction_limit
+    # =========================================================================
+    # STEP 4: Trazione effettiva — min(potenza, grip)
+    # =========================================================================
+    # Se F_power > F_grip: le gomme slittano (wheelspin)
+    # La trazione è semplicemente limitata al grip disponibile (TC in F1).
+    # Non c'è penalità addizionale: il TC previene lo slittamento in modo pulito.
+    wheelspin = F_drive_power > F_long_available
+    F_drive = min(F_drive_power, F_long_available)
 
-    if wheelspin:
-        # Wheelspin → perde 15% di trazione (original formula)
-        # NOTE: This causes acceleration inversion at 100% throttle on wide corners,
-        # but only applies in practice when power vastly exceeds grip.
-        # Real drivers avoid this via throttle control, which is modeled via damping factor.
-        F_drive = F_long_available * 0.85
-    else:
-        F_drive = min(F_drive_power, F_long_available)
+    # =========================================================================
+    # STEP 5: Forze resistive (aero drag + rolling resistance)
+    # =========================================================================
+    # F_drag_aero = 0.5 * ρ * v² * CDA   (drag aerodinamico)
+    # F_roll      = Crr * Fz              (resistenza rotolamento)
+    F_drag_aero = 0.5 * env_rho * (v_ms ** 2) * aero.CDA
+    F_drag_roll = constants.ROLLING_RESISTANCE_COEFF * (balance.Fz_front + balance.Fz_rear)
+    F_drag = F_drag_aero + F_drag_roll
 
-    # ========================================================================
-    # STEP 6: Forza di resistenza (aero drag + rolling resistance)
-    # ========================================================================
-    # F_drag = 0.5 * ρ * v² * CDA + Crr * Fz
-    rho = env_rho  # Air density from environment (or default sea level)
-    F_drag_aero = 0.5 * rho * (v_ms ** 2) * aero.CDA
-    F_drag_rolling = constants.ROLLING_RESISTANCE_COEFF * balance.Fz_rear
-    F_drag_total = F_drag_aero + F_drag_rolling
+    # =========================================================================
+    # STEP 6: Accelerazione netta
+    # =========================================================================
+    F_net = F_drive - F_drag
+    a_net = F_net / mass_kg
 
-    # ========================================================================
-    # STEP 7: Accelerazione netta
-    # ========================================================================
-    F_net = F_drive - F_drag_total
-    a_net = F_net / mass_kg if mass_kg > 0 else 0.0
-
-    # Clamp a MAX_BRAKE_DECEL_G per sicurezza (non può accelerare più di frenare)
+    # Clamp di sicurezza numerica
     a_net = max(-constants.MAX_BRAKE_DECEL_G * constants.G, a_net)
     a_net = min(constants.MAX_BRAKE_DECEL_G * constants.G, a_net)
 
@@ -152,43 +143,25 @@ def ers_deployment_strategy(
     """
     Determina la frazione di ERS da deploy nel prossimo dt.
 
-    Strategia:
-    - Rettilineo (STRAIGHT): deploy massimo (100%)
-    - Uscita curva (FAST_CORNER): deploy parziale (60%) per evitare wheelspin
-    - Curva normale (MEDIUM_CORNER): deploy minimo (20%)
-    - Frenata (trailing): harvest (regen, negative deploy)
-
-    Args:
-        v_ms: Velocità [m/s]
-        section_kind: Tipo sezione ("straight", "fast_corner", "slow_corner", etc.)
-        pu_state: Stato power unit (battery SOC, ERS energy)
-
     Returns:
-        Deploy fraction [0.0, 1.0] dove 0 = no deploy, 1 = max deploy
+        Deploy fraction [0.0, 1.0]
     """
-
-    # Default: sezione sconosciuta → deploy conservativo
     if section_kind is None:
         return 0.3
 
     section_kind_lower = section_kind.lower()
 
-    # Check battery SOC — se troppo carica, rilascia energia
-    if pu_state.ers_energy_mj > 3.8:  # Batteria quasi piena
-        return 1.0  # Deploy massimo per svuotare
+    if pu_state.ers_energy_mj > 3.8:
+        return 1.0
 
-    # Strategia per tipo sezione
-    if "straight" in section_kind_lower or "medium_straight" in section_kind_lower:
-        return 1.0  # Rettilineo: deploy massimo
-
+    if "straight" in section_kind_lower:
+        return 1.0
     elif "fast_corner" in section_kind_lower or "ultra_fast" in section_kind_lower:
-        return 0.6  # Curva veloce: deploy parziale (cauto con wheelspin)
-
+        return 0.6
     elif "slow_corner" in section_kind_lower or "very_slow" in section_kind_lower:
-        return 0.1  # Curva lenta: deploy minimo (quasi no)
-
+        return 0.1
     else:
-        return 0.3  # Sconosciuto: conservativo
+        return 0.3
 
 
 def estimate_max_acceleration(
@@ -199,93 +172,96 @@ def estimate_max_acceleration(
     env_rho: float = constants.RHO_SEA_LEVEL,
 ) -> float:
     """
-    Stima l'accelerazione massima in rettilineo (no traction circle limit).
-
-    Args:
-        v_ms: Velocità [m/s]
-        aero: PhysicsAeroParams (CDA)
-        mass_kg: Massa [kg]
-        pu_state: Stato power unit
+    Stima accelerazione massima teorica in rettilineo (throttle = 100%).
 
     Returns:
         Accelerazione massima [m/s²]
     """
-
     if v_ms < constants.MIN_VELOCITY_MS:
         return 0.0
 
-    # Power disponibile
-    P_total_kw = (pu_state.ice_power_kw + max(0, pu_state.ers_output_kw)) * constants.DRIVETRAIN_EFFICIENCY
-    P_total_w = P_total_kw * 1000.0
-
-    # Drag
-    rho = env_rho  # Air density from environment (or default sea level)
-    F_drag = 0.5 * rho * (v_ms ** 2) * aero.CDA + constants.ROLLING_RESISTANCE_COEFF * mass_kg * constants.G
-
-    # Force
-    F_drive = P_total_w / v_ms if v_ms > 0 else 0
+    P_total_w = (pu_state.ice_power_kw + max(0, pu_state.ers_output_kw)) * constants.DRIVETRAIN_EFFICIENCY * 1000.0
+    F_drag = 0.5 * env_rho * (v_ms ** 2) * aero.CDA + constants.ROLLING_RESISTANCE_COEFF * mass_kg * constants.G
+    F_drive = P_total_w / v_ms
     F_net = F_drive - F_drag
 
-    a = F_net / mass_kg if mass_kg > 0 else 0
-    return min(constants.MAX_BRAKE_DECEL_G * constants.G, max(0, a))
+    a = F_net / mass_kg if mass_kg > 0 else 0.0
+    return min(constants.MAX_BRAKE_DECEL_G * constants.G, max(0.0, a))
 
 
-# ============================================================================
-# Test
-# ============================================================================
+# =============================================================================
+# Test / Validazione
+# =============================================================================
 
 if __name__ == "__main__":
-    from ..data_types import PUState
+    from ..data_types import PUState, AeroSetup, EnvContext
+    from .balance_model import compute_balance, BalanceState
 
+    # Costanti test
     test_aero = PhysicsAeroParams(
-        CLA=3.20,
-        CDA=1.10,
-        CLA_front=1.60,
-        CLA_rear=1.60,
+        CLA=2.90,
+        CDA=1.20,
+        CLA_front=1.45,
+        CLA_rear=1.45,
         aero_balance=0.50,
         ground_effect_bonus=1.0,
         understeer_grip_penalty=0.0,
         oversteer_grip_penalty=0.0,
-        CDA_drs_open=1.10,
+        CDA_drs_open=1.20,
         setup_quality_score=1.0,
     )
 
     test_balance = BalanceState(
-        mu_front_eff=1.65,
-        mu_rear_eff=1.65,
+        mu_front_eff=1.80,
+        mu_rear_eff=1.80,
         load_transfer_lat=0.0,
         load_transfer_long=0.0,
         a_lat_g=0.0,
         a_long_g=0.0,
         balance_label="neutral",
-        Fz_front=4000.0,
-        Fz_rear=4800.0,
+        Fz_front=5500.0,
+        Fz_rear=6200.0,
         load_transfer_lat_front=0.0,
         load_transfer_lat_rear=0.0,
     )
 
     test_pu = PUState(
-        active_map="RACE",
-        ers_mode="DEPLOY",
+        active_map="QUALIFY",
+        ers_mode="QUALIFY",
         ice_temp_c=80.0,
-        ice_power_kw=750.0,
-        ers_energy_mj=2.0,
-        ers_output_kw=160.0,
-        fuel_kg=50.0,
+        ice_power_kw=550.0,
+        ers_energy_mj=3.0,
+        ers_output_kw=120.0,
+        fuel_kg=12.0,
     )
 
-    # Test rettilineo a 100 m/s
-    F_drive, a_net, wheelspin = compute_drive_force(
-        v_ms=100.0,
-        aero=test_aero,
-        balance=test_balance,
-        mass_kg=798.0,
-        pu_state=test_pu,
-        radius_m=0.0,
-        is_cornering=False,
-    )
+    mass = 810.0  # kg (798 dry + 12 fuel)
 
-    print(f"Straight line acceleration (100 m/s):")
-    print(f"  F_drive = {F_drive:.0f} N")
-    print(f"  a_net = {a_net:.2f} m/s² = {a_net/constants.G:.2f}g")
-    print(f"  Wheelspin: {wheelspin}")
+    print("=" * 70)
+    print("VALIDAZIONE: Profilo accelerazione (deve DIMINUIRE con v)")
+    print("=" * 70)
+    print(f"{'Velocità':>10} {'F_power':>10} {'F_grip':>10} {'F_drive':>10} {'F_drag':>10} {'a_net':>8}")
+    print("-" * 70)
+
+    for v_kph in [100, 150, 200, 250, 300, 340]:
+        v_ms = v_kph / 3.6
+        F_drive, a_net, wheelspin = compute_drive_force(
+            v_ms=v_ms,
+            aero=test_aero,
+            balance=test_balance,
+            mass_kg=mass,
+            pu_state=test_pu,
+            radius_m=0.0,
+            is_cornering=False,
+            throttle_fraction=1.0,
+        )
+        P_w = (550 + 120) * 0.895 * 1000
+        F_power = P_w / v_ms
+        F_drag = 0.5 * 1.175 * v_ms ** 2 * 1.20 + 0.011 * 11700
+        F_grip = 1.80 * 6200
+        print(f"{v_kph:>10} {F_power:>10.0f} {F_grip:>10.0f} {F_drive:>10.0f} "
+              f"{F_drag:>10.0f} {a_net:>8.2f}")
+
+    print("-" * 70)
+    print("Obiettivo: a_net deve DIMINUIRE da sinistra a destra")
+    print("v_max attesa: ~340-360 kph (quando a_net ≈ 0)")

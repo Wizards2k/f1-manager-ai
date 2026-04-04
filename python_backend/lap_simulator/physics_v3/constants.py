@@ -28,11 +28,11 @@ FUEL_DENSITY_KG_L = 0.775           # kg/L benzina Formula 1 (premium fuel)
 # Power Unit — Potenza e Efficienza
 # ============================================================================
 
-ICE_PEAK_POWER_KW = 950.0           # kW motore termico picco (turbo a regime) — CALIB: +200kW calibration
-ICE_BASE_POWER_KW = 950.0           # kW power unit a regime stabile
-ERS_PEAK_POWER_KW = 220.0           # kW MGU-K 2025 (picco discharge) — CALIB: +60kW total deploy
-PU_TOTAL_PEAK_KW = 1170.0           # kW ICE + ERS qualifying (1170 kW = 1558 hp)
-DRIVETRAIN_EFFICIENCY = 0.85        # perdite meccaniche (trasmissione, differenziale, semiassi) — Increased to 15% losses for realistic acceleration
+ICE_PEAK_POWER_KW = 550.0           # kW motore termico picco — F1 2025 reale (FIA homologated)
+ICE_BASE_POWER_KW = 550.0           # kW power unit a regime stabile
+ERS_PEAK_POWER_KW = 120.0           # kW MGU-K 2025 (limite FIA: 120 kW max discharge)
+PU_TOTAL_PEAK_KW = 670.0            # kW ICE + ERS qualifying (670 kW = 900 hp)
+DRIVETRAIN_EFFICIENCY = 0.895       # perdite meccaniche (trasmissione, differenziale, semiassi) ~10.5%
 ROLLING_RESISTANCE_COEFF = 0.011    # Crr pneumatici Pirelli F1 (valido su asfalto)
 
 # ============================================================================
@@ -45,10 +45,12 @@ CLA_MAX = 4.80                      # Monaco high-DF setup
 CLA_NEUTRAL = 3.20                  # Setup medio
 
 # Drag coefficient area [m²] — include telaio + aero
-CDA_BASE_STRUCT = 0.0              # m² baseline telaio + ruote
-CDA_MIN = 1.00                      # Monza low-DF setup
-CDA_MAX = 1.40                      # Monaco high-DF setup
-CDA_NEUTRAL = 1.20                  # Setup medio
+CDA_BASE_STRUCT = 0.20             # m² drag strutturale (telaio + ruote + driver) — non-aerodinamico
+CDA_BODY_DRAG = 0.55               # m² drag carrozzeria completa senza ali (corpo + ruote + pilota)
+CDA_FLOOR_WHEELS = 0.42            # m² drag non-wing (pavimento + ruote + scocca) per mapping ala→fisica
+CDA_MIN = 0.85                      # Monza low-DF setup (realistic drag)
+CDA_MAX = 1.60                      # Monaco high-DF setup
+CDA_NEUTRAL = 1.30                  # Monza no-DRS calibration: v_term=328 kph @ 600kW (confirmed from telemetry plateau)
 
 # Sensitivity (aero_points → fisico) — da spec Section 3
 CLA_SENSITIVITY = 0.020             # m²/punto aero  (baseline 160 pt = 3.2 m²)
@@ -168,7 +170,7 @@ BRAKE_TEMP_MAX_C = 1500.0
 
 ERS_BATTERY_CAPACITY_MJ = 4.0       # MJ capacità batteria (4 MJ per lap)
 ERS_MGU_K_HARVEST_LIMIT_KW = 120.0  # kW max harvest (freno motore)
-ERS_MGU_K_DEPLOY_LIMIT_KW = 160.0   # kW max discharge (power boost)
+ERS_MGU_K_DEPLOY_LIMIT_KW = 120.0   # kW max discharge (limite FIA 2025)
 ERS_MGU_H_CONTRIBUTION_MJ = 0.5     # MJ raccolti da MGU-H per lap (circa)
 
 # ============================================================================

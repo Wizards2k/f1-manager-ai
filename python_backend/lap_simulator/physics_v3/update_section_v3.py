@@ -174,7 +174,12 @@ def update_section_v3(
             aero_setup=aero_setup,
             setup_sliders=setup_sliders,
         )
-        mu_base = (mu_grip_front + mu_grip_rear) / 2.0
+        # update_tyres() usa una scala interna normalizzata (C3=1.0, C5=1.12).
+        # Per la fisica newtoniana servono i valori assoluti di mu (C3=1.70, C5=1.90).
+        # Fattore conversione = MU_BASE["C3"] = 1.70 (C3 è il compound di riferimento
+        # con base_grip=1.0 nella tyre model e 1.70 nella scala fisica).
+        MU_PHYSICS_SCALE = constants.MU_BASE.get("C3", 1.70)
+        mu_base = (mu_grip_front + mu_grip_rear) / 2.0 * MU_PHYSICS_SCALE
         events.extend(tyre_events)
 
         # ====================================================================
@@ -209,17 +214,22 @@ def update_section_v3(
         )
 
         # ====================================================================
-        # STEP 7: Corner apex speed (fisica newtoniana)
+        # STEP 7: Corner apex speed
+        # Priorità: v_min_kph (telemetria reale) > corner_solver (fisica) > v_exit
+        #
+        # v_min_kph è il dato del GIOCO: la velocità minima reale nel settore.
+        # Per chicane (Turn 1/2): v_min è l'apex, v_exit è dopo la riaccelerazione.
+        # Per sezioni senza raggio (Turn 3): v_min = v_exit, nessuna curva stretta.
+        # Usare v_exit come apex per queste sezioni causava errori +20% (frenata a 0).
         # ====================================================================
         section_radius = section.radius_m if hasattr(section, 'radius_m') and section.radius_m else 0.0
 
-        # Per curve molto larghe (radius > 500m, es. Parabolica), usa telemetria v_exit come v_apex
-        # instead di calcolo fisico che darebbe valori incorretti
-        if section_radius > 500:
-            # Wide, flowing corner — usare dati telemetrici
-            v_apex_ms = section.v_exit_kph / 3.6 if hasattr(section, 'v_exit_kph') else 30.0
-        else:
-            # Normal corner — calcola con corner solver
+        v_min_kph = getattr(section, 'v_min_kph', None)
+        if v_min_kph is not None and v_min_kph > 0:
+            # PRIORITÀ 1: v_min dalla telemetria (dato reale del gioco)
+            v_apex_ms = v_min_kph / 3.6
+        elif section_radius > 0.1:
+            # PRIORITÀ 2: calcolo fisico se abbiamo il raggio
             v_apex_ms = solve_corner_apex_speed(
                 radius_m=section_radius,
                 aero=physics_aero,
@@ -229,6 +239,9 @@ def update_section_v3(
                 env_rho=env.air_density_kg_m3,
                 banking_deg=0.0,
             )
+        else:
+            # FALLBACK: sezione senza raggio né v_min (caso degenere)
+            v_apex_ms = section.v_exit_kph / 3.6 if hasattr(section, 'v_exit_kph') and section.v_exit_kph > 0 else 30.0
 
         # ====================================================================
         # STEP 8: Integrazione cinematica — HD o analitica
@@ -273,6 +286,13 @@ def update_section_v3(
                 brake_state=brake_state,
                 v_max_constraint=v_exit_constraint if hasattr(section, 'v_exit_kph') else None,
             )
+
+        # ====================================================================
+        # DEBUG TEMPORANEO: stampa parametri chiave per diagnosi
+        # TODO: RIMUOVERE dopo fix Turn 2/3
+        import os as _os
+        if _os.environ.get('V3_DEBUG'):
+            print(f"  [V3DEBUG] {section.name}: v_entry={v_entry_ms*3.6:.1f} v_apex={v_apex_ms*3.6:.1f} v_max={v_exit_constraint*3.6 if v_exit_constraint else None} → dt={dt_s:.3f}s v_exit={v_exit_ms*3.6:.1f}")
 
         # ====================================================================
         # STEP 9: Traffic/airflow cap (stesso V1)
