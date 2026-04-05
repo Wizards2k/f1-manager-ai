@@ -1,156 +1,285 @@
 """
-Tyre Construction - Costruzione e compound gomme F1 2025
+Tyre Construction - Costruzione e compound gomme F1 2025 (Physics V4)
 
-Modello fisico della gomma:
-- 5 compound Pirelli (C1-C5, da hard a soft)
+Modello fisico completo basato su tyre_model.py V1:
+- 5 compound Pirelli (C1-C5) + C6 hyper-soft
 - Struttura: carcassa, battistrada, sidewall
-- Grip base in funzione del compound
-- Sensibilità temperatura
+- Grip base con gaussian thermal factor
+- Sensibilità temperatura, usura, setup
+- Graining/blistering con time accumulator
 
-NOTA: Modulo V4 standalone, non dipende da codice V1
+NOTA: Modulo V4 standalone, non dipende da tyre_model.py V1
 """
 
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import numpy as np
 
 
+def gaussian(value: float, center: float, sigma: float) -> float:
+    """Curva gaussiana per thermal factor."""
+    if sigma <= 0:
+        return 0.0
+    return np.exp(-((value - center) ** 2) / (2 * sigma ** 2))
+
+
 @dataclass
-class TyreCompound:
-    """Definizione compound gomma."""
-    name: str  # es. "C3", "MEDIUM"
-    grip_coefficient: float  # mu base (1.0-2.0)
-    optimal_temp_min_c: float  # °C temperatura ottimale minima
-    optimal_temp_max_c: float  # °C temperatura ottimale massima
-    degradation_rate: float  # % grip perso per giro
-    warmup_laps: int  # giri per warmup completo
-    durability_laps: int  # giri vita utile
+class TyreCompoundParams:
+    """Parametri completi compound gomma (da V1 tyre_model.py)."""
+    name: str
+    base_grip: float  # Grip base (1.0 = C3)
+    temp_opt_surface: float  # °C temperatura ottimale superficie
+    temp_opt_core: float  # °C temperatura ottimale nucleo
+    gaussian_sigma_surface_c: float  # σ superficie (~6-8°C)
+    gaussian_sigma_core_c: float  # σ nucleo (~5-7°C)
+    temp_window_surface_c: Tuple[float, float, float]  # (min, opt, max) superficie
+    temp_window_core_c: Tuple[float, float, float]  # (min, opt, max) nucleo
+    wear_rate_base_pct_per_km: float  # % usura per km
+    degradation_rate_multiplier: float  # 0.6x (C1) ... 1.8x (C6)
+    heat_cycle_grip_penalty: float  # % grip perso per heat cycle
+    slip_sensitivity: float  # sensibilità grip in curva
+    cooling_coeff: float  # coefficiente raffreddamento
+    conduction_coeff: float  # coefficiente conduzione surface→core
+    thermal_mass_surface: float  # kJ/°C massa termica superficie
+    thermal_mass_core: float  # kJ/°C massa termica nucleo
+    graining_time_threshold_s: float  # secondi per graining trigger
+    blistering_time_threshold_s: float  # secondi per blistering trigger
 
 
 @dataclass
 class TyreState:
-    """Stato corrente gomma."""
-    temp_c: float  # °C temperatura superficiale
-    temp_core_c: float  # °C temperatura nucleo
-    wear_pct: float  # % usura (0 = nuovo, 100 = distrutto)
-    grip_pct: float  # % grip residuo (100 = max)
-    pressure_bar: float  # bar pressione
-    compound: str  # compound attuale
+    """Stato completo gomma (da V1 data_types.py)."""
+    wheel_pos: str  # LF, RF, LR, RR
+    compound: str  # C1-C6, INTERMEDIATE, WET
+    surface_temp_c: float  # °C temperatura superficiale
+    core_temp_c: float  # °C temperatura nucleo
+    wear_pct: float  # % usura (0-100)
+    effective_grip: float  # grip effettivo (calcolato)
+    heat_cycles: int  # numero cicli termici
+    graining_level: float  # 0.0-1.0 livello graining
+    graining_time_acc_s: float  # secondi accumulati graining
+    blistering_level: float  # 0.0-1.0 livello blistering
+    blistering_time_acc_s: float  # secondi accumulati blistering
+    flatspot_severity: float  # 0.0-1.0 gravità flat spot
+    puncture_risk: float  # 0.0-1.0 rischio foratura
+    overheat_warning: bool  # Flag overheating
+    cold_warning: bool  # Flag gomma fredda
 
 
 class TyreConstruction:
     """
-    Costruzione gomme F1 2025 - Pirelli
+    Costruzione gomme F1 2025 - Pirelli (basato su V1 tyre_model.py)
     
     Compound disponibili:
     - C1: Hard (durata, grip basso)
     - C2: Medium-Hard (bilanciato)
-    - C3: Medium (compromesso)
+    - C3: Medium (baseline)
     - C4: Medium-Soft (performance)
     - C5: Soft (grip max, durata bassa)
+    - C6: Hyper-soft (Monaco/Imola, grip max, durata minima)
     
     Intermedi:
     - Green: Intermediate (pioggia leggera)
     - Blue: Wet (pioggia pesante)
     """
     
-    # Compound slick Pirelli F1 2025
-    COMPOUNDS: Dict[str, TyreCompound] = {
-        'C1': TyreCompound(
+    # Compound slick Pirelli F1 2025 (dati da V1 + docs/TyreModel.md)
+    COMPOUNDS: Dict[str, TyreCompoundParams] = {
+        'C1': TyreCompoundParams(
             name='C1',
-            grip_coefficient=1.45,
-            optimal_temp_min_c=90.0,
-            optimal_temp_max_c=110.0,
-            degradation_rate=0.15,  # % per giro
-            warmup_laps=2,
-            durability_laps=45
+            base_grip=0.92,
+            temp_opt_surface=125.0,
+            temp_opt_core=102.0,
+            gaussian_sigma_surface_c=7.5,
+            gaussian_sigma_core_c=6.5,
+            temp_window_surface_c=(110.0, 125.0, 140.0),
+            temp_window_core_c=(90.0, 102.0, 115.0),
+            wear_rate_base_pct_per_km=0.09,
+            degradation_rate_multiplier=0.6,
+            heat_cycle_grip_penalty=0.008,
+            slip_sensitivity=0.75,
+            cooling_coeff=1.25,
+            conduction_coeff=0.42,
+            thermal_mass_surface=1.25,
+            thermal_mass_core=3.8,
+            graining_time_threshold_s=45.0,
+            blistering_time_threshold_s=60.0,
         ),
-        'C2': TyreCompound(
+        'C2': TyreCompoundParams(
             name='C2',
-            grip_coefficient=1.55,
-            optimal_temp_min_c=95.0,
-            optimal_temp_max_c=115.0,
-            degradation_rate=0.20,
-            warmup_laps=2,
-            durability_laps=38
+            base_grip=0.95,
+            temp_opt_surface=122.0,
+            temp_opt_core=99.0,
+            gaussian_sigma_surface_c=7.2,
+            gaussian_sigma_core_c=6.3,
+            temp_window_surface_c=(110.0, 122.0, 135.0),
+            temp_window_core_c=(88.0, 99.0, 110.0),
+            wear_rate_base_pct_per_km=0.11,
+            degradation_rate_multiplier=0.8,
+            heat_cycle_grip_penalty=0.010,
+            slip_sensitivity=0.80,
+            cooling_coeff=1.18,
+            conduction_coeff=0.45,
+            thermal_mass_surface=1.18,
+            thermal_mass_core=3.5,
+            graining_time_threshold_s=42.0,
+            blistering_time_threshold_s=55.0,
         ),
-        'C3': TyreCompound(
+        'C3': TyreCompoundParams(
             name='C3',
-            grip_coefficient=1.65,
-            optimal_temp_min_c=100.0,
-            optimal_temp_max_c=120.0,
-            degradation_rate=0.28,
-            warmup_laps=1,
-            durability_laps=30
+            base_grip=1.00,
+            temp_opt_surface=120.0,
+            temp_opt_core=96.0,
+            gaussian_sigma_surface_c=7.0,
+            gaussian_sigma_core_c=6.0,
+            temp_window_surface_c=(105.0, 120.0, 135.0),
+            temp_window_core_c=(85.0, 96.0, 108.0),
+            wear_rate_base_pct_per_km=0.13,
+            degradation_rate_multiplier=1.0,
+            heat_cycle_grip_penalty=0.012,
+            slip_sensitivity=1.00,
+            cooling_coeff=1.10,
+            conduction_coeff=0.48,
+            thermal_mass_surface=1.10,
+            thermal_mass_core=3.2,
+            graining_time_threshold_s=40.0,
+            blistering_time_threshold_s=50.0,
         ),
-        'C4': TyreCompound(
+        'C4': TyreCompoundParams(
             name='C4',
-            grip_coefficient=1.78,
-            optimal_temp_min_c=105.0,
-            optimal_temp_max_c=125.0,
-            degradation_rate=0.38,
-            warmup_laps=1,
-            durability_laps=22
+            base_grip=1.06,
+            temp_opt_surface=105.0,
+            temp_opt_core=90.0,
+            gaussian_sigma_surface_c=6.5,
+            gaussian_sigma_core_c=5.5,
+            temp_window_surface_c=(90.0, 105.0, 120.0),
+            temp_window_core_c=(80.0, 90.0, 100.0),
+            wear_rate_base_pct_per_km=0.16,
+            degradation_rate_multiplier=1.3,
+            heat_cycle_grip_penalty=0.015,
+            slip_sensitivity=1.15,
+            cooling_coeff=0.98,
+            conduction_coeff=0.52,
+            thermal_mass_surface=0.98,
+            thermal_mass_core=2.8,
+            graining_time_threshold_s=35.0,
+            blistering_time_threshold_s=45.0,
         ),
-        'C5': TyreCompound(
+        'C5': TyreCompoundParams(
             name='C5',
-            grip_coefficient=1.92,
-            optimal_temp_min_c=110.0,
-            optimal_temp_max_c=130.0,
-            degradation_rate=0.50,
-            warmup_laps=1,
-            durability_laps=15
+            base_grip=1.12,
+            temp_opt_surface=100.0,
+            temp_opt_core=85.0,
+            gaussian_sigma_surface_c=6.0,
+            gaussian_sigma_core_c=5.0,
+            temp_window_surface_c=(85.0, 100.0, 115.0),
+            temp_window_core_c=(75.0, 85.0, 95.0),
+            wear_rate_base_pct_per_km=0.19,
+            degradation_rate_multiplier=1.6,
+            heat_cycle_grip_penalty=0.018,
+            slip_sensitivity=1.30,
+            cooling_coeff=0.90,
+            conduction_coeff=0.55,
+            thermal_mass_surface=0.90,
+            thermal_mass_core=2.5,
+            graining_time_threshold_s=30.0,
+            blistering_time_threshold_s=40.0,
         ),
-        'INTERMEDIATE': TyreCompound(
+        'C6': TyreCompoundParams(
+            name='C6',
+            base_grip=1.18,
+            temp_opt_surface=92.0,
+            temp_opt_core=80.0,
+            gaussian_sigma_surface_c=5.5,
+            gaussian_sigma_core_c=4.5,
+            temp_window_surface_c=(80.0, 92.0, 105.0),
+            temp_window_core_c=(70.0, 80.0, 90.0),
+            wear_rate_base_pct_per_km=0.22,
+            degradation_rate_multiplier=1.8,
+            heat_cycle_grip_penalty=0.020,
+            slip_sensitivity=1.45,
+            cooling_coeff=0.82,
+            conduction_coeff=0.58,
+            thermal_mass_surface=0.82,
+            thermal_mass_core=2.2,
+            graining_time_threshold_s=28.0,
+            blistering_time_threshold_s=35.0,
+        ),
+        'INTERMEDIATE': TyreCompoundParams(
             name='Intermediate',
-            grip_coefficient=1.40,  # su bagnato
-            optimal_temp_min_c=70.0,
-            optimal_temp_max_c=90.0,
-            degradation_rate=0.10,
-            warmup_laps=1,
-            durability_laps=50
+            base_grip=1.15,  # su bagnato
+            temp_opt_surface=80.0,
+            temp_opt_core=70.0,
+            gaussian_sigma_surface_c=5.0,
+            gaussian_sigma_core_c=4.0,
+            temp_window_surface_c=(70.0, 80.0, 90.0),
+            temp_window_core_c=(60.0, 70.0, 80.0),
+            wear_rate_base_pct_per_km=0.10,
+            degradation_rate_multiplier=0.5,
+            heat_cycle_grip_penalty=0.005,
+            slip_sensitivity=0.90,
+            cooling_coeff=1.35,
+            conduction_coeff=0.40,
+            thermal_mass_surface=1.05,
+            thermal_mass_core=3.0,
+            graining_time_threshold_s=50.0,
+            blistering_time_threshold_s=70.0,
         ),
-        'WET': TyreCompound(
+        'WET': TyreCompoundParams(
             name='Wet',
-            grip_coefficient=1.35,  # su bagnato
-            optimal_temp_min_c=65.0,
-            optimal_temp_max_c=85.0,
-            degradation_rate=0.08,
-            warmup_laps=1,
-            durability_laps=60
+            base_grip=1.10,  # su bagnato
+            temp_opt_surface=75.0,
+            temp_opt_core=65.0,
+            gaussian_sigma_surface_c=4.5,
+            gaussian_sigma_core_c=3.5,
+            temp_window_surface_c=(65.0, 75.0, 85.0),
+            temp_window_core_c=(55.0, 65.0, 75.0),
+            wear_rate_base_pct_per_km=0.08,
+            degradation_rate_multiplier=0.4,
+            heat_cycle_grip_penalty=0.004,
+            slip_sensitivity=0.85,
+            cooling_coeff=1.40,
+            conduction_coeff=0.38,
+            thermal_mass_surface=1.00,
+            thermal_mass_core=2.8,
+            graining_time_threshold_s=55.0,
+            blistering_time_threshold_s=80.0,
         ),
     }
     
-    # Grip relativo tra compound (normalizzato a C3=1.0)
-    Grip_RELATIVE = {
-        'C1': 0.88,
-        'C2': 0.94,
-        'C3': 1.00,
-        'C4': 1.08,
-        'C5': 1.16,
-    }
-    
-    def __init__(self, compound: str = 'C3'):
+    def __init__(self, compound: str = 'C3', wheel_pos: str = 'LF'):
         """
         Inizializza gomma
         
         Args:
-            compound: nome compound (C1-C5, INTERMEDIATE, WET)
+            compound: nome compound (C1-C6, INTERMEDIATE, WET)
+            wheel_pos: posizione ruota (LF, RF, LR, RR)
         """
         if compound not in self.COMPOUNDS:
             raise ValueError(f"Compound {compound} non valido. Usa: {list(self.COMPOUNDS.keys())}")
         
         self.compound = compound
-        self.compound_data = self.COMPOUNDS[compound]
+        self.wheel_pos = wheel_pos
+        self.params = self.COMPOUNDS[compound]
         
-        # Stato iniziale (gomma nuova)
+        # Stato iniziale (gomma nuova, temperature ambiente)
+        ambient_temp = 25.0
         self.state = TyreState(
-            temp_c=25.0,  # Temperatura ambiente
-            temp_core_c=25.0,
+            wheel_pos=wheel_pos,
+            compound=compound,
+            surface_temp_c=ambient_temp,
+            core_temp_c=ambient_temp,
             wear_pct=0.0,
-            grip_pct=100.0,
-            pressure_bar=2.3,  # Pressione ottimale
-            compound=compound
+            effective_grip=self.params.base_grip,
+            heat_cycles=0,
+            graining_level=0.0,
+            graining_time_acc_s=0.0,
+            blistering_level=0.0,
+            blistering_time_acc_s=0.0,
+            flatspot_severity=0.0,
+            puncture_risk=0.0,
+            overheat_warning=False,
+            cold_warning=True,  # Inizialmente fredda
         )
     
     def get_grip_coefficient(self) -> float:

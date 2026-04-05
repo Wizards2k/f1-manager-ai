@@ -20,6 +20,13 @@ from .tyre_thermal import TyreThermal
 from .tyre_wear import TyreWear
 
 
+def gaussian(value: float, center: float, sigma: float) -> float:
+    """Curva gaussiana per thermal factor (da V1 tyre_model.py)."""
+    if sigma <= 0:
+        return 0.0
+    return np.exp(-((value - center) ** 2) / (2 * sigma ** 2))
+
+
 @dataclass
 class GripState:
     """Stato grip gomma."""
