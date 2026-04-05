@@ -163,31 +163,20 @@ class AeroAssembly:
         forces['engine_cover'] = self.engine_cover.calculate_forces(air_density, speed_ms)
         forces['bwing'] = self.bwing.calculate_forces(air_density, speed_ms)
         
-        # Calcola totali (CLA = CL × A_REF, CDA = CD × A_REF)
-        # Usiamo area riferimento comune (1.6 m²) per confronto
-        A_REF_COMMON = 1.60  # m² area frontale auto F1
-        
-        cla_total = sum(f['CL'] * f['A_REF'] / A_REF_COMMON for f in forces.values())
-        cda_total = sum(f['CD'] * f['A_REF'] / A_REF_COMMON for f in forces.values())
-        
+        # Calcola totali SOMMANDO LE FORZE IN NEWTON (non coefficienti)
+        # Questo è il metodo fisicamente corretto: ogni modulo calcola la sua forza
         f_down_total = sum(f['lift'] for f in forces.values())
         f_drag_total = sum(f['drag'] for f in forces.values())
         
-        # Distribuisci front/rear (CLA front/rear)
-        cla_front = (
-            forces['front_wing']['CL'] * forces['front_wing']['A_REF'] +
-            forces['floor_front']['CL'] * forces['floor_front']['A_REF'] +
-            forces['sidepods']['CL'] * forces['sidepods']['A_REF'] * 0.5 +
-            forces['engine_cover']['CL'] * forces['engine_cover']['A_REF'] * 0.3
-        ) / A_REF_COMMON
+        # Deriviamo CLA e CDA dalle forze totali usando l'area frontale della F1
+        A_REF_F1 = 1.60  # m² area frontale tipica F1
+        q = 0.5 * air_density * speed_ms ** 2  # pressione dinamica
         
-        cla_rear = (
-            forces['rear_wing']['CL'] * forces['rear_wing']['A_REF'] +
-            forces['floor_rear']['CL'] * forces['floor_rear']['A_REF'] +
-            forces['sidepods']['CL'] * forces['sidepods']['A_REF'] * 0.5 +
-            forces['bwing']['CL'] * forces['bwing']['A_REF']
-        ) / A_REF_COMMON
+        # CLA = F_down / (q * A_ref), CDA = F_drag / (q * A_ref)
+        cla_total = f_down_total / max(q * A_REF_F1, 0.01)
+        cda_total = f_drag_total / max(q * A_REF_F1, 0.01)
         
+        # Distribuisci front/rear SOMMANDO le forze (non coefficienti)
         f_down_front = (
             forces['front_wing']['lift'] +
             forces['floor_front']['lift'] +
@@ -200,6 +189,10 @@ class AeroAssembly:
             forces['sidepods']['lift'] * 0.5 +
             forces['bwing']['lift']
         )
+        
+        # Deriva CLA front/rear dalle forze
+        cla_front = f_down_front / max(q * A_REF_F1, 0.01)
+        cla_rear = f_down_rear / max(q * A_REF_F1, 0.01)
         
         # Calcola aero balance
         aero_balance = cla_front / max(cla_total, 0.01)
@@ -220,13 +213,23 @@ class AeroAssembly:
         )
     
     def get_aero_efficiency(self) -> float:
-        """Calcola efficienza aerodinamica (L/D ratio)."""
-        cla_sum = sum(c.calculate_forces(1.225, 100)['CL'] for c in [
-            self.front_wing, self.rear_wing, self.floor_front, 
-            self.floor_rear, self.sidepods, self.engine_cover, self.bwing
-        ])
-        cda_sum = sum(c.calculate_forces(1.225, 100)['CD'] for c in [
-            self.front_wing, self.rear_wing, self.floor_front, 
-            self.floor_rear, self.sidepods, self.engine_cover, self.bwing
-        ])
-        return cla_sum / max(cda_sum, 0.01)
+        """Calcola efficienza aerodinamica (L/D ratio) dalle forze totali."""
+        # Calcola forze a 100 m/s (~360 kph) con aria standard
+        test_speed = 100.0
+        test_density = 1.225
+        
+        forces = {}
+        forces['front_wing'] = self.front_wing.calculate_forces(test_density, test_speed)
+        forces['rear_wing'] = self.rear_wing.calculate_forces(test_density, test_speed)
+        forces['floor_front'] = self.floor_front.calculate_forces(test_density, test_speed, 0.040)
+        forces['floor_rear'] = self.floor_rear.calculate_forces(test_density, test_speed, 0.050)
+        forces['sidepods'] = self.sidepods.calculate_forces(test_density, test_speed)
+        forces['engine_cover'] = self.engine_cover.calculate_forces(test_density, test_speed)
+        forces['bwing'] = self.bwing.calculate_forces(test_density, test_speed)
+        
+        # Somma forze in Newton
+        total_lift = sum(f['lift'] for f in forces.values())
+        total_drag = sum(f['drag'] for f in forces.values())
+        
+        # L/D ratio = portanza / resistenza
+        return total_lift / max(total_drag, 0.01)

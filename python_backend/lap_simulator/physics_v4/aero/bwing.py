@@ -22,15 +22,21 @@ class BWing:
     
     def __init__(self, config=None):
         defaults = {
-            'width': 0.40,         # Larghezza (m)
-            'height': 0.08,        # Altezza (m)
             'aoa': 10.0,           # Angolo attacco (gradi)
             'active': True,        # B-wing attivo
         }
         
         self.config = {**defaults, **(config or {})}
         
-        self.A_REF = self.config['width'] * self.config['height']
+        # Parametri geometrici F1 2025
+        self.SPAN = 1.20   # Apertura B-wing (m)
+        self.CHORD = 0.25  # Corda media (m)
+        
+        # Area di riferimento (superficie alare)
+        self.A_REF = self.SPAN * self.CHORD  # 0.30 m²
+        
+        # Area riferimento comune per confronto (area frontale auto)
+        self.A_REF_COMMON = 1.60  # m²
         
         # Parametri aerodinamici
         self.CL_MAX = 0.80

@@ -25,20 +25,27 @@ class FloorRear:
     def __init__(self, config=None):
         defaults = {
             'height': 0.07,        # Altezza da suolo ottimale (m)
-            'width': 1.40,         # Larghezza fondo (m)
-            'length': 1.50,        # Lunghezza diffusore (m)
             'diffuser_angle': 7.0, # Angolo diffusore (gradi)
             'efficiency': 0.90,    # Efficienza diffusore
         }
         
         self.config = {**defaults, **(config or {})}
         
-        self.A_REF = self.config['width'] * self.config['length']
+        # Parametri geometrici F1 2025
+        self.WIDTH = 1.40   # Larghezza diffusore (m)
+        self.LENGTH = 1.50  # Lunghezza diffusore (m)
+        
+        # Area di riferimento (superficie diffusore)
+        self.A_REF = self.WIDTH * self.LENGTH  # 2.10 m²
+        
+        # Area riferimento comune per confronto (area frontale auto)
+        self.A_REF_COMMON = 1.60  # m²
         
         # Parametri aerodinamici
         self.CL_MAX = 1.80        # Portanza da ground effect
         self.CL_MIN = 0.50        # Minimo ground effect
         self.CL_ALPHA = 12.0      # Sensibilità altezza
+        self.CD_BASE = 0.15       # Drag base diffusore (reale F1)
         
         # Sensibilità ground effect
         self.GROUND_EFFECT_SENSITIVITY = 30.0
@@ -68,11 +75,14 @@ class FloorRear:
         ratio = ride_height / self.config['height']
         cl_base = self.CL_MAX * (1.0 - 0.6 * (ratio ** 2))
         
+        # Applica interferenza
         cl = cl_base * self.REAR_WING_INTERFERENCE
+        
+        # Clamp CL
         cl = np.clip(cl, self.CL_MIN, self.CL_MAX)
         
-        # Drag da ground effect
-        cd = 0.008 + 0.003 * (cl ** 2)
+        # Drag da diffusore (significativo nella F1 reale)
+        cd = self.CD_BASE + 0.03 * (cl ** 2)
         
         # Forze
         q = 0.5 * rho * (v ** 2)

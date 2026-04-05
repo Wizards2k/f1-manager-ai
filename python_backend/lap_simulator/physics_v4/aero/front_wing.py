@@ -36,26 +36,25 @@ class FrontWing:
                 - ground_effect: altezza da suolo (m)
         """
         defaults = {
-            'aoa': 20.0,           # Angolo attacco base (gradi)
+            'aoa': 20.0,           # Angolo attacco (gradi)
             'drs_active': False,   # DRS disattivato
             'ground_effect': 0.05, # Altezza da suolo (m)
-            'width': 1.80,         # Larghezza ala (m)
-            'height': 0.15,        # Altezza profilo (m)
-            'span_efficiency': 0.92, # Efficienza spanwise
         }
         
         self.config = {**defaults, **(config or {})}
         
-        # Area riferimento (larghezza × altezza profilo)
-        self.A_REF = self.config['width'] * self.config['height']
+        # Parametri geometrici F1 2025
+        self.SPAN = 1.80   # Apertura ala anteriore (m) - larghezza massima F1
+        self.CHORD = 0.45  # Corda media (m) - profondità ala
+        
+        # Area di riferimento (superficie alare)
+        self.A_REF = self.SPAN * self.CHORD  # 0.81 m²
         
         # Area riferimento comune per confronto (area frontale auto)
         self.A_REF_COMMON = 1.60  # m²
-        self.SPAN = self.config['width']
-        self.ASPECT_RATIO = (self.SPAN ** 2) / self.A_REF
         
         # Parametri aerodinamici base (senza DRS)
-        self.CL_MAX = 2.80        # Portanza massima (stallo)
+        self.CL_MAX = 2.20        # Portanza massima (stallo) - ridotto da 2.80
         self.CL_MIN = -0.50       # Portanza negativa (inverted wing)
         self.CD_MIN = 0.030       # Drag minimo (profili ottimizzati)
         self.K_FACTOR = 0.055     # Induced drag factor

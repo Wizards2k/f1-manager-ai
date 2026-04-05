@@ -37,23 +37,26 @@ class RearWing:
                 - beam_wing_active: beam wing attivo (bool)
         """
         defaults = {
-            'aoa': 12.0,           # Angolo attacco base (gradi)
+            'aoa': 12.0,           # Angolo attacco (gradi)
             'drs_active': False,   # DRS disattivato
             'ground_effect': 0.05, # Altezza da suolo (m)
-            'width': 1.60,         # Larghezza ala (m)
-            'height': 0.20,        # Altezza profilo (m)
             'beam_wing_active': True,  # Beam wing attivo
         }
         
         self.config = {**defaults, **(config or {})}
         
-        # Costanti fisiche
-        self.A_REF = self.config['width'] * self.config['height']  # Area riferimento
-        self.SPAN = self.config['width']
-        self.ASPECT_RATIO = (self.SPAN ** 2) / self.A_REF
+        # Parametri geometrici F1 2025
+        self.SPAN = 1.60   # Apertura ala posteriore (m)
+        self.CHORD = 0.50  # Corda media (m)
+        
+        # Area di riferimento (superficie alare)
+        self.A_REF = self.SPAN * self.CHORD  # 0.80 m²
+        
+        # Area riferimento comune per confronto (area frontale auto)
+        self.A_REF_COMMON = 1.60  # m²
         
         # Parametri aerodinamici base (senza DRS)
-        self.CL_MAX = 3.50        # Portanza massima (stallo)
+        self.CL_MAX = 1.80        # Portanza massima (stallo) - ridotto da 3.50
         self.CL_MIN = -0.80       # Portanza negativa
         self.CD_MIN = 0.045       # Drag minimo (profili ottimizzati)
         self.K_FACTOR = 0.060     # Induced drag factor

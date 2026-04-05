@@ -23,15 +23,20 @@ class EngineCover:
     
     def __init__(self, config=None):
         defaults = {
-            'width': 0.70,         # Larghezza (m)
-            'height': 0.30,        # Altezza (m)
-            'length': 0.80,        # Lunghezza (m)
             'surface_roughness': 0.002,  # Roughness (m)
         }
         
         self.config = {**defaults, **(config or {})}
         
-        self.A_REF = self.config['width'] * self.config['length']
+        # Parametri geometrici F1 2025
+        self.WIDTH = 0.70   # Larghezza cofano (m)
+        self.LENGTH = 0.80  # Lunghezza cofano (m)
+        
+        # Area di riferimento (superficie superiore)
+        self.A_REF = self.WIDTH * self.LENGTH  # 0.56 m²
+        
+        # Area riferimento comune per confronto (area frontale auto)
+        self.A_REF_COMMON = 1.60  # m²
         
         # Parametri aerodinamici
         self.CD_BASE = 0.015      # Drag base (superficie liscia)

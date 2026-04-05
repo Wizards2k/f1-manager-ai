@@ -24,19 +24,26 @@ class Sidepods:
     
     def __init__(self, config=None):
         defaults = {
-            'width': 0.85,         # Larghezza sidepod (m)
-            'height': 0.90,        # Altezza sidepod (m)
-            'length': 1.20,        # Lunghezza sidepod (m)
             'cooling_efficiency': 0.85, # Efficienza raffreddamento
             'venturi_effect': 0.03,    # Effetto venturi laterale
         }
         
         self.config = {**defaults, **(config or {})}
         
-        self.A_REF = self.config['width'] * self.config['height']
+        # Parametri geometrici F1 2025
+        self.WIDTH = 0.85   # Larghezza sidepod (m)
+        self.HEIGHT = 0.90  # Altezza sidepod (m)
+        self.LENGTH = 1.20  # Lunghezza sidepod (m)
+        
+        # Area frontale (per drag da cooling)
+        self.A_REF_FRONT = self.WIDTH * self.HEIGHT  # 0.765 m² (per lato)
+        self.A_REF = 2 * self.A_REF_FRONT  # 1.53 m² (entrambi i lati)
+        
+        # Area riferimento comune per confronto (area frontale auto)
+        self.A_REF_COMMON = 1.60  # m²
         
         # Parametri aerodinamici
-        self.CD_BASE = 0.045      # Drag base (cooling)
+        self.CD_BASE = 0.25       # Drag base cooling (reale F1, significativo)
         self.CL_VENTURI = 0.08    # Portanza da venturi
         self.CL_ALPHA = 5.0       # Sensibilità angolo
         

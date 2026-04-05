@@ -25,19 +25,26 @@ class FloorFront:
     def __init__(self, config=None):
         defaults = {
             'height': 0.08,        # Altezza da suolo ottimale (m)
-            'width': 1.50,         # Larghezza fondo (m)
-            'length': 1.20,        # Lunghezza fondo anteriore (m)
             'efficiency': 0.85,    # Efficienza venturi
         }
         
         self.config = {**defaults, **(config or {})}
         
-        self.A_REF = self.config['width'] * self.config['length']
+        # Parametri geometrici F1 2025
+        self.WIDTH = 1.50   # Larghezza fondo (m)
+        self.LENGTH = 1.20  # Lunghezza fondo anteriore (m)
+        
+        # Area di riferimento (superficie venturi)
+        self.A_REF = self.WIDTH * self.LENGTH  # 1.80 m²
+        
+        # Area riferimento comune per confronto (area frontale auto)
+        self.A_REF_COMMON = 1.60  # m²
         
         # Parametri aerodinamici
         self.CL_MAX = 1.20        # Portanza da ground effect
         self.CL_MIN = 0.30        # Minimo ground effect
         self.CL_ALPHA = 8.0       # Sensibilità altezza (CL per m)
+        self.CD_BASE = 0.12       # Drag base ground effect (reale F1)
         
         # Sensibilità ground effect
         # Più basso = più portanza (fino a un punto)
@@ -77,8 +84,8 @@ class FloorFront:
         # Clamp CL
         cl = np.clip(cl, self.CL_MIN, self.CL_MAX)
         
-        # Drag da ground effect (piccolo)
-        cd = 0.005 + 0.002 * (cl ** 2)
+        # Drag da ground effect (significativo nella F1 reale)
+        cd = self.CD_BASE + 0.02 * (cl ** 2)
         
         # Forze
         q = 0.5 * rho * (v ** 2)
