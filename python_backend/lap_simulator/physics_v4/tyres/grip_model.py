@@ -15,9 +15,10 @@ from dataclasses import dataclass
 from typing import Dict, Tuple
 import numpy as np
 
-from .tyre_construction import TyreConstruction, TyreCompound
+from .tyre_construction import TyreConstruction, TyreCompoundParams
 from .tyre_thermal import TyreThermal
 from .tyre_wear import TyreWear
+from ..core.constants import TYRE_LOAD_SENSITIVITY_EXP, TYRE_LOAD_REF_KN
 
 
 def gaussian(value: float, center: float, sigma: float) -> float:
@@ -73,7 +74,10 @@ class TyreGripModel:
         
         # Parametri
         self.compound = compound
-        self.load_sensitivity = 0.15  # % grip perso per kN sopra 10kN
+        # Load sensitivity: grip diminuisce con carico secondo legge di potenza
+        # μ(Fz) = μ₀ × (Fz / Fz_ref)^(-α), α = 0.25 per F1
+        self.load_sensitivity_exp = TYRE_LOAD_SENSITIVITY_EXP
+        self.load_ref_kn = TYRE_LOAD_REF_KN
     
     def calculate_grip(
         self,
@@ -143,12 +147,12 @@ class TyreGripModel:
         # 2. Penalità usura
         wear_factor = 1.0 - (self.wear.get_grip_loss() / 100.0)
         
-        # 3. Penalità carico (load sensitivity)
-        # Grip diminuisce con carico crescente
-        if load_kn > 10.0:
-            load_factor = 1.0 - (load_kn - 10.0) * self.load_sensitivity
-        else:
-            load_factor = 1.0
+        # 3. Penalità carico (load sensitivity) - FISICAMENTE CORRETTA
+        # Formula: μ(Fz) = μ₀ × (Fz / Fz_ref)^(-α)
+        # Grip diminuisce con carico secondo legge di potenza (non lineare)
+        # α = 0.25 per gomme F1 (sperimentalmente determinato)
+        load_ratio = load_kn / self.load_ref_kn
+        load_factor = load_ratio ** (-self.load_sensitivity_exp)
         
         # 4. Penalità slip (friction circle)
         # Grip disponibile diminuisce con slip elevato
@@ -168,7 +172,7 @@ class TyreGripModel:
             float mu di picco
         """
         # Grip base (senza penalità)
-        mu_base = self.construction.compound_data.grip_coefficient
+        mu_base = self.construction.params.base_grip
         
         # Penalità usura (solo degradazione, non temperatura)
         wear_factor = 1.0 - (self.wear.wear_pct / 100.0) * 0.15

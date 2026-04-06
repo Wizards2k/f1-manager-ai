@@ -14,6 +14,8 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 from scipy import optimize
 
+from .default_setups import DefaultSetups, normalize_circuit_name
+
 
 @dataclass
 class OptimizationResult:
@@ -76,6 +78,7 @@ class SetupOptimizer:
         
         # Stato corrente
         self.best_setup = None
+        self.default_setups = DefaultSetups()
     
     def _objective_function(
         self,
@@ -151,7 +154,7 @@ class SetupOptimizer:
             'spa': 84.0,
         }
         
-        base_time = circuit_times.get(circuit, 80.0)
+        base_time = circuit_times.get(normalize_circuit_name(circuit), 80.0)
         
         # Effetto setup
         # Low downforce = faster (Monza)
@@ -303,8 +306,12 @@ class SetupOptimizer:
         """
         # Initial guess = defaults
         slider_names = list(self.slider_range.keys())
+        default_setup = self.default_setups.get_default_setup(circuit, weather, tire_compound)
         initial_sliders = np.array([
-            (self.slider_range[name][0] + self.slider_range[name][1]) / 2.0
+            default_setup.get(
+                name,
+                (self.slider_range[name][0] + self.slider_range[name][1]) / 2.0,
+            )
             for name in slider_names
         ])
         

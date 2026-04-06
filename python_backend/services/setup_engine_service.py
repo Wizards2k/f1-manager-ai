@@ -8,6 +8,11 @@ import json
 
 from models import DEFAULT_SETUP_CONFIG
 from utils.setup_engine import evaluate_setup, evaluate_setup_categories
+from lap_simulator.physics_v4.calibration.aero_calibration import (
+    apply_aero_setup_bias,
+    compute_aero_setup_bias,
+    get_aero_calibration,
+)
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -182,6 +187,8 @@ class SetupEngineService:
     def build_ranges_payload(cls, circuit_id: Optional[str]) -> Dict[str, Any]:
         circuit_key, mapping = cls.get_circuit_mapping(circuit_id)
         payload = {"circuit_key": circuit_key, "mapping": {}, "constraints": mapping.get("constraints", {})}
+        payload["aero_calibration"] = get_aero_calibration(circuit_id or circuit_key)
+        payload["aero_setup_bias"] = compute_aero_setup_bias(circuit_id or circuit_key)
         for field, config in mapping.items():
             if field.startswith("_"):
                 continue
@@ -206,6 +213,10 @@ class SetupEngineService:
         baseline_path = ranges_dir / f"{circuit_id or circuit_key}.json"
         if not baseline_path.exists():
             baseline_path = ranges_dir / f"{circuit_key}.json"
+        if not baseline_path.exists() and circuit_key:
+            matches = sorted(ranges_dir.glob(f"*_{circuit_key}.json"))
+            if matches:
+                baseline_path = matches[0]
         baseline_target = {}
         if baseline_path.exists():
             with baseline_path.open("r", encoding="utf-8") as handle:
@@ -215,6 +226,9 @@ class SetupEngineService:
                     baseline_target[field] = int(cfg.get("target", 50))
         else:
             baseline_target = {field: 50 for field in DEFAULT_SETUP_CONFIG.keys()}
+
+        aero_target, aero_bias = apply_aero_setup_bias(baseline_target, circuit_id or circuit_key)
+        baseline_target = aero_target
 
         team_offsets = cls._load_team_offsets()
         team_entry = team_offsets.get(getattr(car, "team_name", "")) or {}
@@ -226,4 +240,8 @@ class SetupEngineService:
             base_value = baseline_target.get(field, 50)
             delta = int(team_delta.get(field, 0)) + int(driver_entry.get(field, 0))
             ideal[field] = max(0, min(100, base_value + delta))
+
+        if aero_bias and hasattr(car, "player_config") and isinstance(getattr(car, "player_config", None), dict):
+            car.player_config.setdefault("ideal_setup_meta", {})["aero_setup_bias"] = aero_bias
+
         return ideal

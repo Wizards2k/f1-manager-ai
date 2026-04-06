@@ -97,6 +97,12 @@ MU_BASE = {
     "WET": 0.80,  # Pioggia piena
 }
 
+# Load sensitivity per pneumatici F1
+# Formula: μ(Fz) = μ₀ × (Fz / Fz_ref)^(-α)
+# dove α = 0.2-0.3 per gomme F1 (più alto = più sensibilità)
+TYRE_LOAD_SENSITIVITY_EXP = 0.25  # esponente per load sensitivity (F1 real)
+TYRE_LOAD_REF_KN = 10.0  # kN carico di riferimento per grip base
+
 # Efficienza grip in curva (traction circle)
 # Il grip laterale disponibile è ~87% del grip longitudinale massimo
 GRIP_CORNERING_EFFICIENCY = 0.87

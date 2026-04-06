@@ -10,7 +10,7 @@ Moduli:
 NOTA: Moduli V4 standalone, non dipendono da codice V1
 """
 
-from .tyre_construction import TyreConstruction, TyreCompound, TyreState
+from .tyre_construction import TyreConstruction, TyreCompoundParams, TyreState
 from .tyre_thermal import TyreThermal, TyreThermalState
 from .tyre_wear import TyreWear, TyreWearState
 from .grip_model import TyreGripModel, GripState
@@ -18,7 +18,7 @@ from .grip_model import TyreGripModel, GripState
 __all__ = [
     # Tyre Construction
     'TyreConstruction',
-    'TyreCompound',
+    'TyreCompoundParams',
     'TyreState',
     
     # Tyre Thermal

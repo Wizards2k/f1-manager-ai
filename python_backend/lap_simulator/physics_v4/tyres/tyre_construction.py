@@ -295,7 +295,7 @@ class TyreConstruction:
             float mu effettivo (0.5-2.5)
         """
         # Grip base
-        mu_base = self.compound_data.grip_coefficient
+        mu_base = self.params.base_grip
         
         # Penalità temperatura (fuori window)
         temp_factor = self._calculate_temp_factor()
@@ -315,10 +315,10 @@ class TyreConstruction:
         Returns:
             float 0.5-1.0 (1.0 = window ottimale)
         """
-        temp = self.state.temp_c
-        t_min = self.compound_data.optimal_temp_min_c
-        t_max = self.compound_data.optimal_temp_max_c
-        t_optimal = (t_min + t_max) / 2.0
+        temp = self.state.surface_temp_c
+        t_min = self.params.temp_window_surface_c[0]
+        t_max = self.params.temp_window_surface_c[2]
+        t_optimal = self.params.temp_opt_surface
         
         if t_min <= temp <= t_max:
             # Window ottimale: grip max
@@ -349,17 +349,17 @@ class TyreConstruction:
         flex_heat = load_kn * 0.05  # kJ/s
         
         # Raffreddamento convettivo (aria)
-        cooling = (self.state.temp_c - ambient_temp) * 0.02  # kJ/s
+        cooling = (self.state.surface_temp_c - ambient_temp) * 0.02  # kJ/s
         
         # Variazione temperatura superficiale
         delta_temp = (friction_heat + flex_heat - cooling) * dt / 2.0  # Capacità termica
         
         # Riscaldamento nucleo (più lento)
-        delta_core = (self.state.temp_c - self.state.temp_core_c) * 0.01 * dt
+        delta_core = (self.state.surface_temp_c - self.state.core_temp_c) * 0.01 * dt
         
         # Aggiorna temperature
-        self.state.temp_c = np.clip(self.state.temp_c + delta_temp, ambient_temp, 180.0)
-        self.state.temp_core_c = np.clip(self.state.temp_core_c + delta_core, ambient_temp, 150.0)
+        self.state.surface_temp_c = np.clip(self.state.surface_temp_c + delta_temp, ambient_temp, 180.0)
+        self.state.core_temp_c = np.clip(self.state.core_temp_c + delta_core, ambient_temp, 150.0)
     
     def update_wear(self, load_kn: float, slip_ratio: float, distance_m: float):
         """
@@ -380,13 +380,13 @@ class TyreConstruction:
         load_wear = max(0.0, (load_kn - 10.0) * 0.002)  # % per kN sopra 10kN
         
         # Usura totale
-        total_wear = (base_wear + slip_wear + load_wear) * self.compound_data.degradation_rate
+        total_wear = (base_wear + slip_wear + load_wear) * self.params.degradation_rate_multiplier
         
         # Aggiorna usura
         self.state.wear_pct = np.clip(self.state.wear_pct + total_wear, 0.0, 100.0)
         
         # Aggiorna grip residuo
-        self.state.grip_pct = 100.0 - (self.state.wear_pct * 0.15)
+        self.state.effective_grip = self.params.base_grip * (1.0 - (self.state.wear_pct / 100.0) * 0.15)
     
     def update_pressure(self, temp_c: float):
         """
@@ -415,7 +415,7 @@ class TyreConstruction:
     
     def is_in_window(self) -> bool:
         """Verifica se gomma in window ottimale."""
-        return self.compound_data.optimal_temp_min_c <= self.state.temp_c <= self.compound_data.optimal_temp_max_c
+        return self.params.temp_window_surface_c[0] <= self.state.surface_temp_c <= self.params.temp_window_surface_c[2]
     
     def get_warmup_progress(self) -> float:
         """
@@ -424,8 +424,8 @@ class TyreConstruction:
         Returns:
             float 0.0-1.0 (1.0 = warmup completo)
         """
-        if self.state.temp_c < self.compound_data.optimal_temp_min_c:
-            return (self.state.temp_c - 25.0) / (self.compound_data.optimal_temp_min_c - 25.0)
+        if self.state.surface_temp_c < self.params.temp_window_surface_c[0]:
+            return (self.state.surface_temp_c - 25.0) / (self.params.temp_window_surface_c[0] - 25.0)
         return 1.0
     
     def get_summary(self) -> Dict:

@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+from lap_simulator.physics_v4.calibration.aero_calibration import apply_aero_setup_bias
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,6 +29,7 @@ class IdealSetup:
     team_offsets: Dict[str, int]     # From team_offsets
     driver_offsets: Dict[str, int]   # From team_offsets
     ideal_sliders: Dict[str, int]    # Final ideal (targets + offsets, clamped)
+    aero_bias: Optional[Dict[str, Any]] = None
     df_ref: float = 70.0             # Circuit-specific downforce reference
     drag_ref: float = 30.0           # Circuit-specific drag reference
 
@@ -37,8 +40,14 @@ def load_setup_ranges(circuit_id: str) -> Dict[str, Any]:
     ranges_file = project_root / "config" / "setup" / "setup_ranges" / f"{circuit_id}.json"
     
     if not ranges_file.exists():
-        logger.warning(f"Setup ranges file not found: {ranges_file}, using defaults")
-        return {}
+        circuit_key = (circuit_id or "").strip().lower()
+        if circuit_key:
+            matches = sorted((project_root / "config" / "setup" / "setup_ranges").glob(f"*_{circuit_key}.json"))
+            if matches:
+                ranges_file = matches[0]
+        if not ranges_file.exists():
+            logger.warning(f"Setup ranges file not found: {ranges_file}, using defaults")
+            return {}
     
     with open(ranges_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -88,6 +97,8 @@ def build_ideal_setup(
         slider_name: data.get("target", 50)
         for slider_name, data in ranges.items()
     }
+
+    circuit_targets, aero_bias = apply_aero_setup_bias(circuit_targets, circuit_id)
     
     # Load team/driver offsets
     team_offsets_data = load_team_offsets()
@@ -122,6 +133,7 @@ def build_ideal_setup(
         team_offsets=team_offsets,
         driver_offsets=driver_offsets,
         ideal_sliders=ideal_sliders,
+        aero_bias=aero_bias,
         df_ref=df_ref or 70.0,
         drag_ref=drag_ref or 30.0,
     )

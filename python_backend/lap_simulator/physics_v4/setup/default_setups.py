@@ -24,6 +24,14 @@ class DefaultSetup:
     description: str  # descrizione setup
 
 
+def normalize_circuit_name(circuit: str) -> str:
+    """Normalizza un circuito Physics V4 in una chiave compatibile con i default."""
+    circuit_key = (circuit or "").strip().lower()
+    if "_" in circuit_key:
+        circuit_key = circuit_key.split("_")[-1]
+    return circuit_key
+
+
 class DefaultSetups:
     """
     Configurazioni default F1 2025
@@ -203,8 +211,9 @@ class DefaultSetups:
             Dict {parameter: slider_value}
         """
         # Ottieni setup circuito
-        if circuit in self.circuit_defaults:
-            setup = self.circuit_defaults[circuit].copy()
+        circuit_key = normalize_circuit_name(circuit)
+        if circuit_key in self.circuit_defaults:
+            setup = self.circuit_defaults[circuit_key].copy()
         else:
             # Default generic
             setup = {

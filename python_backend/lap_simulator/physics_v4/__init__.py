@@ -50,6 +50,28 @@ from .core.constants import (
     WEIGHT_DIST_FRONT,
 )
 
+# Team & Driver Data
+from .core.team_driver_data import (
+    TeamDriverLoader,
+    TeamData,
+    DriverSkill,
+    TeamAeroParams,
+    get_team_data,
+    get_driver_data,
+)
+
+# Car Setup
+from .core.car_setup import (
+    PhysicsV4Setup,
+    CarSetup,
+    AeroSetup,
+    SuspensionSetup,
+    PowerUnitSetup,
+    TyreSetup,
+    BrakeSetup,
+    FuelSetup,
+)
+
 # Aero modules
 from .aero.aero_assembly import AeroAssembly, AeroForces
 from .aero.front_wing import FrontWing
@@ -70,8 +92,53 @@ from .suspension.spring_damper import SpringDamper, SpringForce
 from .suspension.antiroll import AntiRollBar, AntiRollForce
 from .suspension.ride_height import RideHeight, RideHeightState
 
+# Tyres
+from .tyres.tyre_construction import TyreConstruction, TyreCompoundParams, TyreState
+from .tyres.tyre_thermal import TyreThermal, TyreThermalState
+from .tyres.tyre_wear import TyreWear, TyreWearState
+from .tyres.grip_model import TyreGripModel, GripState
+
+# Brakes
+from .brakes.brake_material import BrakeMaterial
+from .brakes.brake_cooling import BrakeCooling
+from .brakes.brake_bias import BrakeBias
+from .brakes.brake_wear import BrakeWear
+
+# Vehicle
+from .vehicle.load_transfer import LoadTransfer, LoadTransferState
+from .vehicle.kamm_circle import KammCircle, FrictionCircle
+from .vehicle.handling import HandlingModel, HandlingState
+from .vehicle.balance import VehicleBalance, BalanceState
+from .vehicle.cornering_limit import CorneringLimitCalculator, CorneringLimitResult
+
+# Driver
+from .driver.driving_line import DrivingLine, DrivingLineState
+from .driver.braking_point import BrakingPoint, BrakingPointState
+from .driver.throttle_curve import ThrottleCurve, ThrottleCurveState
+from .driver.steering_input import SteeringInput, SteeringInputState
+
+# Setup
+from .setup.slider_to_physics import SliderToPhysics
+from .setup.default_setups import DefaultSetups
+from .setup.optimizer import SetupOptimizer
+
 # Integrator
 from .integrator.waypoint_integrator import integrate_lap_hd
+
+# Calibration helpers
+from .calibration.reference_calibration import (
+    DEFAULT_CALIBRATION_CIRCUIT_ID,
+    DEFAULT_CALIBRATION_DRIVER_NAME,
+    DEFAULT_CALIBRATION_SESSION,
+    DEFAULT_CALIBRATION_MICROSECTOR_MARGIN_PCT,
+    DEFAULT_CALIBRATION_TEAM_NAME,
+    DEFAULT_CALIBRATION_TYRE_COMPOUND,
+    DEFAULT_CALIBRATION_WEATHER,
+    InitialCalibrationSetup,
+    InitialCalibrationSpec,
+    build_initial_calibration_setup,
+    run_initial_calibration_benchmark,
+)
 
 # API pubblica
 __all__ = [
@@ -102,6 +169,46 @@ __all__ = [
     'AntiRollBar', 'AntiRollForce',
     'RideHeight', 'RideHeightState',
     
+    # Tyres
+    'TyreConstruction', 'TyreCompoundParams', 'TyreState',
+    'TyreThermal', 'TyreThermalState',
+    'TyreWear', 'TyreWearState',
+    'TyreGripModel', 'GripState',
+    
+    # Brakes
+    'BrakeMaterial', 'BrakeCooling', 'BrakeBias', 'BrakeWear',
+    
+    # Vehicle
+    'LoadTransfer', 'LoadTransferState',
+    'KammCircle', 'FrictionCircle',
+    'HandlingModel', 'HandlingState',
+    'VehicleBalance', 'BalanceState',
+    'CorneringLimitCalculator', 'CorneringLimitResult',
+    
+    # Driver
+    'DrivingLine', 'DrivingLineState',
+    'BrakingPoint', 'BrakingPointState',
+    'ThrottleCurve', 'ThrottleCurveState',
+    'SteeringInput', 'SteeringInputState',
+    
+    # Setup
+    'SliderToPhysics',
+    'DefaultSetups',
+    'SetupOptimizer',
+    
     # Integrator
     'integrate_lap_hd',
+
+    # Calibration helpers
+    'DEFAULT_CALIBRATION_CIRCUIT_ID',
+    'DEFAULT_CALIBRATION_TEAM_NAME',
+    'DEFAULT_CALIBRATION_DRIVER_NAME',
+    'DEFAULT_CALIBRATION_SESSION',
+    'DEFAULT_CALIBRATION_MICROSECTOR_MARGIN_PCT',
+    'DEFAULT_CALIBRATION_WEATHER',
+    'DEFAULT_CALIBRATION_TYRE_COMPOUND',
+    'InitialCalibrationSpec',
+    'InitialCalibrationSetup',
+    'build_initial_calibration_setup',
+    'run_initial_calibration_benchmark',
 ]

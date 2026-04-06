@@ -13,6 +13,9 @@ from dataclasses import dataclass
 from typing import Dict, Tuple
 import numpy as np
 
+from ..tyres.grip_model import TyreGripModel
+from ..core.constants import TYRE_LOAD_REF_KN
+
 
 @dataclass
 class CorneringLimitResult:
@@ -52,6 +55,7 @@ class CorneringLimitCalculator:
         downforce_factor: float = 2.0,  # g downforce a 100 kph
         mass_kg: float = 800.0,  # kg
         load_factor: float = 1.0,  # fattore carico (0.8-1.2)
+        tyre_grip_model: TyreGripModel = None,  # modello grip fisico
     ):
         """
         Inizializza limite curva
@@ -61,11 +65,13 @@ class CorneringLimitCalculator:
             downforce_factor: g downforce a 100 kph
             mass_kg: kg massa
             load_factor: fattore carico (0.8-1.2)
+            tyre_grip_model: modello grip fisico (opzionale, se None usa tyre_grip)
         """
         self.tyre_grip = tyre_grip
         self.downforce_factor = downforce_factor
         self.mass_kg = mass_kg
         self.load_factor = load_factor
+        self.tyre_grip_model = tyre_grip_model
         
         # Stato corrente
         self.max_lateral_g = self._calculate_max_lateral_g()
@@ -77,13 +83,25 @@ class CorneringLimitCalculator:
         Returns:
             g accelerazione laterale massima
         """
+        # Se disponibile, usa il modello grip fisico con load sensitivity corretta
+        if self.tyre_grip_model is not None:
+            # Calcola grip effettivo dal modello fisico
+            # Usa un carico di riferimento proporzionale al load_factor
+            load_kn = TYRE_LOAD_REF_KN * self.load_factor
+            grip_state = self.tyre_grip_model.calculate_grip(
+                load_kn=load_kn,
+                slip_ratio=0.0,
+                slip_angle_deg=0.0,
+                v_car_kph=100.0,
+                dt=0.0
+            )
+            effective_grip = grip_state.mu_effective
+        else:
+            # Fallback: usa grip base con load sensitivity semplificata
+            load_sensitivity = 0.1
+            effective_grip = self.tyre_grip * (1.0 - load_sensitivity * (self.load_factor - 1.0))
+        
         # Max lateral g = tyre_grip + downforce_factor × load_factor
-        # Ma con effetto di load sensitivity
-        # Più carico = grip meno efficiente
-        
-        load_sensitivity = 0.1
-        effective_grip = self.tyre_grip * (1.0 - load_sensitivity * (self.load_factor - 1.0))
-        
         max_lateral_g = effective_grip + self.downforce_factor * self.load_factor
         
         return max_lateral_g
