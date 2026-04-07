@@ -420,36 +420,39 @@ def integrate_waypoint(
     f_grip_total_longitudinal = mu_base_val * f_vertical * long_load_factor
     
     # ============================================================
-    # PHYSICS FIX V4.2 #6: Traction Bonus (Differenziale - Curve Strette)
+    # PHYSICS FIX V4.3 #2: Traction Bonus (Differenziale - Exit Speed)
     # ============================================================
-    # Quando le ruote sono quasi dritte (sterzo < 15°), velocità < 120 km/h
-    # e raggio curva < 60m (Monaco), il differenziale autobloccante F1
+    # Quando le ruote sono quasi dritte (sterzo < 25°), velocità < 120 km/h
+    # e raggio curva < 60m (Monaco/Suzuka), il differenziale autobloccante F1
     # massimizza la trazione in uscita curva.
     # Applichiamo un bonus del 20% al grip longitudinale SOLO in queste condizioni.
+    # NOTA: Soglia sterzo alzata da 15° a 25° per anticipare accelerazione in uscita
     v_kph = state.velocity_ms * 3.6
     steering_angle_deg = abs(waypoint.get('steering_angle_deg', 0.0))
     
     longitudinal_traction_bonus = 1.0
-    # Applica solo per curve strette (Monaco), non per Monza
-    if v_kph < 120.0 and steering_angle_deg < 15.0 and state.is_throttle and radius_m < 60.0 and radius_m > 0.0:
+    # Applica solo per curve strette (Monaco/Suzuka), non per Monza
+    # Soglia sterzo aumentata a 25° per permettere accelerazione anticipata
+    if v_kph < 120.0 and steering_angle_deg < 25.0 and state.is_throttle and radius_m < 60.0 and radius_m > 0.0:
         # Bonus del 20% per simulare differenziale che massimizza spinta
-        # Questo aiuta sec_11 (Monaco) e sec_08 a uscire più velocemente
+        # Questo aiuta sec_11 (Monaco), sec_08 e sec_14 (Suzuka) in uscita
         longitudinal_traction_bonus = 1.20
         f_grip_total_longitudinal *= longitudinal_traction_bonus
     
     # ============================================================
-    # PHYSICS FIX V4.2 #5: Curvature Grip Bonus (Curve strette)
+    # PHYSICS FIX V4.3 #1: Curvature Grip Bonus (Suzuka S-Curves)
     # ============================================================
-    # Nelle curve con raggio < 50m, il grip laterale è sottostimato
-    # perché il raggio effettivo del waypoint non tiene conto:
+    # Nelle curve con raggio < 120m (esteso per Suzuka S-Curves), il grip laterale
+    # è sottostimato perché il raggio effettivo del waypoint non tiene conto:
     #   - Curb che allargano la traiettoria effettiva
     #   - Banking che aumenta grip
     #   - Gomme che lavorano meglio a angoli di sterzo elevati
-    # Applichiamo un bonus progressivo: +18% a r=20m, 0% a r=50m
+    #   - S-Curves che richiedono grip in transizione rapida
+    # Applichiamo un bonus progressivo: +12% a r=20m, 0% a r=120m
     curvature_grip_bonus = 1.0
-    if is_corner and radius_m < 50.0 and radius_m > 0.0:
-        curvature_grip_bonus = 1.18 - 0.18 * ((radius_m - 20.0) / 30.0)
-        curvature_grip_bonus = max(1.0, min(1.18, curvature_grip_bonus))
+    if is_corner and radius_m < 120.0 and radius_m > 0.0:  # Esteso da 85.0 a 120.0
+        curvature_grip_bonus = 1.12 - 0.12 * ((radius_m - 20.0) / 100.0)  # Ricalibrato
+        curvature_grip_bonus = max(1.0, min(1.12, curvature_grip_bonus))
         f_grip_total_lateral *= curvature_grip_bonus
     
     # Load transfer in frenata/accelerazione (usa grip longitudinale)
