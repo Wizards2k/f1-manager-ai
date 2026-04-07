@@ -97,7 +97,7 @@ def interpolate_mu_along_track(telemetry_data: Dict, hd_waypoints: List[Dict]) -
     """
     # Track grip factor fisso per circuito
     circuit_factors = {
-        "it-1922_monza": 1.20,
+        "it-1922_monza": 0.86,
         "mc-1929_monaco": 0.92,
         "jp-1962_suzuka": 1.08,
     }

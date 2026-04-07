@@ -430,13 +430,12 @@ def integrate_waypoint(
         lookahead_distance_max = max(150.0, state.velocity_ms * 3.5)
         base_dist = waypoint.get('dist_m', 0.0)
         
-        # Calcola decelerazione massima permessa dai freni (fisica)
-        max_brake_decel_phys = f_grip_total / mass_kg
-        max_brake_decel = min(max_brake_decel_g * G, max_brake_decel_phys)  # m/s²
-        
         v_current = state.velocity_ms
         must_brake = False
         target_brake_v = v_current
+        
+        max_brake_decel_phys = f_grip_total / mass_kg
+        max_brake_decel = min(max_brake_decel_g * G, max_brake_decel_phys)
         
         # Lookahead: search until we reach max distance or end of array
         for i in range(waypoint_idx + 1, len(waypoints)):
@@ -450,8 +449,18 @@ def integrate_waypoint(
             
             # Quanta distanza serve per rallentare da v_current a wp_v_ref?
             if v_current > wp_v_ref + 1.0:
-                braking_dist_req = ((v_current ** 2) - (wp_v_ref ** 2)) / (2 * max_brake_decel)
-                braking_dist_req *= 1.02  # Margine minimo stabilità numerica
+                # Prevediamo la downforce MEDIA durante la frenata per non sovrastimare il grip
+                avg_v = (v_current + wp_v_ref) / 2.0
+                f_down_avg = (0.5 * RHO_SEA_LEVEL * avg_v ** 2) * aero_forces.cla_total
+                f_vert_avg = mass_kg * G + f_down_avg
+                load_factor_avg = max(0.5, min(1.0, 1.0 - (TYRE_LOAD_SENSITIVITY_K * (f_vert_avg / 1000.0))))
+                # Assumiamo grip posteriore ridotto per load transfer (-15%)
+                f_grip_avg = mu_base_val * f_vert_avg * load_factor_avg * 0.85
+                max_brake_decel_avg = f_grip_avg / mass_kg
+                max_brake_decel_avg = min(max_brake_decel_g * G, max_brake_decel_avg)
+                
+                braking_dist_req = ((v_current ** 2) - (wp_v_ref ** 2)) / (2 * max_brake_decel_avg)
+                braking_dist_req *= 1.01  # Margine minimo stabilità numerica
                 
                 dist_to_wp = wp_dist - base_dist
                 if dist_to_wp <= braking_dist_req:
