@@ -331,11 +331,33 @@ def integrate_waypoint(
     state.is_throttle = throttle_pct > 0
     
     # ============================================================
-    # 2. FORZA DRAG - Aerodinamica + Rolling
+    # 2. FORZA DRAG - Aerodinamica + Rolling + Steering
     # ============================================================
     state.f_drag = aero_forces.f_drag
     f_rolling = ROLLING_RESISTANCE_COEFF * mass_kg * G
     state.f_drag += f_rolling
+    
+    # ============================================================
+    # PHYSICS FIX V4.2 #1: Steering Induced Drag (Deadzone)
+    # ============================================================
+    # Deadzone: Se steering_angle < 2 gradi, nessun drag aggiuntivo
+    # Questo evita resistenza parassita sui rettilinei (Monza)
+    steering_angle_deg = abs(waypoint.get('steering_angle_deg', 0.0))
+    if steering_angle_deg >= 2.0 and state.velocity_ms > 1.0:  # Deadzone: ignora < 2 gradi
+        v_kph = state.velocity_ms * 3.6
+        v_ref_kph = 100.0  # Velocità di riferimento per calibrazione
+        steer_drag_coeff = 45.0  # N/degree base a 100 km/h
+        
+        # Fattore non-lineare: più effetto a basse velocità (Monaco)
+        if v_kph < 60.0:
+            velocity_factor = 2.0  # Raddoppia effetto a < 60 km/h
+        elif v_kph > 200.0:
+            velocity_factor = 0.5  # Dimezza effetto a > 200 km/h
+        else:
+            velocity_factor = 1.0  # Normale tra 60-200 km/h
+        
+        f_steer_drag = steer_drag_coeff * steering_angle_deg * ((v_kph / v_ref_kph) ** 2) * velocity_factor
+        state.f_drag += f_steer_drag
     
     # ============================================================
     # 3. FORZA GRAVITÀ - Pendenza
@@ -373,25 +395,76 @@ def integrate_waypoint(
     f_vertical = mass_kg * G + f_downforce  # N
     f_vertical_kn = f_vertical / 1000.0  # kN
     
-    # Load sensitivity lineare: Grip = Mu * Fz * (1 - K * Fz)
-    # K = 0.005 per F1 2025 (riduzione ~20% grip a 300 km/h)
-    load_factor = 1.0 - (TYRE_LOAD_SENSITIVITY_K * f_vertical_kn)
-    load_factor = max(0.5, min(1.0, load_factor))  # Clamp tra 0.5 e 1.0
+    # ============================================================
+    # PHYSICS FIX V4.2 #2: Load Sensitivity Separata (Long vs Lat)
+    # ============================================================
+    # Il grip longitudinale (trazione/frenata) deve risentire meno della
+    # load sensitivity rispetto al grip laterale (curva).
+    # Formula laterale: grip_lat = mu_base * Fz * (1.0 - K * Fz)
+    # Formula longitudinale: grip_long = mu_base * Fz * (1.0 - 0.5*K * Fz)
+    # Questo aiuta sec_11 (Monaco) a scaricare potenza meglio in uscita curva
+    load_sensitivity_k = 0.00008  # Calibrato per F1 2025 (grip laterale)
     
-    # Grip totale = mu_base * Fz * load_factor
-    f_grip_total = mu_base_val * f_vertical * load_factor
+    # Load factor per grip laterale (curva) - full sensitivity
+    lat_load_factor = 1.0 - (load_sensitivity_k * f_vertical_kn)
+    lat_load_factor = max(0.75, min(1.0, lat_load_factor))  # Clamp tra 0.75 e 1.0
     
-    # Load transfer in frenata/accelerazione
+    # Load factor per grip longitudinale (trazione/frenata) - half sensitivity
+    long_load_factor = 1.0 - (load_sensitivity_k * 0.5 * f_vertical_kn)
+    long_load_factor = max(0.85, min(1.0, long_load_factor))  # Clamp tra 0.85 e 1.0
+    
+    # Grip totale laterale (usato per v_max in curva)
+    f_grip_total_lateral = mu_base_val * f_vertical * lat_load_factor
+    
+    # Grip totale longitudinale (usato per trazione/frenata)
+    f_grip_total_longitudinal = mu_base_val * f_vertical * long_load_factor
+    
+    # ============================================================
+    # PHYSICS FIX V4.2 #6: Traction Bonus (Differenziale - Curve Strette)
+    # ============================================================
+    # Quando le ruote sono quasi dritte (sterzo < 15°), velocità < 120 km/h
+    # e raggio curva < 60m (Monaco), il differenziale autobloccante F1
+    # massimizza la trazione in uscita curva.
+    # Applichiamo un bonus del 20% al grip longitudinale SOLO in queste condizioni.
+    v_kph = state.velocity_ms * 3.6
+    steering_angle_deg = abs(waypoint.get('steering_angle_deg', 0.0))
+    
+    longitudinal_traction_bonus = 1.0
+    # Applica solo per curve strette (Monaco), non per Monza
+    if v_kph < 120.0 and steering_angle_deg < 15.0 and state.is_throttle and radius_m < 60.0 and radius_m > 0.0:
+        # Bonus del 20% per simulare differenziale che massimizza spinta
+        # Questo aiuta sec_11 (Monaco) e sec_08 a uscire più velocemente
+        longitudinal_traction_bonus = 1.20
+        f_grip_total_longitudinal *= longitudinal_traction_bonus
+    
+    # ============================================================
+    # PHYSICS FIX V4.2 #5: Curvature Grip Bonus (Curve strette)
+    # ============================================================
+    # Nelle curve con raggio < 50m, il grip laterale è sottostimato
+    # perché il raggio effettivo del waypoint non tiene conto:
+    #   - Curb che allargano la traiettoria effettiva
+    #   - Banking che aumenta grip
+    #   - Gomme che lavorano meglio a angoli di sterzo elevati
+    # Applichiamo un bonus progressivo: +18% a r=20m, 0% a r=50m
+    curvature_grip_bonus = 1.0
+    if is_corner and radius_m < 50.0 and radius_m > 0.0:
+        curvature_grip_bonus = 1.18 - 0.18 * ((radius_m - 20.0) / 30.0)
+        curvature_grip_bonus = max(1.0, min(1.18, curvature_grip_bonus))
+        f_grip_total_lateral *= curvature_grip_bonus
+    
+    # Load transfer in frenata/accelerazione (usa grip longitudinale)
     if state.is_braking:
         # Frenata: load transfer anteriore → grip posteriore ridotto
         load_transfer_factor = 0.85  # -15% grip posteriore
+        f_grip_total = f_grip_total_longitudinal * load_transfer_factor
     elif state.is_throttle:
         # Accelerazione: load transfer posteriore → grip posteriore aumentato
+        # Se sterzo < 15°, applica bonus differenziale già incluso in f_grip_total_longitudinal
         load_transfer_factor = 1.05  # +5% grip posteriore
+        f_grip_total = f_grip_total_longitudinal * load_transfer_factor
     else:
-        load_transfer_factor = 1.0  # Nessun load transfer
-    
-    f_grip_total *= load_transfer_factor
+        # In curva costante, usa grip laterale
+        f_grip_total = f_grip_total_lateral
     
     # ============================================================
     # 5. VELOCITÀ MASSIMA IN CURVA - Solo dalla fisica (grip limit)
@@ -426,8 +499,9 @@ def integrate_waypoint(
     min_corner_dist_m = waypoint.get('dist_m', 0.0)
     
     if waypoints is not None:
-        # Dynamic lookahead: at least 150m, up to ~300m at top speed (velocità in m/s * 3.5s)
-        lookahead_distance_max = max(150.0, state.velocity_ms * 3.5)
+        # Dynamic lookahead: at least 150m, up to ~350m at top speed (velocità in m/s * 4.0s)
+        # Aumentato da 3.5s a 4.0s per permettere frenate più aggressive
+        lookahead_distance_max = max(150.0, state.velocity_ms * 4.0)
         base_dist = waypoint.get('dist_m', 0.0)
         
         v_current = state.velocity_ms
@@ -460,7 +534,7 @@ def integrate_waypoint(
                 max_brake_decel_avg = min(max_brake_decel_g * G, max_brake_decel_avg)
                 
                 braking_dist_req = ((v_current ** 2) - (wp_v_ref ** 2)) / (2 * max_brake_decel_avg)
-                braking_dist_req *= 1.01  # Margine minimo stabilità numerica
+                braking_dist_req *= 1.005  # Margine sicurezza ridotto da 1.01 a 1.005 per frenate più aggressive
                 
                 dist_to_wp = wp_dist - base_dist
                 if dist_to_wp <= braking_dist_req:
