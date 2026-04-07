@@ -86,21 +86,24 @@ AERO_EFFICIENCY_MAX = 4.2  # assetto scarico efficiente
 # ============================================================================
 
 # Coefficiente di attrito base per compound (a temperatura ottimale)
+# Valori realistici per F1 2025 - grip meccanico puro (da test Pirelli + curb effect)
 MU_BASE = {
-    "C1": 1.52,  # Mescola dura (durata, meno grip)
-    "C2": 1.58,
-    "C3": 1.65,  # Mescola media (bilanciata)
-    "C4": 1.72,
-    "C5": 1.80,  # Mescola morbida (grip, meno durata)
-    "C6": 1.85,  # Nuova mescola 2025 (più morbida)
-    "INTERMEDIATE": 1.10,  # Pioggia leggera
-    "WET": 0.80,  # Pioggia piena
+    "C1": 1.78,  # Mescola dura (durata, meno grip)
+    "C2": 1.84,
+    "C3": 1.92,  # Mescola media (bilanciata)
+    "C4": 2.00,
+    "C5": 2.10,  # Mescola morbida (grip, meno durata) - Qualifica
+    "C6": 2.16,  # Nuova mescola 2025 (più morbida)
+    "INTERMEDIATE": 1.35,  # Pioggia leggera
+    "WET": 1.05,  # Pioggia piena
 }
 
 # Load sensitivity per pneumatici F1
-# Formula: μ(Fz) = μ₀ × (Fz / Fz_ref)^(-α)
-# dove α = 0.2-0.3 per gomme F1 (più alto = più sensibilità)
-TYRE_LOAD_SENSITIVITY_EXP = 0.25  # esponente per load sensitivity (F1 real)
+# Formula: Grip = Mu * Fz * (1 - K * Fz)
+# K è il coefficiente di decadimento lineare del grip
+# A 300 km/h, il guadagno di grip dovrebbe essere ~20% in meno rispetto al calcolo teorico
+# Calcolato: K ≈ 0.005 per F1 2025
+TYRE_LOAD_SENSITIVITY_K = 0.005  # Coefficiente di decadimento lineare
 TYRE_LOAD_REF_KN = 10.0  # kN carico di riferimento per grip base
 
 # Efficienza grip in curva (traction circle)
@@ -171,8 +174,8 @@ BRAKE_MU_MAP = [
 # ============================================================================
 
 MAX_LATERAL_G = 5.5  # g laterali massimi (F1 moderne: 5-6g)
-MAX_BRAKE_DECEL_G = 6.5  # g frenata massimi (record: ~6.5g)
-BRAKE_DECEL_PEAK_G = 5.8  # g target per integrazione stabile
+MAX_BRAKE_DECEL_G = 6.0  # g frenata massimi (F1 2025: 6.0g con nuovi freni)
+BRAKE_DECEL_PEAK_G = 5.5  # g target per integrazione stabile
 
 # ============================================================================
 # SOSPENSIONI

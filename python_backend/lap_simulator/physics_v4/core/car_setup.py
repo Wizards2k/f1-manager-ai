@@ -243,14 +243,13 @@ class PhysicsV4Setup:
         if sidepods is not None:
             self.car.aero.sidepods = sidepods
         
-        # Calcola CLA/CDA totali (semplificato)
-        # Formula: base + (wing_level / 50) * range
-        base_cla = 2.5
-        cla_from_wings = (self.car.aero.front_wing + self.car.aero.rear_wing) / 50.0 * 1.5
+        # Calcola CLA/CDA totali ricalibrati per V4 logic (final Monza tuning)
+        base_cla = 2.45
+        cla_from_wings = (self.car.aero.front_wing + self.car.aero.rear_wing) / 100.0 * 1.8
         self.car.aero.cla_total = base_cla + cla_from_wings
         
-        base_cda = 0.8
-        cda_from_wings = (self.car.aero.front_wing + self.car.aero.rear_wing) / 50.0 * 0.6
+        base_cda = 0.72
+        cda_from_wings = (self.car.aero.front_wing + self.car.aero.rear_wing) / 100.0 * 0.7
         self.car.aero.cda_total = base_cda + cda_from_wings
         
         # Applica team aero modifiers
@@ -342,13 +341,13 @@ class PhysicsV4Setup:
         setup["aero"]["front_wing"] += self.driver.front_wing_offset
         setup["aero"]["rear_wing"] += self.driver.rear_wing_offset
         
-        # Ricalcola CLA/CDA
-        base_cla = 2.5
-        cla_from_wings = (setup["aero"]["front_wing"] + setup["aero"]["rear_wing"]) / 50.0 * 1.5
+        # Ricalcola CLA/CDA con ali aggiornate (final Monza tuning)
+        base_cla = 2.45
+        cla_from_wings = (setup["aero"]["front_wing"] + setup["aero"]["rear_wing"]) / 100.0 * 1.8
         setup["aero"]["cla_total"] = base_cla + cla_from_wings
 
-        base_cda = 0.8
-        cda_from_wings = (setup["aero"]["front_wing"] + setup["aero"]["rear_wing"]) / 50.0 * 0.6
+        base_cda = 0.72
+        cda_from_wings = (setup["aero"]["front_wing"] + setup["aero"]["rear_wing"]) / 100.0 * 0.7
         setup["aero"]["cda_total"] = base_cda + cda_from_wings
 
         if self.team:

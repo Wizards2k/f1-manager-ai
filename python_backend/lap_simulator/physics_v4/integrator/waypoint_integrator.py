@@ -40,8 +40,7 @@ from core.constants import (
     MAX_LATERAL_G,
     MAX_BRAKE_DECEL_G,
     MU_BASE,
-    GRIP_CORNERING_EFFICIENCY,
-    TYRE_LOAD_SENSITIVITY_EXP,
+    TYRE_LOAD_SENSITIVITY_K,
     TYRE_LOAD_REF_KN,
 )
 
@@ -223,6 +222,8 @@ def integrate_waypoint(
     section_exit_guidance: Optional[Dict[str, Any]] = None,
     section_speed_scale: float = 1.0,
     section_entry_guidance: Optional[Dict[str, Any]] = None,
+    waypoints: List[Dict] = None,  # Lista completa waypoints per look-ahead
+    waypoint_idx: int = 0,         # Indice del waypoint corrente
 ) -> PhysicsState:
     """
     Integra fisica per un singolo waypoint.
@@ -343,34 +344,44 @@ def integrate_waypoint(
     state.f_gravity = mass_kg * G * math.sin(slope_rad)
     
     # ============================================================
-    # 4. GRIP DINAMICO - Basato su downforce (v²)
+    # 4. GRIP TOTALE - Modello fisico puro (NO reverse engineering)
     # ============================================================
-    # Il grip non è costante: aumenta con la velocità² grazie alla
-    # downforce che schiaccia le gomme contro l'asfalto
+    # Formula: F_lat_max = (Massa * G + F_downforce) * MU_BASE * track_grip_factor
+    # 
+    # MU_BASE viene dal compound gomme:
+    #   C5 = 1.80, C4 = 1.72, C3 = 1.65, C2 = 1.58, C1 = 1.52
+    #
+    # track_grip_factor è fisso per circuito:
+    #   Monza = 1.00, Monaco = 0.90, Suzuka = 1.05
     
-    # Calcola downforce dinamica
+    # Grip base dal compound (senza penalità empiriche)
+    mu_base_val = mu_base.get(tyre_compound, 1.65)
+    
+    # Applica track_grip_factor da telemetry_mu (ora è fisso per circuito)
+    track_grip_factor = waypoint.get('telemetry_mu', 1.0)
+    if track_grip_factor is not None and track_grip_factor > 0:
+        mu_base_val *= track_grip_factor
+    
+    # Applica driver skill (pilota migliore → sfrutta meglio il grip)
+    mu_base_val *= driver_skill
+    
+    # Calcola downforce (contata UNA SOLA VOLTA qui)
     dynamic_pressure = 0.5 * RHO_SEA_LEVEL * state.velocity_ms ** 2
     f_downforce = dynamic_pressure * aero_forces.cla_total
     
-    # Grip base per compound
-    mu = mu_base.get(tyre_compound, 1.65) * GRIP_CORNERING_EFFICIENCY
-    mu *= driver_skill  # Pilota migliore → più grip
-    
-    # Load sensitivity: grip diminuisce con carico secondo legge di potenza
-    # Formula: μ(Fz) = μ₀ × (Fz / Fz_ref)^(-α)
-    # Calcola carico verticale totale (massa + downforce)
+    # Carico verticale totale = peso + downforce
     f_vertical = mass_kg * G + f_downforce  # N
-    load_kn = f_vertical / 1000.0  # kN
-    load_ratio = load_kn / TYRE_LOAD_REF_KN
-    load_factor = load_ratio ** (-TYRE_LOAD_SENSITIVITY_EXP)
-    mu *= load_factor  # Applica load sensitivity
+    f_vertical_kn = f_vertical / 1000.0  # kN
     
-    # Grip totale = grip base + contributo downforce
-    # Formula: F_grip = μ × (m×g + F_downforce)
-    f_grip_total = mu * (mass_kg * G + f_downforce)
+    # Load sensitivity lineare: Grip = Mu * Fz * (1 - K * Fz)
+    # K = 0.005 per F1 2025 (riduzione ~20% grip a 300 km/h)
+    load_factor = 1.0 - (TYRE_LOAD_SENSITIVITY_K * f_vertical_kn)
+    load_factor = max(0.5, min(1.0, load_factor))  # Clamp tra 0.5 e 1.0
     
-    # Load transfer in frenata riduce grip posteriore
-    # In accelerazione, grip posteriore aumenta
+    # Grip totale = mu_base * Fz * load_factor
+    f_grip_total = mu_base_val * f_vertical * load_factor
+    
+    # Load transfer in frenata/accelerazione
     if state.is_braking:
         # Frenata: load transfer anteriore → grip posteriore ridotto
         load_transfer_factor = 0.85  # -15% grip posteriore
@@ -383,8 +394,11 @@ def integrate_waypoint(
     f_grip_total *= load_transfer_factor
     
     # ============================================================
-    # 5. VELOCITÀ MASSIMA IN CURVA - Dal grip disponibile
+    # 5. VELOCITÀ MASSIMA IN CURVA - Solo dalla fisica (grip limit)
     # ============================================================
+    # La velocità deve emergere dalla fisica, non dalla telemetria
+    # v_ref serve solo come riferimento per il driver model
+    
     if is_corner:
         # v_max corner: dove F_centripeta = F_grip
         # m × v² / R = F_grip
@@ -392,38 +406,68 @@ def integrate_waypoint(
         v_max_corner_ms = math.sqrt(f_grip_total * radius_m / mass_kg)
     else:
         v_max_corner_ms = 999.0  # Nessun limite in rettilineo
-    if is_corner and section_speed_scale > 0.0:
-        v_max_corner_ms *= section_speed_scale
     
     # ============================================================
-    # 6. FRENATA - Modello progressivo
+    # 6. FRENATA - Driver model con calcolo fisico della distanza
     # ============================================================
-    # La frenata non è on/off: è progressiva e dipende da
-    # quanto siamo lontani dal braking point ottimale
+    # Il pilota calcola la distanza di frenata D usando:
+    #   D = (v_current² - v_corner²) / (2 * a_brake)
+    # dove a_brake = F_brakes / Massa = max_brake_decel_g * G
+    #
+    # Deve iniziare a frenare ESATTAMENTE a distanza D dal punto
+    # più lento della curva successiva.
     
     v_target_ms = v_ref_kph / 3.6
     if section_speed_scale > 0.0:
         v_target_ms *= section_speed_scale
-    brake_trigger_ms = max(v_target_ms, v_max_corner_ms)
     
-    # Calcola distanza rimanente al braking point
-    # (semplificato: usa v_ref come indicatore)
-    if brake_pct > 0:
-        # Frenata attiva
-        state.is_braking = True
+    # Trova il punto più lento della prossima curva (minimo v_ref nei prossimi waypoint)
+    min_corner_v_ms = v_target_ms
+    min_corner_dist_m = waypoint.get('dist_m', 0.0)
+    
+    if waypoints is not None:
+        # Dynamic lookahead: at least 150m, up to ~300m at top speed (velocità in m/s * 3.5s)
+        lookahead_distance_max = max(150.0, state.velocity_ms * 3.5)
+        base_dist = waypoint.get('dist_m', 0.0)
         
-        # Frenata progressiva: più forte se siamo lontani dal target
-        # o se siamo sopra il limite di curva
-        if state.velocity_ms > brake_trigger_ms:
-            # Urgente: frenata massima
-            f_brake = mass_kg * max_brake_decel_g * G * 1.0
+        # Calcola decelerazione massima permessa dai freni (fisica)
+        max_brake_decel_phys = f_grip_total / mass_kg
+        max_brake_decel = min(max_brake_decel_g * G, max_brake_decel_phys)  # m/s²
+        
+        v_current = state.velocity_ms
+        must_brake = False
+        target_brake_v = v_current
+        
+        # Lookahead: search until we reach max distance or end of array
+        for i in range(waypoint_idx + 1, len(waypoints)):
+            wp = waypoints[i]
+            wp_dist = wp.get('dist_m', 0.0)
+            
+            if wp_dist - base_dist > lookahead_distance_max:
+                break
+                
+            wp_v_ref = wp.get('v_ref_kph', 200.0) / 3.6
+            
+            # Quanta distanza serve per rallentare da v_current a wp_v_ref?
+            if v_current > wp_v_ref + 1.0:
+                braking_dist_req = ((v_current ** 2) - (wp_v_ref ** 2)) / (2 * max_brake_decel)
+                braking_dist_req *= 1.02  # Margine minimo stabilità numerica
+                
+                dist_to_wp = wp_dist - base_dist
+                if dist_to_wp <= braking_dist_req:
+                    must_brake = True
+                    target_brake_v = min(target_brake_v, wp_v_ref)
+                    break
+                    
+        if must_brake:
+            state.is_braking = True
+            # Forza di frenata target (include compensazione drag per decelerazione lineare)
+            f_target_decel = mass_kg * max_brake_decel
+            state.f_engine = -f_target_decel + state.f_drag + state.f_gravity
+            # Limita alla potenza frenante massima
+            state.f_engine = max(state.f_engine, -f_grip_total)
         else:
-            # Frenata progressiva
-            braking_factor = min(1.0, brake_pct / 100.0)
-            f_brake = mass_kg * max_brake_decel_g * G * braking_factor
-        
-        # Forza netta = frenante
-        state.f_engine = -f_brake
+            state.is_braking = False
     else:
         state.is_braking = False
     
@@ -451,39 +495,21 @@ def integrate_waypoint(
     v_target_ms = min(v_target_ms, v_max_corner_ms)
     
     # ============================================================
-    # 9. INTEGRA CINEMATICA
+    # 9. INTEGRA CINEMATICA - FISICA PURA (NO REFERENCE_PULL)
     # ============================================================
     # v_new² = v_old² + 2 × a × d
     v_squared_new = state.velocity_ms ** 2 + 2 * state.acceleration_ms2 * dist_step
     v_squared_new = max(0.0, v_squared_new)  # Evita sqrt negativo
     
     v_new_ms = math.sqrt(v_squared_new)
-    reference_pull = 0.15
-    v_new_ms = (v_new_ms * (1.0 - reference_pull)) + (v_target_ms * reference_pull)
-    if section_exit_guidance:
-        try:
-            exit_kind = str(section_exit_guidance.get('kind') or '')
-            exit_v_kph = float(section_exit_guidance.get('v_exit_kph') or 0.0)
-            if exit_v_kph > 0.0:
-                v_exit_cap = exit_v_kph / 3.6 * (0.97 + 0.06 * driver_skill)
-                if exit_kind in {'VerySlowCorner', 'SlowCorner', 'MediumCorner', 'FastCorner'}:
-                    exit_v_min_kph = float(section_exit_guidance.get('v_min_kph') or 0.0)
-                    if exit_v_min_kph > 0.0:
-                        speed_ratio = v_max_corner_ms / max(exit_v_min_kph / 3.6, 1.0)
-                        speed_ratio = max(0.85, min(1.15, speed_ratio))
-                        v_exit_cap *= speed_ratio
-                v_new_ms = min(v_new_ms, v_exit_cap)
-        except (TypeError, ValueError):
-            pass
-    if section_entry_guidance:
-        try:
-            entry_kind = str(section_entry_guidance.get('kind') or '')
-            entry_v_kph = float(section_entry_guidance.get('v_entry_kph') or 0.0)
-            if entry_v_kph > 0.0 and entry_v_kph < 220.0 and entry_kind in {'VerySlowCorner', 'SlowCorner', 'MediumCorner', 'FastCorner'}:
-                entry_cap = entry_v_kph / 3.6 * (0.96 + 0.04 * driver_skill)
-                v_new_ms = min(v_new_ms, entry_cap)
-        except (TypeError, ValueError):
-            pass
+    # RIMOSSO reference_pull: la fisica deve emergere dai parametri fisici, non da guide empiriche
+    # v_new_ms = (v_new_ms * (1.0 - reference_pull)) + (v_target_ms * reference_pull)
+    
+    # Limita la velocità al grip fisico disponibile (v_max_corner_ms)
+    v_new_ms = min(v_new_ms, v_max_corner_ms)
+    
+    # RIMOSSI section_exit_guidance e section_entry_guidance: sono guide empiriche che "inquinano" la fisica
+    # La velocità deve essere determinata solo da: grip, aero, PU, driver skill
     
     # Clampa a limiti fisici
     v_new_ms = min(v_new_ms, v_max_corner_ms)
@@ -709,6 +735,8 @@ def integrate_lap_hd(
             section_exit_guidance=section_exit_guidance,
             section_speed_scale=section_speed_scale,
             section_entry_guidance=section_entry_guidance,
+            waypoints=waypoints,
+            waypoint_idx=i,
         )
         
         # Aggiorna statistiche

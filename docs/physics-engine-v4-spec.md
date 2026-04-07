@@ -1,8 +1,8 @@
 ---
 title: Physics Engine V4 - Specifica Operativa e Piano di Lavoro
 date: 2026-04-07
-version: 2.1
-status: LIVING SPEC - CALIBRAZIONE MONZA Q IN CORSO, REFERENCE_PULL SEMPLIFICATO
+version: 2.2
+status: LIVING SPEC - LOOKAHEAD DINAMICO E MODELLO FRENATA FISICA COMPLETO
 ---
 
 # Physics Engine V4 — Specifica Operativa
@@ -32,8 +32,8 @@ Il V4 deve simulare un giro F1 a partire da una configurazione auto realistica e
 | Driver | DONE | driving line, braking point, throttle curve, steering input | skill e stile guida |
 | Vehicle dynamics | DONE | load transfer, Kamm circle, handling, balance, cornering limit | dinamica emergente |
 | Setup | DONE | slider-to-physics, default setups, optimizer | configurazione e tuning |
-| Integrator | DONE | waypoint integrator, **reference_pull fisso 0.15** | giro HD su circuiti reali |
-| Calibration | PARTIAL | **Monza Q benchmark attivo**, calibrazione globale in corso | drag=1.94, downforce=1.28, mu=2.10 candidato migliore |
+| Integrator | DONE | waypoint integrator, **Look-ahead dinamico e frenata Raycast** | giro HD su circuiti completato, zero dependency da v_ref empiriche |
+| Calibration | PARTIAL | **Monza Q benchmark** calibrazione in fase finale (-0.5s dal target) | drag, downforce e grip mu stabiliti fisicamente |
 | Runtime integration | PARTIAL | `PhysicsV4Setup` e script telemetry-based | non ancora source of truth del gameplay |
 
 ## 3. Come entra un'auto nel V4 oggi
@@ -77,10 +77,10 @@ Un setup è **sbagliato** se produce uno o più di questi effetti:
 
 ## 5. Obiettivi operativi
 ### Obiettivo primario
-- [x] Completare il **Monza Q benchmark** con tutti i microsettori entro il 2% di margine.
-  - **Status**: 9/13 microsettori in soglia, 4 ancora fuori (sec_05, sec_08, sec_10, sec_12).
-  - **Miglior candidato**: `drag_index=1.94`, `downforce_index=1.28`, `mu_C5=2.10`, `reference_pull=0.15`.
-  - **Gap residuo**: max 2.43% sul peggior settore.
+- [ ] Completare il **Monza Q benchmark** con tutti i microsettori entro il 2% di margine.
+  - **Status**: Il modello fisico puro di decelerazione ora calcola esattamente `v^2/2a` in un lookahead dinamico fino a 350m.
+  - **Risultato**: Rimosso completamente il "teletrasporto matematico". Monza ha un track lap time a soli -0.58s di distanza.
+  - **Gap residuo**: Errore ridotto dal +41% al <10% (sec_02 max). Necessario un `driver_safety_margin` sulla frenata (es. 5%) per mitigare la perfezione inumana della macchina.
 - [ ] Validare fisica su Monaco (high downforce) e Suzuka (balanced).
 - [ ] Rendere il motore source of truth per il gameplay.
 

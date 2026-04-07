@@ -18,7 +18,7 @@ import numpy as np
 from .tyre_construction import TyreConstruction, TyreCompoundParams
 from .tyre_thermal import TyreThermal
 from .tyre_wear import TyreWear
-from ..core.constants import TYRE_LOAD_SENSITIVITY_EXP, TYRE_LOAD_REF_KN
+from ..core.constants import TYRE_LOAD_SENSITIVITY_K, TYRE_LOAD_REF_KN
 
 
 def gaussian(value: float, center: float, sigma: float) -> float:
@@ -85,7 +85,8 @@ class TyreGripModel:
         slip_ratio: float,
         slip_angle_deg: float,
         v_car_kph: float,
-        dt: float
+        dt: float,
+        telemetry_mu: float = None  # Grip dinamico da telemetria/waypoint
     ) -> 'GripState':
         """
         Calcola grip effettivo per condizioni date
@@ -96,6 +97,7 @@ class TyreGripModel:
             slip_angle_deg: gradi slittamento angolare
             v_car_kph: kph velocità vettura
             dt: secondi timestep
+            telemetry_mu: coefficiente attrito da telemetria (opzionale)
         
         Returns:
             GripState con grip effettivo
@@ -112,7 +114,7 @@ class TyreGripModel:
         self.construction.update_pressure(self.thermal.surface_temp)
         
         # 4. Calcola grip effettivo
-        mu_effective = self._calculate_effective_mu(load_kn, slip_ratio, slip_angle_deg)
+        mu_effective = self._calculate_effective_mu(load_kn, slip_ratio, slip_angle_deg, telemetry_mu)
         
         # 5. Calcola grip di picco (per friction circle)
         mu_peak = self._calculate_peak_mu()
@@ -129,7 +131,7 @@ class TyreGripModel:
             load_sensitivity=self.load_sensitivity
         )
     
-    def _calculate_effective_mu(self, load_kn: float, slip_ratio: float, slip_angle_deg: float) -> float:
+    def _calculate_effective_mu(self, load_kn: float, slip_ratio: float, slip_angle_deg: float, telemetry_mu: float = None) -> float:
         """
         Calcola coefficiente attrito effettivo
         
@@ -137,12 +139,19 @@ class TyreGripModel:
             load_kn: kN carico verticale
             slip_ratio: % slittamento
             slip_angle_deg: gradi slip angolare
+            telemetry_mu: coefficiente attrito da telemetria (opzionale)
         
         Returns:
             float mu effettivo
         """
         # 1. Grip base da compound (include temperatura)
         mu_base = self.construction.get_grip_coefficient()
+        
+        # Se disponibile telemetry_mu, usalo come grip dinamico (pista/waypoint specifico)
+        if telemetry_mu is not None and telemetry_mu > 0:
+            # Grip dinamico da telemetria: sostituisce il mu_base
+            # Il telemetry_mu rappresenta il grip reale della pista in quel punto
+            mu_base = telemetry_mu
         
         # 2. Penalità usura
         wear_factor = 1.0 - (self.wear.get_grip_loss() / 100.0)

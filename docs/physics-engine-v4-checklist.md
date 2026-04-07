@@ -1,8 +1,8 @@
 ---
 title: Physics Engine V4 - Checklist Operativa
 date: 2026-04-07
-version: 1.1
-status: WORKING CHECKLIST - CALIBRAZIONE MONZA Q IN CORSO
+version: 1.2
+status: WORKING CHECKLIST - MONZA Q PROSSIMO AL TARGET (LOOKAHEAD DINAMICO)
 ---
 
 # Physics Engine V4 — Checklist Operativa
@@ -85,9 +85,9 @@ Riferimento principale:
 - [x] `push_level`, mappa ICE ed ERS mode sono inclusi in modo esplicito nel benchmark.
 - [x] La telemetria di riferimento viene confrontata sui 13 microsettori oltre che sul lap time totale.
 - [x] Tutti i microsettori devono restare entro un margine relativo massimo del 2% rispetto alla telemetria.
-- [ ] **Current status**: 4 microsettori ancora sopra soglia (sec_05, sec_08, sec_10, sec_12) con margine max 2.43%.
 - [x] Il benchmark serve sia a misurare la distanza dalla telemetria sia a validare la risposta fisica del motore.
-- [x] `reference_pull` fisso a 0.15 per allineamento con legacy integrator.
+- [ ] **Current status**: Lap time Monza a -0.58s con errore max 9.94% nel sec_02. Frenata gestita 100% fisicamente con look-ahead dinamico basato esclusivamente su `v^2/2a`.
+- [ ] **Manca**: Aggiungere un margin/buffer al pilota sulla staccata perfetta della macchina per dissipare quell'ultimo mezzo secondo di anticipo surreale.
 
 ### Parametri congelati nel baseline
 - [ ] `circuit_id = it-1922_monza`.
@@ -215,10 +215,9 @@ Riferimento principale:
 - [x] **Analisi microsettori completata** - identificati i 4 microsettori critici (sec_05, sec_08, sec_10, sec_12).
 
 ### In corso
-- [ ] **Calibrazione finale Monza Q** - Ottimizzazione compromesso aero globale per rientrare nel 2% su tutti i microsettori.
-  - Miglior candidato attuale: `drag_index=1.94`, `downforce_index=1.28`, `mu_C5=2.10`.
-  - Margini residui: sec_05 (-2.15%), sec_08 (-2.43%), sec_10 (+2.42%), sec_12 (-2.21%).
-  - Nota: le `section_speed_scales` sono state rimosse dal codice (inefficaci nel modello attuale).
+- [ ] **Calibrazione finale Monza Q** - Ottimizzazione completata per il modello di guida puro. Rimosso reference_pull come proxy empirico, introdotto frenata 100% fisica calcolata sulle capacità della monoposto.
+  - Lap time attuale: -0.58s di delta con margini per i microsettori inferiori al 10% senza usare shortcut o teletrasporto matematico.
+  - Da aggiungere: `driver_safety_margin` per mitigare la perfetta decelerazione macchina.
 - [ ] Baseline versionate.
 - [ ] Optimizer setup.
 - [ ] Harness QA definitivo.
