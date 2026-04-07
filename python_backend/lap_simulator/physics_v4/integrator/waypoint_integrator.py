@@ -451,11 +451,12 @@ def integrate_waypoint(
     #   - Gomme che lavorano meglio a angoli di sterzo elevati
     #   - S-Curves che richiedono grip in transizione rapida
     # Applichiamo un bonus progressivo: +12% a r=20m, 0% a r=120m
+    # FIX V4.6: Rimosso perché causa sovasterzo in curve medie (Silverstone Luffield)
     curvature_grip_bonus = 1.0
-    if is_corner and radius_m < 120.0 and radius_m > 0.0:  # Esteso da 85.0 a 120.0
-        curvature_grip_bonus = 1.12 - 0.12 * ((radius_m - 20.0) / 100.0)  # Ricalibrato
-        curvature_grip_bonus = max(1.0, min(1.12, curvature_grip_bonus))
-        f_grip_total_lateral *= curvature_grip_bonus
+    # if is_corner and radius_m < 120.0 and radius_m > 0.0:  # RIMOSSO
+    #     curvature_grip_bonus = 1.12 - 0.12 * ((radius_m - 20.0) / 100.0)
+    #     curvature_grip_bonus = max(1.0, min(1.12, curvature_grip_bonus))
+    #     f_grip_total_lateral *= curvature_grip_bonus
     
     # Load transfer in frenata/accelerazione (usa grip longitudinale)
     if state.is_braking:
