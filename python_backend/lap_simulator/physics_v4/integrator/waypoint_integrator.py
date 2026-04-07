@@ -324,7 +324,8 @@ def integrate_waypoint(
         # A basse velocità (uscita curva), limita potenza per trazione
         f_engine = power_available / 1.0
         # Limita accelerazione per evitare wheel spin
-        max_traction_force = mu_base.get(tyre_compound, 1.65) * mass_kg * G * 0.6  # 60% grip posteriore
+        # FIX V4.4: Aumentato da 0.60 a 0.85 per permettere accelerazione in uscita curva
+        max_traction_force = mu_base.get(tyre_compound, 1.65) * mass_kg * G * 0.85  # 85% grip posteriore
         f_engine = min(f_engine, max_traction_force)
     
     state.f_engine = f_engine
@@ -433,7 +434,8 @@ def integrate_waypoint(
     longitudinal_traction_bonus = 1.0
     # Applica solo per curve strette (Monaco/Suzuka), non per Monza
     # Soglia sterzo aumentata a 25° per permettere accelerazione anticipata
-    if v_kph < 120.0 and steering_angle_deg < 25.0 and state.is_throttle and radius_m < 60.0 and radius_m > 0.0:
+    # FIX V4.4: Esteso da 120 a 160 km/h per coprire marce medie di circuiti veloci (Spa, Silverstone)
+    if v_kph < 160.0 and steering_angle_deg < 25.0 and state.is_throttle and radius_m < 60.0 and radius_m > 0.0:
         # Bonus del 20% per simulare differenziale che massimizza spinta
         # Questo aiuta sec_11 (Monaco), sec_08 e sec_14 (Suzuka) in uscita
         longitudinal_traction_bonus = 1.20
@@ -537,7 +539,12 @@ def integrate_waypoint(
                 max_brake_decel_avg = min(max_brake_decel_g * G, max_brake_decel_avg)
                 
                 braking_dist_req = ((v_current ** 2) - (wp_v_ref ** 2)) / (2 * max_brake_decel_avg)
-                braking_dist_req *= 1.005  # Margine sicurezza ridotto da 1.01 a 1.005 per frenate più aggressive
+                # FIX: Margine sicurezza aumentato da 1.005 a 1.15 (15% in più)
+                # Il calcolo teorico sottostima la distanza perché:
+                #   - Usa decelerazione media ottimistica (2.7g vs 2.2g reali)
+                #   - Non considera tempo di reazione del pilota (~0.2s)
+                #   - Non considera che il grip cala con l'usura gomme
+                braking_dist_req *= 1.15
                 
                 dist_to_wp = wp_dist - base_dist
                 if dist_to_wp <= braking_dist_req:
