@@ -539,12 +539,13 @@ def integrate_waypoint(
                 max_brake_decel_avg = min(max_brake_decel_g * G, max_brake_decel_avg)
                 
                 braking_dist_req = ((v_current ** 2) - (wp_v_ref ** 2)) / (2 * max_brake_decel_avg)
-                # FIX: Margine sicurezza aumentato da 1.005 a 1.15 (15% in più)
+                # FIX V4.5: Margine sicurezza ridotto da 1.15 a 1.08 (8% in più)
                 # Il calcolo teorico sottostima la distanza perché:
                 #   - Usa decelerazione media ottimistica (2.7g vs 2.2g reali)
                 #   - Non considera tempo di reazione del pilota (~0.2s)
                 #   - Non considera che il grip cala con l'usura gomme
-                braking_dist_req *= 1.15
+                # NOTA: 1.08 è sufficiente con fisica V4.4 (traction 0.85 + bonus 160km/h)
+                braking_dist_req *= 1.08
                 
                 dist_to_wp = wp_dist - base_dist
                 if dist_to_wp <= braking_dist_req:
@@ -588,15 +589,13 @@ def integrate_waypoint(
     v_target_ms = min(v_target_ms, v_max_corner_ms)
     
     # ============================================================
-    # 9. INTEGRA CINEMATICA - FISICA PURA (NO REFERENCE_PULL)
+    # 9. INTEGRA CINEMATICA - FISICA PURA
     # ============================================================
     # v_new² = v_old² + 2 × a × d
     v_squared_new = state.velocity_ms ** 2 + 2 * state.acceleration_ms2 * dist_step
     v_squared_new = max(0.0, v_squared_new)  # Evita sqrt negativo
     
     v_new_ms = math.sqrt(v_squared_new)
-    # RIMOSSO reference_pull: la fisica deve emergere dai parametri fisici, non da guide empiriche
-    # v_new_ms = (v_new_ms * (1.0 - reference_pull)) + (v_target_ms * reference_pull)
     
     # Limita la velocità al grip fisico disponibile (v_max_corner_ms)
     v_new_ms = min(v_new_ms, v_max_corner_ms)
