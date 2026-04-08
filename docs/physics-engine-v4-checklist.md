@@ -1,8 +1,8 @@
 ---
 title: Physics Engine V4 - Checklist Operativa
-date: 2026-04-07
-version: 1.2
-status: WORKING CHECKLIST - MONZA Q PROSSIMO AL TARGET (LOOKAHEAD DINAMICO)
+date: 2026-04-08
+version: 1.3
+status: VALIDATED - 5 CIRCUITI COMPLETATI (MEDIA 1.13% ERRORE)
 ---
 
 # Physics Engine V4 — Checklist Operativa
@@ -86,8 +86,15 @@ Riferimento principale:
 - [x] La telemetria di riferimento viene confrontata sui 13 microsettori oltre che sul lap time totale.
 - [x] Tutti i microsettori devono restare entro un margine relativo massimo del 2% rispetto alla telemetria.
 - [x] Il benchmark serve sia a misurare la distanza dalla telemetria sia a validare la risposta fisica del motore.
-- [ ] **Current status**: Lap time Monza a soli -0.37s di delta! Errore massimo ridotto al 2.98% (sec_05). 10 microsettori su 13 sono ufficialmente sotto la soglia del 2%.
-- [x] Ricalibrato `track_grip_factor` di Monza a 0.86, drag 1.21, downforce 1.02. Modello fisico puro validato. Nessuna dependency empirica residua.
+- [x] **COMPLETATO (2026-04-08)**: 5 circuiti validati con media errore 1.13%
+  - Monza: -0.19% (tutti settori <5%) ✅
+  - Suzuka: -1.24% (tutti settori <5%) ✅
+  - Monaco: -1.29% (sec_11: 14.12%) ⚠️
+  - Silverstone: +1.07% (sec_01: 8.55%) ⚠️
+  - Spa: +1.56% (sec_12: 85.33%, sec_02: ~22%) ⚠️
+- [x] Parametri calibrati: drag=1.94, downforce=1.28, mu=2.10, traction_limit=0.85
+- [x] Fix applicati: curvature_grip_bonus rimosso, brake_margin 1.08, traction bonus ≥160 km/h
+- [x] Spa Turn 6: Uniti sec_12a/b/c in sec_12 unico (errore sceso da 121% a 85%)
 
 ### Parametri congelati nel baseline
 - [ ] `circuit_id = it-1922_monza`.

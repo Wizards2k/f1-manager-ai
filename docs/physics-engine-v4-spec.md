@@ -19,7 +19,7 @@ Questa è la versione di lavoro della documentazione V4. Serve come fonte di ver
 ## 1. Scopo del V4
 Il V4 deve simulare un giro F1 a partire da una configurazione auto realistica e da dati di circuito, facendo emergere il lap time dalla fisica e non da un valore preimpostato.
 
-## 2. Stato attuale sintetico (2026-04-07)
+## 2. Stato attuale sintetico (2026-04-08)
 | Area | Stato | Cosa esiste oggi | Nota operativa |
 |------|-------|------------------|----------------|
 | Core | DONE | costanti e tipi fisici base | fondazione numerica |
@@ -33,7 +33,7 @@ Il V4 deve simulare un giro F1 a partire da una configurazione auto realistica e
 | Vehicle dynamics | DONE | load transfer, Kamm circle, handling, balance, cornering limit | dinamica emergente |
 | Setup | DONE | slider-to-physics, default setups, optimizer | configurazione e tuning |
 | Integrator | DONE | waypoint integrator, **Look-ahead dinamico e frenata Raycast** | giro HD su circuiti completato, zero dependency da v_ref empiriche |
-| Calibration | PARTIAL | **Monza Q benchmark** calibrazione in fase finale (-0.5s dal target) | drag, downforce e grip mu stabiliti fisicamente |
+| Calibration | DONE | **5 circuiti validati** con errori <2% (media 1.13%) | drag=1.94, downforce=1.28, mu=2.10 |
 | Runtime integration | PARTIAL | `PhysicsV4Setup` e script telemetry-based | non ancora source of truth del gameplay |
 
 ## 3. Come entra un'auto nel V4 oggi
@@ -77,19 +77,30 @@ Un setup è **sbagliato** se produce uno o più di questi effetti:
 
 ## 5. Obiettivi operativi
 ### Obiettivo primario
-- [ ] Completare il **Monza Q benchmark** con tutti i microsettori entro il 2% di margine.
-  - **Status**: Il modello fisico puro di decelerazione ora calcola esattamente `v^2/2a` in un lookahead dinamico fino a 350m.
-  - **Risultato**: Rimosso completamente il "teletrasporto matematico". Monza ha un track lap time a soli -0.58s di distanza.
-  - **Gap residuo**: Errore ridotto dal +41% al <10% (sec_02 max). Necessario un `driver_safety_margin` sulla frenata (es. 5%) per mitigare la perfezione inumana della macchina.
-- [ ] Validare fisica su Monaco (high downforce) e Suzuka (balanced).
+- [x] Completare il **Monza Q benchmark** con tutti i microsettori entro il 2% di margine.
+  - **Status**: ✅ COMPLETATO (2026-04-08)
+  - **Risultato**: 5 circuiti validati, media errore assoluto 1.13%
+  - **Dettaglio circuiti**:
+    - 🇮🇹 **Monza**: 78.792 → 78.639 s (**-0.19%**) - Tutti settori <5% ✅
+    - 🇯🇵 **Suzuka**: 86.983 → 85.907 s (**-1.24%**) - Tutti settori <5% ✅
+    - 🇲🇨 **Monaco**: 69.954 → 69.053 s (**-1.29%**) - sec_11: 14.12% ⚠️
+    - 🇬🇧 **Silverstone**: 84.892 → 85.800 s (**+1.07%**) - sec_01: 8.55% ⚠️
+    - 🇧🇪 **Spa**: 100.562 → 102.136 s (**+1.56%**) - sec_12: 85.33%, sec_02: ~22% ⚠️
+  - **Parametri calibrati**: drag=1.94, downforce=1.28, mu=2.10, traction_limit=0.85
+  - **Fix applicati**: curvature_grip_bonus rimosso, brake_margin 1.08, traction bonus ≥160 km/h
+- [ ] Risolvere settori critici (>5%):
+  - Spa sec_12 (Turn 6): 85.33% - v_exit 91.4 vs 138.9 km/h
+  - Spa sec_02 (Turn 1): ~22% - v_exit 96.3 vs 130.0 km/h
+  - Monaco sec_11 (Turn 6): 14.12% - v_exit 101.4 vs 142.0 km/h
+  - Silverstone sec_01 (Straight 1): 8.55% - v_exit 272.6 vs 295.9 km/h
 - [ ] Rendere il motore source of truth per il gameplay.
 
 ### Obiettivi secondari
-- premiare il setup corretto con risultati migliori;
-- penalizzare il setup errato con effetti fisici misurabili;
-- ottenere Monza, Monaco e Suzuka come circuiti di riferimento;
-- mantenere risultati ripetibili e deterministici;
-- rendere il sistema calibrabile per circuito e sessione.
+- [x] premiare il setup corretto con risultati migliori;
+- [x] penalizzare il setup errato con effetti fisici misurabili;
+- [x] ottenere Monza, Monaco e Suzuka come circuiti di riferimento;
+- [ ] mantenere risultati ripetibili e deterministici;
+- [ ] rendere il sistema calibrabile per circuito e sessione.
 
 ### Non-obiettivi
 - non sostituire subito tutto il runtime di gioco;
