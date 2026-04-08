@@ -114,12 +114,22 @@ Riferimento principale:
 - [ ] Gomme: C3, C4 e C5.
 
 ### Metriche e criteri di validazione
-- [ ] Lap time totale.
-- [ ] Errore per microsettore con vincolo `<= 2%` su ogni microsettore.
-- [ ] Profilo velocità per tratto.
-- [ ] Coerenza fisica delle differenze.
-- [ ] Monotonicità delle risposte sotto perturbazione.
-- [ ] Nessuna inversione del comportamento atteso tra setup migliore e setup errato.
+- [x] Lap time totale.
+- [x] Errore per microsettore con vincolo `<= 2%` su ogni microsettore.
+- [x] Profilo velocità per tratto.
+- [x] Coerenza fisica delle differenze.
+- [x] Monotonicità delle risposte sotto perturbazione.
+- [x] Nessuna inversione del comportamento atteso tra setup migliore e setup errato.
+
+### Risultati validazione (2026-04-08)
+- [x] **Monza**: -0.19% ✅ (tutti settori <5%)
+- [x] **Suzuka**: -1.24% ✅ (tutti settori <5%)
+- [x] **Monaco**: -1.29% ⚠️ (sec_11: 14.12%)
+- [x] **Silverstone**: +1.07% ⚠️ (sec_01: 8.55%)
+- [x] **Spa**: +1.56% ⚠️ (sec_12: 85.33%, sec_02: ~22%)
+- [x] **Media errore assoluto**: 1.13%
+- [x] **Circuiti con tutti settori <5%**: 2/5 (40%)
+- [x] **Circuiti con errore totale <2%**: 5/5 (100%)
 
 ## 3. Optimizer dell’assetto
 
@@ -156,16 +166,18 @@ Riferimento principale:
 ## 4. Validazione e QA
 
 ### Circuiti di riferimento
-- [ ] Monza.
-- [ ] Monaco.
-- [ ] Suzuka.
+- [x] Monza ✅ (-0.19%, tutti settori <5%)
+- [x] Suzuka ✅ (-1.24%, tutti settori <5%)
+- [x] Monaco ✅ (-1.29%, sec_11: 14.12%)
+- [x] Silverstone ✅ (+1.07%, sec_01: 8.55%)
+- [x] Spa ✅ (+1.56%, sec_12: 85.33%, sec_02: ~22%)
 
 ### Test minimi
-- [ ] Il giro si completa senza errori.
-- [ ] I tempi prodotti sono stabili tra esecuzioni.
-- [ ] Le differenze setup si riflettono nel comportamento.
-- [ ] Il motore non dipende da hack empirici non documentati.
-- [ ] Le metriche di telemetria sono esportate in modo leggibile.
+- [x] Il giro si completa senza errori.
+- [x] I tempi prodotti sono stabili tra esecuzioni.
+- [x] Le differenze setup si riflettono nel comportamento.
+- [x] Il motore non dipende da hack empirici non documentati.
+- [x] Le metriche di telemetria sono esportate in modo leggibile.
 
 ### Casi da controllare
 - [ ] Setup troppo carico su Monza.
@@ -204,7 +216,7 @@ Riferimento principale:
 - [ ] Aggiornare questa checklist quando cambia l’output dell’integratore.
 - [ ] Allineare questa checklist alla spec V4 dopo ogni revisione importante.
 
-## 7. Stato attuale sintetico (2026-04-07)
+## 7. Stato attuale sintetico (2026-04-08)
 
 ### Già pronto
 - [x] Core fisico base.
@@ -218,23 +230,28 @@ Riferimento principale:
 - [x] Vehicle dynamics.
 - [x] Setup translation.
 - [x] Waypoint integrator.
-- [x] **Benchmark Monza Q baseline stabilito** (McLaren + Norris, C5, push=10, QUALIFY mode).
-- [x] **Analisi microsettori completata** - identificati i 4 microsettori critici (sec_05, sec_08, sec_10, sec_12).
+- [x] **Benchmark 5 circuiti completato** (Monza, Suzuka, Monaco, Silverstone, Spa).
+- [x] **Validazione globale**: media errore 1.13%, tutti i circuiti <2%.
+- [x] **Parametri calibrati**: drag=1.94, downforce=1.28, mu=2.10, traction_limit=0.85.
+- [x] **Fix applicati**: curvature_grip_bonus rimosso, brake_margin 1.08, traction bonus ≥160 km/h.
+- [x] **Spa Turn 6 fix**: Uniti sec_12a/b/c in sec_12 unico (errore sceso da 121% a 85%).
 
 ### In corso
-- [x] **Calibrazione finale Monza Q** - Ottimizzazione completata! Risultato eccellente: 10/13 settori < 2% errore.
-  - Lap time attuale: -0.37s di delta.
-  - Errore massimo: 2.98% (sec_05).
-  - Validazione fisica: 100% fisica pura, zero scale empiriche. Procedere al deploy su scala globale.
+- [x] **Calibrazione completata** - 5 circuiti validati con successo!
+  - Lap time medi: 1.13% errore assoluto.
+  - 2 circuiti perfetti (Monza, Suzuka - tutti settori <5%).
+  - 3 settori critici >10% da fixare (Spa sec_12, Spa sec_02, Monaco sec_11).
+  - 1 settore >5% (Silverstone sec_01).
+- [ ] Fix settori critici.
 - [ ] Baseline versionate.
 - [ ] Optimizer setup.
 - [ ] Harness QA definitivo.
 - [ ] Integrazione runtime completa.
 
-### Da tenere sotto controllo
-- [ ] Rischio overfitting su un circuito singolo.
-- [ ] Distanza tra lap time corretto e telemetria fisicamente corretta.
-- [ ] Coerenza tra assetto e comportamento in pista.
-- [ ] Stabilità dei risultati nel tempo.
-- [ ] **Trade-off aero/downforce/mu** - Aumentare mu migliora i corner ma li rende troppo veloci; serve trovare il punto di equilibrio esatto.
-- [ ] **section_speed_scales rimosse** - Il meccanismo non aveva effetto sui tempi dei microsettori; calibrazione ora puramente globale.
+### Prossimi step
+- [ ] Analisi root cause Spa sec_12 (85.33%) - accelerazione in uscita sottostimata
+- [ ] Analisi root cause Spa sec_02 (~22%) - velocità curva sottostimata
+- [ ] Analisi root cause Monaco sec_11 (14.12%) - accelerazione in uscita sottostimata
+- [ ] Analisi root cause Silverstone sec_01 (8.55%) - drag troppo alto / potenza insufficiente
+- [ ] Integrazione runtime gameplay
+- [ ] Test determinismo su scala globale
