@@ -281,8 +281,12 @@ def integrate_waypoint(
         if section_radius_m is not None and section_kind in {'VerySlowCorner', 'SlowCorner'}:
             try:
                 section_radius_m = float(section_radius_m)
-                blend_weight = 0.60 if section_kind == 'VerySlowCorner' else 0.45
-                radius_m = (max(radius_m, 1.0) ** (1.0 - blend_weight)) * (max(section_radius_m, 1.0) ** blend_weight)
+                # FIX V4.7: Skip blend when waypoint radius >> section radius (braking zone).
+                # The waypoint already has the correct radius from HD data; blending
+                # with the apex radius would artificially limit speed during braking.
+                if radius_m < section_radius_m * 2.5:
+                    blend_weight = 0.60 if section_kind == 'VerySlowCorner' else 0.45
+                    radius_m = (max(radius_m, 1.0) ** (1.0 - blend_weight)) * (max(section_radius_m, 1.0) ** blend_weight)
             except (TypeError, ValueError):
                 pass
     # Se radius > 1000m, è un rettilineo
@@ -514,7 +518,11 @@ def integrate_waypoint(
         must_brake = False
         target_brake_v = v_current
         
-        max_brake_decel_phys = f_grip_total / mass_kg
+        # FIX V4.7: Use longitudinal grip for braking decel limit, not the
+        # combined/lateral grip.  In straight-line braking the full longitudinal
+        # grip is available; only trail-braking into a corner needs the lower
+        # combined limit.
+        max_brake_decel_phys = f_grip_total_longitudinal / mass_kg
         max_brake_decel = min(max_brake_decel_g * G, max_brake_decel_phys)
         
         # Lookahead: search until we reach max distance or end of array
@@ -534,8 +542,12 @@ def integrate_waypoint(
                 f_down_avg = (0.5 * RHO_SEA_LEVEL * avg_v ** 2) * aero_forces.cla_total
                 f_vert_avg = mass_kg * G + f_down_avg
                 load_factor_avg = max(0.5, min(1.0, 1.0 - (TYRE_LOAD_SENSITIVITY_K * (f_vert_avg / 1000.0))))
-                # Assumiamo grip posteriore ridotto per load transfer (-15%)
-                f_grip_avg = mu_base_val * f_vert_avg * load_factor_avg * 0.85
+                # FIX V4.7: In straight-line braking (steer < 5°) load transfer
+                # moves weight to front axle, which HELPS braking grip.
+                # Only apply -15% penalty when steering is significant (trail braking).
+                steering_now = abs(waypoint.get('steering_angle_deg', 0.0))
+                lt_penalty = 0.92 if steering_now < 5.0 else 0.85
+                f_grip_avg = mu_base_val * f_vert_avg * load_factor_avg * lt_penalty
                 max_brake_decel_avg = f_grip_avg / mass_kg
                 max_brake_decel_avg = min(max_brake_decel_g * G, max_brake_decel_avg)
                 
