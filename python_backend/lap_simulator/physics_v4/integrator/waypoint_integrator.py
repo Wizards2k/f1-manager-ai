@@ -125,6 +125,21 @@ def _load_reference_sections(circuit_id: str) -> Dict[str, Dict[str, Any]]:
     }
 
 
+def _find_section_id_by_distance(reference_sections: Dict[str, Dict[str, Any]], distance_m: float) -> str:
+    """Trova la sezione telemetria che contiene una data distanza.
+
+    Usa i confini start_m/end_m dalla telemetria invece di fidarsi dei
+    macro_sector_id dei waypoint HD, che possono essere disallineati
+    (es. Silverstone: HD sec_02 a 340m vs Tel sec_02 a 785m).
+    """
+    for sid, section in reference_sections.items():
+        start = section.get('start_m', 0.0)
+        end = section.get('end_m', 0.0)
+        if start <= distance_m < end:
+            return sid
+    return ''
+
+
 def _apply_aero_calibration(aero_forces: AeroForces, aero_calibration: Optional[Dict[str, Any]]) -> AeroForces:
     """Applica un profilo aero calibrato ai coefficienti calcolati dal modello fisico."""
     if not aero_calibration:
@@ -160,6 +175,87 @@ def _apply_aero_calibration(aero_forces: AeroForces, aero_calibration: Optional[
     aero_forces.aero_balance = front_share
 
     return aero_forces
+
+
+def _compute_suspension_effects(suspension_setup: Optional[Dict]) -> Dict[str, float]:
+    """
+    Calcola effetti sospensioni sulla performance.
+
+    Le sospensioni influenzano:
+    1. Grip meccanico (contatto gomma-asfalto) - da spring rate
+    2. Load transfer laterale (rollio in curva) - da ARB
+    3. Stabilità in frenata - da bilanciamento molle ant/post
+
+    Args:
+        suspension_setup: dict con spring_front, spring_rear, arb_front, arb_rear
+                         (scala 1-30 per molle, 1-10 per ARB)
+
+    Returns:
+        Dict con fattori moltiplicativi per grip/stabilità
+    """
+    if not suspension_setup:
+        return {
+            'mechanical_grip_factor': 1.0,
+            'corner_grip_penalty': 0.0,
+            'braking_stability_factor': 1.0,
+        }
+
+    # ---- Spring rate → grip meccanico ----
+    # Ottimale: front=15, rear=18 (scala 1-30)
+    # Troppo morbido → rollio, imprecisione. Troppo rigido → rimbalzo, perdita contatto.
+    spring_front = float(suspension_setup.get('spring_front', 15.0))
+    spring_rear = float(suspension_setup.get('spring_rear', 18.0))
+
+    SPRING_FRONT_OPT = 15.0
+    SPRING_REAR_OPT = 18.0
+
+    # Deviazione normalizzata 0-1 (0 = ottimale, 1 = estremo)
+    spring_dev_f = abs(spring_front - SPRING_FRONT_OPT) / 15.0
+    spring_dev_r = abs(spring_rear - SPRING_REAR_OPT) / 15.0
+    spring_dev_avg = (spring_dev_f + spring_dev_r) / 2.0
+
+    # Penalità progressiva: fino a ~7% grip loss agli estremi
+    mechanical_grip_factor = 1.0 - 0.07 * (spring_dev_avg ** 1.5)
+    mechanical_grip_factor = max(0.93, min(1.0, mechanical_grip_factor))
+
+    # ---- ARB → load transfer in curva ----
+    # Ottimale: front=4, rear=6 (scala 1-10)
+    # Troppo rigido → eccesso load transfer → meno grip ruota interna
+    # Troppo morbido → troppo rollio → meno reattività (penalità minore)
+    arb_front = float(suspension_setup.get('arb_front', 4.0))
+    arb_rear = float(suspension_setup.get('arb_rear', 6.0))
+
+    ARB_FRONT_OPT = 4.0
+    ARB_REAR_OPT = 6.0
+
+    arb_dev_f = abs(arb_front - ARB_FRONT_OPT) / 6.0
+    arb_dev_r = abs(arb_rear - ARB_REAR_OPT) / 6.0
+
+    # Asimmetria: troppo rigido penalizza di più
+    if arb_front > ARB_FRONT_OPT:
+        arb_dev_f *= 1.3
+    if arb_rear > ARB_REAR_OPT:
+        arb_dev_r *= 1.3
+
+    arb_dev_avg = (arb_dev_f + arb_dev_r) / 2.0
+    # Fino a ~8% penalità laterale agli estremi
+    corner_grip_penalty = 0.08 * (arb_dev_avg ** 1.3)
+    corner_grip_penalty = min(0.10, corner_grip_penalty)
+
+    # ---- Bilanciamento molle → stabilità frenata ----
+    # Se le molle sono sbilanciate (es. molto rigido davanti, morbido dietro)
+    # la frenata diventa instabile (bloccaggio ruote)
+    ratio_front = spring_front / SPRING_FRONT_OPT
+    ratio_rear = spring_rear / SPRING_REAR_OPT
+    spring_imbalance = abs(ratio_front - ratio_rear)
+    braking_stability_factor = 1.0 - 0.05 * min(1.0, spring_imbalance)
+    braking_stability_factor = max(0.95, min(1.0, braking_stability_factor))
+
+    return {
+        'mechanical_grip_factor': mechanical_grip_factor,
+        'corner_grip_penalty': corner_grip_penalty,
+        'braking_stability_factor': braking_stability_factor,
+    }
 
 
 def compute_grip_limit(
@@ -224,6 +320,7 @@ def integrate_waypoint(
     section_entry_guidance: Optional[Dict[str, Any]] = None,
     waypoints: List[Dict] = None,  # Lista completa waypoints per look-ahead
     waypoint_idx: int = 0,         # Indice del waypoint corrente
+    suspension_effects: Optional[Dict[str, float]] = None,  # Effetti sospensioni pre-calcolati
 ) -> PhysicsState:
     """
     Integra fisica per un singolo waypoint.
@@ -289,6 +386,15 @@ def integrate_waypoint(
                     radius_m = (max(radius_m, 1.0) ** (1.0 - blend_weight)) * (max(section_radius_m, 1.0) ** blend_weight)
             except (TypeError, ValueError):
                 pass
+    # FIX V4.10: Floor radius from v_ref to handle noisy HD radius data.
+    # If v_ref implies a much larger radius than the HD data provides,
+    # the HD radius is likely a GPS artifact (e.g. Silverstone r=48m at 310 kph).
+    # Compute minimum radius from v_ref using lateral G limit.
+    v_ref_ms_for_radius = v_ref_kph / 3.6
+    r_min_from_vref = v_ref_ms_for_radius ** 2 / (max_lateral_g * G)
+    if r_min_from_vref > radius_m * 1.5:
+        radius_m = r_min_from_vref
+
     # Se radius > 1000m, è un rettilineo
     is_corner = radius_m < 1000.0
     
@@ -391,7 +497,12 @@ def integrate_waypoint(
     
     # Applica driver skill (pilota migliore → sfrutta meglio il grip)
     mu_base_val *= driver_skill
-    
+
+    # Applica effetto sospensioni sul grip meccanico
+    # Molle non ottimali → peggior contatto gomma-asfalto → meno grip
+    susp_fx = suspension_effects or {}
+    mu_base_val *= susp_fx.get('mechanical_grip_factor', 1.0)
+
     # Calcola downforce (contata UNA SOLA VOLTA qui)
     dynamic_pressure = 0.5 * RHO_SEA_LEVEL * state.velocity_ms ** 2
     f_downforce = dynamic_pressure * aero_forces.cla_total
@@ -420,7 +531,13 @@ def integrate_waypoint(
     
     # Grip totale laterale (usato per v_max in curva)
     f_grip_total_lateral = mu_base_val * f_vertical * lat_load_factor
-    
+
+    # Applica penalità ARB sospensioni sul grip laterale
+    # ARB non ottimale → eccesso load transfer → meno grip in curva
+    corner_grip_penalty = susp_fx.get('corner_grip_penalty', 0.0)
+    if corner_grip_penalty > 0.0:
+        f_grip_total_lateral *= (1.0 - corner_grip_penalty)
+
     # Grip totale longitudinale (usato per trazione/frenata)
     f_grip_total_longitudinal = mu_base_val * f_vertical * long_load_factor
     
@@ -465,7 +582,9 @@ def integrate_waypoint(
     # Load transfer in frenata/accelerazione (usa grip longitudinale)
     if state.is_braking:
         # Frenata: load transfer anteriore → grip posteriore ridotto
-        load_transfer_factor = 0.85  # -15% grip posteriore
+        # Sospensioni sbilanciate peggiorano la stabilità in frenata
+        braking_stability = susp_fx.get('braking_stability_factor', 1.0)
+        load_transfer_factor = 0.85 * braking_stability  # -15% base + penalità sospensioni
         f_grip_total = f_grip_total_longitudinal * load_transfer_factor
     elif state.is_throttle:
         # Accelerazione: load transfer posteriore → grip posteriore aumentato
@@ -676,6 +795,8 @@ def integrate_lap_hd(
     max_brake_decel_g_override: Optional[float] = None,
     max_lateral_g_override: Optional[float] = None,
     aero_calibration: Optional[Dict[str, Any]] = None,
+    # Sospensioni
+    suspension_setup: Optional[Dict] = None,
     # Sector tracking (per confronto con telemetria)
     sector_boundaries: Optional[List[float]] = None,
 ) -> Dict[str, Any]:
@@ -806,11 +927,17 @@ def integrate_lap_hd(
         if max_lateral_g_override:
             print(f"  Lateral override: {max_lateral_g_override}g")
     
+    # Pre-calcola effetti sospensioni (costanti per tutto il giro)
+    susp_effects = _compute_suspension_effects(suspension_setup)
+
     for i in range(len(waypoints) - 1):
         wp = waypoints[i]
         wp_next = waypoints[i + 1]
-        current_section_id = str(wp.get('macro_sector_id') or wp.get('section_id') or '')
-        next_section_id = str(wp_next.get('macro_sector_id') or wp_next.get('section_id') or '')
+        # FIX V4.10: Distance-based section lookup instead of HD macro_sector_id.
+        # HD section IDs can be misaligned with telemetry section boundaries
+        # (e.g. Silverstone: HD sec_02 at 340m vs Tel sec_02 at 785m).
+        current_section_id = _find_section_id_by_distance(reference_sections, wp.get('dist_m', 0.0))
+        next_section_id = _find_section_id_by_distance(reference_sections, wp_next.get('dist_m', 0.0))
         section_guidance = reference_sections.get(current_section_id)
         section_exit_guidance = section_guidance if current_section_id and current_section_id != next_section_id else None
         section_entry_guidance = reference_sections.get(next_section_id) if current_section_id and current_section_id != next_section_id else None
@@ -842,6 +969,7 @@ def integrate_lap_hd(
             section_entry_guidance=section_entry_guidance,
             waypoints=waypoints,
             waypoint_idx=i,
+            suspension_effects=susp_effects,
         )
         
         # Aggiorna statistiche

@@ -420,6 +420,7 @@ class PhysicsV4Setup:
             tyre_compound=self.car.tyres.compound,
             driver_skill=driver_skill,
             aero_calibration=aero_calibration,
+            suspension_setup=setup.get("suspension"),
             verbose=verbose
         )
         

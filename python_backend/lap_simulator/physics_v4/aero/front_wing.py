@@ -54,17 +54,20 @@ class FrontWing:
         self.A_REF_COMMON = 1.60  # m²
         
         # Parametri aerodinamici base (senza DRS)
-        self.CL_MAX = 2.20        # Portanza massima (stallo) - ridotto da 2.80
+        # Valori calibrati F1 2025: cl_alpha=0.09/° satura a CL_MAX=1.65 intorno a 19°
+        # Range operativo utile: 5-18° (Monza ~8°, Monaco ~16-18°)
+        self.CL_MAX = 1.65        # Portanza massima (stallo) - multi-element F1
         self.CL_MIN = -0.50       # Portanza negativa (inverted wing)
-        self.CD_MIN = 0.030       # Drag minimo (profili ottimizzati)
-        self.K_FACTOR = 0.055     # Induced drag factor
+        self.CD_MIN = 0.025       # Drag minimo (profili ottimizzati)
+        self.K_FACTOR = 0.050     # Induced drag factor (multi-element riduce indotto)
         
         # Parametri DRS
         self.DRS_CL_BOOST = 0.35  # Incremento portanza con DRS
         self.DRS_CD_BOOST = 0.020 # Incremento drag con DRS
         
-        # Sensibilità ground effect
-        self.GROUND_EFFECT_SENSITIVITY = 0.15  # +15% CL per ogni mm sotto ottimale
+        # Sensibilità ground effect (wing-ground interaction only, NOT floor effect)
+        # Floor effect is handled by floor modules; wing GE is ~5-8% enhancement
+        self.GROUND_EFFECT_SENSITIVITY = 0.03  # +3% CL per ogni mm sotto ottimale
         
         # Interferenza con sidepods (riduzione efficienza)
         self.SIDEPODS_INTERFERENCE = 0.96  # -4% efficienza
@@ -85,12 +88,12 @@ class FrontWing:
         if self.config['drs_active']:
             aoa -= 3.0  # DRS riduce AoA di 3 gradi
         
-        # Clamp AoA
-        aoa = np.clip(aoa, 0, 30)
-        
+        # Clamp AoA al range operativo F1
+        aoa = np.clip(aoa, 0, 25)
+
         # Calcola CL (lineare fino a stallo)
-        # CL = CL_alpha * aoa + CL_ground_effect
-        cl_alpha = 0.12  # Pendenza CL vs aoa (per grado)
+        # cl_alpha = 0.09/° → range utile 5-18° senza saturazione
+        cl_alpha = 0.09  # Pendenza CL vs aoa (per grado) - F1 multi-element
         cl_base = cl_alpha * aoa
         
         # Ground effect (se altezza < ottimale)
@@ -127,7 +130,7 @@ class FrontWing:
     
     def set_aoa(self, angle_deg):
         """Imposta angolo attacco"""
-        self.config['aoa'] = np.clip(angle_deg, 0, 30)
+        self.config['aoa'] = np.clip(angle_deg, 0, 25)
     
     def set_drs(self, active):
         """Attiva/disattiva DRS"""

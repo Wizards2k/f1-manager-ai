@@ -56,17 +56,19 @@ class RearWing:
         self.A_REF_COMMON = 1.60  # m²
         
         # Parametri aerodinamici base (senza DRS)
-        self.CL_MAX = 1.80        # Portanza massima (stallo) - ridotto da 3.50
+        # Valori calibrati F1 2025: cl_alpha=0.07/° satura a CL_MAX=1.95 intorno a 28°
+        # Range operativo utile: 8-35° (Monza ~8-12°, Monaco ~30-35°)
+        self.CL_MAX = 1.95        # Portanza massima (stallo) - multi-element F1
         self.CL_MIN = -0.80       # Portanza negativa
-        self.CD_MIN = 0.045       # Drag minimo (profili ottimizzati)
-        self.K_FACTOR = 0.060     # Induced drag factor
+        self.CD_MIN = 0.035       # Drag minimo (profili ottimizzati)
+        self.K_FACTOR = 0.080     # Induced drag factor (lower AR → higher K)
         
         # Parametri DRS
         self.DRS_CL_BOOST = 0.50  # Incremento portanza con DRS
         self.DRS_CD_BOOST = 0.035 # Incremento drag con DRS
         
-        # Sensibilità ground effect
-        self.GROUND_EFFECT_SENSITIVITY = 0.12  # +12% CL per ogni mm sotto ottimale
+        # Sensibilità ground effect (wing-ground interaction only)
+        self.GROUND_EFFECT_SENSITIVITY = 0.03  # +3% CL per ogni mm sotto ottimale
         
         # Effetto beam wing
         self.BEAM_WING_CL_BOOST = 0.15  # +15% CL da beam wing
@@ -88,10 +90,12 @@ class RearWing:
         if self.config['drs_active']:
             aoa -= 2.0  # DRS riduce AoA
         
-        aoa = np.clip(aoa, 0, 30)
-        
+        aoa = np.clip(aoa, 0, 40)
+
         # Calcola CL
-        cl_alpha = 0.14
+        # cl_alpha = 0.055/° → range utile 8-33° senza saturazione
+        # Lower AR + longer chord = flatter lift slope than front wing
+        cl_alpha = 0.055  # Pendenza CL vs aoa (per grado) - F1 lower AR
         cl_base = cl_alpha * aoa
         
         # Ground effect
@@ -132,7 +136,7 @@ class RearWing:
         }
     
     def set_aoa(self, angle_deg):
-        self.config['aoa'] = np.clip(angle_deg, 0, 30)
+        self.config['aoa'] = np.clip(angle_deg, 0, 40)
     
     def set_drs(self, active):
         self.config['drs_active'] = active
