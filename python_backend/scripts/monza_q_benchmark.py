@@ -414,8 +414,10 @@ def format_report(result: Dict[str, Any], comparison: Dict[str, Any], raw_driver
             f"CLA {aero.get('cla_total')} | CDA {aero.get('cda_total')}"
         )
         lines.append(
-            f"  base suspension: SF {suspension.get('spring_front')} | SR {suspension.get('spring_rear')} | "
-            f"ARB F {suspension.get('arb_front')} | ARB R {suspension.get('arb_rear')}"
+            f"  base suspension: SF {suspension.get('spring_front_slider', suspension.get('spring_front'))} "
+            f"| SR {suspension.get('spring_rear_slider', suspension.get('spring_rear'))} "
+            f"| ARB F {suspension.get('arb_front_slider', suspension.get('arb_front'))} "
+            f"| ARB R {suspension.get('arb_rear_slider', suspension.get('arb_rear'))}"
         )
         lines.append(
             f"  base tyres: compound {tyres.get('compound')} | PF {tyres.get('pressure_front')} | PR {tyres.get('pressure_rear')}"
@@ -432,8 +434,10 @@ def format_report(result: Dict[str, Any], comparison: Dict[str, Any], raw_driver
             f"CLA {aero.get('cla_total')} | CDA {aero.get('cda_total')}"
         )
         lines.append(
-            f"  applied suspension: SF {suspension.get('spring_front')} | SR {suspension.get('spring_rear')} | "
-            f"ARB F {suspension.get('arb_front')} | ARB R {suspension.get('arb_rear')}"
+            f"  applied suspension: SF {suspension.get('spring_front_slider', suspension.get('spring_front'))} "
+            f"| SR {suspension.get('spring_rear_slider', suspension.get('spring_rear'))} "
+            f"| ARB F {suspension.get('arb_front_slider', suspension.get('arb_front'))} "
+            f"| ARB R {suspension.get('arb_rear_slider', suspension.get('arb_rear'))}"
         )
         lines.append(
             f"  applied tyres: compound {tyres.get('compound')} | PF {tyres.get('pressure_front')} | PR {tyres.get('pressure_rear')}"

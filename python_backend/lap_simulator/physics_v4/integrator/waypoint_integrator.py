@@ -36,6 +36,8 @@ from core.constants import (
     MASS_TOTAL_QUALY_KG,
     DRIVETRAIN_EFFICIENCY,
     PU_TOTAL_PEAK_KW,
+    ICE_PEAK_POWER_KW,
+    ERS_PEAK_POWER_KW,
     ROLLING_RESISTANCE_COEFF,
     MAX_LATERAL_G,
     MAX_BRAKE_DECEL_G,
@@ -321,6 +323,7 @@ def integrate_waypoint(
     waypoints: List[Dict] = None,  # Lista completa waypoints per look-ahead
     waypoint_idx: int = 0,         # Indice del waypoint corrente
     suspension_effects: Optional[Dict[str, float]] = None,  # Effetti sospensioni pre-calcolati
+    ers_power_fraction: float = 1.0,  # Frazione ERS disponibile (0.0=solo ICE, 1.0=full ERS)
 ) -> PhysicsState:
     """
     Integra fisica per un singolo waypoint.
@@ -414,14 +417,20 @@ def integrate_waypoint(
     
     # Fattore marcia (semplificato): potenza massima in rettilineo,
     # ridotta in curva per evitare wheel spin
+    # Potenza effettiva = ICE (costante) + ERS (scalato da ers_power_fraction)
+    # ers_power_fraction=1.0 → full ERS (quali_deploy: 910 kW)
+    # ers_power_fraction≈0.5 → ERS parziale (race_balanced: ~830 kW)
+    # ers_power_fraction≈0.0 → solo ICE (race_save: 750 kW)
+    effective_pu_kw = ICE_PEAK_POWER_KW + ERS_PEAK_POWER_KW * ers_power_fraction
+
     if is_corner:
         # In curva: potenza ridotta per trazione
         # Più curva stretta = meno potenza disponibile
         corner_factor = min(1.0, 1000.0 / max(radius_m, 100.0))
-        power_available = PU_TOTAL_PEAK_KW * 1000 * (throttle_pct / 100.0) * corner_factor
+        power_available = effective_pu_kw * 1000 * (throttle_pct / 100.0) * corner_factor
     else:
         # In rettilineo: potenza massima
-        power_available = PU_TOTAL_PEAK_KW * 1000 * (throttle_pct / 100.0)
+        power_available = effective_pu_kw * 1000 * (throttle_pct / 100.0)
     
     # Efficienza trasmissione e driver skill
     power_available *= DRIVETRAIN_EFFICIENCY
@@ -799,6 +808,8 @@ def integrate_lap_hd(
     suspension_setup: Optional[Dict] = None,
     # Sector tracking (per confronto con telemetria)
     sector_boundaries: Optional[List[float]] = None,
+    # ERS mode: frazione di potenza ERS disponibile (0.0=solo ICE, 1.0=full quali)
+    ers_power_fraction: float = 1.0,
 ) -> Dict[str, Any]:
     """
     Simula giro completo su circuito HD.
@@ -970,6 +981,7 @@ def integrate_lap_hd(
             waypoints=waypoints,
             waypoint_idx=i,
             suspension_effects=susp_effects,
+            ers_power_fraction=ers_power_fraction,
         )
         
         # Aggiorna statistiche

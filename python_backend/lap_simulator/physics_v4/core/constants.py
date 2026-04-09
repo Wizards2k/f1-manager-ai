@@ -88,15 +88,16 @@ AERO_EFFICIENCY_MAX = 4.2  # assetto scarico efficiente
 # Coefficiente di attrito base per compound (a temperatura ottimale)
 # Valori realistici per F1 2025 - grip meccanico puro (da test Pirelli + curb effect)
 MU_BASE = {
-    "C1": 1.78,  # Mescola dura (durata, meno grip)
-    "C2": 1.84,
-    "C3": 1.92,  # Mescola media (bilanciata)
-    "C4": 2.00,
-    "C5": 2.10,  # Mescola morbida (grip, meno durata) - Qualifica
-    "C6": 2.16,  # Nuova mescola 2025 (più morbida)
+    "C1": 1.65,  # Mescola dura (durata, meno grip)   [era 1.78]
+    "C2": 1.74,  #                                     [era 1.84]
+    "C3": 1.82,  # Mescola media (bilanciata)          [era 1.92]
+    "C4": 1.95,  #                                     [era 2.00]
+    "C5": 2.10,  # Mescola morbida (grip) - Qualifica  [INVARIATO, calibrato]
+    "C6": 2.16,  # Nuova mescola 2025 (più morbida)    [INVARIATO]
     "INTERMEDIATE": 1.35,  # Pioggia leggera
     "WET": 1.05,  # Pioggia piena
 }
+# Spread C3→C5: +15.4% grip (era +9.4%). C5 invariato per non rompere calibrazione.
 
 # Load sensitivity per pneumatici F1
 # Formula: Grip = Mu * Fz * (1 - K * Fz)

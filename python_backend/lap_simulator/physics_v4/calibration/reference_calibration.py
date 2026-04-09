@@ -10,7 +10,9 @@ Esegue il benchmark iniziale usato come punto di partenza della calibrazione:
 
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from lap_simulator.physics_v4.core.car_setup import PhysicsV4Setup
@@ -31,6 +33,17 @@ DEFAULT_CALIBRATION_ICE_MODE = "aggressive"
 DEFAULT_CALIBRATION_PHYSICS_ERS_MODE = "quali_deploy"
 DEFAULT_CALIBRATION_OBJECTIVE = "Simulate a telemetry-aligned Monza qualifying lap."
 DEFAULT_CALIBRATION_MICROSECTOR_MARGIN_PCT = 0.02
+
+
+def _get_soft_compound_from_telemetry(circuit_id: str) -> str:
+    """Legge la mescola SOFT dal file telemetry del circuito."""
+    base = Path(__file__).parent.parent.parent.parent / "data" / "circuits" / "2025"
+    path = base / f"{circuit_id}_Telemetry.json"
+    if not path.exists():
+        return "C3"  # fallback generico
+    with open(path) as f:
+        data = json.load(f)
+    return data.get("tyre_allocation", {}).get("dry_compounds", {}).get("soft", "C3")
 
 
 @dataclass(frozen=True)
@@ -173,7 +186,10 @@ def build_initial_calibration_setup(
         ride_height_rear=reference_defaults["ride_height"],
     )
     physics_setup.set_brakes(bias_front=reference_defaults["brake_bias"])
-    physics_setup.set_tyres(compound=benchmark.tyre_compound)
+    
+    # Use soft compound from telemetry (correct per circuito)
+    soft_compound = _get_soft_compound_from_telemetry(benchmark.circuit_id)
+    physics_setup.set_tyres(compound=soft_compound)
     physics_setup.set_ers_mode("quali_deploy")
 
     return InitialCalibrationSetup(
@@ -193,8 +209,13 @@ def run_initial_calibration_benchmark(
     """Esegue il benchmark iniziale McLaren/Norris e ritorna la telemetria del giro."""
     setup = build_initial_calibration_setup(spec)
     result = setup.physics_setup.simulate_lap(verbose=verbose)
+    
+    # Build result with actual tyre compound used (from telemetry, not spec default)
+    spec_dict = dict(asdict(setup.spec))
+    spec_dict["tyre_compound"] = setup.physics_setup.car.tyres.compound  # Override with actual
+    
     result["initial_calibration"] = {
-        **asdict(setup.spec),
+        **spec_dict,
         "resolved_team_id": setup.team.team_id,
         "resolved_team_name": setup.team.name,
         "resolved_driver_name": setup.driver.name,

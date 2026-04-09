@@ -75,50 +75,50 @@ class DefaultSetups:
                 'rear_wing': 12.0,
                 'brake_bias': 52.0,
                 'ride_height': 60.0,
-                'front_suspension': 200.0,
-                'rear_suspension': 200.0,
-                'front_arb': 2000.0,
-                'rear_arb': 2000.0,
+                'front_suspension': 20.0,   # slider 1-30
+                'rear_suspension': 20.0,    # slider 1-30
+                'front_arb': 4.0,           # slider 1-10
+                'rear_arb': 4.0,            # slider 1-10
             },
             'monaco': {
                 'front_wing': 12.0,  # High downforce
                 'rear_wing': 18.0,
                 'brake_bias': 56.0,
                 'ride_height': 80.0,
-                'front_suspension': 250.0,
-                'rear_suspension': 250.0,
-                'front_arb': 3000.0,
-                'rear_arb': 3000.0,
+                'front_suspension': 25.0,   # slider 1-30
+                'rear_suspension': 25.0,    # slider 1-30
+                'front_arb': 6.0,           # slider 1-10
+                'rear_arb': 6.0,            # slider 1-10
             },
             'suzuka': {
                 'front_wing': 11.0,  # Medium downforce
                 'rear_wing': 14.0,
                 'brake_bias': 54.0,
                 'ride_height': 55.0,
-                'front_suspension': 220.0,
-                'rear_suspension': 220.0,
-                'front_arb': 2500.0,
-                'rear_arb': 2500.0,
+                'front_suspension': 22.0,   # slider 1-30
+                'rear_suspension': 22.0,    # slider 1-30
+                'front_arb': 5.0,           # slider 1-10
+                'rear_arb': 5.0,            # slider 1-10
             },
             'silverstone': {
                 'front_wing': 11.0,
                 'rear_wing': 14.0,
                 'brake_bias': 53.0,
                 'ride_height': 50.0,
-                'front_suspension': 230.0,
-                'rear_suspension': 230.0,
-                'front_arb': 2800.0,
-                'rear_arb': 2800.0,
+                'front_suspension': 23.0,   # slider 1-30
+                'rear_suspension': 23.0,    # slider 1-30
+                'front_arb': 5.6,           # slider 1-10
+                'rear_arb': 5.6,            # slider 1-10
             },
             'spa': {
                 'front_wing': 10.0,
                 'rear_wing': 13.0,
                 'brake_bias': 52.0,
                 'ride_height': 55.0,
-                'front_suspension': 210.0,
-                'rear_suspension': 210.0,
-                'front_arb': 2600.0,
-                'rear_arb': 2600.0,
+                'front_suspension': 21.0,   # slider 1-30
+                'rear_suspension': 21.0,    # slider 1-30
+                'front_arb': 5.2,           # slider 1-10
+                'rear_arb': 5.2,            # slider 1-10
             },
         }
     
@@ -132,24 +132,24 @@ class DefaultSetups:
         return {
             'dry': {
                 'ride_height': 50.0,  # Low ride height
-                'front_suspension': 220.0,
-                'rear_suspension': 220.0,
-                'front_arb': 2500.0,
-                'rear_arb': 2500.0,
+                'front_suspension': 22.0,   # slider 1-30
+                'rear_suspension': 22.0,    # slider 1-30
+                'front_arb': 5.0,           # slider 1-10
+                'rear_arb': 5.0,            # slider 1-10
             },
             'cloudy': {
                 'ride_height': 55.0,
-                'front_suspension': 210.0,
-                'rear_suspension': 210.0,
-                'front_arb': 2400.0,
-                'rear_arb': 2400.0,
+                'front_suspension': 21.0,   # slider 1-30
+                'rear_suspension': 21.0,    # slider 1-30
+                'front_arb': 4.8,           # slider 1-10
+                'rear_arb': 4.8,            # slider 1-10
             },
             'rain': {
                 'ride_height': 70.0,  # High ride height
-                'front_suspension': 180.0,
-                'rear_suspension': 180.0,
-                'front_arb': 2000.0,
-                'rear_arb': 2000.0,
+                'front_suspension': 18.0,   # slider 1-30
+                'rear_suspension': 18.0,    # slider 1-30
+                'front_arb': 4.0,           # slider 1-10
+                'rear_arb': 4.0,            # slider 1-10
             },
         }
     
@@ -164,32 +164,42 @@ class DefaultSetups:
             'C1': {
                 'brake_bias': 54.0,  # More front (harder tires)
                 'ride_height': 50.0,
-                'front_suspension': 230.0,
-                'rear_suspension': 230.0,
+                'front_suspension': 23.0,   # slider 1-30
+                'rear_suspension': 23.0,    # slider 1-30
+                'front_arb': 5.5,           # slider 1-10
+                'rear_arb': 5.5,            # slider 1-10
             },
             'C2': {
                 'brake_bias': 53.0,
                 'ride_height': 52.0,
-                'front_suspension': 220.0,
-                'rear_suspension': 220.0,
+                'front_suspension': 22.0,   # slider 1-30
+                'rear_suspension': 22.0,    # slider 1-30
+                'front_arb': 5.2,           # slider 1-10
+                'rear_arb': 5.2,            # slider 1-10
             },
             'C3': {
                 'brake_bias': 52.0,
                 'ride_height': 55.0,
-                'front_suspension': 210.0,
-                'rear_suspension': 210.0,
+                'front_suspension': 21.0,   # slider 1-30
+                'rear_suspension': 21.0,    # slider 1-30
+                'front_arb': 5.0,           # slider 1-10
+                'rear_arb': 5.0,            # slider 1-10
             },
             'C4': {
                 'brake_bias': 51.0,
                 'ride_height': 58.0,
-                'front_suspension': 200.0,
-                'rear_suspension': 200.0,
+                'front_suspension': 20.0,   # slider 1-30
+                'rear_suspension': 20.0,    # slider 1-30
+                'front_arb': 4.8,           # slider 1-10
+                'rear_arb': 4.8,            # slider 1-10
             },
             'C5': {
                 'brake_bias': 50.0,  # More rear (softer tires)
                 'ride_height': 60.0,
-                'front_suspension': 190.0,
-                'rear_suspension': 190.0,
+                'front_suspension': 19.0,   # slider 1-30
+                'rear_suspension': 19.0,    # slider 1-30
+                'front_arb': 4.5,           # slider 1-10
+                'rear_arb': 4.5,            # slider 1-10
             },
         }
     
@@ -215,16 +225,16 @@ class DefaultSetups:
         if circuit_key in self.circuit_defaults:
             setup = self.circuit_defaults[circuit_key].copy()
         else:
-            # Default generic
+            # Default generic (slider values, NOT physical)
             setup = {
                 'front_wing': 11.0,
                 'rear_wing': 14.0,
                 'brake_bias': 53.0,
                 'ride_height': 55.0,
-                'front_suspension': 220.0,
-                'rear_suspension': 220.0,
-                'front_arb': 2500.0,
-                'rear_arb': 2500.0,
+                'front_suspension': 22.0,   # slider 1-30
+                'rear_suspension': 22.0,    # slider 1-30
+                'front_arb': 5.0,           # slider 1-10
+                'rear_arb': 5.0,            # slider 1-10
             }
         
         # Adatta a weather

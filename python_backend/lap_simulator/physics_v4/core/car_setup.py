@@ -142,10 +142,11 @@ class CarSetup:
     
     def update_mass(self):
         """Aggiorna massa totale in base a fuel e setup."""
-        # Massa base: 798 kg (auto) + 80 kg (driver) = 878 kg
-        # Minimo regolamentare: 883 kg (include 20 kg fuel)
-        base_mass = 883.0
-        fuel_over_min = max(0.0, self.fuel.fuel_kg - 20.0)
+        # base_mass = 798 (auto) + 80 (driver) + 5 (carburante minimo) = 883 kg
+        # Qualsiasi carburante oltre i 5 kg minimi si aggiunge linearmente.
+        # Correzione V4.11: soglia era 20.0 (sbagliata), ora corretta a 5.0.
+        base_mass = 883.0  # include già 5 kg carburante minimo
+        fuel_over_min = max(0.0, self.fuel.fuel_kg - 5.0)
         self.mass_total_kg = base_mass + fuel_over_min
 
 
@@ -269,15 +270,25 @@ class PhysicsV4Setup:
         ride_height_front: Optional[float] = None,
         ride_height_rear: Optional[float] = None
     ):
-        """Imposta configurazione sospensioni."""
+        """Imposta configurazione sospensioni.
+        
+        Converte da slider UI (spring 1-30, ARB 1-10) a valori fisici reali:
+        - spring: slider * 10 -> N/m (es. 15 -> 150 N/m)
+        - ARB: slider * 500 -> N/rad (es. 4 -> 2000 N/rad)
+        """
+        # Conversione slider -> fisico per spring (1-30 -> 10-300 N/m)
+        SPRING_SCALE = 10.0
+        # Conversione slider -> fisico per ARB (1-10 -> 500-5000 N/rad)
+        ARB_SCALE = 500.0
+        
         if spring_front is not None:
-            self.car.suspension.spring_front = spring_front
+            self.car.suspension.spring_front = spring_front * SPRING_SCALE
         if spring_rear is not None:
-            self.car.suspension.spring_rear = spring_rear
+            self.car.suspension.spring_rear = spring_rear * SPRING_SCALE
         if ARB_front is not None:
-            self.car.suspension.arb_front = ARB_front
+            self.car.suspension.arb_front = ARB_front * ARB_SCALE
         if ARB_rear is not None:
-            self.car.suspension.arb_rear = ARB_rear
+            self.car.suspension.arb_rear = ARB_rear * ARB_SCALE
         if ride_height_front is not None:
             self.car.suspension.ride_height_front = ride_height_front
         if ride_height_rear is not None:
@@ -375,6 +386,10 @@ class PhysicsV4Setup:
                 "spring_rear": self.car.suspension.spring_rear,
                 "arb_front": self.car.suspension.arb_front,
                 "arb_rear": self.car.suspension.arb_rear,
+                "spring_front_slider": self.car.suspension.spring_front / 10.0,
+                "spring_rear_slider": self.car.suspension.spring_rear / 10.0,
+                "arb_front_slider": self.car.suspension.arb_front / 500.0,
+                "arb_rear_slider": self.car.suspension.arb_rear / 500.0,
             },
             "tyres": {
                 "compound": self.car.tyres.compound,
@@ -411,7 +426,14 @@ class PhysicsV4Setup:
         
         # Driver skill factor
         driver_skill = self.driver.quali_skill if self.driver else 1.0
-        
+
+        # ERS fraction: 0.0 = solo ICE (race_save), 1.0 = full ERS (quali_deploy)
+        # Normalizzato su deploy_per_km massimo = 0.67 MJ/km (4 MJ / ~6 km)
+        _ERS_DEPLOY_MAX = 0.67  # MJ/km
+        ers_power_fraction = min(1.0, max(0.0,
+            self.car.power_unit.deploy_per_km / _ERS_DEPLOY_MAX
+        ))
+
         # Esegui simulazione
         result = integrate_lap_hd(
             circuit_id=self.circuit,
@@ -421,6 +443,7 @@ class PhysicsV4Setup:
             driver_skill=driver_skill,
             aero_calibration=aero_calibration,
             suspension_setup=setup.get("suspension"),
+            ers_power_fraction=ers_power_fraction,
             verbose=verbose
         )
         
