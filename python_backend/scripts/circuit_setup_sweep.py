@@ -146,6 +146,57 @@ CIRCUIT_CONFIGS: Dict[str, Dict] = {
             },
         ],
     },
+
+    # ── SUZUKA ─────────────────────────────────────────────────────────────
+    # Circuito bilanciato: S-Curves veloci, hairpin lento, rettilinei medi.
+    # Richiede downforce medio-alto per le S-Curves ma non troppo per i rettilinei.
+    # Compounds: Hard=C1  Medium=C2  Soft=C3
+    "suzuka": {
+        "circuit_id":   "jp-1962_suzuka",
+        "circuit_name": "Suzuka",
+        "presets": [
+            {
+                "label": "Ottimale (Suzuka quali)",
+                "desc":  "Ali medie-alte per S-Curves, C3 soft, 20kg, ERS max",
+                "front_wing": 24.0, "rear_wing": 28.0,
+                "spring_front": 16.0, "spring_rear": 20.0,
+                "arb_front": 5.0, "arb_rear": 6.0,
+                "compound": "C3", "fuel_kg": 20.0, "ers_mode": "quali_deploy",
+            },
+            {
+                "label": "Buono",
+                "desc":  "Ali medie, C3 soft, 25kg",
+                "front_wing": 20.0, "rear_wing": 24.0,
+                "spring_front": 14.0, "spring_rear": 18.0,
+                "arb_front": 4.0, "arb_rear": 5.0,
+                "compound": "C3", "fuel_kg": 25.0, "ers_mode": "quali_deploy",
+            },
+            {
+                "label": "Neutro",
+                "desc":  "Ali medie, C2 medium, 40kg, ERS bilanciato",
+                "front_wing": 20.0, "rear_wing": 22.0,
+                "spring_front": 12.0, "spring_rear": 15.0,
+                "arb_front": 4.0, "arb_rear": 5.0,
+                "compound": "C2", "fuel_kg": 40.0, "ers_mode": "balanced",
+            },
+            {
+                "label": "Ali Basse (subottimale)",
+                "desc":  "Poco downforce per S-Curves, C2, 60kg",
+                "front_wing": 12.0, "rear_wing": 14.0,
+                "spring_front": 8.0, "spring_rear": 10.0,
+                "arb_front": 3.0, "arb_rear": 4.0,
+                "compound": "C2", "fuel_kg": 60.0, "ers_mode": "balanced",
+            },
+            {
+                "label": "Pessimo (Monza su Suzuka)",
+                "desc":  "Ali Monza, C1 hard, 80kg, ERS risparmio",
+                "front_wing": 6.0, "rear_wing": 8.0,
+                "spring_front": 5.0, "spring_rear": 6.0,
+                "arb_front": 2.0, "arb_rear": 3.0,
+                "compound": "C1", "fuel_kg": 80.0, "ers_mode": "race_save",
+            },
+        ],
+    },
 }
 
 
