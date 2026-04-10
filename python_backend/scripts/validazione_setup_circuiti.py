@@ -124,7 +124,7 @@ SETUPS = {
 # HELPERS
 # ──────────────────────────────────────────────────
 def load_circuit_hd(circuit_id: str) -> Dict:
-    base = Path(__file__).parent / "data" / "circuits" / "2025"
+    base = Path(__file__).resolve().parent.parent / "data" / "circuits" / "2025"
     path = base / f"{circuit_id}_HD.json"
     if not path.exists():
         raise FileNotFoundError(f"File HD non trovato: {path}")
@@ -134,7 +134,7 @@ def load_circuit_hd(circuit_id: str) -> Dict:
 
 def load_circuit_telemetry(circuit_id: str) -> Dict:
     """Carica il file Telemetry del circuito (geometry.sections come riferimento)."""
-    base = Path(__file__).parent / "data" / "circuits" / "2025"
+    base = Path(__file__).resolve().parent.parent / "data" / "circuits" / "2025"
     path = base / f"{circuit_id}_Telemetry.json"
     if not path.exists():
         raise FileNotFoundError(f"File Telemetry non trovato: {path}")
@@ -144,7 +144,7 @@ def load_circuit_telemetry(circuit_id: str) -> Dict:
 
 def get_soft_compound(circuit_id: str) -> str:
     """Legge la mescola SOFT dal file telemetria del circuito."""
-    base = Path(__file__).parent / "data" / "circuits" / "2025"
+    base = Path(__file__).resolve().parent.parent / "data" / "circuits" / "2025"
     path = base / f"{circuit_id}_Telemetry.json"
     if not path.exists():
         return "C3"  # fallback generico

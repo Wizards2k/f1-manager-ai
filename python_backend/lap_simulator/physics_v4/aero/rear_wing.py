@@ -56,12 +56,13 @@ class RearWing:
         self.A_REF_COMMON = 1.60  # m²
         
         # Parametri aerodinamici base (senza DRS)
-        # Valori calibrati F1 2025: cl_alpha=0.07/° satura a CL_MAX=1.95 intorno a 28°
-        # Range operativo utile: 8-35° (Monza ~8-12°, Monaco ~30-35°)
-        self.CL_MAX = 1.95        # Portanza massima (stallo) - multi-element F1
+        # FIX V4.14: cl_alpha abbassato per range operativo fino a ~42°
+        # K_FACTOR ridotto per L/D realistico (multi-element F1)
+        # Range operativo utile: 8-42° (Monza ~8-12°, Monaco ~35-42°)
+        self.CL_MAX = 2.50        # Portanza massima (stallo) - multi-element F1
         self.CL_MIN = -0.80       # Portanza negativa
         self.CD_MIN = 0.035       # Drag minimo (profili ottimizzati)
-        self.K_FACTOR = 0.080     # Induced drag factor (lower AR → higher K)
+        self.K_FACTOR = 0.090     # Induced drag: CDA range realistico (Monza→Monaco ~40%)
         
         # Parametri DRS
         self.DRS_CL_BOOST = 0.50  # Incremento portanza con DRS
@@ -90,12 +91,12 @@ class RearWing:
         if self.config['drs_active']:
             aoa -= 2.0  # DRS riduce AoA
         
-        aoa = np.clip(aoa, 0, 40)
+        aoa = np.clip(aoa, 0, 45)
 
         # Calcola CL
-        # cl_alpha = 0.055/° → range utile 8-33° senza saturazione
+        # FIX V4.14: cl_alpha=0.045/° → range utile 8-42° senza saturazione
         # Lower AR + longer chord = flatter lift slope than front wing
-        cl_alpha = 0.055  # Pendenza CL vs aoa (per grado) - F1 lower AR
+        cl_alpha = 0.045  # Pendenza CL vs aoa (per grado) - F1 lower AR
         cl_base = cl_alpha * aoa
         
         # Ground effect

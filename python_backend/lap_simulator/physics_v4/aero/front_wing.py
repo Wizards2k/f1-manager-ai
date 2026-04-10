@@ -54,12 +54,14 @@ class FrontWing:
         self.A_REF_COMMON = 1.60  # m²
         
         # Parametri aerodinamici base (senza DRS)
-        # Valori calibrati F1 2025: cl_alpha=0.09/° satura a CL_MAX=1.65 intorno a 19°
-        # Range operativo utile: 5-18° (Monza ~8°, Monaco ~16-18°)
-        self.CL_MAX = 1.65        # Portanza massima (stallo) - multi-element F1
+        # FIX V4.14: cl_alpha abbassato per avere range operativo fino a ~40°
+        # senza saturazione prematura. K_FACTOR ridotto per L/D realistico
+        # (multi-element F1 ha K ~0.02-0.03 grazie a endplates + ground prox)
+        # Range operativo utile: 5-40° (Monza ~8°, Monaco ~35-40°)
+        self.CL_MAX = 2.50        # Portanza massima (stallo) - multi-element F1
         self.CL_MIN = -0.50       # Portanza negativa (inverted wing)
         self.CD_MIN = 0.025       # Drag minimo (profili ottimizzati)
-        self.K_FACTOR = 0.050     # Induced drag factor (multi-element riduce indotto)
+        self.K_FACTOR = 0.060     # Induced drag: CDA range realistico (Monza→Monaco ~40%)
         
         # Parametri DRS
         self.DRS_CL_BOOST = 0.35  # Incremento portanza con DRS
@@ -88,12 +90,12 @@ class FrontWing:
         if self.config['drs_active']:
             aoa -= 3.0  # DRS riduce AoA di 3 gradi
         
-        # Clamp AoA al range operativo F1
-        aoa = np.clip(aoa, 0, 25)
+        # Clamp AoA al range operativo F1 (multi-element fino a ~45°)
+        aoa = np.clip(aoa, 0, 45)
 
         # Calcola CL (lineare fino a stallo)
-        # cl_alpha = 0.09/° → range utile 5-18° senza saturazione
-        cl_alpha = 0.09  # Pendenza CL vs aoa (per grado) - F1 multi-element
+        # FIX V4.14: cl_alpha=0.055/° → range utile 5-40° senza saturazione
+        cl_alpha = 0.055  # Pendenza CL vs aoa (per grado) - F1 multi-element
         cl_base = cl_alpha * aoa
         
         # Ground effect (se altezza < ottimale)

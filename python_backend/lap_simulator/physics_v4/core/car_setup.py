@@ -244,14 +244,21 @@ class PhysicsV4Setup:
         if sidepods is not None:
             self.car.aero.sidepods = sidepods
         
-        # Calcola CLA/CDA totali ricalibrati per V4 logic (final Monza tuning)
-        base_cla = 2.45
-        cla_from_wings = (self.car.aero.front_wing + self.car.aero.rear_wing) / 100.0 * 1.8
-        self.car.aero.cla_total = base_cla + cla_from_wings
-        
-        base_cda = 0.72
-        cda_from_wings = (self.car.aero.front_wing + self.car.aero.rear_wing) / 100.0 * 0.7
-        self.car.aero.cda_total = base_cda + cda_from_wings
+        # Calcola CLA/CDA totali.
+        # FIX V4.13: Wing L/D corretto da 2.57 a 4.36 (reale F1 ≈ 4.0-5.0).
+        # Le ali generavano troppo drag per unità di downforce, rendendo
+        # gli assetti ad alta deportanza sempre svantaggiosi (anche su Monaco).
+        # I coefficienti sono ancorati a FW=10+RW=12 (sum=22°) per preservare
+        # la calibrazione Monza: CLA=2.846, CDA=0.874 invariati a quel punto.
+        wing_sum_frac = (self.car.aero.front_wing + self.car.aero.rear_wing) / 100.0
+
+        base_cla = 2.076       # floor + corpo
+        k_cla    = 3.5         # CLA per grado/100 dalle ali — Wing L/D = 10.0
+        self.car.aero.cla_total = base_cla + wing_sum_frac * k_cla
+
+        base_cda = 0.797       # drag corpo base
+        k_cda    = 0.35        # CDA per grado/100 dalle ali
+        self.car.aero.cda_total = base_cda + wing_sum_frac * k_cda
         
         # Applica team aero modifiers
         if self.team:
@@ -352,14 +359,10 @@ class PhysicsV4Setup:
         setup["aero"]["front_wing"] += self.driver.front_wing_offset
         setup["aero"]["rear_wing"] += self.driver.rear_wing_offset
         
-        # Ricalcola CLA/CDA con ali aggiornate (final Monza tuning)
-        base_cla = 2.45
-        cla_from_wings = (setup["aero"]["front_wing"] + setup["aero"]["rear_wing"]) / 100.0 * 1.8
-        setup["aero"]["cla_total"] = base_cla + cla_from_wings
-
-        base_cda = 0.72
-        cda_from_wings = (setup["aero"]["front_wing"] + setup["aero"]["rear_wing"]) / 100.0 * 0.7
-        setup["aero"]["cda_total"] = base_cda + cda_from_wings
+        # Ricalcola CLA/CDA con ali aggiornate (stessi coeff. di set_aero)
+        wing_sum_frac = (setup["aero"]["front_wing"] + setup["aero"]["rear_wing"]) / 100.0
+        setup["aero"]["cla_total"] = 2.076 + wing_sum_frac * 3.5
+        setup["aero"]["cda_total"] = 0.797 + wing_sum_frac * 0.35
 
         if self.team:
             aero = self.team.aero

@@ -513,8 +513,13 @@ def integrate_waypoint(
     mu_base_val *= susp_fx.get('mechanical_grip_factor', 1.0)
 
     # Calcola downforce (contata UNA SOLA VOLTA qui)
+    # FIX V4.14: Usa f_downforce diretto da AeroAssembly (Newtons).
+    # Prima: f_downforce = q * cla_total, ma cla_total = f_down/(q*A_REF_F1),
+    # quindi f_downforce = f_down/1.60 → perdeva 37.5% della downforce reale.
+    # Il drag usava f_drag diretto (100%), creando un bias sistematico che
+    # penalizzava le ali alte: pagavano 100% drag ma ottenevano solo 62.5% grip.
     dynamic_pressure = 0.5 * RHO_SEA_LEVEL * state.velocity_ms ** 2
-    f_downforce = dynamic_pressure * aero_forces.cla_total
+    f_downforce = aero_forces.f_downforce
     
     # Carico verticale totale = peso + downforce
     f_vertical = mass_kg * G + f_downforce  # N
@@ -607,14 +612,42 @@ def integrate_waypoint(
     # ============================================================
     # 5. VELOCITÀ MASSIMA IN CURVA - Solo dalla fisica (grip limit)
     # ============================================================
-    # La velocità deve emergere dalla fisica, non dalla telemetria
-    # v_ref serve solo come riferimento per il driver model
-    
+    # La velocità deve emergere dalla fisica, non dalla telemetria.
+    #
+    # FIX V4.13: Due correzioni critiche:
+    #
+    # (a) Usa SEMPRE f_grip_total_lateral per v_max_corner.
+    #     Prima usava f_grip_total che in frenata/trazione era il grip
+    #     longitudinale — fisicamente sbagliato per il limite laterale.
+    #
+    # (b) Applica CORNERING_UTILIZATION = 0.63.
+    #     Il grip teorico (mu × F_vert) dà v_max_corner 20-130% superiore
+    #     alla velocità reale (es. Monaco hairpin: 107 kph vs reale 47 kph).
+    #     In curva il pilota NON usa il 100% del grip laterale perché:
+    #       - Combined loading: frenata/trazione consumano parte del grip
+    #       - Margine di sicurezza (muri, cordoli)
+    #       - Transitori: cambio di direzione, trasferimento di carico
+    #       - Superficie irregolare (bumps, vernice)
+    #     Il fattore 0.63 porta v_max_corner ~10-20% sopra v_ref per il
+    #     setup di riferimento, rendendo la downforce il VINCOLO ATTIVO
+    #     sulle curve più impegnative (Monaco, Suzuka hairpin).
+    #     Questo fa sì che più downforce → più grip → curva più veloce.
+
+    # Cornering utilization: dipendente dal raggio.
+    # Curve strette (r<60m, Monaco hairpin): il pilota usa ~60% del grip
+    #   → combined loading, muri, transitori, margine sicurezza
+    # Curve aperte (r>90m, Monza/Silverstone): il pilota usa ~95% del grip
+    #   → stato stazionario, spazi di fuga, stabilità aerodinamica
+    #
+    # Formula: CU = min(0.95, 0.35 + radius / 150)
+    #   r=30m → CU=0.55    r=45m → CU=0.65    r=77m → CU=0.86
+    #   r=90m → CU=0.95    r=150m+ → CU=0.95 (cap)
+
     if is_corner:
-        # v_max corner: dove F_centripeta = F_grip
-        # m × v² / R = F_grip
-        # v_max = sqrt(F_grip × R / m)
-        v_max_corner_ms = math.sqrt(f_grip_total * radius_m / mass_kg)
+        cu = min(0.95, 0.35 + radius_m / 150.0)
+        v_max_corner_ms = math.sqrt(
+            f_grip_total_lateral * cu * radius_m / mass_kg
+        )
     else:
         v_max_corner_ms = 999.0  # Nessun limite in rettilineo
     
@@ -665,14 +698,22 @@ def integrate_waypoint(
             
             # Quanta distanza serve per rallentare da v_current a wp_v_ref?
             if v_current > wp_v_ref + 1.0:
-                # FIX V4.12: Usa solo forza gravitazionale per il lookahead di frenata.
-                # La downforce NON deve entrare qui: il suo beneficio sulla velocità in curva
-                # è già catturato dalla fisica laterale reale (sezione 5).
-                # Includerla nel lookahead crea un loop dove più ala = più "grip previsto"
-                # = frenata più tardi = v_min più alta = giro più veloce (fisicamente sbagliato
-                # a Monza dove la drag penalizza). Il punto di frenata deve essere
-                # setup-indipendente; è la velocità minima in curva che dipende dall'assetto.
-                f_vert_avg = mass_kg * G  # solo gravità, no downforce
+                # FIX V4.13: Braking lookahead include 50% della downforce.
+                # V4.12 rimuoveva TUTTA la downforce per evitare un feedback loop
+                # (più ala → frena più tardi → giro più veloce). Ma questo eliminava
+                # un effetto fisico REALE: più downforce = più grip in frenata = si può
+                # frenare più tardi. Su Monaco questo è cruciale.
+                # Soluzione: usiamo il 50% della downforce come compromesso —
+                # abbastanza per dare un vantaggio reale alle ali alte in frenata,
+                # ma non abbastanza da creare il feedback loop di V4.12.
+                # La velocità media di frenata è circa (v_current + v_target) / 2.
+                # FIX V4.14: Scala f_downforce per velocità media di frenata
+                # (downforce ∝ v², quindi scala con rapporto q)
+                v_brake_avg = (v_current + wp_v_ref) / 2.0
+                dyn_p_brake = 0.5 * RHO_SEA_LEVEL * v_brake_avg ** 2
+                q_ratio = dyn_p_brake / max(dynamic_pressure, 0.01)
+                f_down_brake = aero_forces.f_downforce * q_ratio * 0.50  # 50% downforce
+                f_vert_avg = mass_kg * G + f_down_brake
                 load_factor_avg = max(0.5, min(1.0, 1.0 - (TYRE_LOAD_SENSITIVITY_K * (f_vert_avg / 1000.0))))
                 # FIX V4.7: In straight-line braking (steer < 5°) load transfer
                 # moves weight to front axle, which HELPS braking grip.
