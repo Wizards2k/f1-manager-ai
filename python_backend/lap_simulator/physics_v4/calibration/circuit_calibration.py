@@ -22,13 +22,16 @@ from typing import Dict, Any, Optional
 # Calibrazioni per circuito
 CIRCUIT_CALIBRATIONS: Dict[str, Dict[str, Any]] = {
     # MONACO - High Downforce
-    # Calibrato il: 2026-04-06
-    # Target: 70.2s, Risultato: 70.560s (+0.5%)
+    # Calibrato il: 2026-04-10 (V4.15: ridotto mu per permettere downforce coupling)
+    # Target: ~70.0s con setup Monaco ottimale (FW=38, RW=42, C6)
+    # V4.15: mu_override ridotto da +20% a +8% sopra base.
+    # Il grip meccanico troppo alto rendeva il downforce marginale.
+    # Ora il downforce è il vincolo attivo → setup carico è premiato.
     "mc-1929_monaco": {
-        "mu_override": {"C5": 2.52, "C4": 2.34, "C3": 2.16},  # +40% grip
+        "mu_override": {"C6": 2.33, "C5": 2.26, "C4": 2.10, "C3": 1.96},  # +8% grip
         "max_brake_decel_g": 4.8,  # -26% frenata più dolce
         "max_lateral_g": 8.0,  # +45% più carico laterale
-        "notes": "Grip molto alto per curve strette, frenata progressiva",
+        "notes": "V4.15: mu ridotto per rendere downforce premiante. Floor coupling attivo.",
         "accuracy_pct": 0.5,
     },
     

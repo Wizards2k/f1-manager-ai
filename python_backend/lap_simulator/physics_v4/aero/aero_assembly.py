@@ -109,13 +109,21 @@ class AeroAssembly:
         self.ground_effect_sensitivity = 0.010  # +1% CLA per mm sotto ottimale
     
     def set_component_angles(self, angles: Dict[str, float]):
-        """Imposta angoli componenti."""
+        """Imposta angoli componenti e propaga il coupling ala-floor."""
+        fw_aoa = angles.get('front_wing', 20.0)
+        rw_aoa = angles.get('rear_wing', 22.0)
+        
         if 'front_wing' in angles:
             self.front_wing.set_aoa(angles['front_wing'])
         if 'rear_wing' in angles:
             self.rear_wing.set_aoa(angles['rear_wing'])
         if 'b_wing' in angles:
             self.bwing.set_aoa(angles['b_wing'])
+        
+        # FIX V4.15: Propaga angoli ali ai moduli floor per il coupling
+        # Più angolo ala → flusso più energico → più ground effect
+        self.floor_front.set_wing_coupling(fw_aoa, rw_aoa)
+        self.floor_rear.set_wing_coupling(fw_aoa, rw_aoa)
     
     def set_drs(self, active: bool):
         """Attiva/disattiva DRS."""
