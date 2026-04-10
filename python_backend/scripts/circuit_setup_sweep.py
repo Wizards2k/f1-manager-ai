@@ -151,10 +151,19 @@ CIRCUIT_CONFIGS: Dict[str, Dict] = {
     # Circuito bilanciato: S-Curves veloci, hairpin lento, rettilinei medi.
     # Richiede downforce medio-alto per le S-Curves ma non troppo per i rettilinei.
     # Compounds: Hard=C1  Medium=C2  Soft=C3
+    # 7 preset: da iper carico (Monaco-style) a iper scarico (Monza-style)
     "suzuka": {
         "circuit_id":   "jp-1962_suzuka",
         "circuit_name": "Suzuka",
         "presets": [
+            {
+                "label": "Iper Carico (Monaco-style)",
+                "desc":  "Troppa downforce per i rettilinei, C3, 20kg, ERS max",
+                "front_wing": 36.0, "rear_wing": 40.0,
+                "spring_front": 20.0, "spring_rear": 24.0,
+                "arb_front": 6.0, "arb_rear": 7.0,
+                "compound": "C3", "fuel_kg": 20.0, "ers_mode": "quali_deploy",
+            },
             {
                 "label": "Ottimale (Suzuka quali)",
                 "desc":  "Ali medie-alte per S-Curves, C3 soft, 20kg, ERS max",
@@ -188,7 +197,15 @@ CIRCUIT_CONFIGS: Dict[str, Dict] = {
                 "compound": "C2", "fuel_kg": 60.0, "ers_mode": "balanced",
             },
             {
-                "label": "Pessimo (Monza su Suzuka)",
+                "label": "Iper Scarico (Monza-style)",
+                "desc":  "Ali minime, nessun downforce per curve, C2, 40kg",
+                "front_wing": 6.0, "rear_wing": 8.0,
+                "spring_front": 6.0, "spring_rear": 8.0,
+                "arb_front": 2.0, "arb_rear": 3.0,
+                "compound": "C2", "fuel_kg": 40.0, "ers_mode": "balanced",
+            },
+            {
+                "label": "Pessimo",
                 "desc":  "Ali Monza, C1 hard, 80kg, ERS risparmio",
                 "front_wing": 6.0, "rear_wing": 8.0,
                 "spring_front": 5.0, "spring_rear": 6.0,
