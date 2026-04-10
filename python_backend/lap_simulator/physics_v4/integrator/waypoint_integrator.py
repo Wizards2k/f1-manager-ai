@@ -665,10 +665,14 @@ def integrate_waypoint(
             
             # Quanta distanza serve per rallentare da v_current a wp_v_ref?
             if v_current > wp_v_ref + 1.0:
-                # Prevediamo la downforce MEDIA durante la frenata per non sovrastimare il grip
-                avg_v = (v_current + wp_v_ref) / 2.0
-                f_down_avg = (0.5 * RHO_SEA_LEVEL * avg_v ** 2) * aero_forces.cla_total
-                f_vert_avg = mass_kg * G + f_down_avg
+                # FIX V4.12: Usa solo forza gravitazionale per il lookahead di frenata.
+                # La downforce NON deve entrare qui: il suo beneficio sulla velocità in curva
+                # è già catturato dalla fisica laterale reale (sezione 5).
+                # Includerla nel lookahead crea un loop dove più ala = più "grip previsto"
+                # = frenata più tardi = v_min più alta = giro più veloce (fisicamente sbagliato
+                # a Monza dove la drag penalizza). Il punto di frenata deve essere
+                # setup-indipendente; è la velocità minima in curva che dipende dall'assetto.
+                f_vert_avg = mass_kg * G  # solo gravità, no downforce
                 load_factor_avg = max(0.5, min(1.0, 1.0 - (TYRE_LOAD_SENSITIVITY_K * (f_vert_avg / 1000.0))))
                 # FIX V4.7: In straight-line braking (steer < 5°) load transfer
                 # moves weight to front axle, which HELPS braking grip.
@@ -678,14 +682,11 @@ def integrate_waypoint(
                 f_grip_avg = mu_base_val * f_vert_avg * load_factor_avg * lt_penalty
                 max_brake_decel_avg = f_grip_avg / mass_kg
                 max_brake_decel_avg = min(max_brake_decel_g * G, max_brake_decel_avg)
-                
+
                 braking_dist_req = ((v_current ** 2) - (wp_v_ref ** 2)) / (2 * max_brake_decel_avg)
-                # FIX V4.5: Margine sicurezza ridotto da 1.15 a 1.08 (8% in più)
-                # Il calcolo teorico sottostima la distanza perché:
-                #   - Usa decelerazione media ottimistica (2.7g vs 2.2g reali)
-                #   - Non considera tempo di reazione del pilota (~0.2s)
-                #   - Non considera che il grip cala con l'usura gomme
-                # NOTA: 1.08 è sufficiente con fisica V4.4 (traction 0.85 + bonus 160km/h)
+                # Margine sicurezza: 8% in più per pilota reaction time + usura gomme.
+                # Ridotto da 1.15 (V4.5). Con load_factor_avg ora coerente con la dinamica reale,
+                # la stima è più precisa → meno margine necessario.
                 braking_dist_req *= 1.08
                 
                 dist_to_wp = wp_dist - base_dist
