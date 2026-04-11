@@ -295,9 +295,10 @@ Dove:
 
 ## 6. Manutenzione della documentazione
 
-- [x] `docs/physics-engine-v4-checklist.md` — Questo file, aggiornato a V5.0.
-- [x] `docs/physics-engine-v5-telemetry-bridge.md` — Spec V5.0 completa (24 circuiti).
+- [x] `docs/physics-engine-v5-checklist.md` — Questo file, aggiornato a V5.1.
+- [x] `docs/physics-engine-v5-telemetry-bridge.md` — Spec V5.1 completa (24 circuiti).
 - [x] `docs/physics-engine-v4-spec.md` — Spec V4 di riferimento (archivio storico).
+- [x] Rimosso `docs/physics-engine-v4-checklist.md` — Contenuto obsoleto e duplicato, consolidato in V5.1.
 - [x] Rimossi 12 doc obsoleti/superati (V4.6 validation, V5.0 validation, V0.5 spec, V2 analysis, ecc.).
 
 ## 7. Stato attuale sintetico (2026-04-11)
@@ -328,11 +329,20 @@ Dove:
 - [x] Integrare PU Lookup nel simulatore (pu_lookup_blend=0.0 default, Opzione A implementata).
 - [x] Integrare Aero Calibration (mu_mechanical, k_wing_coupling) nel simulatore.
 - [x] Bug fix mu_aero_contribution — Modello compound-specific + CL\*A lookup.
-- [ ] Investigare Austin (2.02%) e Las Vegas (1.07%).
-- [ ] Ricalibrare modello di potenza con rpm_fraction attivo (pu_lookup_blend > 0).
-- [ ] Validazione setup variati (High-DF vs Low-DF).
-- [ ] Optimizer dell'assetto.
-- [ ] Integrazione runtime gameplay.
+
+#### 🔧 Gruppo 1 — Modifiche al Modello Fisico
+- [ ] **P0: Floor Coupling dinamico** — $CL_{floor} = CL_{base} \cdot (1 + k \cdot \text{WingAngle})$. Attualmente k_wing_coupling è costante per circuito. Rendere il fondo sensibile all'angolo dell'ala è prerequisito per setup variati fisicamente corretti.
+- [ ] **P1: Cornering Utilization adattivo** — Derivare CU dalla telemetria reale (quanta forza laterale usa il pilota in ogni curva). Potrebbe aiutare Austin (Esses = CU basso nelle transizioni).
+- [ ] **P2: Ricalibrare potenza con rpm_fraction** — Attualmente pu_lookup_blend=0.0 (potenza costante). Curva di potenza RPM-dipendente è più realistica ma richiede ricalibrazione completa.
+
+#### 🎯 Gruppo 2 — Calibrazioni
+- [ ] **P3: Validazione setup variati** — Verificare che High-DF sia più veloce a Monaco e Low-DF a Monza. Se non funziona, il modello è fittato ma fisicamente sbagliato. Prerequisito: Floor Coupling dinamico.
+- [ ] **P4: Investigare Austin (2.02%)** — Sim troppo lento, Esses curvature. Dopo Floor Coupling + CU adattivo, potrebbe migliorare da solo.
+- [ ] **P5: Investigare Las Vegas (1.07%)** — Sim troppo veloce, drag ad alta velocità. Dopo le modifiche al modello, ri-validare.
+
+#### 🚀 Gruppo 3 — Feature
+- [ ] **P6: Optimizer dell'assetto** — Ricerca setup ottimale per circuito. Richiede modello fisico stabile + setup validation passata.
+- [ ] **P7: Integrazione runtime gameplay** — Contratto dati input/output. Richiede tutto stabile sopra.
 
 ### File generati V5.0
 | Tipo | Path | Quantità |
@@ -354,16 +364,50 @@ Dove:
 | `aero_calibration.py` | `physics_v4/calibration/` | ✅ Aggiornato (V5 format, c_aero, compound) |
 | `pu_lookup.py` | `physics_v4/calibration/` | ✅ Nuovo (PU Lookup loader) |
 
-## 8. Prossimi passi (V5.2)
+## 8. Roadmap V5.2+ — Priorità Ordinate
 
-1. **Investigare Austin (2.02%)** — Raggio dinamico nelle Esses, possibile problema di curvature transizione.
-2. **Investigare Las Vegas (1.07%)** — Modello drag ad alta velocità, street circuit con grip basso.
-3. **Ricalibrare modello di potenza con rpm_fraction attivo** — Attualmente pu_lookup_blend=0.0. Attivare richiede compensare riduzione media del 25.6%.
-4. **Validazione setup variati** — Verificare che High-DF sia più veloce a Monaco e Low-DF a Monza.
-5. **Cornering Utilization adattivo** — Derivare CU dalla telemetria reale.
-6. **Floor Coupling dinamico** — $CL_{floor} = CL_{base} \cdot (1 + k \cdot \text{WingAngle})$.
-7. **Optimizer dell'assetto** — Ricerca setup ottimale per circuito.
-8. **Integrazione runtime gameplay** — Contratto dati input/output.
+> **Principio**: prima il modello fisico, poi la calibrazione, poi le feature.
+> Le modifiche al modello fisico sono prerequisito per calibrazioni valide.
+
+### 🔧 Gruppo 1 — Modifiche al Modello Fisico
+
+| # | Task | Impatto | Perché |
+|---|------|--------|------|
+| **P0** | **Floor Coupling dinamico** | 🔴 Alto | Attualmente k_wing_coupling è costante per circuito. Rendere $CL_{floor} = CL_{base} \cdot (1 + k \cdot \text{WingAngle})$ significa che il fondo genera più downforce quando l'ala è carica. **Senza questo, i setup variati non funzionano fisicamente.** |
+| **P1** | **Cornering Utilization adattivo** | 🟡 Medio | Attualmente CU è fisso. Derivarlo dalla telemetria (quanta forza laterale usa il pilota realmente in ogni curva) rende il modello più realistico. Potrebbe aiutare Austin (Esses = CU basso nelle transizioni). |
+| **P2** | **Ricalibrare potenza con rpm_fraction** | 🟢 Basso | Attualmente potenza costante (pu_lookup_blend=0.0). Curva di potenza RPM-dipendente è più realistica ma richiede ricalibrazione completa. I tempi sono già buoni, questo migliora solo la speed trace. |
+
+### 🎯 Gruppo 2 — Calibrazioni
+
+| # | Task | Impatto | Perché |
+|---|------|--------|------|
+| **P3** | **Validazione setup variati** | 🔴 Critico | Dopo le modifiche al modello, verificare che High-DF sia più veloce a Monaco e Low-DF a Monza. Se non funziona, il modello è fittato ma fisicamente sbagliato. **Prerequisito: Floor Coupling dinamico.** |
+| **P4** | **Investigare Austin (2.02%)** | Alto | Outlier peggiore. Dopo Floor Coupling + CU adattivo, potrebbe migliorare da solo. |
+| **P5** | **Investigare Las Vegas (1.07%)** | Medio | Sim troppo veloce. Dopo le modifiche al modello, ri-validare. |
+
+### 🚀 Gruppo 3 — Feature
+
+| # | Task | Impatto | Perché |
+|---|------|--------|------|
+| **P6** | **Optimizer dell'assetto** | Alto | Ricerca setup ottimale per circuito. Richiede modello fisico stabile + setup validation passata. |
+| **P7** | **Integrazione runtime gameplay** | 🔴 Critico | Contratto dati input/output. Richiede tutto stabile sopra. |
+
+### Dettaglio P0: Floor Coupling Dinamico
+
+Attualmente il modello ha `k_wing_coupling` costante per circuito (derivato da CL\*A).
+Il floor coupling dinamico rende il fondo piatto sensibile all'angolo dell'ala:
+
+$$CL_{floor} = CL_{base} \cdot (1 + k_{wing} \cdot \text{WingAngle})$$
+
+Dove:
+- $CL_{base}$ = downforce del fondo a angolo ala neutro
+- $k_{wing}$ = coefficiente di coupling ala-fondo (già derivato da CL\*A)
+- $\text{WingAngle}$ = angolo dell'ala (da setup, 0-100%)
+
+Effetto atteso:
+- Monaco (High-DF): WingAngle alto → più downforce dal fondo → più grip in curva
+- Monza (Low-DF): WingAngle basso → meno downforce dal fondo → meno drag in rettilineo
+- Questo rende i setup variati fisicamente significativi
 
 ---
 
