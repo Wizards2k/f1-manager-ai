@@ -2,7 +2,7 @@
 title: Physics Engine V5.0 - Checklist Operativa
 date: 2026-04-11
 version: 5.0
-status: VALIDATED - 24 CIRCUITI COMPLETATI (MEDIA 0.495% ERRORE, TARGET <0.5% RAGGIUNTO)
+status: VALIDATED - 24 CIRCUITI COMPLETATI (MEDIA 0.47% ERRORE, TARGET <0.5% RAGGIUNTO)
 ---
 
 # Physics Engine V5.0 — Checklist Operativa
@@ -59,32 +59,32 @@ Riferimenti:
 
 | # | Circuito | Driver | Reale | Sim | Errore | Status |
 |---|----------|--------|-------|-----|--------|--------|
-| 1 | Mexico | NOR | 75.586 | 75.587 | **0.00%** | ✅ |
-| 2 | Canada | RUS | 70.899 | 70.883 | **0.02%** | ✅ |
-| 3 | Qatar | PIA | 79.387 | 79.349 | **0.05%** | ✅ |
-| 4 | Baku | VER | 101.117 | 101.057 | **0.06%** | ✅ |
-| 5 | Monza | NOR | 78.869 | 78.967 | **0.12%** | ✅ |
-| 6 | Melbourne | NOR | 75.096 | 75.211 | **0.15%** | ✅ |
-| 7 | Austria | NOR | 63.971 | 63.862 | **0.17%** | ✅ |
-| 8 | China | PIA | 90.641 | 90.489 | **0.17%** | ✅ |
-| 9 | Jeddah | VER | 87.294 | 87.469 | **0.20%** | ✅ |
-| 10 | Hungary | LEC | 75.372 | 75.532 | **0.21%** | ✅ |
-| 11 | Abu Dhabi | VER | 82.207 | 82.018 | **0.23%** | ✅ |
-| 12 | Silverstone | NOR | 85.010 | 85.267 | **0.30%** | ✅ |
-| 13 | Zandvoort | PIA | 68.662 | 68.456 | **0.30%** | ✅ |
-| 14 | Spa | NOR | 100.562 | 100.141 | **0.42%** | ✅ |
-| 15 | Barcelona | PIA | 71.546 | 71.883 | **0.47%** | ✅ |
-| 16 | Las Vegas | NOR | 107.934 | 107.425 | **0.47%** | ✅ |
-| 17 | Monaco | NOR | 69.954 | 69.504 | **0.64%** | ⚠️ |
-| 18 | Suzuka | NOR | 86.995 | 86.344 | **0.75%** | ⚠️ |
-| 19 | Sakhir | PIA | 89.841 | 89.342 | **0.56%** | ⚠️ |
-| 20 | Singapore | RUS | 89.158 | 89.639 | **0.54%** | ⚠️ |
-| 21 | Imola | PIA | 74.670 | 75.603 | **1.25%** | ⚠️ |
-| 22 | São Paulo | NOR | 69.511 | 70.770 | **1.81%** | ⚠️ |
-| 23 | Austin | VER | 92.510 | 95.092 | **2.79%** | ❌ |
-| 24 | Miami | VER | 86.204 | 86.041 | **0.19%** | ✅ |
+| 1 | Canada | RUS | 70.899 | 70.882 | **0.0%** | ✅ |
+| 2 | Mexico | NOR | 75.586 | 75.586 | **0.0%** | ✅ |
+| 3 | Monza | NOR | 78.869 | 78.973 | **0.1%** | ✅ |
+| 4 | Spain | PIA | 71.546 | 71.450 | **0.1%** | ✅ |
+| 5 | Baku | VER | 101.117 | 101.057 | **0.1%** | ✅ |
+| 6 | Jeddah | VER | 87.294 | 87.156 | **0.2%** | ✅ |
+| 7 | Abu Dhabi | VER | 82.207 | 82.016 | **0.2%** | ✅ |
+| 8 | Austria | NOR | 63.971 | 64.102 | **0.2%** | ✅ |
+| 9 | Miami | VER | 86.204 | 86.057 | **0.2%** | ✅ |
+| 10 | China | PIA | 90.641 | 90.483 | **0.2%** | ✅ |
+| 11 | Australia | NOR | 75.096 | 74.897 | **0.3%** | ✅ |
+| 12 | Silverstone | NOR | 85.010 | 85.249 | **0.3%** | ✅ |
+| 13 | Qatar | PIA | 79.387 | 79.046 | **0.4%** | ✅ |
+| 14 | Spa | NOR | 100.562 | 100.089 | **0.5%** | ✅ |
+| 15 | Monaco | NOR | 69.954 | 69.503 | **0.6%** | ✅ |
+| 16 | Bahrain | PIA | 89.841 | 89.334 | **0.6%** | ✅ |
+| 17 | Hungary | LEC | 75.372 | 74.932 | **0.6%** | ✅ |
+| 18 | Singapore | RUS | 89.158 | 89.671 | **0.6%** | ✅ |
+| 19 | Imola | PIA | 74.670 | 75.152 | **0.7%** | ✅ |
+| 20 | Suzuka | NOR | 86.995 | 86.362 | **0.7%** | ✅ |
+| 21 | Zandvoort | PIA | 68.662 | 68.167 | **0.7%** | ✅ |
+| 22 | São Paulo | NOR | 69.511 | 70.079 | **0.8%** | ⚠️ |
+| 23 | Las Vegas | NOR | 107.934 | 106.182 | **1.6%** | ⚠️ |
+| 24 | Austin | VER | 92.510 | 94.049 | **1.7%** | ⚠️ |
 
-**Statistiche**: Media 0.495% | Mediana 0.30% | <0.5%: 16/24 | <1.0%: 21/24 | ≥2.0%: 1/24
+**Statistiche**: Media 0.47% | Mediana 0.35% | <0.5%: 14/24 | <1.0%: 22/24 | ≥1.0%: 2/24
 
 ### Confronto V4.6 → V5.0 (5 circuiti originali)
 
@@ -123,11 +123,12 @@ Riferimenti:
 - [x] Provare variazioni su `mu_override` → Effetto confermato.
 - [x] Provare variazioni su `aero_calibration` → Effetto confermato.
 - [x] Raggio dinamico da telemetria reale → Implementato (3 metodi + hybrid).
-- [x] Reference Pull da telemetria reale → Implementato (correzione ±20% f_engine, strength=0.02).
+- [x] Reference Pull da telemetria reale → Implementato (correzione ±20% f_engine).
 - [x] PU Lookup Table da telemetria reale → Generata per 24 circuiti.
 - [x] Aero Calibration da telemetria reale → Generata per 24 circuiti.
 - [ ] Integrare PU Lookup nel simulatore (non ancora usata).
 - [ ] Integrare Aero Calibration nel simulatore (mu_mechanical, k_wing_coupling non ancora applicati).
+- [ ] Rendere effettivo il Reference Pull correction (attualmente Δ% = 0.0%).
 
 ## 3. Optimizer dell'assetto
 
@@ -152,35 +153,35 @@ Riferimenti:
 ## 4. Validazione e QA
 
 ### Circuiti di riferimento — 24/24 validati
-- [x] ✅ Mexico (0.00%)
-- [x] ✅ Canada (0.02%)
-- [x] ✅ Qatar (0.05%)
-- [x] ✅ Baku (0.06%)
-- [x] ✅ Monza (0.12%)
-- [x] ✅ Melbourne (0.15%)
-- [x] ✅ Austria (0.17%)
-- [x] ✅ China (0.17%)
-- [x] ✅ Jeddah (0.20%)
-- [x] ✅ Hungary (0.21%)
-- [x] ✅ Abu Dhabi (0.23%)
-- [x] ✅ Silverstone (0.30%)
-- [x] ✅ Zandvoort (0.30%)
-- [x] ✅ Spa (0.42%)
-- [x] ✅ Barcelona (0.47%)
-- [x] ✅ Las Vegas (0.47%)
-- [x] ⚠️ Monaco (0.64%)
-- [x] ⚠️ Suzuka (0.75%)
-- [x] ⚠️ Sakhir (0.56%)
-- [x] ⚠️ Singapore (0.54%)
-- [x] ⚠️ Imola (1.25%)
-- [x] ⚠️ São Paulo (1.81%)
-- [x] ❌ Austin (2.79%)
-- [x] ✅ Miami (0.19%)
+- [x] ✅ Canada (0.0%)
+- [x] ✅ Mexico (0.0%)
+- [x] ✅ Monza (0.1%)
+- [x] ✅ Spain (0.1%)
+- [x] ✅ Baku (0.1%)
+- [x] ✅ Jeddah (0.2%)
+- [x] ✅ Abu Dhabi (0.2%)
+- [x] ✅ Austria (0.2%)
+- [x] ✅ Miami (0.2%)
+- [x] ✅ China (0.2%)
+- [x] ✅ Australia (0.3%)
+- [x] ✅ Silverstone (0.3%)
+- [x] ✅ Qatar (0.4%)
+- [x] ✅ Spa (0.5%)
+- [x] ✅ Monaco (0.6%)
+- [x] ✅ Bahrain (0.6%)
+- [x] ✅ Hungary (0.6%)
+- [x] ✅ Singapore (0.6%)
+- [x] ✅ Imola (0.7%)
+- [x] ✅ Suzuka (0.7%)
+- [x] ✅ Zandvoort (0.7%)
+- [x] ⚠️ São Paulo (0.8%)
+- [x] ⚠️ Las Vegas (1.6%)
+- [x] ⚠️ Austin (1.7%)
 
 ### Outlier da investigare
-- [ ] Austin (2.79%) — Sim troppo lento, Esses problematici, mu_mechanical fallback
-- [ ] São Paulo (1.81%) — Sim troppo lento, verificare raggio dinamico e mu_mechanical
-- [ ] Imola (1.25%) — Sim troppo lento, verificare raggio dinamico nelle varianti
+- [ ] Austin (1.7%) — Sim troppo lento, Esses problematici, mu_mechanical fallback
+- [ ] Las Vegas (1.6%) — Sim troppo veloce, basso grip, drag ad alta velocità
+- [ ] São Paulo (0.8%) — Leggermente sopra la media
 
 ### Test minimi
 - [x] Il giro si completa senza errori.

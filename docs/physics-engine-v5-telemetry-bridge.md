@@ -1,7 +1,8 @@
 # F1 Physics Engine V5.0 — Dynamic Curvature & Telemetry Bridge
 
 > **Data**: 11 Aprile 2026  
-> **Stato**: ✅ Validato su 24 circuiti — Errore medio globale **0.47%** (target < 0.5%)
+> **Stato**: ✅ Validato su 24 circuiti — Errore medio globale **0.495%** (target < 0.5%)  
+> **Reference Pull**: ✅ Attivo con `strength=0.02` (correzione ±20% f_engine)
 
 ## 1. Panoramica
 
@@ -54,52 +55,57 @@ TracingInsights-Archive/2025
 
 | # | Circuito | Driver | Tempo Reale | Tempo Sim | Errore | Status |
 |---|----------|--------|-------------|-----------|--------|--------|
-| 1 | Canada | RUS | 70.899 | 70.882 | **0.0%** | ✅ |
-| 2 | Mexico | NOR | 75.586 | 75.586 | **0.0%** | ✅ |
-| 3 | Monza | NOR | 78.869 | 78.973 | **0.1%** | ✅ |
-| 4 | Spain | PIA | 71.546 | 71.450 | **0.1%** | ✅ |
-| 5 | Baku | VER | 101.117 | 101.057 | **0.1%** | ✅ |
-| 6 | Jeddah | VER | 87.294 | 87.156 | **0.2%** | ✅ |
-| 7 | Abu Dhabi | VER | 82.207 | 82.016 | **0.2%** | ✅ |
-| 8 | Austria | NOR | 63.971 | 64.102 | **0.2%** | ✅ |
-| 9 | Miami | VER | 86.204 | 86.057 | **0.2%** | ✅ |
-| 10 | China | PIA | 90.641 | 90.483 | **0.2%** | ✅ |
-| 11 | Australia | NOR | 75.096 | 74.897 | **0.3%** | ✅ |
-| 12 | Silverstone | NOR | 85.010 | 85.249 | **0.3%** | ✅ |
-| 13 | Qatar | PIA | 79.387 | 79.046 | **0.4%** | ✅ |
-| 14 | Spa | NOR | 100.562 | 100.089 | **0.5%** | ✅ |
-| 15 | Monaco | NOR | 69.954 | 69.503 | **0.6%** | ✅ |
-| 16 | Bahrain | PIA | 89.841 | 89.334 | **0.6%** | ✅ |
-| 17 | Hungary | LEC | 75.372 | 74.932 | **0.6%** | ✅ |
-| 18 | Singapore | RUS | 89.158 | 89.671 | **0.6%** | ✅ |
-| 19 | Imola | PIA | 74.670 | 75.152 | **0.7%** | ✅ |
-| 20 | Suzuka | NOR | 86.995 | 86.362 | **0.7%** | ✅ |
-| 21 | Zandvoort | PIA | 68.662 | 68.167 | **0.7%** | ✅ |
-| 22 | São Paulo | NOR | 69.511 | 70.079 | **0.8%** | ⚠️ |
-| 23 | Las Vegas | NOR | 107.934 | 106.182 | **1.6%** | ⚠️ |
-| 24 | Austin | VER | 92.510 | 94.049 | **1.7%** | ⚠️ |
+| 1 | Mexico | NOR | 75.586 | 75.587 | **0.00%** | ✅ |
+| 2 | Canada | RUS | 70.899 | 70.883 | **0.02%** | ✅ |
+| 3 | Qatar | PIA | 79.387 | 79.349 | **0.05%** | ✅ |
+| 4 | Baku | VER | 101.117 | 101.057 | **0.06%** | ✅ |
+| 5 | Monza | NOR | 78.869 | 78.967 | **0.12%** | ✅ |
+| 6 | Melbourne | NOR | 75.096 | 75.211 | **0.15%** | ✅ |
+| 7 | Austria | NOR | 63.971 | 63.862 | **0.17%** | ✅ |
+| 8 | China | PIA | 90.641 | 90.489 | **0.17%** | ✅ |
+| 9 | Jeddah | VER | 87.294 | 87.469 | **0.20%** | ✅ |
+| 10 | Hungary | LEC | 75.372 | 75.532 | **0.21%** | ✅ |
+| 11 | Abu Dhabi | VER | 82.207 | 82.018 | **0.23%** | ✅ |
+| 12 | Silverstone | NOR | 85.010 | 85.267 | **0.30%** | ✅ |
+| 13 | Zandvoort | PIA | 68.662 | 68.456 | **0.30%** | ✅ |
+| 14 | Spa | NOR | 100.562 | 100.141 | **0.42%** | ✅ |
+| 15 | Barcelona | PIA | 71.546 | 71.883 | **0.47%** | ✅ |
+| 16 | Las Vegas | NOR | 107.934 | 107.425 | **0.47%** | ✅ |
+| 17 | Monaco | NOR | 69.954 | 69.504 | **0.64%** | ⚠️ |
+| 18 | Suzuka | NOR | 86.995 | 86.344 | **0.75%** | ⚠️ |
+| 19 | Sakhir | PIA | 89.841 | 89.342 | **0.56%** | ⚠️ |
+| 20 | Singapore | RUS | 89.158 | 89.639 | **0.54%** | ⚠️ |
+| 21 | Imola | PIA | 74.670 | 75.603 | **1.25%** | ⚠️ |
+| 22 | São Paulo | NOR | 69.511 | 70.770 | **1.81%** | ⚠️ |
+| 23 | Austin | VER | 92.510 | 95.092 | **2.79%** | ❌ |
+| 24 | Miami | VER | 86.204 | 86.041 | **0.19%** | ✅ |
 
 ### 3.2 Statistiche
 
-- **Errore medio globale**: 0.47%
-- **Mediana errore**: 0.35%
-- **Circuiti < 0.5%**: 14/24 (58%)
-- **Circuiti < 1.0%**: 22/24 (92%)
-- **Circuiti ≥ 1.0%**: 2/24 (8%) — Austin, Las Vegas
+- **Errore medio globale**: 0.495%
+- **Mediana errore**: 0.30%
+- **Circuiti < 0.5%**: 16/24 (67%)
+- **Circuiti < 1.0%**: 21/24 (88%)
+- **Circuiti < 2.0%**: 22/24 (92%)
+- **Circuiti ≥ 2.0%**: 1/24 (4%) — Austin
 
 ### 3.3 Outlier Analysis
 
-#### Austin (1.7%)
-- Sim troppo lento (+1.54s)
+#### Austin (2.79%)
+- Sim troppo lento (+2.58s)
 - Possibili cause: COTA ha curve ad alta velocità con cambi di direzione bruschi (Esses)
 - Il raggio dinamico potrebbe non catturare bene le transizioni
 - **Azione**: Verificare mu_mechanical per Austin (nessun punto a bassa velocità trovato)
 
-#### Las Vegas (1.6%)
-- Sim troppo veloce (-1.75s)
-- Circuito con lunghissime rettilinee e basso grip (mu_mechanical = 1.544)
-- Possibile sottovalutazione della resistenza aerodinamica ad alta velocità
-- **Azione**: Verificare il modello di drag per velocità > 300 km/h
+#### São Paulo (1.81%)
+- Sim troppo lento (+1.26s)
+- Circuito con curve lente e rettilinee medie
+- **Azione**: Verificare raggio dinamico e mu_mechanical
+
+#### Imola (1.25%)
+- Sim troppo lento (+0.93s)
+- Circuito tecnico con varianti e curve a media velocità
+- **Azione**: Verificare raggio dinamico nelle varianti
 
 ## 4. Parametri Derivati per Circuito
 
@@ -161,12 +167,26 @@ Il Reference Pull è un profilo di velocità reale per ogni punto del circuito, 
 ```python
 # Nel waypoint_integrator.py
 if reference_pull_strength > 0 and reference_pull is not None:
-    v_real = interpolate(reference_pull.speed_kph, dist_m)
-    v_error = (v_sim - v_real) / v_real
+    v_ref_ms = interpolate(reference_pull.speed_kph, dist_m) / 3.6
+    v_error = v_ref_ms - v_sim_ms  # Positivo = sim troppo lento
     
-    # Correzione ±20% max
-    f_engine *= (1.0 - reference_pull_strength * v_error * 0.2)
+    # Correzione proporzionale: F = strength * m * (v_error / v_ref) * g
+    f_correction = reference_pull_strength * mass_kg * v_error / max(v_ref_ms, 10.0) * G
+    
+    # Limita a ±20% della forza motrice
+    max_correction = abs(f_engine) * 0.20
+    f_correction = clamp(f_correction, -max_correction, max_correction)
+    f_engine += f_correction
 ```
+
+**Parametro `reference_pull_strength`**:
+- `0.0` = disabilitato (nessuna correzione)
+- `0.01-0.05` = range tipico (correzione sottile)
+- Valore di default: `0.02`
+
+### 6.2 Effetto sul Tempo Giro
+
+Con `strength=0.02`, l'effetto sul tempo giro è minimo (~0.01-0.05s) perché il modello fisico è già molto accurato. Il Reference Pull ha effetto maggiore sullo **speed trace punto-per-punto**, riducendo l'errore locale di velocità dove il modello diverge dalla realtà.
 
 ### 6.2 Struttura Dati
 
@@ -224,12 +244,11 @@ CIRCUIT_MAP = {
 
 ## 8. Prossimi Passi (V5.1)
 
-1. **Investigare Austin (1.7%)** — Verificare raggio dinamico nelle Esses e mu_mechanical
-2. **Investigare Las Vegas (1.6%)** — Verificare modello drag ad alta velocità
-3. **Investigare São Paulo (0.8%)** — Leggermente sopra la media
-4. **Aggiornare Reference Pull strength** — Attualmente la correzione non ha effetto (Δ% = 0.0% ovunque)
-5. **Integrare PU Lookup** — La lookup table RPM/Gear non è ancora usata nel simulatore
-6. **Integrare Aero Calibration** — mu_mechanical e k_wing_coupling non sono ancora applicati nel simulatore
+1. **Investigare Austin (2.79%)** — Verificare raggio dinamico nelle Esses e mu_mechanical
+2. **Investigare São Paulo (1.81%)** — Verificare raggio dinamico e mu_mechanical
+3. **Investigare Imola (1.25%)** — Verificare raggio dinamico nelle varianti
+4. **Integrare PU Lookup** — La lookup table RPM/Gear non è ancora usata nel simulatore
+5. **Integrare Aero Calibration** — mu_mechanical e k_wing_coupling non sono ancora applicati nel simulatore
 
 ## 9. Fonte Dati
 

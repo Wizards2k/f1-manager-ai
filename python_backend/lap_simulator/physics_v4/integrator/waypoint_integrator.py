@@ -326,7 +326,7 @@ def integrate_waypoint(
     suspension_effects: Optional[Dict[str, float]] = None,  # Effetti sospensioni pre-calcolati
     ers_power_fraction: float = 1.0,  # Frazione ERS disponibile (0.0=solo ICE, 1.0=full ERS)
     reference_pull: Optional[Dict] = None,  # V5.0: Reference Pull data
-    reference_pull_strength: float = 0.0,  # V5.0: Reference Pull correction strength
+    reference_pull_strength: float = 0.0,  # V5.0: Reference Pull strength (0.0-0.05 tipico)
 ) -> PhysicsState:
     """
     Integra fisica per un singolo waypoint.
@@ -507,7 +507,7 @@ def integrate_waypoint(
             # Questo dà una correzione graduale che non domina la fisica
             if abs(v_ref_ms_real) > 1.0:
                 f_correction = (reference_pull_strength * mass_kg * v_error 
-                                / max(v_ref_ms_real, 10.0) * G * 0.1)
+                                / max(v_ref_ms_real, 10.0) * G)
                 # Limita la correzione a ±20% della forza motrice
                 max_correction = abs(f_engine) * 0.20
                 f_correction = max(-max_correction, min(max_correction, f_correction))
@@ -939,7 +939,7 @@ def integrate_lap_hd(
     sector_boundaries: Optional[List[float]] = None,
     # ERS mode: frazione di potenza ERS disponibile (0.0=solo ICE, 1.0=full quali)
     ers_power_fraction: float = 1.0,
-    # V5.0: Reference Pull strength (0.0=disabilitato, 1.0=full correction)
+    # V5.0: Reference Pull strength (0.0=disabilitato, tipico 0.01-0.05)
     # Quando >0, la forza motrice viene corretta per allineare la velocità
     # simulata alla traccia reale di TracingInsights.
     reference_pull_strength: float = 0.0,

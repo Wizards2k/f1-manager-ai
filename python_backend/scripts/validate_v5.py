@@ -33,11 +33,32 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Reference lap times (TracingInsights 2025 Qualifying, NOR)
 REFERENCE_TIMES = {
+    # 5 circuiti originali
     "mc-1929_monaco": 69.954,
     "it-1922_monza": 78.869,
     "jp-1962_suzuka": 86.995,
     "gb-1948_silverstone": 85.010,
     "be-1925_spa_francorchamps": 100.562,
+    # 19 circuiti aggiuntivi (V5.1)
+    "ae-2009_yas_marina": 82.207,
+    "at-1969_spielberg": 63.971,
+    "au-1953_melbourne": 75.096,
+    "az-2016_baku": 101.117,
+    "bh-2002_sakhir": 89.841,
+    "br-1940_sao_paulo": 69.511,
+    "ca-1978_montreal": 70.899,
+    "cn-2004_shanghai": 90.641,
+    "es-1991_barcelona": 71.546,
+    "hu-1986_budapest": 75.372,
+    "it-1953_imola": 74.670,
+    "mx-1962_mexico_city": 75.586,
+    "nl-1948_zandvoort": 68.662,
+    "qa-2004_lusail": 79.387,
+    "sa-2021_jeddah": 87.294,
+    "sg-2008_singapore": 89.158,
+    "us-2012_austin": 92.510,
+    "us-2022_miami": 86.204,
+    "us-2023_las_vegas": 107.934,
 }
 
 CIRCUIT_NAMES = {
@@ -46,11 +67,30 @@ CIRCUIT_NAMES = {
     "jp-1962_suzuka": "Suzuka",
     "gb-1948_silverstone": "Silverstone",
     "be-1925_spa_francorchamps": "Spa",
+    "ae-2009_yas_marina": "Yas Marina",
+    "at-1969_spielberg": "Spielberg",
+    "au-1953_melbourne": "Melbourne",
+    "az-2016_baku": "Baku",
+    "bh-2002_sakhir": "Sakhir",
+    "br-1940_sao_paulo": "São Paulo",
+    "ca-1978_montreal": "Montreal",
+    "cn-2004_shanghai": "Shanghai",
+    "es-1991_barcelona": "Barcelona",
+    "hu-1986_budapest": "Budapest",
+    "it-1953_imola": "Imola",
+    "mx-1962_mexico_city": "Mexico City",
+    "nl-1948_zandvoort": "Zandvoort",
+    "qa-2004_lusail": "Lusail",
+    "sa-2021_jeddah": "Jeddah",
+    "sg-2008_singapore": "Singapore",
+    "us-2012_austin": "Austin",
+    "us-2022_miami": "Miami",
+    "us-2023_las_vegas": "Las Vegas",
 }
 
 
 def run_simulation(circuit_id: str, aero_setup: Dict = None,
-                   reference_pull_strength: float = 0.0) -> Dict:
+                   reference_pull_strength: float = 0.02) -> Dict:
     """Esegue la simulazione per un circuito."""
     if aero_setup is None:
         aero_setup = {"front_wing": 20.0, "rear_wing": 22.0}
@@ -99,7 +139,8 @@ def generate_speed_trace_report(circuit_id: str) -> Dict:
     
     results = {}
     for s in setups:
-        r = run_simulation(circuit_id, aero_setup=s["setup"])
+        r = run_simulation(circuit_id, aero_setup=s["setup"],
+                           reference_pull_strength=0.02)
         results[s["name"]] = {
             "lap_time_s": r["lap_time_s"],
             "v_max_kph": r["v_max_kph"],
@@ -110,7 +151,10 @@ def generate_speed_trace_report(circuit_id: str) -> Dict:
     
     # 3. Calcola errori
     neutral_time = results["Neutral"]["lap_time_s"]
-    error_pct = abs(neutral_time - real_time) / real_time * 100
+    if real_time > 0:
+        error_pct = abs(neutral_time - real_time) / real_time * 100
+    else:
+        error_pct = float('inf')
     
     print(f"  ⏱️ Tempo reale: {real_time:.3f}s")
     print(f"  🏁 Sim Neutral: {neutral_time:.3f}s (errore: {error_pct:.2f}%)")

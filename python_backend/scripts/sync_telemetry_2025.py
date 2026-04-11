@@ -864,9 +864,11 @@ def compute_floor_coupling(points: List[TelemetryPoint],
 # Task 5: Validation Report
 # ---------------------------------------------------------------------------
 
-def run_simulation(circuit_id: str, aero_setup: Dict = None) -> Dict:
+def run_simulation(circuit_id: str, aero_setup: Dict = None,
+                   reference_pull_strength: float = 0.02) -> Dict:
     """
     Esegue una simulazione con il waypoint_integrator corrente.
+    reference_pull_strength: forza della correzione verso la velocità reale (0.0-0.05 tipico).
     """
     # Import dinamico per evitare dipendenze circolari
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -880,6 +882,7 @@ def run_simulation(circuit_id: str, aero_setup: Dict = None) -> Dict:
             circuit_id=circuit_id,
             aero_setup=aero_setup,
             verbose=False,
+            reference_pull_strength=reference_pull_strength,
         )
         return result
     except Exception as e:
