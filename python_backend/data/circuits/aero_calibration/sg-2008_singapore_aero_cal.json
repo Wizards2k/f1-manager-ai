@@ -2,14 +2,17 @@
   "circuit_id": "sg-2008_singapore",
   "source": "TracingInsights-Archive/2025",
   "grip_data": {
-    "mu_mechanical": 2.239,
-    "mu_aero_contribution": -0.885,
-    "low_speed_points": 14,
-    "high_speed_points": 265
+    "mu_mechanical": 1.7,
+    "mu_aero_contribution": 2.075,
+    "c_aero": 0.00043,
+    "compound": "C5",
+    "cla_estimated": 5.5,
+    "low_speed_points": 337,
+    "high_speed_points": 245
   },
   "floor_data": {
-    "k_wing_coupling": 0.0,
-    "cla_floor_dynamic": 0.0,
+    "k_wing_coupling": 0.055,
+    "cla_floor_dynamic": 2.074,
     "mu_by_speed": {
       "slow": 1.8851372761600855,
       "medium": 1.8394960041995752,

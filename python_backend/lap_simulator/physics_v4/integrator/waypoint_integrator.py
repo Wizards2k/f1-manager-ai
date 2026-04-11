@@ -38,6 +38,8 @@ from core.constants import (
     PU_TOTAL_PEAK_KW,
     ICE_PEAK_POWER_KW,
     ERS_PEAK_POWER_KW,
+    ICE_IDLE_RPM,
+    ICE_MAX_RPM,
     ROLLING_RESISTANCE_COEFF,
     MAX_LATERAL_G,
     MAX_BRAKE_DECEL_G,
@@ -49,6 +51,7 @@ from core.constants import (
 from aero.aero_assembly import AeroAssembly, AeroForces
 from calibration.aero_calibration import get_aero_calibration
 from calibration.circuit_calibration import get_circuit_calibration
+from calibration.pu_lookup import load_pu_lookup, PULookupInterpolator
 from calibration.telemetry_bridge import TelemetryBridge
 
 
@@ -144,7 +147,14 @@ def _find_section_id_by_distance(reference_sections: Dict[str, Dict[str, Any]], 
 
 
 def _apply_aero_calibration(aero_forces: AeroForces, aero_calibration: Optional[Dict[str, Any]]) -> AeroForces:
-    """Applica un profilo aero calibrato ai coefficienti calcolati dal modello fisico."""
+    """Applica un profilo aero calibrato ai coefficienti calcolati dal modello fisico.
+    
+    V5.0: Supporta sia il formato legacy (drag_index, downforce_index, aero_balance_target)
+    sia il formato V5 (mu_mechanical, k_wing_coupling, mu_by_speed).
+    I parametri mu_mechanical e k_wing_coupling NON sono applicati qui:
+    - mu_mechanical è applicato nel grip calculation (integrate_waypoint)
+    - k_wing_coupling è applicato nell'AeroAssembly (set_k_wing_coupling)
+    """
     if not aero_calibration:
         return aero_forces
 
@@ -154,9 +164,16 @@ def _apply_aero_calibration(aero_forces: AeroForces, aero_calibration: Optional[
         except (TypeError, ValueError):
             return default
 
-    drag_scale = _as_float(aero_calibration.get("drag_index"), 1.0)
-    downforce_scale = _as_float(aero_calibration.get("downforce_index"), 1.0)
+    # V5.0: Nel nuovo formato, drag_index e downforce_index potrebbero non esserci
+    # In tal caso, non applicare scaling aero (usa il modello fisico puro)
+    drag_scale = _as_float(aero_calibration.get("drag_index"), 1.0) or 1.0
+    downforce_scale = _as_float(aero_calibration.get("downforce_index"), 1.0) or 1.0
     balance_target = aero_calibration.get("aero_balance_target")
+
+    # Se il formato è V5 e non ha drag_index/downforce_index, salta lo scaling aero
+    if aero_calibration.get("format") == "v5" and "drag_index" not in aero_calibration:
+        # V5: Il modello fisico è già calibrato, non serve scaling
+        return aero_forces
 
     front_share = aero_forces.aero_balance
     if balance_target is not None:
@@ -327,6 +344,8 @@ def integrate_waypoint(
     ers_power_fraction: float = 1.0,  # Frazione ERS disponibile (0.0=solo ICE, 1.0=full ERS)
     reference_pull: Optional[Dict] = None,  # V5.0: Reference Pull data
     reference_pull_strength: float = 0.0,  # V5.0: Reference Pull strength (0.0-0.05 tipico)
+    pu_lookup_interpolator: Optional[PULookupInterpolator] = None,  # V5.0: PU Lookup interpolator (legacy, unused)
+    pu_lookup_blend: float = 0.0,  # V5.0: RPM blend from Reference Pull (0.0=constant power, 1.0=RPM from ref pull)
 ) -> PhysicsState:
     """
     Integra fisica per un singolo waypoint.
@@ -412,15 +431,74 @@ def integrate_waypoint(
     aero_forces = _apply_aero_calibration(aero_forces, aero_calibration)
     
     # ============================================================
-    # 1. POTENZA MOTORE - Modello realistico
+    # 1. POTENZA MOTORE - Modello realistico con RPM-dependent power
     # ============================================================
-    # La potenza non è costante: dipende da marcia e velocità
-    # In F1, la potenza massima è disponibile solo in marce alte
-    # e a RPM elevati
+    # La potenza non è costante: dipende da RPM e velocità.
+    # In F1, la potenza massima è disponibile solo a RPM elevati.
+    #
+    # V5.0: rpm_fraction da Reference Pull (per-distanza)
+    # Il Reference Pull contiene RPM reale per ogni punto del giro,
+    # interpolato per distanza. Questo è molto più informativo della
+    # PU Lookup (per-velocità, solo full throttle) perché:
+    # - RPM varia 5074-12446 (non solo ~11000)
+    # - Include zone di frenata, curva, partiale
+    # - Per-distanza → nessuna ambiguità gear/velocità
+    #
+    # pu_lookup_blend controlla la transizione:
+    #   0.0 → potenza costante (comportamento V4, rpm_fraction = 1.0)
+    #   1.0 → rpm_fraction completamente da RPM reale (Reference Pull)
+    #   0.5 → blend 50/50
     
-    # Fattore marcia (semplificato): potenza massima in rettilineo,
-    # ridotta in curva per evitare wheel spin
-    # Potenza effettiva = ICE (costante) + ERS (scalato da ers_power_fraction)
+    # Calcola rpm_fraction da Reference Pull (per-distanza)
+    rpm_fraction = 1.0  # Default: potenza costante (V4)
+    throttle_real_pct = throttle_pct  # Default: throttle dai waypoint
+    
+    if pu_lookup_blend > 0.0 and reference_pull is not None:
+        ref_data = reference_pull.get("data", {})
+        ref_dist = ref_data.get("dist_m", [])
+        ref_rpm = ref_data.get("rpm", [])
+        ref_throttle = ref_data.get("throttle_pct", [])
+        
+        if ref_dist and ref_rpm and len(ref_dist) > 1:
+            # Interpola RPM reale alla distanza corrente
+            current_dist = state.distance_m
+            # Trova indice per interpolazione
+            idx = 0
+            for i in range(len(ref_dist) - 1):
+                if ref_dist[i + 1] >= current_dist:
+                    idx = i
+                    break
+            else:
+                idx = len(ref_dist) - 2
+            
+            # Interpolazione lineare RPM
+            if idx < len(ref_dist) - 1:
+                d0 = ref_dist[idx]
+                d1 = ref_dist[idx + 1]
+                if d1 > d0:
+                    t = (current_dist - d0) / (d1 - d0)
+                    t = max(0.0, min(1.0, t))
+                    rpm_real = ref_rpm[idx] * (1 - t) + ref_rpm[idx + 1] * t
+                    # Throttle reale dalla telemetria (Opzione E+)
+                    if ref_throttle and idx < len(ref_throttle) - 1:
+                        throttle_real_pct = ref_throttle[idx] * (1 - t) + ref_throttle[idx + 1] * t
+                        throttle_real_pct = max(0.0, min(100.0, throttle_real_pct))
+                else:
+                    rpm_real = ref_rpm[idx]
+                    if ref_throttle and idx < len(ref_throttle):
+                        throttle_real_pct = max(0.0, min(100.0, ref_throttle[idx]))
+            else:
+                rpm_real = ref_rpm[idx]
+                if ref_throttle and idx < len(ref_throttle):
+                    throttle_real_pct = max(0.0, min(100.0, ref_throttle[idx]))
+            
+            # rpm_fraction: frazione di potenza disponibile a questo RPM
+            # Potenza ICE segue curva: min a idle, max a peak RPM
+            rpm_frac_real = max(0.3, min(1.0, (rpm_real - ICE_IDLE_RPM) / (ICE_MAX_RPM - ICE_IDLE_RPM)))
+            # Blend tra potenza costante (rpm_frac=1.0) e RPM reale
+            rpm_fraction = 1.0 + pu_lookup_blend * (rpm_frac_real - 1.0)
+    
+    # Potenza effettiva = ICE (RPM-dependent) + ERS (scalato da ers_power_fraction)
     # ers_power_fraction=1.0 → full ERS (quali_deploy: 910 kW)
     # ers_power_fraction≈0.5 → ERS parziale (race_balanced: ~830 kW)
     # ers_power_fraction≈0.0 → solo ICE (race_save: 750 kW)
@@ -430,15 +508,15 @@ def integrate_waypoint(
         # In curva: potenza ridotta per trazione
         # Più curva stretta = meno potenza disponibile
         corner_factor = min(1.0, 1000.0 / max(radius_m, 100.0))
-        power_available = effective_pu_kw * 1000 * (throttle_pct / 100.0) * corner_factor
+        power_available = effective_pu_kw * 1000 * rpm_fraction * (throttle_real_pct / 100.0) * corner_factor
     else:
         # In rettilineo: potenza massima
-        power_available = effective_pu_kw * 1000 * (throttle_pct / 100.0)
+        power_available = effective_pu_kw * 1000 * rpm_fraction * (throttle_real_pct / 100.0)
     
     # Efficienza trasmissione e driver skill
     power_available *= DRIVETRAIN_EFFICIENCY
     power_available *= driver_skill
-    
+
     # Forza motrice = Potenza / Velocità
     if state.velocity_ms > 1.0:
         f_engine = power_available / state.velocity_ms
@@ -452,7 +530,6 @@ def integrate_waypoint(
     
     state.f_engine = f_engine
     state.is_throttle = throttle_pct > 0
-    
     # ============================================================
     # V5.0: REFERENCE PULL - Correzione forza motrice da telemetria reale
     # ============================================================
@@ -557,19 +634,44 @@ def integrate_waypoint(
     # MU_BASE viene dal compound gomme:
     #   C5 = 1.80, C4 = 1.72, C3 = 1.65, C2 = 1.58, C1 = 1.52
     #
+    # V5.0: Se abbiamo mu_mechanical dalla calibrazione aero, usiamo quello
+    # come baseline per il grip meccanico. Questo valore è derivato dalla
+    # telemetria reale e rappresenta il grip a bassa velocità (senza downforce).
+    # È circuit-specific e include l'effetto dell'asfalto e del compound.
+    #
     # track_grip_factor è fisso per circuito:
     #   Monza = 1.00, Monaco = 0.90, Suzuka = 1.05
     
     # Grip base dal compound (senza penalità empiriche)
     mu_base_val = mu_base.get(tyre_compound, 1.65)
     
-    # V5.0: Se abbiamo il Reference Pull con mu_mechanical derivato dalla
-    # telemetria reale, usiamo quello come baseline per il grip meccanico.
-    # NOTA: Il mu_mechanical derivato dalla telemetria include downforce
-    # anche a basse velocità, quindi va usato con cautela. Lo applichiamo
-    # solo se il valore è ragionevole (< 2.0, che è grip meccanico puro).
-    # Valori > 2.0 indicano che il downforce è già incluso.
-    if reference_pull is not None:
+    # V5.0: Se abbiamo mu_mechanical dalla calibrazione aero, usiamo quello.
+    # Il mu_mechanical è derivato dalla telemetria reale e rappresenta il
+    # grip meccanico a bassa velocità (senza downforce). È circuit-specific
+    # e include l'effetto dell'asfalto e del compound.
+    # Valori tipici: 1.54 (Las Vegas) a 2.58 (Montreal).
+    # NOTA: Valori > 2.0 indicano che il downforce è parzialmente incluso,
+    # ma lo usiamo comunque perché rappresenta il grip reale a bassa velocità.
+    aero_cal_mu_mechanical = None
+    if aero_calibration is not None:
+        aero_cal_mu_mechanical = aero_calibration.get("mu_mechanical")
+        if aero_cal_mu_mechanical is not None:
+            try:
+                aero_cal_mu_mechanical = float(aero_cal_mu_mechanical)
+            except (TypeError, ValueError):
+                aero_cal_mu_mechanical = None
+    
+    if aero_cal_mu_mechanical is not None and aero_cal_mu_mechanical > 0:
+        # Sostituisci mu_base con mu_mechanical dalla calibrazione aero.
+        # Questo è il grip reale a bassa velocità per questo circuito.
+        mu_base_val = aero_cal_mu_mechanical
+    elif reference_pull is not None:
+        # Fallback: Se non abbiamo mu_mechanical dalla calibrazione aero,
+        # usiamo il Reference Pull con mu_mechanical derivato dalla telemetria.
+        # NOTA: Il mu_mechanical derivato dalla telemetria include downforce
+        # anche a basse velocità, quindi va usato con cautela. Lo applichiamo
+        # solo se il valore è ragionevole (< 2.0, che è grip meccanico puro).
+        # Valori > 2.0 indicano che il downforce è già incluso.
         ref_mu_mechanical = reference_pull.get("mu_mechanical", 0.0)
         if 1.5 < ref_mu_mechanical < 2.0:
             # Il mu_mechanical reale è il grip a bassa velocità (senza downforce).
@@ -943,6 +1045,10 @@ def integrate_lap_hd(
     # Quando >0, la forza motrice viene corretta per allineare la velocità
     # simulata alla traccia reale di TracingInsights.
     reference_pull_strength: float = 0.0,
+    # V5.0: PU Lookup RPM blend (0.0=constant power, 1.0=RPM from lookup)
+    # Quando >0, la curva di potenza usa RPM reali dalla PU Lookup
+    # per modellare la dipendenza RPM-potenza del motore.
+    pu_lookup_blend: float = 0.0,
 ) -> Dict[str, Any]:
     """
     Simula giro completo su circuito HD.
@@ -984,6 +1090,19 @@ def integrate_lap_hd(
     if reference_pull and verbose:
         print(f"  📡 Reference Pull caricato: {reference_pull.get('driver', '?')} "
               f"{reference_pull.get('lap_time_s', 0):.3f}s")
+    
+    # V5.0: Carica PU Lookup per fusione modello generico + dati reali
+    pu_lookup_interpolator = None
+    if pu_lookup_blend > 0.0:
+        pu_lookup_data = load_pu_lookup(circuit_id)
+        if pu_lookup_data:
+            pu_lookup_interpolator = PULookupInterpolator(pu_lookup_data)
+            if verbose:
+                speed_min, speed_max = pu_lookup_interpolator.speed_range
+                print(f"  🔋 PU Lookup caricato: {pu_lookup_interpolator.num_entries} punti, "
+                      f"speed {speed_min:.0f}-{speed_max:.0f} kph, blend={pu_lookup_blend:.2f}")
+        elif verbose:
+            print(f"  ⚠️ PU Lookup non trovato per {circuit_id}, blend disabilitato")
     
     if not waypoints:
         raise ValueError(f"Nessun waypoint trovato per {circuit_id}")
@@ -1051,6 +1170,19 @@ def integrate_lap_hd(
     if aero_calibration is None:
         aero_calibration = get_aero_calibration(circuit_id)
 
+    # V5.0: Applica k_wing_coupling dalla calibrazione aero all'AeroAssembly.
+    # Questo modifica il coupling ala-floor per riflettere la sensibilità
+    # circuito-specifica del ground effect alle variazioni dell'angolo ala.
+    if aero_calibration is not None:
+        k_wing_coupling = aero_calibration.get("k_wing_coupling")
+        if k_wing_coupling is not None:
+            try:
+                k_wing_coupling = float(k_wing_coupling)
+                if k_wing_coupling > 0:
+                    aero.set_k_wing_coupling(k_wing_coupling)
+            except (TypeError, ValueError):
+                pass
+
     # Applica override parametri per calibrazione
     mu_base_local = MU_BASE.copy()
     if mu_override:
@@ -1071,6 +1203,13 @@ def integrate_lap_hd(
                 aero_message += f" CdA={cda:.4f}"
             if isinstance(cla, (int, float)):
                 aero_message += f" ClA={cla:.4f}"
+            # V5.0: Stampa parametri calibrazione aero
+            mu_mech = aero_calibration.get("mu_mechanical")
+            k_wc = aero_calibration.get("k_wing_coupling")
+            if mu_mech is not None:
+                aero_message += f" mu_mech={float(mu_mech):.3f}"
+            if k_wc is not None:
+                aero_message += f" k_wing_coupling={float(k_wc):.4f}"
             print(aero_message)
         if mu_override:
             print(f"  MU override: {mu_override}")
@@ -1125,6 +1264,8 @@ def integrate_lap_hd(
             ers_power_fraction=ers_power_fraction,
             reference_pull=reference_pull,
             reference_pull_strength=reference_pull_strength,
+            pu_lookup_interpolator=pu_lookup_interpolator,
+            pu_lookup_blend=pu_lookup_blend,
         )
         
         # Aggiorna statistiche

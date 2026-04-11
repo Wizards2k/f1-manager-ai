@@ -90,7 +90,8 @@ CIRCUIT_NAMES = {
 
 
 def run_simulation(circuit_id: str, aero_setup: Dict = None,
-                   reference_pull_strength: float = 0.02) -> Dict:
+                   reference_pull_strength: float = 0.02,
+                   pu_lookup_blend: float = 0.0) -> Dict:
     """Esegue la simulazione per un circuito."""
     if aero_setup is None:
         aero_setup = {"front_wing": 20.0, "rear_wing": 22.0}
@@ -100,6 +101,7 @@ def run_simulation(circuit_id: str, aero_setup: Dict = None,
         aero_setup=aero_setup,
         verbose=False,
         reference_pull_strength=reference_pull_strength,
+        pu_lookup_blend=pu_lookup_blend,
     )
 
 
@@ -140,7 +142,8 @@ def generate_speed_trace_report(circuit_id: str) -> Dict:
     results = {}
     for s in setups:
         r = run_simulation(circuit_id, aero_setup=s["setup"],
-                           reference_pull_strength=0.02)
+                           reference_pull_strength=0.02,
+                           pu_lookup_blend=0.0)
         results[s["name"]] = {
             "lap_time_s": r["lap_time_s"],
             "v_max_kph": r["v_max_kph"],

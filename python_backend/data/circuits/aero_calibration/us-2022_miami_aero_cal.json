@@ -2,14 +2,17 @@
   "circuit_id": "us-2022_miami",
   "source": "TracingInsights-Archive/2025",
   "grip_data": {
-    "mu_mechanical": 2.326,
-    "mu_aero_contribution": -0.295,
-    "low_speed_points": 15,
-    "high_speed_points": 302
+    "mu_mechanical": 1.6,
+    "mu_aero_contribution": 1.509,
+    "c_aero": 0.000313,
+    "compound": "C4",
+    "cla_estimated": 4.0,
+    "low_speed_points": 347,
+    "high_speed_points": 283
   },
   "floor_data": {
-    "k_wing_coupling": 0.0281,
-    "cla_floor_dynamic": 0.281,
+    "k_wing_coupling": 0.04,
+    "cla_floor_dynamic": 1.509,
     "mu_by_speed": {
       "slow": 1.8265507309836932,
       "medium": 2.1049729547511644,

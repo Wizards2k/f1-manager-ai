@@ -127,6 +127,33 @@ class AeroAssembly:
         # FIX V4.16b: Propaga angoli ali ai sidepods per il coupling
         self.sidepods.set_wing_coupling(fw_aoa, rw_aoa)
     
+    def set_k_wing_coupling(self, k_wing_coupling: float):
+        """
+        V5.0: Imposta il coefficiente k_wing_coupling dalla calibrazione aero.
+        
+        In F1 reale, il coupling ala-floor dipende dalla geometria del circuito:
+        - Circuiti con floor molto sensibili (es. Interlagos) hanno k_wing_coupling alto
+        - Circuiti con floor poco sensibili (es. Monaco, Monza) hanno k_wing_coupling basso
+        
+        Il k_wing_coupling moltiplica l'effetto del wing_coupling calcolato dagli angoli.
+        k_wing_coupling = 0.0 → nessun effetto aggiuntivo (usa solo angoli)
+        k_wing_coupling = 0.10 → +10% effetto coupling per ogni grado di ala
+        
+        Questo viene moltiplicato per il wing_coupling calcolato da set_wing_coupling().
+        Formula: wing_coupling_effettivo = wing_coupling_angoli * (1.0 + k_wing_coupling)
+        """
+        if k_wing_coupling <= 0:
+            return  # Nessun effetto aggiuntivo
+        
+        # Moltiplica il wing_coupling esistente per il fattore circuito-specifico
+        # k_wing_coupling = 0.0 → factor = 1.0 (nessun cambiamento)
+        # k_wing_coupling = 0.10 → factor = 1.10 (+10% coupling)
+        factor = 1.0 + k_wing_coupling
+        
+        self.floor_front.wing_coupling *= factor
+        self.floor_rear.wing_coupling *= factor
+        self.sidepods.wing_coupling *= factor
+    
     def set_drs(self, active: bool):
         """Attiva/disattiva DRS."""
         self.front_wing.set_drs(active)

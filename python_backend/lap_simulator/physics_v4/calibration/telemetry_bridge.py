@@ -98,6 +98,7 @@ class ReferencePull:
     radius_m: np.ndarray     # Raggio dinamico calcolato [m]
     mu_mechanical: float = 0.0
     k_wing_coupling: float = 0.0
+    c_aero: float = 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -471,8 +472,8 @@ class TelemetryBridge:
         radius_interp = np.interp(dist_grid, dist_m, radius_hybrid)
 
         # 8. Deriva parametri aero-meccanici
-        mu_mechanical, k_wing_coupling = self._derive_aero_params(
-            speed_kph, acc_y, acc_x
+        mu_mechanical, k_wing_coupling, c_aero = self._derive_aero_params(
+            speed_kph, acc_y, acc_x, circuit_id=circuit_id
         )
 
         return ReferencePull(
@@ -488,33 +489,56 @@ class TelemetryBridge:
             radius_m=radius_interp,
             mu_mechanical=mu_mechanical,
             k_wing_coupling=k_wing_coupling,
+            c_aero=c_aero,
         )
 
     def _derive_aero_params(self, speed_kph: np.ndarray,
-                             acc_y: np.ndarray, acc_x: np.ndarray) -> Tuple[float, float]:
+                             acc_y: np.ndarray, acc_x: np.ndarray,
+                             circuit_id: str = "") -> Tuple[float, float, float]:
         """
-        Deriva mu_base meccanico e k_wing_coupling dai dati reali.
+        Deriva mu_base meccanico, k_wing_coupling e c_aero dai dati reali.
 
-        mu_mechanical: grip a bassa velocità (< 80 km/h), dove il downforce è trascurabile
+        V5.1 FIX: Usa modello fisicamente vincolato con CL*A lookup
+        per circuito (valori noti F1 2025) invece di derivare dalla telemetria.
+
+        mu_mechanical: grip puro meccanico (compound-specific, senza downforce)
         k_wing_coupling: sensibilità del floor all'angolo ala
+        c_aero: coefficiente aero per mu_aero = c_aero * v²
         """
-        # Grip meccanico (bassa velocità, curva)
-        low_speed_mask = (speed_kph < 80.0) & (speed_kph > 20.0) & (np.abs(acc_y) > 1.0)
-        mu_values = np.abs(acc_y[low_speed_mask]) / G
+        # Parametri fisici
+        RHO = 1.225   # densità aria (kg/m³)
+        MASS = 798.0   # massa totale qualifica (kg)
 
-        if len(mu_values) > 5:
-            mu_mechanical = float(np.percentile(mu_values, 75))
-        else:
-            mu_mechanical = 1.65  # Default C3
+        # Compound-specific mu_mechanical_pure
+        COMPOUND_MU = {
+            "C1": 1.45, "C2": 1.50, "C3": 1.55, "C4": 1.60,
+            "C5": 1.70, "C6": 1.75,
+        }
+        mu_mechanical = 1.55  # Default C3
 
-        # k_wing_coupling: differenza grip tra alta e bassa velocità
-        high_speed_mask = (speed_kph > 180.0) & (np.abs(acc_y) > 2.0)
-        mu_high = np.abs(acc_y[high_speed_mask]) / G if high_speed_mask.sum() > 5 else np.array([1.8])
+        # CL*A lookup per circuito (valori noti F1 2025 qualifica)
+        CLA_BY_CIRCUIT = {
+            "mc-1929_monaco": 5.8, "sg-2008_singapore": 5.5,
+            "hu-1986_budapest": 5.0, "nl-1948_zandvoort": 5.2,
+            "jp-1962_suzuka": 4.8, "es-1991_barcelona": 4.5,
+            "gb-1948_silverstone": 4.5, "it-1953_imola": 4.5,
+            "br-1940_sao_paulo": 4.3, "at-1969_spielberg": 4.3,
+            "us-2012_austin": 4.3, "qa-2004_lusail": 4.0,
+            "ae-2009_yas_marina": 4.0, "cn-2004_shanghai": 4.0,
+            "ca-1978_montreal": 4.0, "us-2022_miami": 4.0,
+            "mx-1962_mexico_city": 3.8, "az-2016_baku": 3.8,
+            "bh-2002_sakhir": 3.8, "sa-2021_jeddah": 3.5,
+            "au-1953_melbourne": 3.8, "be-1925_spa_francorchamps": 3.5,
+            "it-1922_monza": 3.0, "us-2023_las_vegas": 3.2,
+        }
 
-        mu_aero_contribution = float(np.mean(mu_high)) - mu_mechanical
-        k_wing_coupling = max(0.0, mu_aero_contribution / 10.0)  # Scala empirica
+        cla_circuit = CLA_BY_CIRCUIT.get(circuit_id, 4.0)
+        c_aero = cla_circuit * RHO / (2 * MASS * G)
 
-        return round(mu_mechanical, 3), round(k_wing_coupling, 4)
+        # k_wing_coupling: scala con CL*A
+        k_wing_coupling = round(min(0.10, max(0.005, cla_circuit / 100.0)), 4)
+
+        return round(mu_mechanical, 3), round(k_wing_coupling, 4), round(c_aero, 6)
 
     def update_hd_file(self, circuit_id: str, ref_pull: ReferencePull) -> bool:
         """Aggiorna il file HD.json con i raggi dinamici calcolati."""

@@ -2,12 +2,17 @@
   "circuit_id": "gb-1948_silverstone",
   "source": "TracingInsights-Archive/2025",
   "grip_data": {
-    "mu_mechanical": 1.65,
-    "mu_aero_contribution": 0.0
+    "mu_mechanical": 1.55,
+    "mu_aero_contribution": 1.698,
+    "c_aero": 0.000352,
+    "compound": "C3",
+    "cla_estimated": 4.5,
+    "low_speed_points": 413,
+    "high_speed_points": 350
   },
   "floor_data": {
-    "k_wing_coupling": 0.0801,
-    "cla_floor_dynamic": 0.801,
+    "k_wing_coupling": 0.045,
+    "cla_floor_dynamic": 1.698,
     "mu_by_speed": {
       "slow": 2.4052388052418343,
       "medium": 2.4476959394213016,

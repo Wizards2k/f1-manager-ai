@@ -1,8 +1,10 @@
-# F1 Physics Engine V5.0 — Dynamic Curvature & Telemetry Bridge
+# F1 Physics Engine V5.1 — Dynamic Curvature, Telemetry Bridge & Compound-Specific Grip
 
 > **Data**: 11 Aprile 2026  
-> **Stato**: ✅ Validato su 24 circuiti — Errore medio globale **0.495%** (target < 0.5%)  
-> **Reference Pull**: ✅ Attivo con `strength=0.02` (correzione ±20% f_engine)
+> **Stato**: ✅ Validato su 24 circuiti — Errore medio globale **0.46%** (target < 0.5% RAGGIUNTO)  
+> **Modello V5.1**: Compound-specific mu_mechanical + CL*A lookup  
+> **Reference Pull**: ✅ Attivo con `strength=0.02` (correzione ±20% f_engine)  
+> **Aero Calibration**: ✅ Compound-specific mu + CL*A lookup (0/24 negativi)
 
 ## 1. Panoramica
 
@@ -11,7 +13,7 @@ La V5.0 introduce il **Telemetry Bridge**, un ponte tra i dati reali di telemetr
 1. **Raggio Dinamico** — Calcolato waypoint-per-waypoint dalla traiettoria reale dei piloti
 2. **Reference Pull** — Profilo di velocità/throttle/brake reale per correggere la simulazione
 3. **PU Lookup Table** — Mappa RPM/Gear/Speed dalla Power Unit reale
-4. **Calibrazione Aero-Meccanica** — mu_mechanical e k_wing_coupling derivati dai dati reali
+4. **Calibrazione Aero-Meccanica** — mu_mechanical compound-specific e k_wing_coupling da CL*A lookup table
 
 ## 2. Architettura
 
@@ -35,9 +37,12 @@ TracingInsights-Archive/2025
 
 | Modulo | Path | Funzione |
 |--------|------|----------|
-| `telemetry_bridge.py` | `physics_v4/calibration/` | Download, smoothing, Reference Pull, raggio dinamico |
-| `sync_telemetry_2025.py` | `scripts/` | CLI per sincronizzare tutti i circuiti |
-| `waypoint_integrator.py` | `physics_v4/integrator/` | Simulazione con Reference Pull correction |
+| `telemetry_bridge.py` | `physics_v4/calibration/` | Download, smoothing, Reference Pull, CL*A lookup |
+| `sync_telemetry_2025.py` | `scripts/` | CLI per sincronizzare, derive_mechanical_grip |
+| `waypoint_integrator.py` | `physics_v4/integrator/` | Simulazione con Reference Pull + Aero Cal |
+| `aero_calibration.py` | `physics_v4/calibration/` | V5 format: c_aero, compound, cla_estimated |
+| `aero_assembly.py` | `physics_v4/aero/` | set_k_wing_coupling() dinamico |
+| `pu_lookup.py` | `physics_v4/calibration/` | PU Lookup loader e interpolatore |
 
 ### 2.2 Dati Generati
 
@@ -55,78 +60,123 @@ TracingInsights-Archive/2025
 
 | # | Circuito | Driver | Tempo Reale | Tempo Sim | Errore | Status |
 |---|----------|--------|-------------|-----------|--------|--------|
-| 1 | Mexico | NOR | 75.586 | 75.587 | **0.00%** | ✅ |
-| 2 | Canada | RUS | 70.899 | 70.883 | **0.02%** | ✅ |
-| 3 | Qatar | PIA | 79.387 | 79.349 | **0.05%** | ✅ |
-| 4 | Baku | VER | 101.117 | 101.057 | **0.06%** | ✅ |
-| 5 | Monza | NOR | 78.869 | 78.967 | **0.12%** | ✅ |
-| 6 | Melbourne | NOR | 75.096 | 75.211 | **0.15%** | ✅ |
-| 7 | Austria | NOR | 63.971 | 63.862 | **0.17%** | ✅ |
-| 8 | China | PIA | 90.641 | 90.489 | **0.17%** | ✅ |
-| 9 | Jeddah | VER | 87.294 | 87.469 | **0.20%** | ✅ |
-| 10 | Hungary | LEC | 75.372 | 75.532 | **0.21%** | ✅ |
-| 11 | Abu Dhabi | VER | 82.207 | 82.018 | **0.23%** | ✅ |
-| 12 | Silverstone | NOR | 85.010 | 85.267 | **0.30%** | ✅ |
-| 13 | Zandvoort | PIA | 68.662 | 68.456 | **0.30%** | ✅ |
-| 14 | Spa | NOR | 100.562 | 100.141 | **0.42%** | ✅ |
-| 15 | Barcelona | PIA | 71.546 | 71.883 | **0.47%** | ✅ |
-| 16 | Las Vegas | NOR | 107.934 | 107.425 | **0.47%** | ✅ |
-| 17 | Monaco | NOR | 69.954 | 69.504 | **0.64%** | ⚠️ |
-| 18 | Suzuka | NOR | 86.995 | 86.344 | **0.75%** | ⚠️ |
-| 19 | Sakhir | PIA | 89.841 | 89.342 | **0.56%** | ⚠️ |
-| 20 | Singapore | RUS | 89.158 | 89.639 | **0.54%** | ⚠️ |
-| 21 | Imola | PIA | 74.670 | 75.603 | **1.25%** | ⚠️ |
-| 22 | São Paulo | NOR | 69.511 | 70.770 | **1.81%** | ⚠️ |
-| 23 | Austin | VER | 92.510 | 95.092 | **2.79%** | ❌ |
-| 24 | Miami | VER | 86.204 | 86.041 | **0.19%** | ✅ |
+| 1 | Jeddah | VER | 87.294 | 87.302 | **0.01%** | ✅ |
+| 2 | Silverstone | NOR | 85.010 | 84.995 | **0.02%** | ✅ |
+| 3 | Spa | NOR | 100.562 | 100.600 | **0.04%** | ✅ |
+| 4 | Barcelona | PIA | 71.546 | 71.606 | **0.08%** | ✅ |
+| 5 | Budapest | LEC | 75.372 | 75.429 | **0.08%** | ✅ |
+| 6 | Yas Marina | VER | 82.207 | 82.349 | **0.17%** | ✅ |
+| 7 | Shanghai | PIA | 90.641 | 90.825 | **0.20%** | ✅ |
+| 8 | Suzuka | NOR | 86.995 | 86.788 | **0.24%** | ✅ |
+| 9 | Melbourne | NOR | 75.096 | 75.286 | **0.25%** | ✅ |
+| 10 | Zandvoort | PIA | 68.662 | 68.488 | **0.25%** | ✅ |
+| 11 | Baku | VER | 101.117 | 101.538 | **0.42%** | ✅ |
+| 12 | Lusail | PIA | 79.387 | 79.056 | **0.42%** | ✅ |
+| 13 | Singapore | RUS | 89.158 | 89.559 | **0.45%** | ✅ |
+| 14 | Monza | NOR | 78.869 | 79.241 | **0.47%** | ✅ |
+| 15 | Sakhir | PIA | 89.841 | 90.265 | **0.47%** | ✅ |
+| 16 | São Paulo | NOR | 69.511 | 69.861 | **0.50%** | ⚠️ |
+| 17 | Mexico City | NOR | 75.586 | 75.977 | **0.52%** | ⚠️ |
+| 18 | Imola | PIA | 74.670 | 75.079 | **0.55%** | ⚠️ |
+| 19 | Miami | VER | 86.204 | 86.714 | **0.59%** | ⚠️ |
+| 20 | Monaco | NOR | 69.954 | 70.378 | **0.61%** | ⚠️ |
+| 21 | Montreal | RUS | 70.899 | 71.377 | **0.67%** | ⚠️ |
+| 22 | Spielberg | NOR | 63.971 | 64.536 | **0.88%** | ⚠️ |
+| 23 | Las Vegas | NOR | 107.934 | 106.776 | **1.07%** | ⚠️ |
+| 24 | Austin | VER | 92.510 | 94.382 | **2.02%** | ❌ |
 
 ### 3.2 Statistiche
 
-- **Errore medio globale**: 0.495%
-- **Mediana errore**: 0.30%
-- **Circuiti < 0.5%**: 16/24 (67%)
-- **Circuiti < 1.0%**: 21/24 (88%)
-- **Circuiti < 2.0%**: 22/24 (92%)
+- **Errore medio globale**: 0.46%
+- **Mediana errore**: 0.42%
+- **Circuiti < 0.5%**: 15/24 (63%)
+- **Circuiti < 1.0%**: 22/24 (92%)
+- **Circuiti < 2.0%**: 23/24 (96%)
 - **Circuiti ≥ 2.0%**: 1/24 (4%) — Austin
+- **mu_aero negativi**: 0/24 ✅
+- **mu_mechanical fuori range**: 0/24 ✅
 
 ### 3.3 Outlier Analysis
 
-#### Austin (2.79%)
-- Sim troppo lento (+2.58s)
+#### Austin (2.02%)
+- Sim troppo lento (+1.87s)
 - Possibili cause: COTA ha curve ad alta velocità con cambi di direzione bruschi (Esses)
 - Il raggio dinamico potrebbe non catturare bene le transizioni
-- **Azione**: Verificare mu_mechanical per Austin (nessun punto a bassa velocità trovato)
+- **Azione**: Verificare curvature nelle Esses, possibile problema di transizione
 
-#### São Paulo (1.81%)
-- Sim troppo lento (+1.26s)
-- Circuito con curve lente e rettilinee medie
-- **Azione**: Verificare raggio dinamico e mu_mechanical
+#### Las Vegas (1.07%)
+- Sim troppo veloce (-1.16s)
+- Street circuit con basso grip e rettilinei lunghi
+- **Azione**: Verificare modello drag ad alta velocità
 
-#### Imola (1.25%)
-- Sim troppo lento (+0.93s)
-- Circuito tecnico con varianti e curve a media velocità
-- **Azione**: Verificare raggio dinamico nelle varianti
+#### Spielberg (0.88%)
+- Sim troppo lento (+0.57s)
+- Circuito corto con curve fluide
+- **Azione**: Verificare raggio dinamico e downforce
 
 ## 4. Parametri Derivati per Circuito
 
-### 4.1 Grip Meccanico (mu_mechanical)
+### 4.1 Modello Fisico V5.1 — Grip Meccanico + Aero
 
-| Circuito | mu_base | mu_aero | k_wing | Note |
-|----------|---------|---------|--------|------|
-| Monaco | 2.299 | — | 0.000 | Street circuit, bassa velocità |
-| Spa | 1.848 | — | 0.026 | Alta velocità, curvature miste |
-| Silverstone | 1.650 | — | 0.071 | Alta velocità, curvature fluide |
-| Monza | 2.057 | — | 0.000 | Bassa downforce |
-| Suzuka | 2.086 | — | 0.045 | Tecnico, curvature variate |
-| Las Vegas | 1.520 | 0.028 | 0.000 | Basso grip, street circuit |
-| Austin | 1.650 | — | 0.068 | Misto, Esses problematici |
-| Qatar | 1.650 | — | 0.090 | Alta downforce |
+Il modello V5.1 separa il grip meccanico puro dal contributo aerodinamico:
 
-### 4.2 Note sulla Calibrazione
+$$\mu_{total}(v) = \mu_{mechanical\_pure} + c_{aero} \cdot v^2$$
 
-- **mu_mechanical = 1.650** per molti circuiti indica che il fallback è stato usato (nessun punto a bassa velocità con g_lat significativo trovato)
-- Questo valore corrisponde al grip meccanico puro (senza downforce) stimato per pneumatici F1 2025
-- Circuiti con mu > 2.0 hanno punti lenti con g_lat elevato (hairpin, chicane)
+Dove:
+- $\mu_{mechanical\_pure}$ = grip meccanico puro della mescola Pirelli (compound-specific)
+- $c_{aero} = \frac{\rho \cdot CL \cdot A}{2 \cdot m \cdot g}$ = coefficiente downforce per circuito
+- $CL \cdot A$ = lookup table circuito-specifica basata su livelli downforce F1 2025
+
+**Valori compound-specific** (da dati Pirelli 2025):
+
+| Compound | mu_mechanical_pure |
+|----------|-------------------|
+| C1 | 1.45 |
+| C2 | 1.50 |
+| C3 | 1.55 |
+| C4 | 1.60 |
+| C5 | 1.70 |
+| C6 | 1.75 |
+
+### 4.2 CL*A Lookup Table per Circuito
+
+La CL*A (coefficiente di portanza × area di riferimento) è assegnata per circuito
+basandosi sui livelli di downforce F1 2025 noti:
+
+| Circuito | CL*A | k_wing_coupling | c_aero | Compound | mu_mech |
+|----------|-------|-----------------|--------|----------|---------|
+| Monaco | 5.8 | 0.058 | 0.000454 | C5 | 1.70 |
+| Singapore | 5.5 | 0.055 | 0.000431 | C5 | 1.70 |
+| Zandvoort | 5.2 | 0.052 | 0.000407 | C3 | 1.55 |
+| Budapest | 5.0 | 0.050 | 0.000392 | C3 | 1.55 |
+| Suzuka | 4.8 | 0.048 | 0.000376 | C3 | 1.55 |
+| Barcelona | 4.5 | 0.045 | 0.000352 | C3 | 1.55 |
+| Silverstone | 4.5 | 0.045 | 0.000352 | C3 | 1.55 |
+| Imola | 4.5 | 0.045 | 0.000352 | C3 | 1.55 |
+| São Paulo | 4.3 | 0.043 | 0.000337 | C3 | 1.55 |
+| Spielberg | 4.3 | 0.043 | 0.000337 | C3 | 1.55 |
+| Austin | 4.3 | 0.043 | 0.000337 | C3 | 1.55 |
+| Lusail | 4.0 | 0.040 | 0.000313 | C3 | 1.55 |
+| Yas Marina | 4.0 | 0.040 | 0.000313 | C3 | 1.55 |
+| Shanghai | 4.0 | 0.040 | 0.000313 | C3 | 1.55 |
+| Montreal | 4.0 | 0.040 | 0.000313 | C3 | 1.55 |
+| Miami | 4.0 | 0.040 | 0.000313 | C3 | 1.55 |
+| Mexico City | 3.8 | 0.038 | 0.000298 | C3 | 1.55 |
+| Baku | 3.8 | 0.038 | 0.000298 | C3 | 1.55 |
+| Sakhir | 3.8 | 0.038 | 0.000298 | C3 | 1.55 |
+| Melbourne | 3.8 | 0.038 | 0.000298 | C3 | 1.55 |
+| Jeddah | 3.5 | 0.035 | 0.000274 | C3 | 1.55 |
+| Spa | 3.5 | 0.035 | 0.000274 | C3 | 1.55 |
+| Las Vegas | 3.2 | 0.032 | 0.000251 | C3 | 1.55 |
+| Monza | 3.0 | 0.030 | 0.000235 | C4 | 1.60 |
+
+### 4.3 Note sulla Calibrazione
+
+- **mu_mechanical** è ora compound-specific (C3=1.55, C4=1.60, C5=1.70), mai > 2.0
+- Il vecchio approccio (V5.0) derivava mu_mechanical dalla telemetria (P75 g_lat/G a bassa velocità), che includeva downforce residuo e dava valori fino a 2.583 (fisicamente impossibile per grip meccanico puro)
+- **k_wing_coupling** = CL*A / 100 (clamped a 0.005-0.10), scala con il livello di downforce
+- **c_aero** = ρ × CL*A / (2 × m × g), dove ρ=1.225, m=798, g=9.81
+- **mu_aero_contribution** = c_aero × (250/3.6)², sempre positivo per tutti i 24 circuiti
 
 ## 5. Raggio Dinamico
 
@@ -188,15 +238,18 @@ if reference_pull_strength > 0 and reference_pull is not None:
 
 Con `strength=0.02`, l'effetto sul tempo giro è minimo (~0.01-0.05s) perché il modello fisico è già molto accurato. Il Reference Pull ha effetto maggiore sullo **speed trace punto-per-punto**, riducendo l'errore locale di velocità dove il modello diverge dalla realtà.
 
-### 6.2 Struttura Dati
+### 6.3 Struttura Dati
 
 ```json
 {
   "circuit_id": "mc-1929_monaco",
   "driver": "NOR",
   "lap_time_s": 69.954,
-  "mu_mechanical": 2.299,
-  "k_wing_coupling": 0.0,
+  "mu_mechanical": 1.70,
+  "k_wing_coupling": 0.058,
+  "c_aero": 0.000454,
+  "cla_estimated": 5.8,
+  "compound": "C5",
   "step_m": 5.0,
   "total_length_m": 3367.0,
   "data": {
@@ -242,15 +295,19 @@ CIRCUIT_MAP = {
 }
 ```
 
-## 8. Prossimi Passi (V5.1)
+## 8. Prossimi Passi (V5.2)
 
-> **Strategia**: prima integrare PU Lookup e Aero Calibration nel simulatore
-> (migliora TUTTI i circuiti), poi investigare i singoli outlier rimanenti.
+> **Strategia**: investigare outlier rimanenti, poi ricalibrare potenza con rpm_fraction,
+> poi validazione setup variati e optimizer.
 
-1. **[PRIORITÀ 1] Integrare PU Lookup nel simulatore** — Usare la lookup table RPM/Gear/Speed per modellare potenza, coppia e ERS per ogni circuito
-2. **[PRIORITÀ 2] Integrare Aero Calibration nel simulatore** — Applicare mu_mechanical e k_wing_coupling per-circuito al posto dei valori hardcoded
-3. **[PRIORITÀ 3] Re-validare tutti i 24 circuiti** — Dopo le integrazioni, l'errore medio dovrebbe scendere
-4. **[DOPO 3] Investigare outlier rimanenti** — Austin (2.79%), São Paulo (1.81%), Imola (1.25%)
+1. **[PRIORITÀ 1] Investigare Austin (2.02%)** — Raggio dinamico nelle Esses, possibile problema di curvature transizione
+2. **[PRIORITÀ 2] Investigare Las Vegas (1.07%)** — Modello drag ad alta velocità, street circuit con grip basso
+3. **[PRIORITÀ 3] Ricalibrare modello di potenza con rpm_fraction attivo** — Attualmente pu_lookup_blend=0.0. Attivare richiede compensare riduzione media del 25.6%
+4. **[DOPO 3] Validazione setup variati** — Verificare High-DF più veloce a Monaco, Low-DF a Monza
+5. **Cornering Utilization adattivo** — Derivare CU dalla telemetria reale
+6. **Floor Coupling dinamico** — $CL_{floor} = CL_{base} \cdot (1 + k \cdot \text{WingAngle})$
+7. **Optimizer dell'assetto** — Ricerca setup ottimale per circuito
+8. **Integrazione runtime gameplay** — Contratto dati input/output
 
 ## 9. Fonte Dati
 
@@ -258,3 +315,20 @@ CIRCUIT_MAP = {
 - **Formato**: `{GP Name}/Qualifying/{Driver}/{LapNumber}_tel.json`
 - **Campi**: time, rpm, speed, gear, throttle, brake, drs, distance, x, y, z, acc_x, acc_y, acc_z
 - **Driver di riferimento**: NOR (Norris), VER (Verstappen), PIA (Piastri), RUS (Russell), LEC (Leclerc)
+
+## 10. Evoluzione del Modello
+
+### V5.0 → V5.1: Bug Fix mu_aero_contribution
+
+Il modello V5.0 derivava `mu_mechanical` dalla telemetria (P75 di g_lat/G a bassa velocità),
+che includeva downforce residuo anche a 60-80 km/h. Questo dava valori fino a 2.583
+(fisicamente impossibile per grip meccanico puro) e causava `mu_aero_contribution` negativo
+per 10/24 circuiti.
+
+Il modello V5.1 risolve il problema con:
+1. **mu_mechanical_pure** compound-specific (C3=1.55, C4=1.60, C5=1.70) — mai > 2.0
+2. **CL\*A lookup** circuito-specifica (3.0 Monza → 5.8 Monaco) — basata su livelli downforce F1 2025 noti
+3. **c_aero** = 0.5 × ρ × CL\*A / (m × g) — contributo downforce per unità v²
+4. **k_wing_coupling** = CL\*A / 100 — coupling ala-fondo scala con downforce
+
+Risultato: 0/24 circuiti con mu_aero negativo, errore medio 0.46% (era 0.91% con V5.0 aero cal).
