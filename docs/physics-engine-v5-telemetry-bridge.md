@@ -244,11 +244,13 @@ CIRCUIT_MAP = {
 
 ## 8. Prossimi Passi (V5.1)
 
-1. **Investigare Austin (2.79%)** — Verificare raggio dinamico nelle Esses e mu_mechanical
-2. **Investigare São Paulo (1.81%)** — Verificare raggio dinamico e mu_mechanical
-3. **Investigare Imola (1.25%)** — Verificare raggio dinamico nelle varianti
-4. **Integrare PU Lookup** — La lookup table RPM/Gear non è ancora usata nel simulatore
-5. **Integrare Aero Calibration** — mu_mechanical e k_wing_coupling non sono ancora applicati nel simulatore
+> **Strategia**: prima integrare PU Lookup e Aero Calibration nel simulatore
+> (migliora TUTTI i circuiti), poi investigare i singoli outlier rimanenti.
+
+1. **[PRIORITÀ 1] Integrare PU Lookup nel simulatore** — Usare la lookup table RPM/Gear/Speed per modellare potenza, coppia e ERS per ogni circuito
+2. **[PRIORITÀ 2] Integrare Aero Calibration nel simulatore** — Applicare mu_mechanical e k_wing_coupling per-circuito al posto dei valori hardcoded
+3. **[PRIORITÀ 3] Re-validare tutti i 24 circuiti** — Dopo le integrazioni, l'errore medio dovrebbe scendere
+4. **[DOPO 3] Investigare outlier rimanenti** — Austin (2.79%), São Paulo (1.81%), Imola (1.25%)
 
 ## 9. Fonte Dati
 

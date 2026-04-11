@@ -126,8 +126,35 @@ Riferimenti:
 - [x] Reference Pull da telemetria reale → Implementato (correzione ±20% f_engine, strength=0.02).
 - [x] PU Lookup Table da telemetria reale → Generata per 24 circuiti.
 - [x] Aero Calibration da telemetria reale → Generata per 24 circuiti.
-- [ ] Integrare PU Lookup nel simulatore (non ancora usata).
-- [ ] Integrare Aero Calibration nel simulatore (mu_mechanical, k_wing_coupling non ancora applicati).
+
+### Prossimi passi — Priorità ordinate
+
+> **Strategia**: prima integrare PU Lookup e Aero Calibration nel simulatore
+> (migliora TUTTI i circuiti), poi investigare i singoli outlier rimanenti.
+
+1. **[PRIORITÀ 1] Integrare PU Lookup nel simulatore**
+   - La lookup table RPM/Gear/Speed dalla Power Unit reale non è ancora usata.
+   - Attualmente il modello PU usa curve generiche; la lookup permette di usare
+     i dati reali per modellare potenza, coppia e ERS per ogni circuito.
+   - File: `data/circuits/pu_lookup/*_pu_lookup.json` (24 circuiti)
+   - Modulo: `waypoint_integrator.py` → usare `pu_lookup` per modellare f_engine
+
+2. **[PRIORITÀ 2] Integrare Aero Calibration nel simulatore**
+   - `mu_mechanical` e `k_wing_coupling` sono calcolati per ogni circuito ma non applicati.
+   - Attualmente `mu_base` è hardcoded a 1.65 per la maggior parte dei circuiti.
+   - Applicare `mu_mechanical` reale migliora il grip nelle curve lente.
+   - Applicare `k_wing_coupling` migliora il downforce speed-dependent.
+   - File: `data/circuits/aero_calibration/*_aero_cal.json` (24 circuiti)
+   - Modulo: `waypoint_integrator.py` → usare `aero_calibration` per mu e downforce
+
+3. **[PRIORITÀ 3] Re-validare tutti i 24 circuiti dopo integrazioni**
+   - Dopo PU Lookup + Aero Calibration, l'errore medio dovrebbe scendere
+   - Rieseguire `validate_v5.py --circuit all` e aggiornare la tabella
+
+4. **[DOPO 3] Investigare outlier rimanenti**
+   - Austin (2.79%) — Sim troppo lento, Esses problematici
+   - São Paulo (1.81%) — Sim troppo lento
+   - Imola (1.25%) — Sim troppo lento nelle varianti
 
 ## 3. Optimizer dell'assetto
 
@@ -177,10 +204,12 @@ Riferimenti:
 - [x] ❌ Austin (2.79%)
 - [x] ✅ Miami (0.19%)
 
-### Outlier da investigare
+### Outlier da investigare (dopo integrazioni PU Lookup + Aero Calibration)
 - [ ] Austin (2.79%) — Sim troppo lento, Esses problematici, mu_mechanical fallback
 - [ ] São Paulo (1.81%) — Sim troppo lento, verificare raggio dinamico e mu_mechanical
 - [ ] Imola (1.25%) — Sim troppo lento, verificare raggio dinamico nelle varianti
+- [ ] Monaco (0.64%) — Verificare se PU Lookup migliora
+- [ ] Suzuka (0.75%) — Verificare se Aero Calibration migliora
 
 ### Test minimi
 - [x] Il giro si completa senza errori.
