@@ -148,8 +148,9 @@ CIRCUIT_CONFIGS: Dict[str, Dict] = {
     },
 
     # ── SUZUKA ─────────────────────────────────────────────────────────────
-    # Circuito bilanciato: S-Curves veloci, hairpin lento, rettilinei medi.
-    # Richiede downforce medio-alto per le S-Curves ma non troppo per i rettilinei.
+    # Circuito ALTO DOWNFORCE (4/5): S-Curves veloci, 130R, hairpin lento.
+    # Il rettilineo principale (~800m) non è abbastanza lungo per premiare il basso carico.
+    # Setup ottimale: FW=28-36°, RW=32-40° (alto carico, come in F1 reale).
     # Compounds: Hard=C1  Medium=C2  Soft=C3
     # 7 preset: da iper carico (Monaco-style) a iper scarico (Monza-style)
     "suzuka": {

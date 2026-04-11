@@ -95,8 +95,11 @@ class FloorFront:
         # Clamp CL
         cl = np.clip(cl, self.CL_MIN, self.CL_MAX)
         
-        # Drag da ground effect (significativo nella F1 reale)
-        cd = self.CD_BASE + 0.02 * (cl ** 2)
+        # FIX V4.16: Drag da ground effect con coupling
+        # Più carico (wing_coupling alto) → più downforce MA anche più drag
+        # Il ground effect non è "gratis": flusso più energico = più resistenza
+        # K_floor = 0.08 (era 0.02) per L/D floor ~2.5-3.0 (reale F1)
+        cd = self.CD_BASE + 0.08 * (cl ** 2)
         
         # Forze
         q = 0.5 * rho * (v ** 2)

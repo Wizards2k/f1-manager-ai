@@ -124,6 +124,8 @@ class AeroAssembly:
         # Più angolo ala → flusso più energico → più ground effect
         self.floor_front.set_wing_coupling(fw_aoa, rw_aoa)
         self.floor_rear.set_wing_coupling(fw_aoa, rw_aoa)
+        # FIX V4.16b: Propaga angoli ali ai sidepods per il coupling
+        self.sidepods.set_wing_coupling(fw_aoa, rw_aoa)
     
     def set_drs(self, active: bool):
         """Attiva/disattiva DRS."""
@@ -134,6 +136,7 @@ class AeroAssembly:
         """Imposta altezza da suolo."""
         self.floor_front.set_ride_height(front)
         self.floor_rear.set_ride_height(rear)
+        self.sidepods.set_ride_height(front)  # FIX V4.16b: sidepods usano altezza anteriore
     
     def compute_forces(
         self,
@@ -167,7 +170,7 @@ class AeroAssembly:
         forces['rear_wing'] = self.rear_wing.calculate_forces(air_density, speed_ms)
         forces['floor_front'] = self.floor_front.calculate_forces(air_density, speed_ms, ride_height_front)
         forces['floor_rear'] = self.floor_rear.calculate_forces(air_density, speed_ms, ride_height_rear)
-        forces['sidepods'] = self.sidepods.calculate_forces(air_density, speed_ms)
+        forces['sidepods'] = self.sidepods.calculate_forces(air_density, speed_ms, ride_height_front)
         forces['engine_cover'] = self.engine_cover.calculate_forces(air_density, speed_ms)
         forces['bwing'] = self.bwing.calculate_forces(air_density, speed_ms)
         

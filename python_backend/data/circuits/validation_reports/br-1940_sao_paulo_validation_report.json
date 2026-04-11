@@ -1,0 +1,29 @@
+{
+  "circuit_id": "br-1940_sao_paulo",
+  "circuit_key": "saopaulo",
+  "gp_name": "São Paulo Grand Prix",
+  "reference_driver": "NOR",
+  "real_lap_time_s": 69.511,
+  "sim_pre_lap_time_s": 70.07923189456751,
+  "sim_pre_error_pct": 0.82,
+  "sim_post_lap_time_s": 70.07923189456751,
+  "sim_post_error_pct": 0.82,
+  "improvement_pct": 0.0,
+  "radius_updated": true,
+  "grip_data": {
+    "mu_mechanical": 1.65,
+    "mu_aero_contribution": 0.0
+  },
+  "floor_data": {
+    "k_wing_coupling": 0.1038,
+    "cla_floor_dynamic": 1.038,
+    "mu_by_speed": {
+      "slow": 1.9594539487887501,
+      "medium": 2.135934704712677,
+      "fast": 2.6877275057627026,
+      "very_fast": 0.8191675778172011
+    }
+  },
+  "pu_lookup_entries": 41,
+  "radius_points_count": 846
+}

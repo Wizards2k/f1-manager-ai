@@ -1,0 +1,20 @@
+{
+  "circuit_id": "at-1969_spielberg",
+  "source": "TracingInsights-Archive/2025",
+  "grip_data": {
+    "mu_mechanical": 2.004,
+    "mu_aero_contribution": -0.063,
+    "low_speed_points": 8,
+    "high_speed_points": 281
+  },
+  "floor_data": {
+    "k_wing_coupling": 0.019,
+    "cla_floor_dynamic": 0.19,
+    "mu_by_speed": {
+      "slow": 1.6995634903341956,
+      "medium": 1.7358054459802401,
+      "fast": 2.1944598235622923,
+      "very_fast": 0.9736708392611649
+    }
+  }
+}

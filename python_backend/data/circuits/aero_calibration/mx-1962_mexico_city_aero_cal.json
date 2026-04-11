@@ -1,0 +1,20 @@
+{
+  "circuit_id": "mx-1962_mexico_city",
+  "source": "TracingInsights-Archive/2025",
+  "grip_data": {
+    "mu_mechanical": 2.086,
+    "mu_aero_contribution": -0.505,
+    "low_speed_points": 20,
+    "high_speed_points": 192
+  },
+  "floor_data": {
+    "k_wing_coupling": 0.0,
+    "cla_floor_dynamic": 0.0,
+    "mu_by_speed": {
+      "slow": 1.70465982038367,
+      "medium": 1.8562665620085717,
+      "fast": 1.524704421516976,
+      "very_fast": 0.29283204235781396
+    }
+  }
+}

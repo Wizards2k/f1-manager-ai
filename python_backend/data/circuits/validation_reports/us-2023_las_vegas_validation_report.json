@@ -1,0 +1,31 @@
+{
+  "circuit_id": "us-2023_las_vegas",
+  "circuit_key": "lasvegas",
+  "gp_name": "Las Vegas Grand Prix",
+  "reference_driver": "NOR",
+  "real_lap_time_s": 107.934,
+  "sim_pre_lap_time_s": 106.18175931539918,
+  "sim_pre_error_pct": 1.62,
+  "sim_post_lap_time_s": 106.18175931539918,
+  "sim_post_error_pct": 1.62,
+  "improvement_pct": 0.0,
+  "radius_updated": true,
+  "grip_data": {
+    "mu_mechanical": 1.544,
+    "mu_aero_contribution": 0.028,
+    "low_speed_points": 40,
+    "high_speed_points": 236
+  },
+  "floor_data": {
+    "k_wing_coupling": 0.0,
+    "cla_floor_dynamic": 0.0,
+    "mu_by_speed": {
+      "slow": 1.2323580137197925,
+      "medium": 1.2017973051408002,
+      "fast": 1.100461411977993,
+      "very_fast": 1.1116069648519151
+    }
+  },
+  "pu_lookup_entries": 37,
+  "radius_points_count": 1231
+}

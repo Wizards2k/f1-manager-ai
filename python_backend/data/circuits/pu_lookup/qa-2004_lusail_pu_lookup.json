@@ -1,0 +1,348 @@
+{
+  "circuit_id": "qa-2004_lusail",
+  "source": "TracingInsights-Archive/2025",
+  "description": "Power Unit lookup table from real telemetry data",
+  "entries": [
+    {
+      "speed_kph": 151.5,
+      "rpm": 11293.0,
+      "gear": 3,
+      "throttle_pct": 99.1,
+      "f_engine_estimated": 19321.4
+    },
+    {
+      "speed_kph": 167.6,
+      "rpm": 10665.0,
+      "gear": 3,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 16105.3
+    },
+    {
+      "speed_kph": 176.7,
+      "rpm": 11168.0,
+      "gear": 4,
+      "throttle_pct": 97.8,
+      "f_engine_estimated": 16075.7
+    },
+    {
+      "speed_kph": 183.5,
+      "rpm": 11391.0,
+      "gear": 4,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 16310.2
+    },
+    {
+      "speed_kph": 187.2,
+      "rpm": 11569.0,
+      "gear": 4,
+      "throttle_pct": 98.9,
+      "f_engine_estimated": 16202.4
+    },
+    {
+      "speed_kph": 193.6,
+      "rpm": 11190.0,
+      "gear": 4,
+      "throttle_pct": 99.9,
+      "f_engine_estimated": 15037.8
+    },
+    {
+      "speed_kph": 197.4,
+      "rpm": 11278.0,
+      "gear": 4,
+      "throttle_pct": 98.9,
+      "f_engine_estimated": 14772.1
+    },
+    {
+      "speed_kph": 202.7,
+      "rpm": 10589.0,
+      "gear": 4,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 13167.2
+    },
+    {
+      "speed_kph": 201.1,
+      "rpm": 10767.0,
+      "gear": 5,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 13625.7
+    },
+    {
+      "speed_kph": 206.4,
+      "rpm": 10997.0,
+      "gear": 5,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 13728.3
+    },
+    {
+      "speed_kph": 212.5,
+      "rpm": 11266.0,
+      "gear": 5,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 13850.0
+    },
+    {
+      "speed_kph": 215.3,
+      "rpm": 11388.0,
+      "gear": 5,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 13899.6
+    },
+    {
+      "speed_kph": 220.3,
+      "rpm": 11449.0,
+      "gear": 5,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 13691.2
+    },
+    {
+      "speed_kph": 226.5,
+      "rpm": 10935.0,
+      "gear": 5,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 12391.8
+    },
+    {
+      "speed_kph": 229.1,
+      "rpm": 10546.0,
+      "gear": 5,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 11574.2
+    },
+    {
+      "speed_kph": 236.3,
+      "rpm": 10837.0,
+      "gear": 5,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 11720.0
+    },
+    {
+      "speed_kph": 228.3,
+      "rpm": 10461.0,
+      "gear": 6,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 11460.6
+    },
+    {
+      "speed_kph": 234.3,
+      "rpm": 10698.0,
+      "gear": 6,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 11578.4
+    },
+    {
+      "speed_kph": 239.8,
+      "rpm": 11002.0,
+      "gear": 6,
+      "throttle_pct": 99.5,
+      "f_engine_estimated": 11771.7
+    },
+    {
+      "speed_kph": 243.5,
+      "rpm": 11151.0,
+      "gear": 6,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 11892.7
+    },
+    {
+      "speed_kph": 249.8,
+      "rpm": 11420.0,
+      "gear": 6,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 12029.1
+    },
+    {
+      "speed_kph": 254.1,
+      "rpm": 11550.0,
+      "gear": 6,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 12035.8
+    },
+    {
+      "speed_kph": 259.8,
+      "rpm": 11152.0,
+      "gear": 6,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 11147.4
+    },
+    {
+      "speed_kph": 263.9,
+      "rpm": 10619.0,
+      "gear": 6,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 10158.3
+    },
+    {
+      "speed_kph": 263.5,
+      "rpm": 10618.0,
+      "gear": 7,
+      "throttle_pct": 99.7,
+      "f_engine_estimated": 10141.7
+    },
+    {
+      "speed_kph": 268.3,
+      "rpm": 10732.0,
+      "gear": 7,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 10161.3
+    },
+    {
+      "speed_kph": 273.1,
+      "rpm": 10943.0,
+      "gear": 7,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 10296.0
+    },
+    {
+      "speed_kph": 278.9,
+      "rpm": 11164.0,
+      "gear": 7,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 10402.5
+    },
+    {
+      "speed_kph": 283.0,
+      "rpm": 11346.0,
+      "gear": 7,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 10513.9
+    },
+    {
+      "speed_kph": 288.2,
+      "rpm": 11516.0,
+      "gear": 7,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 10563.4
+    },
+    {
+      "speed_kph": 292.8,
+      "rpm": 11652.0,
+      "gear": 7,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 10583.8
+    },
+    {
+      "speed_kph": 296.0,
+      "rpm": 11842.0,
+      "gear": 7,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 10730.1
+    },
+    {
+      "speed_kph": 295.4,
+      "rpm": 10397.0,
+      "gear": 8,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 8771.3
+    },
+    {
+      "speed_kph": 299.9,
+      "rpm": 10557.0,
+      "gear": 8,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 8854.4
+    },
+    {
+      "speed_kph": 305.4,
+      "rpm": 10774.0,
+      "gear": 8,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 8982.3
+    },
+    {
+      "speed_kph": 309.8,
+      "rpm": 10924.0,
+      "gear": 8,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 9049.8
+    },
+    {
+      "speed_kph": 316.9,
+      "rpm": 11134.0,
+      "gear": 8,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 9117.3
+    },
+    {
+      "speed_kph": 321.8,
+      "rpm": 11311.0,
+      "gear": 8,
+      "throttle_pct": 99.7,
+      "f_engine_estimated": 9177.3
+    },
+    {
+      "speed_kph": 325.6,
+      "rpm": 11448.0,
+      "gear": 8,
+      "throttle_pct": 100.0,
+      "f_engine_estimated": 9263.7
+    }
+  ],
+  "gear_summary": {
+    "3": {
+      "speed_range_kph": [
+        151.5,
+        167.6
+      ],
+      "rpm_range": [
+        10665.0,
+        11293.0
+      ],
+      "avg_throttle_pct": 99.5
+    },
+    "4": {
+      "speed_range_kph": [
+        176.7,
+        202.7
+      ],
+      "rpm_range": [
+        10589.0,
+        11569.0
+      ],
+      "avg_throttle_pct": 99.2
+    },
+    "5": {
+      "speed_range_kph": [
+        201.1,
+        236.3
+      ],
+      "rpm_range": [
+        10546.0,
+        11449.0
+      ],
+      "avg_throttle_pct": 100.0
+    },
+    "6": {
+      "speed_range_kph": [
+        228.3,
+        263.9
+      ],
+      "rpm_range": [
+        10461.0,
+        11550.0
+      ],
+      "avg_throttle_pct": 99.9
+    },
+    "7": {
+      "speed_range_kph": [
+        263.5,
+        296.0
+      ],
+      "rpm_range": [
+        10618.0,
+        11842.0
+      ],
+      "avg_throttle_pct": 100.0
+    },
+    "8": {
+      "speed_range_kph": [
+        295.4,
+        325.6
+      ],
+      "rpm_range": [
+        10397.0,
+        11448.0
+      ],
+      "avg_throttle_pct": 100.0
+    }
+  }
+}

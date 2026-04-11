@@ -1,0 +1,20 @@
+{
+  "circuit_id": "jp-1962_suzuka",
+  "source": "TracingInsights-Archive/2025",
+  "grip_data": {
+    "mu_mechanical": 2.174,
+    "mu_aero_contribution": 0.356,
+    "low_speed_points": 8,
+    "high_speed_points": 445
+  },
+  "floor_data": {
+    "k_wing_coupling": 0.0424,
+    "cla_floor_dynamic": 0.424,
+    "mu_by_speed": {
+      "slow": 1.9012311398622763,
+      "medium": 2.3848888869278015,
+      "fast": 2.5982782744476185,
+      "very_fast": 1.9628207859402034
+    }
+  }
+}

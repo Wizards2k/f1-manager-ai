@@ -49,6 +49,7 @@ from core.constants import (
 from aero.aero_assembly import AeroAssembly, AeroForces
 from calibration.aero_calibration import get_aero_calibration
 from calibration.circuit_calibration import get_circuit_calibration
+from calibration.telemetry_bridge import TelemetryBridge
 
 
 @dataclass
@@ -324,6 +325,8 @@ def integrate_waypoint(
     waypoint_idx: int = 0,         # Indice del waypoint corrente
     suspension_effects: Optional[Dict[str, float]] = None,  # Effetti sospensioni pre-calcolati
     ers_power_fraction: float = 1.0,  # Frazione ERS disponibile (0.0=solo ICE, 1.0=full ERS)
+    reference_pull: Optional[Dict] = None,  # V5.0: Reference Pull data
+    reference_pull_strength: float = 0.0,  # V5.0: Reference Pull correction strength
 ) -> PhysicsState:
     """
     Integra fisica per un singolo waypoint.
@@ -451,6 +454,67 @@ def integrate_waypoint(
     state.is_throttle = throttle_pct > 0
     
     # ============================================================
+    # V5.0: REFERENCE PULL - Correzione forza motrice da telemetria reale
+    # ============================================================
+    # Se la velocità simulata diverge da quella reale (TracingInsights),
+    # applichiamo una correzione di coppia per riallineare la traccia.
+    # Questo non sostituisce la fisica, ma corregge errori sistematici
+    # nel modello PU (mappa RPM/coppia, clipping ERS, ecc.).
+    #
+    # reference_pull_strength: 0.0 = disabilitato, 1.0 = full correction
+    # Tipico: 0.15-0.30 per correzione sottile senza dominare la fisica
+    if reference_pull_strength > 0.0 and reference_pull is not None:
+        ref_data = reference_pull.get("data", {})
+        ref_dist = ref_data.get("dist_m", [])
+        ref_speed = ref_data.get("speed_kph", [])
+        if ref_dist and ref_speed and len(ref_dist) > 0:
+            # Interpola velocità reale alla distanza corrente
+            current_dist = state.distance_m
+            ref_dist_arr = ref_dist
+            ref_speed_arr = ref_speed
+            # Trova indice più vicino
+            idx = 0
+            for i in range(len(ref_dist_arr) - 1):
+                if ref_dist_arr[i + 1] >= current_dist:
+                    idx = i
+                    break
+            else:
+                idx = len(ref_dist_arr) - 2
+            
+            # Interpolazione lineare
+            if idx < len(ref_dist_arr) - 1:
+                d0 = ref_dist_arr[idx]
+                d1 = ref_dist_arr[idx + 1]
+                if d1 > d0:
+                    t = (current_dist - d0) / (d1 - d0)
+                    t = max(0.0, min(1.0, t))
+                    v_ref_kph_real = ref_speed_arr[idx] * (1 - t) + ref_speed_arr[idx + 1] * t
+                else:
+                    v_ref_kph_real = ref_speed_arr[idx]
+            else:
+                v_ref_kph_real = ref_speed_arr[idx]
+            
+            v_ref_ms_real = v_ref_kph_real / 3.6
+            v_sim_ms = state.velocity_ms
+            
+            # Correzione proporzionale alla differenza di velocità
+            # Se la simulazione è più lenta del reale → aumenta forza motrice
+            # Se la simulazione è più veloce → riduci forza motrice
+            v_error = v_ref_ms_real - v_sim_ms  # Positivo = sim troppo lento
+            
+            # La correzione è proporzionale all'errore e alla massa
+            # F_correction = strength * m * (v_error / v_ref) * g
+            # Questo dà una correzione graduale che non domina la fisica
+            if abs(v_ref_ms_real) > 1.0:
+                f_correction = (reference_pull_strength * mass_kg * v_error 
+                                / max(v_ref_ms_real, 10.0) * G * 0.1)
+                # Limita la correzione a ±20% della forza motrice
+                max_correction = abs(f_engine) * 0.20
+                f_correction = max(-max_correction, min(max_correction, f_correction))
+                f_engine += f_correction
+                state.f_engine = f_engine
+    
+    # ============================================================
     # 2. FORZA DRAG - Aerodinamica + Rolling + Steering
     # ============================================================
     state.f_drag = aero_forces.f_drag
@@ -499,6 +563,20 @@ def integrate_waypoint(
     # Grip base dal compound (senza penalità empiriche)
     mu_base_val = mu_base.get(tyre_compound, 1.65)
     
+    # V5.0: Se abbiamo il Reference Pull con mu_mechanical derivato dalla
+    # telemetria reale, usiamo quello come baseline per il grip meccanico.
+    # NOTA: Il mu_mechanical derivato dalla telemetria include downforce
+    # anche a basse velocità, quindi va usato con cautela. Lo applichiamo
+    # solo se il valore è ragionevole (< 2.0, che è grip meccanico puro).
+    # Valori > 2.0 indicano che il downforce è già incluso.
+    if reference_pull is not None:
+        ref_mu_mechanical = reference_pull.get("mu_mechanical", 0.0)
+        if 1.5 < ref_mu_mechanical < 2.0:
+            # Il mu_mechanical reale è il grip a bassa velocità (senza downforce).
+            # Lo usiamo come baseline, scalato per il compound.
+            compound_scale = mu_base_val / mu_base.get(tyre_compound, 1.65)
+            mu_base_val = ref_mu_mechanical * compound_scale
+    
     # Applica track_grip_factor da telemetry_mu (ora è fisso per circuito)
     track_grip_factor = waypoint.get('telemetry_mu', 1.0)
     if track_grip_factor is not None and track_grip_factor > 0:
@@ -533,7 +611,16 @@ def integrate_waypoint(
     # Formula laterale: grip_lat = mu_base * Fz * (1.0 - K * Fz)
     # Formula longitudinale: grip_long = mu_base * Fz * (1.0 - 0.5*K * Fz)
     # Questo aiuta sec_11 (Monaco) a scaricare potenza meglio in uscita curva
-    load_sensitivity_k = 0.00008  # Calibrato per F1 2025 (grip laterale)
+    #
+    # FIX V4.16: Aumentato K da 0.00008 a 0.010 per rendere il downforce
+    # meno sempre-conveniente e creare la curva a campana a Suzuka.
+    # Con K=0.00008 il grip decade solo dello 0.1% tra setup basso e alto.
+    # Con K=0.010 il grip decade del ~7% tra setup basso e alto.
+    # In F1 reale, il grip specifico decade ~15-20% quando il carico raddoppia.
+    # K=0.010 produce un decadimento del ~20% a carico doppio, realistico.
+    # Questo fa sì che il downforce extra sia meno efficace ad alto carico,
+    # creando un optimum intermedio (campana) sui circuiti bilanciati.
+    load_sensitivity_k = 0.010  # FIX V4.16: era 0.00008, poi 0.003, poi 0.006
     
     # Load factor per grip laterale (curva) - full sensitivity
     lat_load_factor = 1.0 - (load_sensitivity_k * f_vertical_kn)
@@ -852,6 +939,10 @@ def integrate_lap_hd(
     sector_boundaries: Optional[List[float]] = None,
     # ERS mode: frazione di potenza ERS disponibile (0.0=solo ICE, 1.0=full quali)
     ers_power_fraction: float = 1.0,
+    # V5.0: Reference Pull strength (0.0=disabilitato, 1.0=full correction)
+    # Quando >0, la forza motrice viene corretta per allineare la velocità
+    # simulata alla traccia reale di TracingInsights.
+    reference_pull_strength: float = 0.0,
 ) -> Dict[str, Any]:
     """
     Simula giro completo su circuito HD.
@@ -885,6 +976,14 @@ def integrate_lap_hd(
     
     waypoints = load_hd_waypoints(circuit_id)
     reference_sections = _load_reference_sections(circuit_id)
+    
+    # V5.0: Carica Reference Pull da telemetria reale TracingInsights
+    # Se disponibile, fornisce velocità/throttle/brake reali per correggere
+    # la forza motrice quando la simulazione diverge dalla traccia reale.
+    reference_pull = TelemetryBridge.load_reference_pull(circuit_id)
+    if reference_pull and verbose:
+        print(f"  📡 Reference Pull caricato: {reference_pull.get('driver', '?')} "
+              f"{reference_pull.get('lap_time_s', 0):.3f}s")
     
     if not waypoints:
         raise ValueError(f"Nessun waypoint trovato per {circuit_id}")
@@ -1024,6 +1123,8 @@ def integrate_lap_hd(
             waypoint_idx=i,
             suspension_effects=susp_effects,
             ers_power_fraction=ers_power_fraction,
+            reference_pull=reference_pull,
+            reference_pull_strength=reference_pull_strength,
         )
         
         # Aggiorna statistiche

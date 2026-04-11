@@ -1,0 +1,20 @@
+{
+  "circuit_id": "it-1922_monza",
+  "source": "TracingInsights-Archive/2025",
+  "grip_data": {
+    "mu_mechanical": 2.244,
+    "mu_aero_contribution": -0.362,
+    "low_speed_points": 8,
+    "high_speed_points": 308
+  },
+  "floor_data": {
+    "k_wing_coupling": 0.0,
+    "cla_floor_dynamic": 0.0,
+    "mu_by_speed": {
+      "slow": 1.4542231453466774,
+      "medium": 1.4660523832285417,
+      "fast": 2.1682796095041215,
+      "very_fast": 0.9155365612594857
+    }
+  }
+}

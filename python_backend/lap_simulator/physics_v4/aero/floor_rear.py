@@ -92,8 +92,11 @@ class FloorRear:
         # Clamp CL
         cl = np.clip(cl, self.CL_MIN, self.CL_MAX)
         
-        # Drag da diffusore (significativo nella F1 reale)
-        cd = self.CD_BASE + 0.03 * (cl ** 2)
+        # FIX V4.16: Drag da diffusore con coupling
+        # Più carico (wing_coupling alto) → più downforce MA anche più drag
+        # Il diffusore non è "gratis": estrazione più forte = più resistenza
+        # K_floor = 0.10 (era 0.03) per L/D diffusore ~2.5-3.0 (reale F1)
+        cd = self.CD_BASE + 0.10 * (cl ** 2)
         
         # Forze
         q = 0.5 * rho * (v ** 2)

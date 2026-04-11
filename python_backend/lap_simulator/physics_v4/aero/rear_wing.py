@@ -57,12 +57,14 @@ class RearWing:
         
         # Parametri aerodinamici base (senza DRS)
         # FIX V4.14: cl_alpha abbassato per range operativo fino a ~42°
-        # K_FACTOR ridotto per L/D realistico (multi-element F1)
+        # FIX V4.16: K_FACTOR aumentato da 0.090 a 0.220 per L/D realistico.
+        # La rear wing ha aspect ratio più basso del front wing → più drag indotto
+        # per unità di downforce. K rear > K front è fisicamente corretto.
         # Range operativo utile: 8-42° (Monza ~8-12°, Monaco ~35-42°)
         self.CL_MAX = 2.50        # Portanza massima (stallo) - multi-element F1
         self.CL_MIN = -0.80       # Portanza negativa
         self.CD_MIN = 0.035       # Drag minimo (profili ottimizzati)
-        self.K_FACTOR = 0.090     # Induced drag: CDA range realistico (Monza→Monaco ~40%)
+        self.K_FACTOR = 0.220     # Induced drag: CDA range realistico (Monza→Monaco ~80%)
         
         # Parametri DRS
         self.DRS_CL_BOOST = 0.50  # Incremento portanza con DRS

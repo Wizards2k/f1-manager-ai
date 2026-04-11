@@ -1,0 +1,18 @@
+{
+  "circuit_id": "au-1953_melbourne",
+  "source": "TracingInsights-Archive/2025",
+  "grip_data": {
+    "mu_mechanical": 1.65,
+    "mu_aero_contribution": 0.0
+  },
+  "floor_data": {
+    "k_wing_coupling": 0.0837,
+    "cla_floor_dynamic": 0.837,
+    "mu_by_speed": {
+      "slow": 2.6115933529548596,
+      "medium": 2.4232446474787115,
+      "fast": 2.4872217725600922,
+      "very_fast": 1.4006033965752474
+    }
+  }
+}
