@@ -42,7 +42,10 @@ class FloorRear:
         self.A_REF_COMMON = 1.60  # m²
         
         # Parametri aerodinamici
-        self.CL_MAX = 1.80        # Portanza da ground effect
+        # FIX V5.2: CL_MAX aumentato da 1.80 a 2.50 per permettere al diffusore
+        # di generare la maggior parte del downforce (target F1 reale: 60-65% floor).
+        # Il diffusore è il componente aero più importante di una F1.
+        self.CL_MAX = 2.50        # Portanza da ground effect (era 1.80, poi 3.00)
         self.CL_MIN = 0.50        # Minimo ground effect
         self.CL_ALPHA = 12.0      # Sensibilità altezza
         self.CD_BASE = 0.15       # Drag base diffusore (reale F1)
@@ -92,11 +95,12 @@ class FloorRear:
         # Clamp CL
         cl = np.clip(cl, self.CL_MIN, self.CL_MAX)
         
-        # FIX V4.16: Drag da diffusore con coupling
+        # FIX V5.2: Drag da diffusore con coupling
         # Più carico (wing_coupling alto) → più downforce MA anche più drag
         # Il diffusore non è "gratis": estrazione più forte = più resistenza
-        # K_floor = 0.10 (era 0.03) per L/D diffusore ~2.5-3.0 (reale F1)
-        cd = self.CD_BASE + 0.10 * (cl ** 2)
+        # K_floor = 0.18 (era 0.10) per L/D diffusore ~3.0-3.5 (reale F1)
+        # Compromesso: abbastanza drag per setup variati, non troppo per Monza
+        cd = self.CD_BASE + 0.18 * (cl ** 2)
         
         # Forze
         q = 0.5 * rho * (v ** 2)
@@ -115,25 +119,27 @@ class FloorRear:
     
     def set_wing_coupling(self, front_wing_aoa: float, rear_wing_aoa: float):
         """
-        FIX V4.15: Imposta il coupling ala-floor.
+        FIX V5.2: Coupling ala-diffusore dinamico.
         
         In F1 reale, le ali condizionano il flusso al diffusore:
         più angolo ala → flusso più energico sotto l'auto → più ground effect.
         
+        Il diffusore genera la maggior parte del downforce e scala
+        significativamente con l'angolo dell'ala.
+        Range coupling: 0.70 (ala minima) a 1.40 (ala massima).
+        
         Il rear wing ha un effetto maggiore sul diffusore (beam wing + estrazione),
         il front wing ha un effetto minore (flusso indiretto).
-        
-        Range: 0.85 (ala minima ~5°) a 1.15 (ala massima ~40°)
         """
         # Rear wing coupling: effetto diretto sul diffusore (beam wing + estrazione)
-        # Formula: coupling = 0.85 + 0.30 * (rw_aoa / 42.0)
-        # rw=10° → 0.92, rw=22° → 1.01, rw=42° → 1.15
-        rw_coupling = 0.85 + 0.30 * min(rear_wing_aoa / 42.0, 1.0)
+        # Range: 0.70 (rw=0°) a 1.40 (rw=42°)
+        # rw=14° → 0.87, rw=22° → 1.01, rw=32° → 1.17
+        rw_coupling = 0.70 + 0.70 * min(rear_wing_aoa / 42.0, 1.0)
         
         # Front wing coupling: effetto indiretto sul diffusore (più debole)
-        # Formula: coupling = 0.90 + 0.15 * (fw_aoa / 40.0)
-        # fw=5° → 0.92, fw=20° → 0.98, fw=38° → 1.04
-        fw_coupling = 0.90 + 0.15 * min(front_wing_aoa / 40.0, 1.0)
+        # Range: 0.80 (fw=0°) a 1.20 (fw=40°)
+        # fw=12° → 0.91, fw=20° → 1.05, fw=28° → 1.19
+        fw_coupling = 0.80 + 0.40 * min(front_wing_aoa / 40.0, 1.0)
         
         # Il diffusore è più influenzato dal rear wing (estrazione diretta)
         self.wing_coupling = 0.3 * fw_coupling + 0.7 * rw_coupling

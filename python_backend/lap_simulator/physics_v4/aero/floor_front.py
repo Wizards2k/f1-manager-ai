@@ -41,7 +41,10 @@ class FloorFront:
         self.A_REF_COMMON = 1.60  # m²
         
         # Parametri aerodinamici
-        self.CL_MAX = 1.20        # Portanza da ground effect
+        # FIX V5.2: CL_MAX aumentato da 1.20 a 1.70 per permettere al fondo
+        # di generare ~60-65% del downforce totale (target F1 reale).
+        # Il fondo F1 genera la maggior parte del downforce tramite ground effect.
+        self.CL_MAX = 1.70        # Portanza da ground effect (era 1.20, poi 2.00)
         self.CL_MIN = 0.30        # Minimo ground effect
         self.CL_ALPHA = 8.0       # Sensibilità altezza (CL per m)
         self.CD_BASE = 0.12       # Drag base ground effect (reale F1)
@@ -95,11 +98,12 @@ class FloorFront:
         # Clamp CL
         cl = np.clip(cl, self.CL_MIN, self.CL_MAX)
         
-        # FIX V4.16: Drag da ground effect con coupling
+        # FIX V5.2: Drag da ground effect con coupling
         # Più carico (wing_coupling alto) → più downforce MA anche più drag
         # Il ground effect non è "gratis": flusso più energico = più resistenza
-        # K_floor = 0.08 (era 0.02) per L/D floor ~2.5-3.0 (reale F1)
-        cd = self.CD_BASE + 0.08 * (cl ** 2)
+        # K_floor = 0.14 (era 0.08) per L/D floor ~3.0-3.5 (reale F1)
+        # Compromesso: abbastanza drag per setup variati, non troppo per Monza
+        cd = self.CD_BASE + 0.14 * (cl ** 2)
         
         # Forze
         q = 0.5 * rho * (v ** 2)
@@ -118,25 +122,26 @@ class FloorFront:
     
     def set_wing_coupling(self, front_wing_aoa: float, rear_wing_aoa: float):
         """
-        FIX V4.15: Imposta il coupling ala-floor.
+        FIX V5.2: Coupling ala-floor dinamico.
         
         In F1 reale, le ali condizionano il flusso al diffusore:
         più angolo ala → flusso più energico sotto l'auto → più ground effect.
         
+        Il fondo genera 60-65% del downforce totale e scala significativamente
+        con l'angolo dell'ala. Range coupling: 0.70 (ala minima) a 1.40 (ala massima).
+        
         Il front wing ha un effetto maggiore sul floor anteriore (flusso diretto),
         il rear wing ha un effetto minore (flusso indiretto tramite beam wing).
-        
-        Range: 0.85 (ala minima ~5°) a 1.15 (ala massima ~40°)
         """
         # Front wing coupling: effetto diretto sul floor anteriore
-        # Formula: coupling = 0.85 + 0.30 * (fw_aoa / 40.0)
-        # fw=5° → 0.89, fw=20° → 1.00, fw=38° → 1.14
-        fw_coupling = 0.85 + 0.30 * min(front_wing_aoa / 40.0, 1.0)
+        # Range: 0.70 (fw=0°) a 1.40 (fw=40°)
+        # fw=12° → 0.91, fw=20° → 1.05, fw=28° → 1.19
+        fw_coupling = 0.70 + 0.70 * min(front_wing_aoa / 40.0, 1.0)
         
         # Rear wing coupling: effetto indiretto (più debole)
-        # Formula: coupling = 0.90 + 0.15 * (rw_aoa / 42.0)
-        # rw=10° → 0.94, rw=22° → 0.99, rw=42° → 1.05
-        rw_coupling = 0.90 + 0.15 * min(rear_wing_aoa / 42.0, 1.0)
+        # Range: 0.80 (rw=0°) a 1.20 (rw=42°)
+        # rw=14° → 0.87, rw=22° → 0.95, rw=32° → 1.05
+        rw_coupling = 0.80 + 0.40 * min(rear_wing_aoa / 42.0, 1.0)
         
         # Il floor anteriore è più influenzato dal front wing
         self.wing_coupling = 0.7 * fw_coupling + 0.3 * rw_coupling

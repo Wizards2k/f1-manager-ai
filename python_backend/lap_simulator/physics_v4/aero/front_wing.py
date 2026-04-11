@@ -56,17 +56,14 @@ class FrontWing:
         # Parametri aerodinamici base (senza DRS)
         # FIX V4.14: cl_alpha abbassato per avere range operativo fino a ~40°
         # senza saturazione prematura.
-        # FIX V4.16: K_FACTOR aumentato da 0.060 a 0.150 per L/D realistico.
-        # Con K=0.060 il CDA variava solo del 28% (Monza→Monaco) mentre il CLA
-        # variava del 91%. Il drag indotto era troppo basso, rendendo il downforce
-        # sempre conveniente anche su circuiti veloci. In F1 reale il L/D varia
-        # da ~4.0 (Monza) a ~2.8 (Monaco). K=0.150 produce un range CDA
-        # Monza→Monaco di ~80%, più realistico.
-        # Range operativo utile: 5-40° (Monza ~8°, Monaco ~35-40°)
         self.CL_MAX = 2.50        # Portanza massima (stallo) - multi-element F1
         self.CL_MIN = -0.50       # Portanza negativa (inverted wing)
         self.CD_MIN = 0.025       # Drag minimo (profili ottimizzati)
-        self.K_FACTOR = 0.150     # Induced drag: CDA range realistico (Monza→Monaco ~80%)
+        # FIX V5.2: K_FACTOR aumentato da 0.150 a 0.200 per rendere il drag
+        # più sensibile all'angolo dell'ala. Questo assicura che setup High-DF
+        # paghino un drag penalty significativo sui rettilinei, rendendo Low-DF
+        # più veloce a Monza e Spa. L/D range: ~4.5 (Low-DF) a ~3.0 (High-DF).
+        self.K_FACTOR = 0.200     # Induced drag: CDA range realistico (Monza→Monaco ~100%)
         
         # Parametri DRS
         self.DRS_CL_BOOST = 0.35  # Incremento portanza con DRS
@@ -99,8 +96,11 @@ class FrontWing:
         aoa = np.clip(aoa, 0, 45)
 
         # Calcola CL (lineare fino a stallo)
-        # FIX V4.14: cl_alpha=0.055/° → range utile 5-40° senza saturazione
-        cl_alpha = 0.055  # Pendenza CL vs aoa (per grado) - F1 multi-element
+        # FIX V5.2: cl_alpha ridotto da 0.055 a 0.042 per spostare il bilanciamento
+        # del downforce verso il fondo (target: 60-65% floor, 35-40% wings).
+        # Le ali F1 generano meno downforce per grado rispetto al modello precedente,
+        # ma il floor compensa con coupling dinamico più forte.
+        cl_alpha = 0.042  # Pendenza CL vs aoa (per grado) - F1 multi-element (era 0.055, poi 0.040)
         cl_base = cl_alpha * aoa
         
         # Ground effect (se altezza < ottimale)

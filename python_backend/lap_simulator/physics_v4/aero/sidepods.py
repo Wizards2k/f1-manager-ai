@@ -53,14 +53,12 @@ class Sidepods:
         self.A_REF_COMMON = 1.60  # m²
         
         # Parametri aerodinamici
-        # FIX V4.16b: Sidepods con ground effect realistico.
+        # FIX V5.2: Sidepods con ground effect realistico e coupling dinamico.
         # In F1 reale i sidepods producono downforce significativo tramite
-        # canali Venturi laterali (L/D ~3-4). Il modello precedente aveva
-        # CL_VENTURI=0.30 * venturi_effect=0.03 = CL_eff=0.009, quasi zero.
-        # Nuovo modello: CL dipende da altezza da suolo (come il floor),
-        # con wing coupling per sensibilità all'angolo dell'ala.
+        # canali Venturi laterali (L/D ~3-4). Il downforce scala con l'angolo
+        # dell'ala perché più carico = flusso più energico ai Venturi.
         # Target: ~5-8% del downforce totale, ~8-12% del drag totale, L/D ~3.5
-        self.CL_MAX = 0.45        # Portanza massima da ground effect laterale
+        self.CL_MAX = 0.60        # Portanza massima da ground effect laterale (era 0.45, poi 0.70)
         self.CL_MIN = 0.10        # Portanza minima (sempre positivo, forma)
         self.CD_BASE = 0.08       # Drag base (forma)
         self.CD_COOLING = 0.04    # Drag aggiuntivo da cooling (aperture)
@@ -129,16 +127,21 @@ class Sidepods:
     
     def set_wing_coupling(self, front_wing_aoa: float, rear_wing_aoa: float):
         """
-        FIX V4.16b: Imposta il coupling ala-sidepods.
+        FIX V5.2: Coupling ala-sidepods dinamico.
         
-        Le ali condizionano il flusso ai sidepods:
+        Le ali condizionano il flusso ai canali Venturi laterali:
         più angolo ala → flusso più energico → più ground effect laterale.
-        Range: 0.90 (ala minima ~5°) a 1.10 (ala massima ~40°)
+        Range coupling: 0.70 (ala minima) a 1.40 (ala massima).
+        Il front wing ha effetto maggiore sui sidepods (flusso diretto).
         """
-        # Front wing ha effetto diretto sul flusso ai sidepods
-        fw_coupling = 0.90 + 0.20 * min(front_wing_aoa / 40.0, 1.0)
-        # Rear wing ha effetto indiretto (estrazione)
-        rw_coupling = 0.95 + 0.10 * min(rear_wing_aoa / 42.0, 1.0)
+        # Front wing coupling: effetto diretto sui sidepods
+        # Range: 0.70 (fw=0°) a 1.40 (fw=40°)
+        # fw=12° → 0.91, fw=20° → 1.05, fw=28° → 1.19
+        fw_coupling = 0.70 + 0.70 * min(front_wing_aoa / 40.0, 1.0)
+        # Rear wing coupling: effetto indiretto (più debole)
+        # Range: 0.80 (rw=0°) a 1.20 (rw=42°)
+        # rw=14° → 0.87, rw=22° → 0.95, rw=32° → 1.05
+        rw_coupling = 0.80 + 0.40 * min(rear_wing_aoa / 42.0, 1.0)
         
         # I sidepods sono più influenzati dal front wing (flusso diretto)
         self.wing_coupling = 0.6 * fw_coupling + 0.4 * rw_coupling
