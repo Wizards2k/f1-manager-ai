@@ -2,23 +2,23 @@
   "circuit_id": "it-1953_imola",
   "circuit_name": "Imola",
   "real_lap_time_s": 74.67,
-  "sim_lap_time_s": 75.06123986079228,
-  "error_pct": 0.52,
+  "sim_lap_time_s": 75.02603968530731,
+  "error_pct": 0.48,
   "setups": {
     "Low DF": {
-      "lap_time_s": 75.16177113449301,
+      "lap_time_s": 75.12302639141247,
       "v_max_kph": 329.41055629440854,
-      "v_min_kph": 102.80485529926892
+      "v_min_kph": 102.83383037424272
     },
     "Neutral": {
-      "lap_time_s": 75.06123986079228,
+      "lap_time_s": 75.02603968530731,
       "v_max_kph": 328.7302333263182,
-      "v_min_kph": 103.5500429658136
+      "v_min_kph": 103.58223329758061
     },
     "High DF": {
-      "lap_time_s": 75.02876740545514,
+      "lap_time_s": 74.99087990800744,
       "v_max_kph": 313.10289339171936,
-      "v_min_kph": 99.85323351916165
+      "v_min_kph": 99.89378085004729
     }
   },
   "reference_pull": {

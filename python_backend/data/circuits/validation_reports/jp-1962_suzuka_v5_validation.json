@@ -2,23 +2,23 @@
   "circuit_id": "jp-1962_suzuka",
   "circuit_name": "Suzuka",
   "real_lap_time_s": 86.995,
-  "sim_lap_time_s": 86.7259928400882,
-  "error_pct": 0.31,
+  "sim_lap_time_s": 86.70265946379068,
+  "error_pct": 0.34,
   "setups": {
     "Low DF": {
-      "lap_time_s": 86.74510562000026,
+      "lap_time_s": 86.72555976276213,
       "v_max_kph": 330.2673176618349,
-      "v_min_kph": 77.76418543439303
+      "v_min_kph": 77.80947482445772
     },
     "Neutral": {
-      "lap_time_s": 86.7259928400882,
+      "lap_time_s": 86.70265946379068,
       "v_max_kph": 330.05460206738053,
-      "v_min_kph": 74.13337601293858
+      "v_min_kph": 79.20497827468976
     },
     "High DF": {
-      "lap_time_s": 86.71895011407871,
+      "lap_time_s": 86.68438842675765,
       "v_max_kph": 317.7571243175426,
-      "v_min_kph": 80.07778972976395
+      "v_min_kph": 80.1414596600607
     }
   },
   "reference_pull": {

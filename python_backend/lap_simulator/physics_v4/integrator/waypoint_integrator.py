@@ -93,6 +93,15 @@ def load_hd_waypoints(circuit_id: str) -> List[Dict]:
     
     Returns:
       Lista di waypoints con: dist_m, v_ref_kph, radius_m, slope_deg, etc.
+    
+    FIX V5.1: Deduplicate boundary waypoints. The HD data contains duplicate
+    entries at section boundaries (same dist_m, different macro_sector_id).
+    The boundary waypoint from the incoming section often carries the apex
+    minimum radius (e.g. 40.6m) instead of the actual radius at that track
+    position (e.g. ~1260m at corner entry). This causes catastrophic speed
+    drops when the integrator uses the apex radius at a point where the car
+    is still on the straight. We keep the waypoint with the LARGER radius,
+    which corresponds to the outgoing/entry side of the boundary.
     """
     from pathlib import Path
     import json
@@ -106,7 +115,41 @@ def load_hd_waypoints(circuit_id: str) -> List[Dict]:
     with open(hd_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
-    return data.get("waypoints", [])
+    raw_waypoints = data.get("waypoints", [])
+    
+    # FIX V5.2: Handle duplicate waypoints at section boundaries.
+    # At section boundaries, two waypoints exist at the same dist_m:
+    #   - One from the outgoing section (e.g. large radius at corner exit)
+    #   - One from the incoming section (e.g. small radius at corner entry)
+    #
+    # V5.1 kept the larger radius, but this CANCELLED apex waypoints at corners
+    # where the boundary coincides with the apex (8 cases in Austin alone).
+    # V5.2-merge kept the smaller radius, but this caused the opposite problem:
+    # applying apex radius at corner entry where the car is still going fast.
+    #
+    # V5.2-offset: Keep BOTH waypoints with a tiny distance offset (0.01m).
+    # This preserves the full track profile: the outgoing section's last point
+    # AND the incoming section's first point. The integrator processes both,
+    # correctly transitioning from one section to the next.
+    # The offset is negligible (0.01m << 5m step size) but ensures the
+    # integrator doesn't skip the second waypoint.
+    if len(raw_waypoints) > 1:
+        deduped = [raw_waypoints[0]]
+        for wp in raw_waypoints[1:]:
+            prev_dist = deduped[-1].get('dist_m', -999)
+            wp_dist = wp.get('dist_m', -998)
+            if abs(wp_dist - prev_dist) < 0.01:
+                # Duplicate distance: keep BOTH waypoints with tiny offset
+                # The outgoing waypoint (prev) stays at its distance.
+                # The incoming waypoint (wp) gets a tiny offset forward.
+                wp_copy = dict(wp)
+                wp_copy['dist_m'] = prev_dist + 0.01  # Tiny offset
+                deduped.append(wp_copy)
+            else:
+                deduped.append(wp)
+        raw_waypoints = deduped
+    
+    return raw_waypoints
 
 
 def _load_reference_sections(circuit_id: str) -> Dict[str, Dict[str, Any]]:
@@ -386,7 +429,12 @@ def integrate_waypoint(
     # Distanza tra waypoint (tipicamente 5m)
     dist_step = next_waypoint['dist_m'] - waypoint['dist_m']
     if dist_step <= 0:
-        dist_step = 0.1
+        # FIX V5.1: Duplicate waypoint at same distance (section boundary artifact).
+        # Instead of forcing a tiny 0.1m step with potentially wrong radius,
+        # skip this step entirely by returning the state unchanged.
+        # The deduplication in load_hd_waypoints() should prevent this, but
+        # this is a safety net for any remaining edge cases.
+        return state
     
     # Estrai dati waypoint: usiamo il waypoint successivo come guida del micro-step,
     # così l'integrazione segue il profilo telemetrico già osservato nel runtime legacy.

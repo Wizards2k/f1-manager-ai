@@ -2,23 +2,23 @@
   "circuit_id": "us-2012_austin",
   "circuit_name": "Austin",
   "real_lap_time_s": 92.51,
-  "sim_lap_time_s": 93.9772200678412,
-  "error_pct": 1.59,
+  "sim_lap_time_s": 93.94540683526637,
+  "error_pct": 1.55,
   "setups": {
     "Low DF": {
-      "lap_time_s": 94.45891443577663,
-      "v_max_kph": 330.0764545956958,
-      "v_min_kph": 81.17131295839276
+      "lap_time_s": 94.40065203009844,
+      "v_max_kph": 330.0751334868505,
+      "v_min_kph": 81.20676065433723
     },
     "Neutral": {
-      "lap_time_s": 93.9772200678412,
-      "v_max_kph": 328.5993106018667,
-      "v_min_kph": 78.71002400733383
+      "lap_time_s": 93.94540683526637,
+      "v_max_kph": 328.59815108230146,
+      "v_min_kph": 78.93347291756456
     },
     "High DF": {
-      "lap_time_s": 93.91829992103473,
-      "v_max_kph": 313.6237230980352,
-      "v_min_kph": 80.12239374066885
+      "lap_time_s": 93.87449354495398,
+      "v_max_kph": 313.6231614461977,
+      "v_min_kph": 80.34468442783258
     }
   },
   "reference_pull": {

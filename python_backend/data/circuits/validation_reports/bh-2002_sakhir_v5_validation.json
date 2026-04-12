@@ -2,23 +2,23 @@
   "circuit_id": "bh-2002_sakhir",
   "circuit_name": "Sakhir",
   "real_lap_time_s": 89.841,
-  "sim_lap_time_s": 89.91977505505457,
-  "error_pct": 0.09,
+  "sim_lap_time_s": 89.89410322687583,
+  "error_pct": 0.06,
   "setups": {
     "Low DF": {
-      "lap_time_s": 90.34705053053862,
+      "lap_time_s": 90.30070567504504,
       "v_max_kph": 321.25956229646124,
-      "v_min_kph": 64.42541390789438
+      "v_min_kph": 64.70971906116087
     },
     "Neutral": {
-      "lap_time_s": 89.91977505505457,
+      "lap_time_s": 89.89410322687583,
       "v_max_kph": 321.3946452455382,
-      "v_min_kph": 63.7080392799233
+      "v_min_kph": 63.89024561488276
     },
     "High DF": {
-      "lap_time_s": 89.91948221257226,
+      "lap_time_s": 89.85997845494794,
       "v_max_kph": 311.60400866001225,
-      "v_min_kph": 63.79665818068397
+      "v_min_kph": 64.0660522256724
     }
   },
   "reference_pull": {

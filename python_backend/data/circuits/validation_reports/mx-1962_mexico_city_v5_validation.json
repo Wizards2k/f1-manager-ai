@@ -2,23 +2,23 @@
   "circuit_id": "mx-1962_mexico_city",
   "circuit_name": "Mexico City",
   "real_lap_time_s": 75.586,
-  "sim_lap_time_s": 76.00411008397562,
-  "error_pct": 0.55,
+  "sim_lap_time_s": 75.94341644123968,
+  "error_pct": 0.47,
   "setups": {
     "Low DF": {
-      "lap_time_s": 75.95183256681699,
+      "lap_time_s": 75.90320447003455,
       "v_max_kph": 356.02761132213067,
-      "v_min_kph": 69.59696565213122
+      "v_min_kph": 69.79196015042183
     },
     "Neutral": {
-      "lap_time_s": 76.00411008397562,
+      "lap_time_s": 75.94341644123968,
       "v_max_kph": 337.0729101837871,
-      "v_min_kph": 71.9408532561162
+      "v_min_kph": 72.14934061198922
     },
     "High DF": {
-      "lap_time_s": 76.55028299348615,
+      "lap_time_s": 76.49494725192588,
       "v_max_kph": 314.29030507082285,
-      "v_min_kph": 73.452742636055
+      "v_min_kph": 73.59861683061946
     }
   },
   "reference_pull": {

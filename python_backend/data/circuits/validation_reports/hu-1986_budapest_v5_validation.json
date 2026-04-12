@@ -2,23 +2,23 @@
   "circuit_id": "hu-1986_budapest",
   "circuit_name": "Budapest",
   "real_lap_time_s": 75.372,
-  "sim_lap_time_s": 75.14365191078164,
-  "error_pct": 0.3,
+  "sim_lap_time_s": 75.07099640882915,
+  "error_pct": 0.4,
   "setups": {
     "Low DF": {
-      "lap_time_s": 75.42016072915914,
+      "lap_time_s": 75.37650048035138,
       "v_max_kph": 323.53109442527455,
-      "v_min_kph": 96.5302250652398
+      "v_min_kph": 96.73633208680103
     },
     "Neutral": {
-      "lap_time_s": 75.14365191078164,
+      "lap_time_s": 75.07099640882915,
       "v_max_kph": 321.34565712280903,
-      "v_min_kph": 98.47672880681618
+      "v_min_kph": 98.68472466327985
     },
     "High DF": {
-      "lap_time_s": 75.12650473966933,
+      "lap_time_s": 75.09373107366415,
       "v_max_kph": 311.89797985791034,
-      "v_min_kph": 100.57207580638479
+      "v_min_kph": 100.98823335992284
     }
   },
   "reference_pull": {

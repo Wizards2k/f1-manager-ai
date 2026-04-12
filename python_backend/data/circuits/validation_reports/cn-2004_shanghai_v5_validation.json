@@ -2,23 +2,23 @@
   "circuit_id": "cn-2004_shanghai",
   "circuit_name": "Shanghai",
   "real_lap_time_s": 90.641,
-  "sim_lap_time_s": 90.61408032730434,
-  "error_pct": 0.03,
+  "sim_lap_time_s": 90.58315959364775,
+  "error_pct": 0.06,
   "setups": {
     "Low DF": {
-      "lap_time_s": 90.80542666113526,
-      "v_max_kph": 335.7951138826668,
-      "v_min_kph": 51.79637477941944
+      "lap_time_s": 90.77736517783588,
+      "v_max_kph": 335.79477217092716,
+      "v_min_kph": 51.79643404427964
     },
     "Neutral": {
-      "lap_time_s": 90.61408032730434,
-      "v_max_kph": 334.26055965375843,
-      "v_min_kph": 52.73092219961747
+      "lap_time_s": 90.58315959364775,
+      "v_max_kph": 334.26039394127304,
+      "v_min_kph": 52.7308728469113
     },
     "High DF": {
-      "lap_time_s": 90.79311600754143,
-      "v_max_kph": 313.956579597384,
-      "v_min_kph": 53.689670694207514
+      "lap_time_s": 90.75912400540135,
+      "v_max_kph": 313.95646215094035,
+      "v_min_kph": 53.68860050891867
     }
   },
   "reference_pull": {

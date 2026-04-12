@@ -2,23 +2,23 @@
   "circuit_id": "qa-2004_lusail",
   "circuit_name": "Lusail",
   "real_lap_time_s": 79.387,
-  "sim_lap_time_s": 78.93554977720356,
-  "error_pct": 0.57,
+  "sim_lap_time_s": 78.92474129953558,
+  "error_pct": 0.58,
   "setups": {
     "Low DF": {
-      "lap_time_s": 79.06166342983003,
+      "lap_time_s": 79.03814739826406,
       "v_max_kph": 332.1258981818505,
-      "v_min_kph": 101.99527919131569
+      "v_min_kph": 102.05414458839198
     },
     "Neutral": {
-      "lap_time_s": 78.93554977720356,
+      "lap_time_s": 78.92474129953558,
       "v_max_kph": 330.6479238262315,
-      "v_min_kph": 100.08847214950343
+      "v_min_kph": 95.39539017906839
     },
     "High DF": {
-      "lap_time_s": 79.06097336956437,
+      "lap_time_s": 79.0567564029134,
       "v_max_kph": 314.1897409714108,
-      "v_min_kph": 102.6261591628085
+      "v_min_kph": 102.65447095908947
     }
   },
   "reference_pull": {

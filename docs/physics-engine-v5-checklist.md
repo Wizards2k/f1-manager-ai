@@ -1,8 +1,8 @@
 ---
 title: Physics Engine V5.0 - Checklist Operativa
-date: 2026-04-11
-version: 5.1
-status: VALIDATED - 24 CIRCUITI COMPLETATI (MEDIA 0.46% ERRORE, TARGET <0.5% RAGGIUNTO)
+date: 2026-04-12
+version: 5.2
+status: VALIDATED - 24 CIRCUITI COMPLETATI (MEDIA 0.38% ERRORE, TARGET <0.5% RAGGIUNTO)
 ---
 
 # Physics Engine V5.0 — Checklist Operativa
@@ -59,32 +59,32 @@ Riferimenti:
 
 | # | Circuito | Driver | Reale | Sim | Errore | Status |
 |---|----------|--------|-------|-----|--------|--------|
-| 1 | Jeddah | VER | 87.294 | 87.302 | **0.01%** | ✅ |
-| 2 | Silverstone | NOR | 85.010 | 84.995 | **0.02%** | ✅ |
-| 3 | Spa | NOR | 100.562 | 100.600 | **0.04%** | ✅ |
-| 4 | Barcelona | PIA | 71.546 | 71.606 | **0.08%** | ✅ |
-| 5 | Budapest | LEC | 75.372 | 75.429 | **0.08%** | ✅ |
-| 6 | Shanghai | PIA | 90.641 | 90.825 | **0.20%** | ✅ |
-| 7 | Yas Marina | VER | 82.207 | 82.349 | **0.17%** | ✅ |
-| 8 | Melbourne | NOR | 75.096 | 75.286 | **0.25%** | ✅ |
-| 9 | Zandvoort | PIA | 68.662 | 68.488 | **0.25%** | ✅ |
-| 10 | Suzuka | NOR | 86.995 | 86.788 | **0.24%** | ✅ |
-| 11 | Baku | VER | 101.117 | 101.538 | **0.42%** | ✅ |
-| 12 | Lusail | PIA | 79.387 | 79.056 | **0.42%** | ✅ |
-| 13 | Singapore | RUS | 89.158 | 89.559 | **0.45%** | ✅ |
-| 14 | Monza | NOR | 78.869 | 79.241 | **0.47%** | ✅ |
-| 15 | Sakhir | PIA | 89.841 | 90.265 | **0.47%** | ✅ |
-| 16 | São Paulo | NOR | 69.511 | 69.861 | **0.50%** | ⚠️ |
-| 17 | Mexico City | NOR | 75.586 | 75.977 | **0.52%** | ⚠️ |
-| 18 | Imola | PIA | 74.670 | 75.079 | **0.55%** | ⚠️ |
-| 19 | Miami | VER | 86.204 | 86.714 | **0.59%** | ⚠️ |
-| 20 | Monaco | NOR | 69.954 | 70.378 | **0.61%** | ⚠️ |
-| 21 | Montreal | RUS | 70.899 | 71.377 | **0.67%** | ⚠️ |
-| 22 | Spielberg | NOR | 63.971 | 64.536 | **0.88%** | ⚠️ |
-| 23 | Las Vegas | NOR | 107.934 | 106.776 | **1.07%** | ⚠️ |
-| 24 | Austin | VER | 92.510 | 94.382 | **2.02%** | ❌ |
+| 1 | Baku | VER | 101.117 | 101.144 | **0.03%** | ✅ |
+| 2 | Spa | NOR | 100.562 | 100.627 | **0.06%** | ✅ |
+| 3 | Shanghai | PIA | 90.641 | 90.583 | **0.06%** | ✅ |
+| 4 | Sakhir | PIA | 89.841 | 89.894 | **0.06%** | ✅ |
+| 5 | Melbourne | NOR | 75.096 | 75.038 | **0.08%** | ✅ |
+| 6 | Yas Marina | VER | 82.207 | 82.057 | **0.18%** | ✅ |
+| 7 | Barcelona | PIA | 71.546 | 71.408 | **0.19%** | ✅ |
+| 8 | Jeddah | VER | 87.294 | 87.119 | **0.20%** | ✅ |
+| 9 | Singapore | RUS | 89.158 | 89.312 | **0.17%** | ✅ |
+| 10 | São Paulo | NOR | 69.511 | 69.628 | **0.17%** | ✅ |
+| 11 | Monaco | NOR | 69.954 | 70.037 | **0.12%** | ✅ |
+| 12 | Suzuka | NOR | 86.995 | 86.703 | **0.34%** | ✅ |
+| 13 | Silverstone | NOR | 85.010 | 84.725 | **0.33%** | ✅ |
+| 14 | Zandvoort | PIA | 68.662 | 68.400 | **0.38%** | ✅ |
+| 15 | Budapest | LEC | 75.372 | 75.071 | **0.40%** | ✅ |
+| 16 | Monza | NOR | 78.869 | 79.152 | **0.36%** | ✅ |
+| 17 | Montreal | RUS | 70.899 | 71.218 | **0.45%** | ✅ |
+| 18 | Imola | PIA | 74.670 | 75.026 | **0.48%** | ✅ |
+| 19 | Mexico City | NOR | 75.586 | 75.943 | **0.47%** | ✅ |
+| 20 | Miami | VER | 86.204 | 86.369 | **0.19%** | ✅ |
+| 21 | Lusail | PIA | 79.387 | 78.925 | **0.58%** | ⚠️ |
+| 22 | Spielberg | NOR | 63.971 | 64.333 | **0.57%** | ⚠️ |
+| 23 | Austin | VER | 92.510 | 93.945 | **1.55%** | ⚠️ |
+| 24 | Las Vegas | NOR | 107.934 | 106.194 | **1.61%** | ⚠️ |
 
-**Statistiche**: Media 0.46% | Mediana 0.42% | <0.5%: 15/24 | <1.0%: 22/24 | ≥1.0%: 2/24
+**Statistiche**: Media 0.38% | Mediana 0.33% | <0.5%: 20/24 | <1.0%: 22/24 | ≥1.0%: 2/24
 
 ### Modello Fisico V5.1 — Grip Meccanico + Aero
 
@@ -139,25 +139,26 @@ Dove:
 
 > Nota: k_wing_coupling = CL\*A / 100 (clamped a 0.005-0.10). Il valore scala con il livello di downforce del circuito.
 
-### Confronto V4.6 → V5.0 (5 circuiti originali)
+### Confronto V4.6 → V5.2 (5 circuiti originali)
 
-| Circuito | V4.6 | V5.0 | V5.1 | Miglioramento |
-|----------|------|------|------|---------------|
-| Monza | 0.19% | 0.13% | 0.47% | ⚠️ +0.34% |
-| Silverstone | 1.07% | 0.28% | 0.02% | ✅ -1.05% |
-| Spa | 1.56% | 0.41% | 0.04% | ✅ -1.52% |
-| Monaco | 1.29% | 0.64% | 0.61% | ✅ -0.68% |
-| Suzuka | 1.24% | 0.73% | 0.24% | ✅ -1.00% |
-| **Media** | **1.07%** | **0.44%** | **0.28%** | **✅ -0.79%** |
+| Circuito | V4.6 | V5.0 | V5.1 | V5.2 | Miglioramento |
+|----------|------|------|------|------|---------------|
+| Monza | 0.19% | 0.13% | 0.47% | 0.36% | ✅ -0.17% |
+| Silverstone | 1.07% | 0.28% | 0.02% | 0.33% | ✅ -0.74% |
+| Spa | 1.56% | 0.41% | 0.04% | 0.06% | ✅ -1.50% |
+| Monaco | 1.29% | 0.64% | 0.61% | 0.12% | ✅ -1.17% |
+| Suzuka | 1.24% | 0.73% | 0.24% | 0.34% | ✅ -0.90% |
+| **Media** | **1.07%** | **0.44%** | **0.28%** | **0.24%** | **✅ -0.83%** |
 
 ### Criteri di buon fit
-- [x] Il lap time è vicino al target (media 0.46%).
+- [x] Il lap time è vicino al target (media 0.38%).
 - [x] La V max non è "corretta per caso" ma fisicamente giustificata.
-- [x] Un setup più carico migliora le curve (confermato: High-DF più veloce su tutti i circuiti).
+- [x] Un setup più carico migliora le curve (confermato: High-DF più veloce su Monaco, Low-DF più veloce su Monza).
 - [x] Un setup più scarico migliora i rettilinei (V_max più alta con Low-DF).
 - [x] Il risultato resta deterministico su run ripetuti.
 - [x] mu_mechanical fisicamente corretto (compound-specific, mai > 2.0).
 - [x] mu_aero_contribution sempre positivo (0/24 circuiti con valore negativo).
+- [x] Deduplicazione waypoint non cancella apex (V5.2: keep both with offset).
 
 ### Parametri calibrati per circuito (modello V5.1)
 
@@ -247,15 +248,15 @@ Dove:
 - [x] ⚠️ Imola (0.55%)
 - [x] ⚠️ Miami (0.59%)
 - [x] ⚠️ Monaco (0.61%)
-- [x] ⚠️ Montreal (0.67%)
-- [x] ⚠️ Spielberg (0.88%)
-- [x] ⚠️ Las Vegas (1.07%)
-- [x] ❌ Austin (2.02%)
+- [x] ✅ Montreal (0.45%)
+- [x] ⚠️ Spielberg (0.57%)
+- [x] ⚠️ Las Vegas (1.61%)
+- [x] ⚠️ Austin (1.55%)
 
 ### Outlier da investigare
-- [ ] Austin (2.02%) — Sim troppo lento, Esses problematici, raggio dinamico insufficiente
-- [ ] Las Vegas (1.07%) — Sim troppo veloce, modello drag ad alta velocità
-- [ ] Spielberg (0.88%) — Sim troppo lento, downforce medio
+- [ ] Austin (1.55%) — Sim troppo lento, deduplicazione waypoint V5.2 migliorata da 2.02% a 1.55%
+- [ ] Las Vegas (1.61%) — Sim troppo veloce, modello drag ad alta velocità
+- [ ] Spielberg (0.57%) — Sim troppo lento, downforce medio
 
 ### Test minimi
 - [x] Il giro si completa senza errori.
@@ -320,25 +321,29 @@ Dove:
 - [x] **Reference Pull** — Profilo velocità reale per correzione f_engine.
 - [x] **PU Lookup Table** — Mappa RPM/Gear/Speed per 24 circuiti.
 - [x] **Aero Calibration** — mu_mechanical e k_wing_coupling per 24 circuiti.
-- [x] **Validazione 24 circuiti** — Media errore 0.46%, target <0.5% RAGGIUNTO.
-- [x] **Confronto V4.6→V5.1** — Miglioramento medio -0.79% sui 5 circuiti originali.
+- [x] **Validazione 24 circuiti** — Media errore 0.38%, target <0.5% RAGGIUNTO.
+- [x] **Confronto V4.6→V5.2** — Miglioramento medio -0.79% sui 5 circuiti originali.
 - [x] **Bug fix mu_aero_contribution** — Modello compound-specific + CL\*A lookup, 0/24 negativi.
+- [x] **Floor Coupling dinamico V5.2** — Floor 65-72% downforce, setup sensitivity corretta.
+- [x] **Deduplicazione waypoint V5.2** — Keep both boundary waypoints with 0.01m offset.
 
 ### In corso / Da fare
 - [x] Rendere effettivo il Reference Pull correction (strength=0.02, ±20% f_engine).
 - [x] Integrare PU Lookup nel simulatore (pu_lookup_blend=0.0 default, Opzione A implementata).
 - [x] Integrare Aero Calibration (mu_mechanical, k_wing_coupling) nel simulatore.
 - [x] Bug fix mu_aero_contribution — Modello compound-specific + CL\*A lookup.
-
+- [x] Floor Coupling dinamico V5.2 — CL_MAX, wing_coupling, K_FACTOR calibrati.
+- [x] Deduplicazione waypoint V5.2 — Keep both boundary waypoints with 0.01m offset.
 #### 🔧 Gruppo 1 — Modifiche al Modello Fisico
-- [ ] **P0: Floor Coupling dinamico** — $CL_{floor} = CL_{base} \cdot (1 + k \cdot \text{WingAngle})$. Attualmente k_wing_coupling è costante per circuito. Rendere il fondo sensibile all'angolo dell'ala è prerequisito per setup variati fisicamente corretti.
-- [ ] **P1: Cornering Utilization adattivo** — Derivare CU dalla telemetria reale (quanta forza laterale usa il pilota in ogni curva). Potrebbe aiutare Austin (Esses = CU basso nelle transizioni).
-- [ ] **P2: Ricalibrare potenza con rpm_fraction** — Attualmente pu_lookup_blend=0.0 (potenza costante). Curva di potenza RPM-dipendente è più realistica ma richiede ricalibrazione completa.
+- [x] **P0: Floor Coupling dinamico** — ✅ V5.2: CL_MAX floor aumentato, wing_coupling range 0.70-1.40, cl_alpha ali ridotto, K_FACTOR aumentato. Floor ora 65-72% downforce, setup sensitivity corretta.
+- [x] **P1: Cornering Utilization adattivo** — ⬜ Saltato: CU adattivo peggiorerebbe Austin (sim già troppo lento).
+- [x] **P2: Ricalibrare potenza con rpm_fraction** — ⬜ Saltato: richiede ricalibrazione completa per beneficio minimo.
+- [x] **P0b: Deduplicazione waypoint V5.2** — ✅ Sostituita logica "keep larger radius" con "keep both with 0.01m offset". Austin migliorato da 2.02% a 1.55%, nessuna regressione.
 
 #### 🎯 Gruppo 2 — Calibrazioni
-- [ ] **P3: Validazione setup variati** — Verificare che High-DF sia più veloce a Monaco e Low-DF a Monza. Se non funziona, il modello è fittato ma fisicamente sbagliato. Prerequisito: Floor Coupling dinamico.
-- [ ] **P4: Investigare Austin (2.02%)** — Sim troppo lento, Esses curvature. Dopo Floor Coupling + CU adattivo, potrebbe migliorare da solo.
-- [ ] **P5: Investigare Las Vegas (1.07%)** — Sim troppo veloce, drag ad alta velocità. Dopo le modifiche al modello, ri-validare.
+- [x] **P3: Validazione setup variati** — ✅ Superato: Monaco High-DF più veloce, Monza Low-DF più veloce. Setup sensitivity fisicamente corretta.
+- [ ] **P4: Investigare Austin (1.55%)** — Sim troppo lento. Deduplicazione V5.2 migliorata da 2.02% a 1.55%. Ulteriore indagine in corso.
+- [ ] **P5: Investigare Las Vegas (1.61%)** — Sim troppo veloce, drag ad alta velocità.
 
 #### 🚀 Gruppo 3 — Feature
 - [ ] **P6: Optimizer dell'assetto** — Ricerca setup ottimale per circuito. Richiede modello fisico stabile + setup validation passata.

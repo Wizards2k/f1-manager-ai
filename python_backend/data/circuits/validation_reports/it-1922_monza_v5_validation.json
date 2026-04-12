@@ -2,23 +2,23 @@
   "circuit_id": "it-1922_monza",
   "circuit_name": "Monza",
   "real_lap_time_s": 78.869,
-  "sim_lap_time_s": 79.18000826567204,
-  "error_pct": 0.39,
+  "sim_lap_time_s": 79.15177398169396,
+  "error_pct": 0.36,
   "setups": {
     "Low DF": {
-      "lap_time_s": 79.25397434483303,
+      "lap_time_s": 79.22121270701498,
       "v_max_kph": 353.0448156302676,
-      "v_min_kph": 77.58259618262042
+      "v_min_kph": 77.63319013559668
     },
     "Neutral": {
-      "lap_time_s": 79.18000826567204,
+      "lap_time_s": 79.15177398169396,
       "v_max_kph": 338.47905973256405,
-      "v_min_kph": 73.28710754106363
+      "v_min_kph": 73.35134487743628
     },
     "High DF": {
-      "lap_time_s": 80.68691185387728,
+      "lap_time_s": 80.64784919662992,
       "v_max_kph": 321.5132896143819,
-      "v_min_kph": 72.29647830956088
+      "v_min_kph": 72.45267731019061
     }
   },
   "reference_pull": {

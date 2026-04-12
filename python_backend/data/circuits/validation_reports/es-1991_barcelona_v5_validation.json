@@ -2,23 +2,23 @@
   "circuit_id": "es-1991_barcelona",
   "circuit_name": "Barcelona",
   "real_lap_time_s": 71.546,
-  "sim_lap_time_s": 71.39785598269388,
-  "error_pct": 0.21,
+  "sim_lap_time_s": 71.40750131447577,
+  "error_pct": 0.19,
   "setups": {
     "Low DF": {
-      "lap_time_s": 71.61145563753752,
+      "lap_time_s": 71.58519650650243,
       "v_max_kph": 333.81453369034614,
-      "v_min_kph": 107.44517526118646
+      "v_min_kph": 107.45131316515747
     },
     "Neutral": {
-      "lap_time_s": 71.39785598269388,
+      "lap_time_s": 71.40750131447577,
       "v_max_kph": 332.962527244789,
-      "v_min_kph": 105.70556945510573
+      "v_min_kph": 105.94583270807239
     },
     "High DF": {
-      "lap_time_s": 71.67524838771824,
+      "lap_time_s": 71.64598958865554,
       "v_max_kph": 316.1823877368164,
-      "v_min_kph": 107.78121467237284
+      "v_min_kph": 107.82432372091273
     }
   },
   "reference_pull": {
