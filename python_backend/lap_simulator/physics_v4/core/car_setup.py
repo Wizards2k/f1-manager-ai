@@ -59,13 +59,21 @@ class AeroSetup:
 
 @dataclass
 class SuspensionSetup:
-    """Configurazione sospensioni."""
-    spring_front: float = 15.0  # 1-30
-    spring_rear: float = 18.0   # 1-30
-    arb_front: float = 4.0      # 1-10 (antiroll)
-    arb_rear: float = 6.0       # 1-10
-    ride_height_front: float = 3.0  # mm
-    ride_height_rear: float = 5.0   # mm
+    """Configurazione sospensioni.
+    
+    I valori sono salvati come SLIDER (unità UI):
+    - spring_front/rear: slider 1-50
+    - arb_front/rear: slider 1-30
+    - ride_height_front/rear: slider 1-30
+    
+    La conversione a valori fisici reali avviene in slider_to_real().
+    """
+    spring_front: float = 25.0  # slider 1-50
+    spring_rear: float = 33.0   # slider 1-50
+    arb_front: float = 11.0     # slider 1-30
+    arb_rear: float = 18.0      # slider 1-30
+    ride_height_front: float = 7.0   # slider 1-30
+    ride_height_rear: float = 14.0   # slider 1-30
     camber_front: float = -3.5      # degrees
     camber_rear: float = -1.5       # degrees
     toe_front: float = 0.1          # degrees
@@ -148,6 +156,75 @@ class CarSetup:
         base_mass = 883.0  # include già 5 kg carburante minimo
         fuel_over_min = max(0.0, self.fuel.fuel_kg - 5.0)
         self.mass_total_kg = base_mass + fuel_over_min
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# P4: CONVERSIONI SLIDER → VALORI REALI F1
+# ─────────────────────────────────────────────────────────────────────────────
+# Il motore fisico lavora con unità reali (N/mm, Nm/deg, mm, gradi).
+# L'interfaccia UI usa slider user-friendly (1-50 per molle, 1-30 per ARB/RH).
+# Queste funzioni centralizzano la conversione.
+#
+# Valori ottimali F1 (riferimento):
+# - Spring Front: ~400 N/mm (slider ≈ 25)
+# - Spring Rear:  ~ 556 N/mm (slider ≈ 38)
+# - ARB Front:    ~ 200 Nm/deg (slider ≈ 11)
+# - ARB Rear:     ~ 305 Nm/deg (slider ≈ 18)
+# - Ride Height Front: ~ 26 mm (slider ≈ 7)
+# - Ride Height Rear:  ~ 46 mm (slider ≈ 14)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def slider_to_real(param: str, slider_value: float) -> float:
+    """Converte un valore slider nel corrispondente valore fisico reale.
+    
+    Args:
+        param: nome parametro ('spring_front', 'spring_rear', 'arb_front',
+               'arb_rear', 'ride_height_front', 'ride_height_rear',
+               'front_wing', 'rear_wing', 'bwing')
+        slider_value: valore slider
+    
+    Returns:
+        Valore in unità fisiche reali
+    """
+    conversions = {
+        # Spring: slider 1-50 → N/mm (range F1: 112-700 N/mm front, 114-800 N/mm rear)
+        'spring_front':     lambda v: v * 12.0 + 100.0,   # 112-700 N/mm
+        'spring_rear':      lambda v: v * 14.0 + 100.0,   # 114-800 N/mm
+        # ARB: slider 1-30 → Nm/deg (range F1: 50-485 Nm/deg)
+        'arb_front':        lambda v: v * 15.0 + 35.0,    # 50-485 Nm/deg
+        'arb_rear':         lambda v: v * 15.0 + 35.0,    # 50-485 Nm/deg
+        # Ride Height: slider 1-30 → mm (range F1: 20-49 mm front, 30-65 mm rear)
+        'ride_height_front': lambda v: v * 1.0 + 19.0,   # 20-49 mm
+        'ride_height_rear':  lambda v: v * 1.2 + 28.8,    # 30-65 mm
+        # Wing angles: slider = gradi (nessuna conversione)
+        'front_wing':       lambda v: v,                  # 0-45°
+        'rear_wing':        lambda v: v,                  # 0-45°
+        'bwing':            lambda v: v,                  # 0-20°
+    }
+    if param not in conversions:
+        raise ValueError(f"Parametro sconosciuto: {param}. Validi: {list(conversions.keys())}")
+    return conversions[param](slider_value)
+
+
+def real_to_slider(param: str, real_value: float) -> float:
+    """Converte un valore fisico reale nel corrispondente valore slider.
+    
+    Inverso di slider_to_real(). Utile per l'UI.
+    """
+    inversions = {
+        'spring_front':      lambda v: (v - 100.0) / 12.0,
+        'spring_rear':       lambda v: (v - 100.0) / 14.0,
+        'arb_front':         lambda v: (v - 35.0) / 15.0,
+        'arb_rear':          lambda v: (v - 35.0) / 15.0,
+        'ride_height_front': lambda v: (v - 19.0) / 1.0,
+        'ride_height_rear':  lambda v: (v - 28.8) / 1.2,
+        'front_wing':        lambda v: v,
+        'rear_wing':         lambda v: v,
+        'bwing':             lambda v: v,
+    }
+    if param not in inversions:
+        raise ValueError(f"Parametro sconosciuto: {param}")
+    return inversions[param](real_value)
 
 
 class PhysicsV4Setup:
@@ -277,25 +354,26 @@ class PhysicsV4Setup:
         ride_height_front: Optional[float] = None,
         ride_height_rear: Optional[float] = None
     ):
-        """Imposta configurazione sospensioni.
+        """Imposta configurazione sospensioni con valori SLIDER.
         
-        Converte da slider UI (spring 1-30, ARB 1-10) a valori fisici reali:
-        - spring: slider * 10 -> N/m (es. 15 -> 150 N/m)
-        - ARB: slider * 500 -> N/rad (es. 4 -> 2000 N/rad)
+        P4 FIX: I valori sono salvati come slider (1-50 per molle, 1-30 per ARB/RH).
+        La conversione a valori fisici reali avviene in slider_to_real() e viene
+        applicata nel motore fisico (_compute_suspension_effects, compute_forces).
+        
+        Prima (BUG): set_suspension() scalava i valori (spring 15→150 N/m)
+        ma _compute_suspension_effects() si aspettava slider (opt=15), causando
+        penalità del 900% per il setup ottimale.
+        
+        Ora: i valori rimangono come slider. La conversione è centralizzata.
         """
-        # Conversione slider -> fisico per spring (1-30 -> 10-300 N/m)
-        SPRING_SCALE = 10.0
-        # Conversione slider -> fisico per ARB (1-10 -> 500-5000 N/rad)
-        ARB_SCALE = 500.0
-        
         if spring_front is not None:
-            self.car.suspension.spring_front = spring_front * SPRING_SCALE
+            self.car.suspension.spring_front = spring_front
         if spring_rear is not None:
-            self.car.suspension.spring_rear = spring_rear * SPRING_SCALE
+            self.car.suspension.spring_rear = spring_rear
         if ARB_front is not None:
-            self.car.suspension.arb_front = ARB_front * ARB_SCALE
+            self.car.suspension.arb_front = ARB_front
         if ARB_rear is not None:
-            self.car.suspension.arb_rear = ARB_rear * ARB_SCALE
+            self.car.suspension.arb_rear = ARB_rear
         if ride_height_front is not None:
             self.car.suspension.ride_height_front = ride_height_front
         if ride_height_rear is not None:
@@ -385,14 +463,23 @@ class PhysicsV4Setup:
                 "cda_total": self.car.aero.cda_total,
             },
             "suspension": {
+                # Valori slider (1-30 per molle, 1-10 per ARB/ride height)
                 "spring_front": self.car.suspension.spring_front,
                 "spring_rear": self.car.suspension.spring_rear,
                 "arb_front": self.car.suspension.arb_front,
                 "arb_rear": self.car.suspension.arb_rear,
-                "spring_front_slider": self.car.suspension.spring_front / 10.0,
-                "spring_rear_slider": self.car.suspension.spring_rear / 10.0,
-                "arb_front_slider": self.car.suspension.arb_front / 500.0,
-                "arb_rear_slider": self.car.suspension.arb_rear / 500.0,
+                "ride_height_front": self.car.suspension.ride_height_front,
+                "ride_height_rear": self.car.suspension.ride_height_rear,
+                # Valori fisici reali (convertiti con slider_to_real)
+                "spring_front_Nmm": slider_to_real('spring_front', self.car.suspension.spring_front),
+                "spring_rear_Nmm": slider_to_real('spring_rear', self.car.suspension.spring_rear),
+                "arb_front_Nmdeg": slider_to_real('arb_front', self.car.suspension.arb_front),
+                "arb_rear_Nmdeg": slider_to_real('arb_rear', self.car.suspension.arb_rear),
+                "ride_height_front_mm": slider_to_real('ride_height_front', self.car.suspension.ride_height_front),
+                "ride_height_rear_mm": slider_to_real('ride_height_rear', self.car.suspension.ride_height_rear),
+                # Ride height in metri (per AeroAssembly.compute_forces)
+                "ride_height_front_m": slider_to_real('ride_height_front', self.car.suspension.ride_height_front) / 1000.0,
+                "ride_height_rear_m": slider_to_real('ride_height_rear', self.car.suspension.ride_height_rear) / 1000.0,
             },
             "tyres": {
                 "compound": self.car.tyres.compound,

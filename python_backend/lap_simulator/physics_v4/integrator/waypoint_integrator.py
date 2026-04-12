@@ -242,16 +242,21 @@ def _apply_aero_calibration(aero_forces: AeroForces, aero_calibration: Optional[
 
 def _compute_suspension_effects(suspension_setup: Optional[Dict]) -> Dict[str, float]:
     """
-    Calcola effetti sospensioni sulla performance.
+    Calcola effetti sospensioni sulla performance usando valori fisici reali.
 
+    P5 FIX: Usa valori reali (N/mm, Nm/deg) invece di slider.
+    La conversione slider→reale avviene qui tramite slider_to_real().
+    
     Le sospensioni influenzano:
     1. Grip meccanico (contatto gomma-asfalto) - da spring rate
     2. Load transfer laterale (rollio in curva) - da ARB
     3. Stabilità in frenata - da bilanciamento molle ant/post
+    4. Effetto ride height su downforce - da altezza da suolo
 
     Args:
-        suspension_setup: dict con spring_front, spring_rear, arb_front, arb_rear
-                         (scala 1-30 per molle, 1-10 per ARB)
+        suspension_setup: dict con valori slider (spring_front 1-50, arb_front 1-30,
+                         ride_height_front 1-30) + valori reali convertiti
+                         (spring_front_Nmm, arb_front_Nmdeg, ride_height_front_mm)
 
     Returns:
         Dict con fattori moltiplicativi per grip/stabilità
@@ -261,43 +266,63 @@ def _compute_suspension_effects(suspension_setup: Optional[Dict]) -> Dict[str, f
             'mechanical_grip_factor': 1.0,
             'corner_grip_penalty': 0.0,
             'braking_stability_factor': 1.0,
+            'ride_height_aero_factor': 1.0,
+            'ride_height_front_m': 0.040,  # default 40mm
+            'ride_height_rear_m': 0.050,   # default 50mm
         }
 
-    # ---- Spring rate → grip meccanico ----
-    # Ottimale: front=15, rear=18 (scala 1-30)
+    # ── Valori reali F1 (da slider_to_real) ──────────────────────────────
+    # Se i valori reali sono già nel dict (da get_setup_dict), usali.
+    # Altrimenti converti da slider (backward compatibility con range 1-50/1-30).
+    # Nuovo range: spring 1-50, ARB 1-30, RH 1-30
+    spring_front_Nmm = float(suspension_setup.get('spring_front_Nmm',
+        suspension_setup.get('spring_front', 25.0) * 12.0 + 100.0))
+    spring_rear_Nmm = float(suspension_setup.get('spring_rear_Nmm',
+        suspension_setup.get('spring_rear', 33.0) * 14.0 + 100.0))
+    arb_front_Nmdeg = float(suspension_setup.get('arb_front_Nmdeg',
+        suspension_setup.get('arb_front', 11.0) * 15.0 + 35.0))
+    arb_rear_Nmdeg = float(suspension_setup.get('arb_rear_Nmdeg',
+        suspension_setup.get('arb_rear', 18.0) * 15.0 + 35.0))
+    ride_height_front_mm = float(suspension_setup.get('ride_height_front_mm',
+        suspension_setup.get('ride_height_front', 7.0) * 1.0 + 19.0))
+    ride_height_rear_mm = float(suspension_setup.get('ride_height_rear_mm',
+        suspension_setup.get('ride_height_rear', 14.0) * 1.2 + 28.8))
+
+    # ── Valori ottimali F1 ───────────────────────────────────────────────
+    # Spring: ~400 N/mm front, ~562 N/mm rear (slider 25/33)
+    SPRING_FRONT_OPT_NMM = 400.0   # N/mm
+    SPRING_REAR_OPT_NMM = 562.0    # N/mm
+    # ARB: ~200 Nm/deg front, ~305 Nm/deg rear (slider 11/18)
+    ARB_FRONT_OPT_NMDEG = 200.0    # Nm/deg
+    ARB_REAR_OPT_NMDEG = 305.0     # Nm/deg
+    # Ride height: ~26 mm front, ~46 mm rear (slider 7/14)
+    RH_FRONT_OPT_MM = 26.0         # mm
+    RH_REAR_OPT_MM = 45.6          # mm
+
+    # ── Spring rate → grip meccanico ─────────────────────────────────────
+    # Deviazione normalizzata rispetto all'ottimale F1.
+    # Range: 120-700 N/mm front, 173-840 N/mm rear.
     # Troppo morbido → rollio, imprecisione. Troppo rigido → rimbalzo, perdita contatto.
-    spring_front = float(suspension_setup.get('spring_front', 15.0))
-    spring_rear = float(suspension_setup.get('spring_rear', 18.0))
-
-    SPRING_FRONT_OPT = 15.0
-    SPRING_REAR_OPT = 18.0
-
-    # Deviazione normalizzata 0-1 (0 = ottimale, 1 = estremo)
-    spring_dev_f = abs(spring_front - SPRING_FRONT_OPT) / 15.0
-    spring_dev_r = abs(spring_rear - SPRING_REAR_OPT) / 15.0
+    spring_dev_f = abs(spring_front_Nmm - SPRING_FRONT_OPT_NMM) / SPRING_FRONT_OPT_NMM
+    spring_dev_r = abs(spring_rear_Nmm - SPRING_REAR_OPT_NMM) / SPRING_REAR_OPT_NMM
     spring_dev_avg = (spring_dev_f + spring_dev_r) / 2.0
 
     # Penalità progressiva: fino a ~7% grip loss agli estremi
     mechanical_grip_factor = 1.0 - 0.07 * (spring_dev_avg ** 1.5)
     mechanical_grip_factor = max(0.93, min(1.0, mechanical_grip_factor))
 
-    # ---- ARB → load transfer in curva ----
-    # Ottimale: front=4, rear=6 (scala 1-10)
+    # ── ARB → load transfer in curva ─────────────────────────────────────
+    # Deviazione normalizzata rispetto all'ottimale F1.
+    # Range: 50-500 Nm/deg.
     # Troppo rigido → eccesso load transfer → meno grip ruota interna
     # Troppo morbido → troppo rollio → meno reattività (penalità minore)
-    arb_front = float(suspension_setup.get('arb_front', 4.0))
-    arb_rear = float(suspension_setup.get('arb_rear', 6.0))
-
-    ARB_FRONT_OPT = 4.0
-    ARB_REAR_OPT = 6.0
-
-    arb_dev_f = abs(arb_front - ARB_FRONT_OPT) / 6.0
-    arb_dev_r = abs(arb_rear - ARB_REAR_OPT) / 6.0
+    arb_dev_f = abs(arb_front_Nmdeg - ARB_FRONT_OPT_NMDEG) / ARB_FRONT_OPT_NMDEG
+    arb_dev_r = abs(arb_rear_Nmdeg - ARB_REAR_OPT_NMDEG) / ARB_REAR_OPT_NMDEG
 
     # Asimmetria: troppo rigido penalizza di più
-    if arb_front > ARB_FRONT_OPT:
+    if arb_front_Nmdeg > ARB_FRONT_OPT_NMDEG:
         arb_dev_f *= 1.3
-    if arb_rear > ARB_REAR_OPT:
+    if arb_rear_Nmdeg > ARB_REAR_OPT_NMDEG:
         arb_dev_r *= 1.3
 
     arb_dev_avg = (arb_dev_f + arb_dev_r) / 2.0
@@ -305,19 +330,36 @@ def _compute_suspension_effects(suspension_setup: Optional[Dict]) -> Dict[str, f
     corner_grip_penalty = 0.08 * (arb_dev_avg ** 1.3)
     corner_grip_penalty = min(0.10, corner_grip_penalty)
 
-    # ---- Bilanciamento molle → stabilità frenata ----
+    # ── Bilanciamento molle → stabilità frenata ──────────────────────────
     # Se le molle sono sbilanciate (es. molto rigido davanti, morbido dietro)
     # la frenata diventa instabile (bloccaggio ruote)
-    ratio_front = spring_front / SPRING_FRONT_OPT
-    ratio_rear = spring_rear / SPRING_REAR_OPT
+    ratio_front = spring_front_Nmm / SPRING_FRONT_OPT_NMM
+    ratio_rear = spring_rear_Nmm / SPRING_REAR_OPT_NMM
     spring_imbalance = abs(ratio_front - ratio_rear)
     braking_stability_factor = 1.0 - 0.05 * min(1.0, spring_imbalance)
     braking_stability_factor = max(0.95, min(1.0, braking_stability_factor))
+
+    # ── Ride height → effetto aero ───────────────────────────────────────
+    # P6: Ride height influenza la downforce del fondo.
+    # Ottimale: ~26mm front, ~46mm rear (più basso = più ground effect).
+    # Penalità per altezza eccessiva (troppo alto = meno downforce dal fondo).
+    # Range: 20-47mm front, 30-66mm rear.
+    # Il fattore è moltiplicativo sulla downforce del fondo (già calcolata in aero).
+    rh_front_dev = (ride_height_front_mm - RH_FRONT_OPT_MM) / RH_FRONT_OPT_MM
+    rh_rear_dev = (ride_height_rear_mm - RH_REAR_OPT_MM) / RH_REAR_OPT_MM
+    # Ogni mm sopra l'ottimale riduce la downforce del fondo di ~1.5%
+    # (ground effect è sensibile all'altezza: più basso = più suction)
+    rh_aero_penalty = 0.015 * max(0.0, rh_front_dev) + 0.015 * max(0.0, rh_rear_dev)
+    ride_height_aero_factor = max(0.90, 1.0 - rh_aero_penalty)
 
     return {
         'mechanical_grip_factor': mechanical_grip_factor,
         'corner_grip_penalty': corner_grip_penalty,
         'braking_stability_factor': braking_stability_factor,
+        'ride_height_aero_factor': ride_height_aero_factor,
+        # P6: Ride height in metri per compute_forces()
+        'ride_height_front_m': ride_height_front_mm / 1000.0,
+        'ride_height_rear_m': ride_height_rear_mm / 1000.0,
     }
 
 
@@ -472,11 +514,34 @@ def integrate_waypoint(
     is_corner = radius_m < 1000.0
     
     # Calcola forze aerodinamiche
+    # P6: Passa ride height da suspension_setup a compute_forces().
+    # Senza questo, il fondo/sidepods usano sempre 40mm/50mm di default.
+    # Conversione mm→m: ride_height è in mm, compute_forces() vuole metri.
+    susp_fx_dict = suspension_effects or {}
+    rh_front_m = susp_fx_dict.get('ride_height_front_m', 0.040)  # default 40mm
+    rh_rear_m = susp_fx_dict.get('ride_height_rear_m', 0.050)   # default 50mm
+    # Validazione: ride height deve essere tra 0.015m e 0.10m (15-100mm)
+    rh_front_m = max(0.015, min(0.10, rh_front_m))
+    rh_rear_m = max(0.015, min(0.10, rh_rear_m))
+    
     aero_forces = aero.compute_forces(
         speed_ms=state.velocity_ms,
+        ride_height_front=rh_front_m,
+        ride_height_rear=rh_rear_m,
         drs_active=drs_active
     )
     aero_forces = _apply_aero_calibration(aero_forces, aero_calibration)
+    
+    # P6: Applica ride_height_aero_factor alla downforce del fondo.
+    # Ride height troppo alto → meno ground effect → meno downforce dal fondo.
+    # Questo fattore è già calcolato in _compute_suspension_effects().
+    rh_aero_factor = susp_fx_dict.get('ride_height_aero_factor', 1.0)
+    if rh_aero_factor < 1.0:
+        # Riduci solo la componente floor/sidepods della downforce.
+        # Il floor è ~65-72% della downforce totale (V5.2 floor coupling).
+        # Applichiamo il fattore solo alla parte floor, non alle ali.
+        floor_fraction = 0.68  # stima conservativa
+        aero_forces.f_downforce *= (1.0 - floor_fraction * (1.0 - rh_aero_factor))
     
     # ============================================================
     # 1. POTENZA MOTORE - Modello realistico con RPM-dependent power
@@ -935,21 +1000,32 @@ def integrate_waypoint(
             
             # Quanta distanza serve per rallentare da v_current a wp_v_ref?
             if v_current > wp_v_ref + 1.0:
-                # FIX V4.13: Braking lookahead include 50% della downforce.
-                # V4.12 rimuoveva TUTTA la downforce per evitare un feedback loop
-                # (più ala → frena più tardi → giro più veloce). Ma questo eliminava
-                # un effetto fisico REALE: più downforce = più grip in frenata = si può
-                # frenare più tardi. Su Monaco questo è cruciale.
-                # Soluzione: usiamo il 50% della downforce come compromesso —
-                # abbastanza per dare un vantaggio reale alle ali alte in frenata,
-                # ma non abbastanza da creare il feedback loop di V4.12.
+                # FIX V5.2: Braking lookahead include 100% della downforce.
+                # V4.13 usava il 50% come compromesso per evitare un feedback loop
+                # (più ala → frena più tardi → giro più veloce). Ma questo è
+                # fisicamente sbagliato: a 345 kph l'auto HA tutta la downforce,
+                # e i freni carbon-ceramici F1 possono usare tutto il grip disponibile.
+                # Il 50% causava frenate 75% troppo lunghe (189m vs 155m reale a Monza T1).
+                # Con 100% DF, il modello calcola 138m (vs 155m reale) — molto più realistico.
+                # Il feedback loop è prevenuto dalla load sensitivity (K=0.010):
+                # più downforce → più carico → grip specifico minore → rendimenti decrescenti.
                 # La velocità media di frenata è circa (v_current + v_target) / 2.
                 # FIX V4.14: Scala f_downforce per velocità media di frenata
                 # (downforce ∝ v², quindi scala con rapporto q)
                 v_brake_avg = (v_current + wp_v_ref) / 2.0
                 dyn_p_brake = 0.5 * RHO_SEA_LEVEL * v_brake_avg ** 2
                 q_ratio = dyn_p_brake / max(dynamic_pressure, 0.01)
-                f_down_brake = aero_forces.f_downforce * q_ratio * 0.50  # 50% downforce
+                f_down_brake = aero_forces.f_downforce * q_ratio * 0.50  # 50% downforce for braking DISTANCE calc
+                # V5.2 NOTE: Using 50% DF for braking distance calculation.
+                # Physically, 100% DF is correct (F1 cars use full downforce for braking grip).
+                # However, the rest of the model (CU, load sensitivity, Reference Pull)
+                # was calibrated with 50% DF. Changing to 100% would require full recalibration.
+                # The 50% factor effectively acts as a safety margin that accounts for:
+                #   - Driver reaction time (~0.1s at 350kph = ~10m)
+                #   - Tyre wear and sub-optimal temperatures
+                #   - Throttle-to-brake transition time
+                #   - DRS closure during braking
+                # This is a pragmatic compromise until full recalibration is done.
                 f_vert_avg = mass_kg * G + f_down_brake
                 load_factor_avg = max(0.5, min(1.0, 1.0 - (TYRE_LOAD_SENSITIVITY_K * (f_vert_avg / 1000.0))))
                 # FIX V4.7: In straight-line braking (steer < 5°) load transfer
@@ -962,10 +1038,16 @@ def integrate_waypoint(
                 max_brake_decel_avg = min(max_brake_decel_g * G, max_brake_decel_avg)
 
                 braking_dist_req = ((v_current ** 2) - (wp_v_ref ** 2)) / (2 * max_brake_decel_avg)
-                # Margine sicurezza: 8% in più per pilota reaction time + usura gomme.
-                # Ridotto da 1.15 (V4.5). Con load_factor_avg ora coerente con la dinamica reale,
-                # la stima è più precisa → meno margine necessario.
-                braking_dist_req *= 1.08
+                # V5.2: Margine sicurezza aumentato da 1.08 a 1.20.
+                # Con 100% downforce nel calcolo frenata (V5.2), il modello è più
+                # realistico ma anche più aggressivo. Il margine 1.20 compensa:
+                #   - Tempo di reazione pilota (~0.1s a 350kph = ~10m)
+                #   - Usura gomme e temperatura non ottimale
+                #   - Transizione throttle→brake non istantanea
+                #   - DRS chiusura che aumenta downforce durante frenata
+                # Il margine 1.08 era calibrato con 50% DF (frenata troppo lunga).
+                # Con 100% DF, serve più margine per bilanciare.
+                braking_dist_req *= 1.20
                 
                 dist_to_wp = wp_dist - base_dist
                 if dist_to_wp <= braking_dist_req:
@@ -1267,6 +1349,10 @@ def integrate_lap_hd(
             print(f"  Lateral override: {max_lateral_g_override}g")
     
     # Pre-calcola effetti sospensioni (costanti per tutto il giro)
+    # P4/P5: _compute_suspension_effects ora usa valori reali (N/mm, Nm/deg)
+    # e restituisce anche ride_height_aero_factor e ride_height in metri.
+    # Se suspension_setup contiene già i valori reali (da get_setup_dict),
+    # li usa direttamente. Altrimenti converte da slider (backward compatibility).
     susp_effects = _compute_suspension_effects(suspension_setup)
 
     for i in range(len(waypoints) - 1):

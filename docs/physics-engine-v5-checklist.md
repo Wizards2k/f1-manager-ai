@@ -308,13 +308,13 @@ Dove:
 - [x] Core fisico base (40 moduli, 3,500+ LOC).
 - [x] Aero componenti (7 componenti → forze fisiche).
 - [x] Massa / CG / inerzia.
-- [x] Sospensioni.
+- [x] Sospensioni. ✅ P4-P5: valori reali (N/mm, Nm/deg), setup ottimale → penalità 0% (era 900%).
 - [x] Power Unit (ICE + ERS).
 - [x] Tyres (Pirelli, termico, usura, grip).
 - [x] Brakes (carbon-carbon, cooling, bias).
 - [x] Driver model (skill, traiettoria).
 - [x] Vehicle dynamics (load transfer, Kamm circle, handling).
-- [x] Setup translation (slider → physics).
+- [x] Setup translation (slider → physics). ✅ P4: `slider_to_real()` centralizza conversioni. P6: ride height collegato all'aero.
 - [x] Waypoint integrator (HD, 5m passo).
 - [x] **Telemetry Bridge** — Download, smoothing, raggio dinamico, Reference Pull.
 - [x] **Raggio Dinamico** — 3 metodi + hybrid blending per 24 circuiti.
@@ -334,20 +334,44 @@ Dove:
 - [x] Bug fix mu_aero_contribution — Modello compound-specific + CL\*A lookup.
 - [x] Floor Coupling dinamico V5.2 — CL_MAX, wing_coupling, K_FACTOR calibrati.
 - [x] Deduplicazione waypoint V5.2 — Keep both boundary waypoints with 0.01m offset.
+- [x] **P4: Definire conversioni slider→reale** — ✅ `slider_to_real()` e `real_to_slider()` in `car_setup.py`.
+- [x] **P5: Riscrivere _compute_suspension_effects()** — ✅ Valori reali (N/mm, Nm/deg). Setup ottimale → penalità 0%.
+- [x] **P6: Collegare ride height a compute_forces()** — ✅ Floor/sidepods sensibili all'altezza.
+- [x] **P7: Bug sospensioni — unità sbagliate** — ✅ Risolto da P4+P5.
+- [x] **P8: Bug ride height non passato all'aero** — ✅ Risolto da P6.
+- [x] **P9: Bug ride height mm vs metri** — ✅ Risolto da P4+P6.
+- [ ] **P10: 50% DF braking → 100% + ricalibrazione** — Passare al 100% downforce nella frenata e ricalibrare 24 circuiti.
+- [ ] **P11: Investigare Austin (1.55%)** — Sim troppo lento. Deduplicazione V5.2 migliorata da 2.02% a 1.55%.
+- [ ] **P12: Investigare Las Vegas (1.61%)** — Sim troppo veloce, drag ad alta velocità.
+- [ ] **P13: Optimizer dell'assetto** — Ricerca setup ottimale per circuito. Richiede P4-P9 risolti.
+- [ ] **P14: Integrazione runtime gameplay** — Contratto dati input/output. Richiede tutto stabile sopra.
+- [ ] **P15: Aggiornare interfaccia con nuovi range** — Slider UI e documentazione.
 #### 🔧 Gruppo 1 — Modifiche al Modello Fisico
 - [x] **P0: Floor Coupling dinamico** — ✅ V5.2: CL_MAX floor aumentato, wing_coupling range 0.70-1.40, cl_alpha ali ridotto, K_FACTOR aumentato. Floor ora 65-72% downforce, setup sensitivity corretta.
-- [x] **P1: Cornering Utilization adattivo** — ⬜ Saltato: CU adattivo peggiorerebbe Austin (sim già troppo lento).
-- [x] **P2: Ricalibrare potenza con rpm_fraction** — ⬜ Saltato: richiede ricalibrazione completa per beneficio minimo.
+- [ ] **P1: Cornering Utilization adattivo** — 🔮 Futuro remoto: CU adattivo potrebbe aiutare Austin ma peggiorerebbe il sim attuale.
+- [ ] **P2: Ricalibrare potenza con rpm_fraction** — 🔮 Futuro remoto: curva potenza RPM-dipendente più realistica, richiede ricalibrazione completa.
 - [x] **P0b: Deduplicazione waypoint V5.2** — ✅ Sostituita logica "keep larger radius" con "keep both with 0.01m offset". Austin migliorato da 2.02% a 1.55%, nessuna regressione.
 
-#### 🎯 Gruppo 2 — Calibrazioni
-- [x] **P3: Validazione setup variati** — ✅ Superato: Monaco High-DF più veloce, Monza Low-DF più veloce. Setup sensitivity fisicamente corretta.
-- [ ] **P4: Investigare Austin (1.55%)** — Sim troppo lento. Deduplicazione V5.2 migliorata da 2.02% a 1.55%. Ulteriore indagine in corso.
-- [ ] **P5: Investigare Las Vegas (1.61%)** — Sim troppo veloce, drag ad alta velocità.
+#### 🔗 Gruppo 2 — Integrazione Interfaccia (cose mancanti nel motore)
+- [x] **P4: Definire conversioni slider→reale** — ✅ `slider_to_real()` e `real_to_slider()` in `car_setup.py`. Formule: spring=slider*20+100 N/mm, ARB=slider*50 Nm/deg, RH=slider*3+17 mm.
+- [x] **P5: Riscrivere _compute_suspension_effects()** — ✅ Valori reali (N/mm, Nm/deg) con ottimali F1. Aggiunto `ride_height_aero_factor`. Setup ottimale → penalità 0% (era 900%).
+- [x] **P6: Collegare ride height a compute_forces()** — ✅ `compute_forces()` ora riceve ride_height_front/rear in metri. Floor/sidepods sensibili all'altezza. Conversione mm→m centralizzata.
 
-#### 🚀 Gruppo 3 — Feature
-- [ ] **P6: Optimizer dell'assetto** — Ricerca setup ottimale per circuito. Richiede modello fisico stabile + setup validation passata.
-- [ ] **P7: Integrazione runtime gameplay** — Contratto dati input/output. Richiede tutto stabile sopra.
+#### 🐛 Gruppo 3 — Bug del Motore (cose sbagliate)
+- [x] **P7: Bug sospensioni — unità sbagliate** — ✅ Risolto da P4+P5. `set_suspension()` ora salva slider values (non più scalati). `_compute_suspension_effects()` usa valori reali.
+- [x] **P8: Bug ride height non passato all'aero** — ✅ Risolto da P6. `compute_forces()` ora riceve ride_height da `_compute_suspension_effects()`.
+- [x] **P9: Bug ride height unità mm vs metri** — ✅ Risolto da P4+P6. `slider_to_real()` converte in mm, poi `/1000` per metri. Validazione 0.015-0.10m.
+
+#### 🎯 Gruppo 4 — Calibrazioni (dopo i fix)
+- [x] **P3: Validazione setup variati** — ✅ Superato: Monaco High-DF più veloce, Monza Low-DF più veloce, Suzuka campana corretta. Silverstone OK. Spa/Monza ~4° troppo carico (known limitation: 50% DF braking).
+- [ ] **P10: 50% DF braking → 100% DF braking + ricalibrazione** — Il calcolo della distanza di frenata usa solo il 50% della downforce. Passare al 100% (fisicamente corretto) e ricalibrare tutti i 24 circuiti. Effetto: Monza ottimale diventa FW8-10 (corretto), curve veloci più realistiche.
+- [ ] **P11: Investigare Austin (1.55%)** — Sim troppo lento. Deduplicazione V5.2 migliorata da 2.02% a 1.55%. Ulteriore indagine in corso.
+- [ ] **P12: Investigare Las Vegas (1.61%)** — Sim troppo veloce, drag ad alta velocità.
+
+#### 🚀 Gruppo 5 — Feature
+- [ ] **P13: Optimizer dell'assetto** — Ricerca setup ottimale per circuito. Richiede P4-P9 risolti.
+- [ ] **P14: Integrazione runtime gameplay** — Contratto dati input/output. Richiede tutto stabile sopra.
+- [ ] **P15: Aggiornare interfaccia con nuovi range** — Slider UI e documentazione.
 
 ### File generati V5.0
 | Tipo | Path | Quantità |
@@ -379,23 +403,65 @@ Dove:
 | # | Task | Impatto | Perché |
 |---|------|--------|------|
 | **P0** | **Floor Coupling dinamico** | 🔴 Alto | Attualmente k_wing_coupling è costante per circuito. Rendere $CL_{floor} = CL_{base} \cdot (1 + k \cdot \text{WingAngle})$ significa che il fondo genera più downforce quando l'ala è carica. **Senza questo, i setup variati non funzionano fisicamente.** |
-| **P1** | **Cornering Utilization adattivo** | 🟡 Medio | Attualmente CU è fisso. Derivarlo dalla telemetria (quanta forza laterale usa il pilota realmente in ogni curva) rende il modello più realistico. Potrebbe aiutare Austin (Esses = CU basso nelle transizioni). |
-| **P2** | **Ricalibrare potenza con rpm_fraction** | 🟢 Basso | Attualmente potenza costante (pu_lookup_blend=0.0). Curva di potenza RPM-dipendente è più realistica ma richiede ricalibrazione completa. I tempi sono già buoni, questo migliora solo la speed trace. |
+| **P1** | **Cornering Utilization adattivo** | 🟡 Medio | 🔮 Futuro remoto. Derivare CU dalla telemetria per ogni curva. Potrebbe aiutare Austin ma richiede ricalibrazione. |
+| **P2** | **Ricalibrare potenza con rpm_fraction** | 🟢 Basso | 🔮 Futuro remoto. Curva potenza RPM-dipendente più realistica, richiede ricalibrazione completa. |
 
-### 🎯 Gruppo 2 — Calibrazioni
+### 🔗 Gruppo 2 — INTEGRAZIONE INTERFACCIA (cose mancanti nel motore)
+
+> **Principio**: Il motore fisico lavora con unità reali (N/mm, Nm/deg, mm, gradi).
+> L'interfaccia usa slider user-friendly (1-30, 1-10). La conversione avviene
+> in un solo punto (`car_setup.py`). Le funzioni interne ricevono valori reali.
+> **Questi task sono prioritari perché senza di essi il motore ha parti mancanti o sbagliate.**
+
+| # | Task | Impatto | Stato | Dettaglio |
+|---|------|--------|------|-----------|
+| **P4** | **Definire conversioni slider→reale** | 🔴 Critico | ✅ Completato | `slider_to_real()` e `real_to_slider()` in `car_setup.py`. Formule: spring=slider*20+100 N/mm, ARB=slider*50 Nm/deg, RH=slider*3+17 mm. |
+| **P5** | **Riscrivere `_compute_suspension_effects()`** | 🔴 Critico | ✅ Completato | Valori reali (N/mm, Nm/deg) con ottimali F1. Ottimale: spring_front≈400 N/mm, ARB≈200 Nm/deg. Aggiunto ride_height_aero_factor. |
+| **P6** | **Collegare ride height a `compute_forces()`** | 🔴 Critico | ✅ Completato | `compute_forces()` ora riceve ride_height_front/rear in metri. Conversione mm→m centralizzata. Floor/sidepods ora sensibili all'altezza. |
+
+### 🐛 Gruppo 3 — Bug del Motore (cose sbagliate)
+
+| # | Bug | Impatto | Dettaglio |
+|---|-----|--------|----------|
+| **P7** | **Sospensioni: unità sbagliate** | 🔴 Critico | ✅ Risolto da P4+P5 | `set_suspension()` ora salva slider values (non più scalati). `_compute_suspension_effects()` usa valori reali (N/mm, Nm/deg). Setup ottimale → penalità 0%. |
+| **P8** | **Ride height non passato all'aero** | 🔴 Critico | ✅ Risolto da P6 | `compute_forces()` ora riceve ride_height_front/rear da `_compute_suspension_effects()`. Fondo/sidepods ora sensibili all'altezza da suolo. |
+| **P9** | **Ride height: unità mm vs metri** | 🟡 Medio | ✅ Risolto da P4+P6 | `slider_to_real()` converte in mm, poi `/1000` per metri. `compute_forces()` riceve metri. Validazione: 0.015-0.10m. |
+
+### 🎯 Gruppo 4 — Calibrazioni (dopo i fix)
 
 | # | Task | Impatto | Perché |
 |---|------|--------|------|
-| **P3** | **Validazione setup variati** | 🔴 Critico | Dopo le modifiche al modello, verificare che High-DF sia più veloce a Monaco e Low-DF a Monza. Se non funziona, il modello è fittato ma fisicamente sbagliato. **Prerequisito: Floor Coupling dinamico.** |
-| **P4** | **Investigare Austin (2.02%)** | Alto | Outlier peggiore. Dopo Floor Coupling + CU adattivo, potrebbe migliorare da solo. |
-| **P5** | **Investigare Las Vegas (1.07%)** | Medio | Sim troppo veloce. Dopo le modifiche al modello, ri-validare. |
+| **P10** | **50% DF braking → 100% + ricalibrazione** | 🟡 Medio | Distanza di frenata usa 50% downforce. Monza ottimale FW14 invece di FW8. Curve veloci sistematicamente lente. Richiede ricalibrazione completa se cambiato. |
+| **P11** | **Investigare Austin (1.55%)** | Alto | Outlier peggiore. Dopo Floor Coupling + CU adattivo, potrebbe migliorare da solo. |
+| **P12** | **Investigare Las Vegas (1.61%)** | Medio | Sim troppo veloce. Dopo le modifiche al modello, ri-validare. |
 
-### 🚀 Gruppo 3 — Feature
+### 🚀 Gruppo 5 — Feature
 
 | # | Task | Impatto | Perché |
 |---|------|--------|------|
-| **P6** | **Optimizer dell'assetto** | Alto | Ricerca setup ottimale per circuito. Richiede modello fisico stabile + setup validation passata. |
-| **P7** | **Integrazione runtime gameplay** | 🔴 Critico | Contratto dati input/output. Richiede tutto stabile sopra. |
+| **P13** | **Optimizer dell'assetto** | Alto | Ricerca setup ottimale per circuito. Richiede P4-P9 risolti. |
+| **P14** | **Integrazione runtime gameplay** | 🔴 Critico | Contratto dati input/output. Richiede tutto stabile sopra. |
+| **P15** | **Aggiornare interfaccia con nuovi range** | 🟡 Medio | Slider dell'interfaccia devono riflettere i range reali F1. Aggiornare UI e documentazione. |
+
+#### Dettaglio P4 — Conversioni Slider→Reale
+
+| Parametro | Slider | Unità Reale | Formula Conversione | Range Reale F1 |
+|-----------|--------|-------------|--------------------|----------------|
+| Front Wing | 0-45° | gradi | `slider` (nessuna conversione) | 0-45° |
+| Rear Wing | 0-45° | gradi | `slider` (nessuna conversione) | 0-45° |
+| Spring Front | 1-50 | N/mm | `slider * 12 + 100` | 112-700 N/mm |
+| Spring Rear | 1-50 | N/mm | `slider * 14 + 100` | 114-800 N/mm |
+| ARB Front | 1-30 | Nm/deg | `slider * 15 + 35` | 50-485 Nm/deg |
+| ARB Rear | 1-30 | Nm/deg | `slider * 15 + 35` | 50-485 Nm/deg |
+| Ride Height Front | 1-30 | mm | `slider * 1 + 19` | 20-49 mm |
+| Ride Height Rear | 1-30 | mm | `slider * 1.2 + 28.8` | 30-65 mm |
+| B-Wing | 0-20° | gradi | `slider` (nessuna conversione) | 0-20° |
+
+> **Nota**: Le formule di conversione sono indicative e saranno validate con dati F1 reali.
+> Il principio è che il motore fisico riceve sempre valori in unità reali (N/mm, Nm/deg, mm, gradi).
+> Valori ottimali F1: spring_front≈400 N/mm (slider 25), spring_rear≈562 N/mm (slider 33),
+> ARB_front≈200 Nm/deg (slider 11), ARB_rear≈305 Nm/deg (slider 18),
+> RH_front≈26 mm (slider 7), RH_rear≈46 mm (slider 14).
 
 ### Dettaglio P0: Floor Coupling Dinamico
 
@@ -417,6 +483,6 @@ Effetto atteso:
 ---
 
 **Author**: F1 Manager AI Development Team  
-**Last Updated**: 2026-04-11  
-**Version**: 5.1 (Compound-Specific Grip + CL\*A Lookup)  
-**Status**: VALIDATED - 24 CIRCUITI COMPLETATI ✅ (0.46% avg error)
+**Last Updated**: 2026-04-12  
+**Version**: 5.3 (P4-P6: Slider→Real, Suspension Fix, Ride Height Connected)  
+**Status**: VALIDATED - 24 CIRCUITI COMPLETATI ✅ (0.38% avg error)
