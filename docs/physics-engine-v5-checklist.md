@@ -364,9 +364,10 @@ Dove:
 
 #### 🎯 Gruppo 4 — Calibrazioni (dopo i fix)
 - [x] **P3: Validazione setup variati** — ✅ Superato: Monaco High-DF più veloce, Monza Low-DF più veloce, Suzuka campana corretta. Silverstone OK. Spa/Monza ~4° troppo carico (known limitation: 50% DF braking).
-- [ ] **P10: 50% DF braking → 100% DF braking + ricalibrazione** — Il calcolo della distanza di frenata usa solo il 50% della downforce. Passare al 100% (fisicamente corretto) e ricalibrare tutti i 24 circuiti. Effetto: Monza ottimale diventa FW8-10 (corretto), curve veloci più realistiche.
-- [ ] **P11: Investigare Austin (1.55%)** — Sim troppo lento. Deduplicazione V5.2 migliorata da 2.02% a 1.55%. Ulteriore indagine in corso.
-- [ ] **P12: Investigare Las Vegas (1.61%)** — Sim troppo veloce, drag ad alta velocità.
+- [x] **P10: 100% DF braking + margine 1.30** — ✅ Frenata usa 100% downforce (era 50%). Margine 1.30. Errore medio 0.59%. Serve ricalibrazione per <0.5%.
+- [ ] **P10b: Ricalibrazione 24 circuiti** — Necessaria per tornare sotto 0.5% medio. Modificare aero_calibration per compensare 100% DF braking.
+- [ ] **P11: Investigare Austin (0.87%)** — Migliorato da 2.40% a 0.87% con P10. Ancora sopra 0.5%.
+- [ ] **P12: Investigare Las Vegas (1.68%)** — Peggiorato con P10. Sim troppo veloce, drag ad alta velocità.
 
 #### 🚀 Gruppo 5 — Feature
 - [ ] **P13: Optimizer dell'assetto** — Ricerca setup ottimale per circuito. Richiede P4-P9 risolti.
@@ -431,9 +432,9 @@ Dove:
 
 | # | Task | Impatto | Perché |
 |---|------|--------|------|
-| **P10** | **50% DF braking → 100% + ricalibrazione** | 🟡 Medio | Distanza di frenata usa 50% downforce. Monza ottimale FW14 invece di FW8. Curve veloci sistematicamente lente. Richiede ricalibrazione completa se cambiato. |
-| **P11** | **Investigare Austin (1.55%)** | Alto | Outlier peggiore. Dopo Floor Coupling + CU adattivo, potrebbe migliorare da solo. |
-| **P12** | **Investigare Las Vegas (1.61%)** | Medio | Sim troppo veloce. Dopo le modifiche al modello, ri-validare. |
+| **P10** | **100% DF braking + margine 1.30** | 🟡 Medio | ✅ Completato. Frenata usa 100% downforce (era 50%). Margine sicurezza 1.30 (era 1.20). Errore medio: 0.59% (era 0.38% con 50% DF). Austin migliorato da 2.40% a 0.87%. Serve ricalibrazione per tornare sotto 0.5%. |
+| **P11** | **Investigare Austin** | Alto | ✅ Migliorato da 2.40% a 0.87% con P10 (100% DF braking). Ancora sopra 0.5%, ma molto migliorato. |
+| **P12** | **Investigare Las Vegas** | Medio | Peggiorato da 1.61% a 1.68% con P10. Sim troppo veloce, problema di drag ad alta velocità. Serve ricalibrazione specifica. |
 
 ### 🚀 Gruppo 5 — Feature
 

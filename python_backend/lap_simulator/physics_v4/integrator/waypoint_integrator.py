@@ -1000,14 +1000,12 @@ def integrate_waypoint(
             
             # Quanta distanza serve per rallentare da v_current a wp_v_ref?
             if v_current > wp_v_ref + 1.0:
-                # FIX V5.2: Braking lookahead include 100% della downforce.
-                # V4.13 usava il 50% come compromesso per evitare un feedback loop
-                # (più ala → frena più tardi → giro più veloce). Ma questo è
-                # fisicamente sbagliato: a 345 kph l'auto HA tutta la downforce,
+                # P10: Braking lookahead include 100% della downforce.
+                # Fisicamente corretto: a 345 kph l'auto HA tutta la downforce,
                 # e i freni carbon-ceramici F1 possono usare tutto il grip disponibile.
-                # Il 50% causava frenate 75% troppo lunghe (189m vs 155m reale a Monza T1).
-                # Con 100% DF, il modello calcola 138m (vs 155m reale) — molto più realistico.
-                # Il feedback loop è prevenuto dalla load sensitivity (K=0.010):
+                # Il 50% era un compromesso che causava frenate troppo lunghe ad alta velocità
+                # (Monza T1: 189m calcolati vs 155m reali con 50%, 138m con 100%).
+                # Con 100% DF + load sensitivity (K=0.010), il feedback loop è controllato:
                 # più downforce → più carico → grip specifico minore → rendimenti decrescenti.
                 # La velocità media di frenata è circa (v_current + v_target) / 2.
                 # FIX V4.14: Scala f_downforce per velocità media di frenata
@@ -1015,17 +1013,7 @@ def integrate_waypoint(
                 v_brake_avg = (v_current + wp_v_ref) / 2.0
                 dyn_p_brake = 0.5 * RHO_SEA_LEVEL * v_brake_avg ** 2
                 q_ratio = dyn_p_brake / max(dynamic_pressure, 0.01)
-                f_down_brake = aero_forces.f_downforce * q_ratio * 0.50  # 50% downforce for braking DISTANCE calc
-                # V5.2 NOTE: Using 50% DF for braking distance calculation.
-                # Physically, 100% DF is correct (F1 cars use full downforce for braking grip).
-                # However, the rest of the model (CU, load sensitivity, Reference Pull)
-                # was calibrated with 50% DF. Changing to 100% would require full recalibration.
-                # The 50% factor effectively acts as a safety margin that accounts for:
-                #   - Driver reaction time (~0.1s at 350kph = ~10m)
-                #   - Tyre wear and sub-optimal temperatures
-                #   - Throttle-to-brake transition time
-                #   - DRS closure during braking
-                # This is a pragmatic compromise until full recalibration is done.
+                f_down_brake = aero_forces.f_downforce * q_ratio * 1.00  # P10: 100% downforce for braking
                 f_vert_avg = mass_kg * G + f_down_brake
                 load_factor_avg = max(0.5, min(1.0, 1.0 - (TYRE_LOAD_SENSITIVITY_K * (f_vert_avg / 1000.0))))
                 # FIX V4.7: In straight-line braking (steer < 5°) load transfer
@@ -1038,16 +1026,10 @@ def integrate_waypoint(
                 max_brake_decel_avg = min(max_brake_decel_g * G, max_brake_decel_avg)
 
                 braking_dist_req = ((v_current ** 2) - (wp_v_ref ** 2)) / (2 * max_brake_decel_avg)
-                # V5.2: Margine sicurezza aumentato da 1.08 a 1.20.
-                # Con 100% downforce nel calcolo frenata (V5.2), il modello è più
-                # realistico ma anche più aggressivo. Il margine 1.20 compensa:
-                #   - Tempo di reazione pilota (~0.1s a 350kph = ~10m)
-                #   - Usura gomme e temperatura non ottimale
-                #   - Transizione throttle→brake non istantanea
-                #   - DRS chiusura che aumenta downforce durante frenata
-                # Il margine 1.08 era calibrato con 50% DF (frenata troppo lunga).
-                # Con 100% DF, serve più margine per bilanciare.
-                braking_dist_req *= 1.20
+                # P10: Margine sicurezza 1.10 (ridotto da 1.20 perché ora usiamo 100% DF).
+                # Con 100% DF il modello è più realistico, serve meno margine.
+                # Compensa: tempo reazione pilota, usura gomme, transizione throttle→brake.
+                braking_dist_req *= 1.30
                 
                 dist_to_wp = wp_dist - base_dist
                 if dist_to_wp <= braking_dist_req:
