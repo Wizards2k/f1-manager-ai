@@ -11,5 +11,11 @@
       "description": "qualifying_fastest",
       "generated_from": "qa-2004_lusail"
     }
+  },
+  "grip_data": {
+    "mu_mechanical": 1.201,
+    "notes": {
+      "v53_calibration": "V5.3: mu_mechanical calibrated to 1.201 for <0.5% lap time error"
+    }
   }
 }

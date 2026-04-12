@@ -11,5 +11,11 @@
       "description": "qualifying_fastest",
       "generated_from": "es-1991_barcelona"
     }
+  },
+  "grip_data": {
+    "mu_mechanical": 1.317,
+    "notes": {
+      "v53_calibration": "V5.3: mu_mechanical calibrated to 1.317 for <0.5% lap time error"
+    }
   }
 }

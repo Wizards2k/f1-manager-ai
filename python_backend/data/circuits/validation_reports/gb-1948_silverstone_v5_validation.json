@@ -2,23 +2,23 @@
   "circuit_id": "gb-1948_silverstone",
   "circuit_name": "Silverstone",
   "real_lap_time_s": 85.01,
-  "sim_lap_time_s": 84.72526599038892,
-  "error_pct": 0.33,
+  "sim_lap_time_s": 84.39463215116754,
+  "error_pct": 0.72,
   "setups": {
     "Low DF": {
-      "lap_time_s": 85.036386724226,
-      "v_max_kph": 329.17323910558895,
-      "v_min_kph": 94.13767292989296
+      "lap_time_s": 84.67972954666104,
+      "v_max_kph": 330.7984851916694,
+      "v_min_kph": 94.5611816361464
     },
     "Neutral": {
-      "lap_time_s": 84.72526599038892,
-      "v_max_kph": 328.76088332444186,
-      "v_min_kph": 95.52360675567643
+      "lap_time_s": 84.39463215116754,
+      "v_max_kph": 329.1408656652722,
+      "v_min_kph": 85.64116342155835
     },
     "High DF": {
-      "lap_time_s": 85.39316833268296,
-      "v_max_kph": 315.13885520719595,
-      "v_min_kph": 89.61770303321687
+      "lap_time_s": 84.87850785978101,
+      "v_max_kph": 315.1451201883422,
+      "v_min_kph": 90.0316979456563
     }
   },
   "reference_pull": {

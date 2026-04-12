@@ -2,13 +2,16 @@
   "circuit_id": "hu-1986_budapest",
   "source": "TracingInsights-Archive/2025",
   "grip_data": {
-    "mu_mechanical": 1.6,
+    "mu_mechanical": 1.36,
     "mu_aero_contribution": 1.887,
     "c_aero": 0.000391,
     "compound": "C4",
     "cla_estimated": 5.0,
     "low_speed_points": 352,
-    "high_speed_points": 286
+    "high_speed_points": 286,
+    "notes": {
+      "v53_calibration": "V5.3: mu_mechanical calibrated to 1.360 for <0.5% lap time error"
+    }
   },
   "floor_data": {
     "k_wing_coupling": 0.05,

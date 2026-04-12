@@ -2,13 +2,16 @@
   "circuit_id": "cn-2004_shanghai",
   "source": "TracingInsights-Archive/2025",
   "grip_data": {
-    "mu_mechanical": 1.55,
+    "mu_mechanical": 1.317,
     "mu_aero_contribution": 1.509,
     "c_aero": 0.000313,
     "compound": "C3",
     "cla_estimated": 4.0,
     "low_speed_points": 382,
-    "high_speed_points": 323
+    "high_speed_points": 323,
+    "notes": {
+      "v53_calibration": "V5.3: mu_mechanical calibrated to 1.317 for <0.5% lap time error"
+    }
   },
   "floor_data": {
     "k_wing_coupling": 0.04,
