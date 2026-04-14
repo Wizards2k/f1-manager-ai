@@ -1,23 +1,26 @@
 {
-  "circuit_id": "it-1953_imola",
-  "source": "TracingInsights-Archive/2025",
-  "grip_data": {
-    "mu_mechanical": 1.6,
-    "mu_aero_contribution": 1.698,
-    "c_aero": 0.000352,
-    "compound": "C4",
-    "cla_estimated": 4.5,
-    "low_speed_points": 256,
-    "high_speed_points": 188
-  },
-  "floor_data": {
-    "k_wing_coupling": 0.045,
-    "cla_floor_dynamic": 1.698,
-    "mu_by_speed": {
-      "slow": 0.0,
-      "medium": 2.148974315876317,
-      "fast": 1.4166937856412782,
-      "very_fast": 1.1914816071619894
+    "circuit_id": "it-1953_imola",
+    "source": "TracingInsights-Archive/2025",
+    "grip_data": {
+        "mu_mechanical": 1.4,
+        "mu_aero_contribution": 1.698,
+        "c_aero": 0.000352,
+        "compound": "C4",
+        "cla_estimated": 4.5,
+        "low_speed_points": 256,
+        "high_speed_points": 188,
+        "notes": {
+            "v55_calibration": "V5.5: mu_mechanical=1.4 for <0.5% error (PU stateful)"
+        }
+    },
+    "floor_data": {
+        "k_wing_coupling": 0.045,
+        "cla_floor_dynamic": 1.698,
+        "mu_by_speed": {
+            "slow": 0.0,
+            "medium": 2.148974315876317,
+            "fast": 1.4166937856412782,
+            "very_fast": 1.1914816071619894
+        }
     }
-  }
 }

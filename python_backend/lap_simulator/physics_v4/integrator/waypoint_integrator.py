@@ -1342,7 +1342,7 @@ def integrate_lap_hd(
     # Quando >0, la curva di potenza usa RPM reali dalla PU Lookup
     # per modellare la dipendenza RPM-potenza del motore.
     pu_lookup_blend: float = 0.0,
-    pu_config: Optional[Dict] = None,  # V5.4: {"engine_map": "QUALIFY"} activates PU stateful model
+    pu_config: Optional[Dict] = None,  # V5.5: None=V5.3 flat (legacy), {"engine_map": "QUALIFY"}=V5.4 stateful
 ) -> Dict[str, Any]:
     """
     Simula giro completo su circuito HD.
@@ -1398,17 +1398,20 @@ def integrate_lap_hd(
         elif verbose:
             print(f"  ⚠️ PU Lookup non trovato per {circuit_id}, blend disabilitato")
     
-    # V5.4: Inizializza PU stateful model se pu_config fornito
+    # V5.5: Inizializza PU stateful model (default: QUALIFY)
     pu_ctx = None
     if pu_config is not None:
         engine_map = pu_config.get("engine_map", "QUALIFY")
         pu_ctx = init_pu_context(circuit_id, engine_map)
-        if verbose:
-            print(f"  ⚡ V5.4 PU Stateful: map={engine_map}, "
-                  f"deploy={pu_ctx.deploy_mj_per_lap:.2f} MJ, "
-                  f"harvest={pu_ctx.harvest_mj_per_lap:.2f} MJ, "
-                  f"mguh_power={pu_ctx.mguh_power_kw:.1f} kW, "
-                  f"ers_output={pu_ctx.ers_output_kw:.1f} kW")
+    else:
+        # V5.5: PU stateful attivo di default con QUALIFY map
+        pu_ctx = init_pu_context(circuit_id, "QUALIFY")
+    if verbose and pu_ctx is not None:
+        print(f"  ⚡ V5.5 PU Stateful: map={pu_ctx.engine_map}, "
+              f"deploy={pu_ctx.deploy_mj_per_lap:.2f} MJ, "
+              f"harvest={pu_ctx.harvest_mj_per_lap:.2f} MJ, "
+              f"mguh_power={pu_ctx.mguh_power_kw:.1f} kW, "
+              f"ers_output={pu_ctx.ers_output_kw:.1f} kW")
     
     if not waypoints:
         raise ValueError(f"Nessun waypoint trovato per {circuit_id}")

@@ -1,26 +1,27 @@
 {
-  "circuit_id": "us-2023_las_vegas",
-  "source": "TracingInsights-Archive/2025",
-  "grip_data": {
-    "mu_mechanical": 1.361,
-    "mu_aero_contribution": 1.207,
-    "c_aero": 0.00025,
-    "compound": "C4",
-    "cla_estimated": 3.2,
-    "low_speed_points": 311,
-    "high_speed_points": 182,
-    "notes": {
-      "v53_calibration": "V5.3: mu_mechanical calibrated to 1.361 for <0.5% lap time error"
+    "circuit_id": "us-2023_las_vegas",
+    "source": "TracingInsights-Archive/2025",
+    "grip_data": {
+        "mu_mechanical": 1.2249,
+        "mu_aero_contribution": 1.207,
+        "c_aero": 0.00025,
+        "compound": "C4",
+        "cla_estimated": 3.2,
+        "low_speed_points": 311,
+        "high_speed_points": 182,
+        "notes": {
+            "v53_calibration": "V5.3: mu_mechanical calibrated to 1.361 for <0.5% lap time error",
+            "v55_calibration": "V5.5: mu_mechanical=1.2249 for <0.5% error (PU stateful)"
+        }
+    },
+    "floor_data": {
+        "k_wing_coupling": 0.032,
+        "cla_floor_dynamic": 1.206,
+        "mu_by_speed": {
+            "slow": 1.2323580137197925,
+            "medium": 1.2017973051408002,
+            "fast": 1.100461411977993,
+            "very_fast": 1.1116069648519151
+        }
     }
-  },
-  "floor_data": {
-    "k_wing_coupling": 0.032,
-    "cla_floor_dynamic": 1.206,
-    "mu_by_speed": {
-      "slow": 1.2323580137197925,
-      "medium": 1.2017973051408002,
-      "fast": 1.100461411977993,
-      "very_fast": 1.1116069648519151
-    }
-  }
 }

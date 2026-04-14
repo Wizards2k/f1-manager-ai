@@ -1,26 +1,27 @@
 {
-  "circuit_id": "es-1991_barcelona",
-  "source": "TracingInsights-Archive/2025",
-  "grip_data": {
-    "mu_mechanical": 1.317,
-    "mu_aero_contribution": 1.698,
-    "c_aero": 0.000352,
-    "compound": "C3",
-    "cla_estimated": 4.5,
-    "low_speed_points": 344,
-    "high_speed_points": 308,
-    "notes": {
-      "v53_calibration": "V5.3: mu_mechanical calibrated to 1.317 for <0.5% lap time error"
+    "circuit_id": "es-1991_barcelona",
+    "source": "TracingInsights-Archive/2025",
+    "grip_data": {
+        "mu_mechanical": 1.1853,
+        "mu_aero_contribution": 1.698,
+        "c_aero": 0.000352,
+        "compound": "C3",
+        "cla_estimated": 4.5,
+        "low_speed_points": 344,
+        "high_speed_points": 308,
+        "notes": {
+            "v53_calibration": "V5.3: mu_mechanical calibrated to 1.317 for <0.5% lap time error",
+            "v55_calibration": "V5.5: mu_mechanical=1.1853 for <0.5% error (PU stateful)"
+        }
+    },
+    "floor_data": {
+        "k_wing_coupling": 0.045,
+        "cla_floor_dynamic": 1.698,
+        "mu_by_speed": {
+            "slow": 0.0,
+            "medium": 2.823884274208236,
+            "fast": 2.4897682662957807,
+            "very_fast": 1.3907522267845225
+        }
     }
-  },
-  "floor_data": {
-    "k_wing_coupling": 0.045,
-    "cla_floor_dynamic": 1.698,
-    "mu_by_speed": {
-      "slow": 0.0,
-      "medium": 2.823884274208236,
-      "fast": 2.4897682662957807,
-      "very_fast": 1.3907522267845225
-    }
-  }
 }

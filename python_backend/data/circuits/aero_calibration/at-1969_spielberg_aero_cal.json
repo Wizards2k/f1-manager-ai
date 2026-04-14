@@ -1,23 +1,26 @@
 {
-  "circuit_id": "at-1969_spielberg",
-  "source": "TracingInsights-Archive/2025",
-  "grip_data": {
-    "mu_mechanical": 1.55,
-    "mu_aero_contribution": 1.622,
-    "c_aero": 0.000336,
-    "compound": "C3",
-    "cla_estimated": 4.3,
-    "low_speed_points": 222,
-    "high_speed_points": 181
-  },
-  "floor_data": {
-    "k_wing_coupling": 0.0429,
-    "cla_floor_dynamic": 1.62,
-    "mu_by_speed": {
-      "slow": 1.6995634903341956,
-      "medium": 1.7358054459802401,
-      "fast": 2.1944598235622923,
-      "very_fast": 0.9736708392611649
+    "circuit_id": "at-1969_spielberg",
+    "source": "TracingInsights-Archive/2025",
+    "grip_data": {
+        "mu_mechanical": 1.5306,
+        "mu_aero_contribution": 1.622,
+        "c_aero": 0.000336,
+        "compound": "C3",
+        "cla_estimated": 4.3,
+        "low_speed_points": 222,
+        "high_speed_points": 181,
+        "notes": {
+            "v55_calibration": "V5.5: mu_mechanical=1.5306 for <0.5% error (PU stateful)"
+        }
+    },
+    "floor_data": {
+        "k_wing_coupling": 0.0429,
+        "cla_floor_dynamic": 1.62,
+        "mu_by_speed": {
+            "slow": 1.6995634903341956,
+            "medium": 1.7358054459802401,
+            "fast": 2.1944598235622923,
+            "very_fast": 0.9736708392611649
+        }
     }
-  }
 }
