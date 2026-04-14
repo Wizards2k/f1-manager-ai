@@ -53,6 +53,20 @@ from calibration.aero_calibration import get_aero_calibration
 from calibration.circuit_calibration import get_circuit_calibration
 from calibration.pu_lookup import load_pu_lookup, PULookupInterpolator
 from calibration.telemetry_bridge import TelemetryBridge
+from integrator.pu_stateful_v2 import (
+    PU_Context,
+    init_pu_context,
+    compute_f_engine_v54,
+    get_optimal_gear,
+    get_gear_ratio_from_n_gear,
+    update_thermal_state,
+    compute_thermal_eta,
+    R_WHEEL,
+    FINAL_DRIVE,
+    DRIVETRAIN_EFFICIENCY as PU_DRIVETRAIN_EFFICIENCY,
+    GEAR_RATIOS,
+    BATTERY_CAPACITY_MJ,
+)
 
 
 @dataclass
@@ -117,22 +131,20 @@ def load_hd_waypoints(circuit_id: str) -> List[Dict]:
     
     raw_waypoints = data.get("waypoints", [])
     
-    # FIX V5.2: Handle duplicate waypoints at section boundaries.
+    # FIX V5.2-offset: Handle duplicate waypoints at section boundaries.
     # At section boundaries, two waypoints exist at the same dist_m:
     #   - One from the outgoing section (e.g. large radius at corner exit)
     #   - One from the incoming section (e.g. small radius at corner entry)
     #
-    # V5.1 kept the larger radius, but this CANCELLED apex waypoints at corners
-    # where the boundary coincides with the apex (8 cases in Austin alone).
-    # V5.2-merge kept the smaller radius, but this caused the opposite problem:
-    # applying apex radius at corner entry where the car is still going fast.
+    # The incoming section's first point carries the APEX minimum radius
+    # of that section (e.g. 45m for Monaco hairpin), NOT the actual radius
+    # at the boundary point. The actual radius at the boundary is the
+    # outgoing section's last point (e.g. 3842m at corner entry).
     #
     # V5.2-offset: Keep BOTH waypoints with a tiny distance offset (0.01m).
-    # This preserves the full track profile: the outgoing section's last point
-    # AND the incoming section's first point. The integrator processes both,
-    # correctly transitioning from one section to the next.
-    # The offset is negligible (0.01m << 5m step size) but ensures the
-    # integrator doesn't skip the second waypoint.
+    # This preserves the full track profile including apex radii.
+    # The integrator handles the boundary speed transition via a per-step
+    # deceleration limit (see V5.4.3 in integrate_waypoint).
     if len(raw_waypoints) > 1:
         deduped = [raw_waypoints[0]]
         for wp in raw_waypoints[1:]:
@@ -140,8 +152,6 @@ def load_hd_waypoints(circuit_id: str) -> List[Dict]:
             wp_dist = wp.get('dist_m', -998)
             if abs(wp_dist - prev_dist) < 0.01:
                 # Duplicate distance: keep BOTH waypoints with tiny offset
-                # The outgoing waypoint (prev) stays at its distance.
-                # The incoming waypoint (wp) gets a tiny offset forward.
                 wp_copy = dict(wp)
                 wp_copy['dist_m'] = prev_dist + 0.01  # Tiny offset
                 deduped.append(wp_copy)
@@ -431,6 +441,8 @@ def integrate_waypoint(
     reference_pull_strength: float = 0.0,  # V5.0: Reference Pull strength (0.0-0.05 tipico)
     pu_lookup_interpolator: Optional[PULookupInterpolator] = None,  # V5.0: PU Lookup interpolator (legacy, unused)
     pu_lookup_blend: float = 0.0,  # V5.0: RPM blend from Reference Pull (0.0=constant power, 1.0=RPM from ref pull)
+    pu_config: Optional[Dict] = None,  # V5.4: PU stateful config (None=V5.3 legacy)
+    pu_ctx: Optional[PU_Context] = None,  # V5.4: PU state (passed between waypoints)
 ) -> PhysicsState:
     """
     Integra fisica per un singolo waypoint.
@@ -455,6 +467,8 @@ def integrate_waypoint(
       max_brake_decel_g: frenata massima (override)
       max_lateral_g: accelerazione laterale max (override)
       aero_calibration: profilo aero calibrato (drag/downforce/balance)
+      pu_config: V5.4 PU stateful config (None=V5.3 legacy mode)
+      pu_ctx: V5.4 PU state (transported between waypoints)
     
     Returns:
       Nuovo stato fisico aggiornato
@@ -544,10 +558,10 @@ def integrate_waypoint(
         aero_forces.f_downforce *= (1.0 - floor_fraction * (1.0 - rh_aero_factor))
     
     # ============================================================
-    # 1. POTENZA MOTORE - Modello realistico con RPM-dependent power
+    # 1. POTENZA MOTORE - Modello V5.3 (flat) o V5.4 (stateful)
     # ============================================================
-    # La potenza non è costante: dipende da RPM e velocità.
-    # In F1, la potenza massima è disponibile solo a RPM elevati.
+    # V5.3: effective_pu_kw = ICE_PEAK + ERS_PEAK * fraction (flat power)
+    # V5.4: F_prop = (T_ICE + T_MGUK + T_MGUH) * G_ratio * FD * η / r_wheel
     #
     # V5.0: rpm_fraction da Reference Pull (per-distanza)
     # Il Reference Pull contiene RPM reale per ogni punto del giro,
@@ -561,16 +575,19 @@ def integrate_waypoint(
     #   0.0 → potenza costante (comportamento V4, rpm_fraction = 1.0)
     #   1.0 → rpm_fraction completamente da RPM reale (Reference Pull)
     #   0.5 → blend 50/50
-    
+
     # Calcola rpm_fraction da Reference Pull (per-distanza)
     rpm_fraction = 1.0  # Default: potenza costante (V4)
     throttle_real_pct = throttle_pct  # Default: throttle dai waypoint
+    rpm_current = 0.0  # V5.4: RPM for torque calculation
+    gear_ratio_current = 1.0  # V5.4: Gear ratio for torque calculation
     
     if pu_lookup_blend > 0.0 and reference_pull is not None:
         ref_data = reference_pull.get("data", {})
         ref_dist = ref_data.get("dist_m", [])
         ref_rpm = ref_data.get("rpm", [])
         ref_throttle = ref_data.get("throttle_pct", [])
+        ref_gear = ref_data.get("gear", [])
         
         if ref_dist and ref_rpm and len(ref_dist) > 1:
             # Interpola RPM reale alla distanza corrente
@@ -596,50 +613,155 @@ def integrate_waypoint(
                     if ref_throttle and idx < len(ref_throttle) - 1:
                         throttle_real_pct = ref_throttle[idx] * (1 - t) + ref_throttle[idx + 1] * t
                         throttle_real_pct = max(0.0, min(100.0, throttle_real_pct))
+                    # V5.4: nGear from reference pull
+                    if ref_gear and idx < len(ref_gear) - 1:
+                        n_gear_real = ref_gear[idx] * (1 - t) + ref_gear[idx + 1] * t
+                        n_gear_int = max(1, min(8, int(round(n_gear_real))))
+                        gear_ratio_current = get_gear_ratio_from_n_gear(n_gear_int)
+                        rpm_current = rpm_real
                 else:
                     rpm_real = ref_rpm[idx]
                     if ref_throttle and idx < len(ref_throttle):
                         throttle_real_pct = max(0.0, min(100.0, ref_throttle[idx]))
+                    if ref_gear and idx < len(ref_gear):
+                        n_gear_int = max(1, min(8, int(round(ref_gear[idx]))))
+                        gear_ratio_current = get_gear_ratio_from_n_gear(n_gear_int)
+                        rpm_current = rpm_real
             else:
                 rpm_real = ref_rpm[idx]
                 if ref_throttle and idx < len(ref_throttle):
                     throttle_real_pct = max(0.0, min(100.0, ref_throttle[idx]))
+                if ref_gear and idx < len(ref_gear):
+                    n_gear_int = max(1, min(8, int(round(ref_gear[idx]))))
+                    gear_ratio_current = get_gear_ratio_from_n_gear(n_gear_int)
+                    rpm_current = rpm_real
             
             # rpm_fraction: frazione di potenza disponibile a questo RPM
             # Potenza ICE segue curva: min a idle, max a peak RPM
             rpm_frac_real = max(0.3, min(1.0, (rpm_real - ICE_IDLE_RPM) / (ICE_MAX_RPM - ICE_IDLE_RPM)))
             # Blend tra potenza costante (rpm_frac=1.0) e RPM reale
             rpm_fraction = 1.0 + pu_lookup_blend * (rpm_frac_real - 1.0)
-    
-    # Potenza effettiva = ICE (RPM-dependent) + ERS (scalato da ers_power_fraction)
-    # ers_power_fraction=1.0 → full ERS (quali_deploy: 910 kW)
-    # ers_power_fraction≈0.5 → ERS parziale (race_balanced: ~830 kW)
-    # ers_power_fraction≈0.0 → solo ICE (race_save: 750 kW)
-    effective_pu_kw = ICE_PEAK_POWER_KW + ERS_PEAK_POWER_KW * ers_power_fraction
 
-    if is_corner:
-        # In curva: potenza ridotta per trazione
-        # Più curva stretta = meno potenza disponibile
-        corner_factor = min(1.0, 1000.0 / max(radius_m, 100.0))
-        power_available = effective_pu_kw * 1000 * rpm_fraction * (throttle_real_pct / 100.0) * corner_factor
-    else:
-        # In rettilineo: potenza massima
-        power_available = effective_pu_kw * 1000 * rpm_fraction * (throttle_real_pct / 100.0)
-    
-    # Efficienza trasmissione e driver skill
-    power_available *= DRIVETRAIN_EFFICIENCY
-    power_available *= driver_skill
+    # ============================================================
+    # V5.4: PU Stateful Model (torque-based)
+    # ============================================================
+    if pu_ctx is not None:
+        # V5.4 mode: torque-based propulsive force
+        
+        # Get RPM and gear ratio
+        if rpm_current > 0 and gear_ratio_current > 0:
+            # From Reference Pull (Level 1)
+            rpm = rpm_current
+            gear_ratio = gear_ratio_current
+        else:
+            # Synthetic gearbox (Level 3 fallback)
+            n_gear, gear_ratio, rpm = get_optimal_gear(state.velocity_ms)
+        
+        # Section kind for MGU-H factors
+        section_kind = waypoint.get("section_kind", "Straight")
+        
+        # Lap progress for dynamic SOC floor
+        total_dist = waypoint.get("dist_m", 0.0)
+        lap_progress = min(1.0, total_dist / max(waypoint.get("circuit_length_m", 5000.0), 1.0))
+        
+        # Compute dt for this step
+        dt_step = max(0.001, (next_waypoint.get("dist_m", waypoint.get("dist_m", 0) + 5) - waypoint.get("dist_m", 0)) / max(state.velocity_ms, 1.0))
+        
+        # Derive brake_pct for harvesting: if waypoint brake_pct is 0 (common in HD data),
+        # estimate from throttle and look-ahead speed delta
+        brake_pct_for_ers = waypoint.get("brake_pct", 0.0)
+        if brake_pct_for_ers < 1 and throttle_real_pct < 20:
+            # Look ahead 10-20 waypoints to find minimum speed in braking zone
+            v_curr = waypoint.get("v_ref_kph", 0)
+            v_min_ahead = v_curr
+            look_ahead = min(20, len(waypoints) - waypoint_idx - 1) if waypoints else 1
+            for la in range(1, look_ahead + 1):
+                la_idx = waypoint_idx + la
+                if la_idx < len(waypoints):
+                    v_la = waypoints[la_idx].get("v_ref_kph", 0)
+                    if v_la < v_min_ahead:
+                        v_min_ahead = v_la
+                    # Stop looking if speed starts increasing (end of braking zone)
+                    if v_la > v_min_ahead * 1.02 and la > 3:
+                        break
 
-    # Forza motrice = Potenza / Velocità
-    if state.velocity_ms > 1.0:
-        f_engine = power_available / state.velocity_ms
+            if v_curr > 0 and v_min_ahead < v_curr * 0.95:
+                # Significant speed drop ahead → braking zone
+                speed_drop_frac = (v_curr - v_min_ahead) / v_curr
+                # Scale: 10% drop = ~30% brake, 30% drop = ~80% brake
+                brake_pct_for_ers = min(100, speed_drop_frac * 300)
+
+        # Compute propulsive force using V5.4 model
+        f_engine = compute_f_engine_v54(
+            pu_ctx=pu_ctx,
+            rpm=rpm,
+            gear_ratio=gear_ratio,
+            throttle_pct=throttle_real_pct,
+            section_kind=section_kind,
+            dt_s=dt_step,
+            lap_progress=lap_progress,
+            is_corner=is_corner,
+            radius_m=radius_m,
+            driver_skill=driver_skill,
+            brake_pct=brake_pct_for_ers,
+            drs_active=waypoint.get("drs_active", False),
+            section_length_m=waypoint.get("section_length_m", 100.0),
+            v_ms=state.velocity_ms,
+            dist_m=waypoint.get("dist_m", 0.0),
+        )
+        
+        # Update thermal state using instantaneous ERS power (not cumulative)
+        # MGU-K power from last deploy + MGU-H power
+        last_trace = pu_ctx.energy_trace[-1] if pu_ctx.energy_trace else {}
+        mguk_power_kw = last_trace.get("deploy_mj", 0) * 1000.0 / max(dt_step, 0.001)
+        mguh_power_kw = last_trace.get("mguh_direct_mj", 0) * 1000.0 / max(dt_step, 0.001)
+        total_ers_power_kw = mguk_power_kw + mguh_power_kw
+        update_thermal_state(pu_ctx, total_ers_power_kw, state.velocity_ms, dt_step)
+        
+        # Traction limit at low speed
+        if state.velocity_ms <= 1.0:
+            max_traction_force = mu_base.get(tyre_compound, 1.65) * mass_kg * G * 0.85
+            f_engine = min(f_engine, max_traction_force)
+        
+        # Power limit: force cannot exceed P_max / v (same physics as V5.3)
+        # This prevents V5.4 from having too much force at low speeds
+        # compared to V5.3's power/v model. P_max = ICE peak + ERS peak.
+        if state.velocity_ms > 1.0:
+            ice_peak_kw = 750.0  # kW — approximate ICE peak power
+            ers_peak_kw = pu_ctx.ers_output_kw if pu_ctx else 160.0
+            p_max_kw = ice_peak_kw + ers_peak_kw
+            max_force_from_power = p_max_kw * 1000.0 / state.velocity_ms
+            f_engine = min(f_engine, max_force_from_power)
+    
     else:
-        # A basse velocità (uscita curva), limita potenza per trazione
-        f_engine = power_available / 1.0
-        # Limita accelerazione per evitare wheel spin
-        # FIX V4.4: Aumentato da 0.60 a 0.85 per permettere accelerazione in uscita curva
-        max_traction_force = mu_base.get(tyre_compound, 1.65) * mass_kg * G * 0.85  # 85% grip posteriore
-        f_engine = min(f_engine, max_traction_force)
+        # ============================================================
+        # V5.3: Flat Power Model (legacy, backward compatible)
+        # ============================================================
+        effective_pu_kw = ICE_PEAK_POWER_KW + ERS_PEAK_POWER_KW * ers_power_fraction
+
+        if is_corner:
+            # In curva: potenza ridotta per trazione
+            # Più curva stretta = meno potenza disponibile
+            corner_factor = min(1.0, 1000.0 / max(radius_m, 100.0))
+            power_available = effective_pu_kw * 1000 * rpm_fraction * (throttle_real_pct / 100.0) * corner_factor
+        else:
+            # In rettilineo: potenza massima
+            power_available = effective_pu_kw * 1000 * rpm_fraction * (throttle_real_pct / 100.0)
+        
+        # Efficienza trasmissione e driver skill
+        power_available *= DRIVETRAIN_EFFICIENCY
+        power_available *= driver_skill
+
+        # Forza motrice = Potenza / Velocità
+        if state.velocity_ms > 1.0:
+            f_engine = power_available / state.velocity_ms
+        else:
+            # A basse velocità (uscita curva), limita potenza per trazione
+            f_engine = power_available / 1.0
+            # Limita accelerazione per evitare wheel spin
+            # FIX V4.4: Aumentato da 0.60 a 0.85 per permettere accelerazione in uscita curva
+            max_traction_force = mu_base.get(tyre_compound, 1.65) * mass_kg * G * 0.85  # 85% grip posteriore
+            f_engine = min(f_engine, max_traction_force)
     
     state.f_engine = f_engine
     state.is_throttle = throttle_pct > 0
@@ -962,6 +1084,16 @@ def integrate_waypoint(
     #
     # Deve iniziare a frenare ESATTAMENTE a distanza D dal punto
     # più lento della curva successiva.
+    #
+    # FIX V5.4.2: Graduated throttle reduction.
+    # When v_current slightly exceeds v_ref, real drivers lift throttle
+    # gradually instead of slamming the brakes. This prevents the
+    # oscillation between full throttle and full brakes that caused
+    # 174 transitions/lap and catastrophic speed drops at Monaco.
+    # The sim now has 3 regimes:
+    #   1. v_current <= v_ref * 1.02: full throttle (2% tolerance)
+    #   2. v_ref * 1.02 < v_current < v_ref * 1.08: lift & coast (reduce throttle)
+    #   3. v_current >= v_ref * 1.08 OR braking lookahead triggers: full brakes
     
     v_target_ms = v_ref_kph / 3.6
     if section_speed_scale > 0.0:
@@ -999,7 +1131,12 @@ def integrate_waypoint(
             wp_v_ref = wp.get('v_ref_kph', 200.0) / 3.6
             
             # Quanta distanza serve per rallentare da v_current a wp_v_ref?
-            if v_current > wp_v_ref + 1.0:
+            # FIX V5.4.2: Skip waypoints where speed difference is small (< 4%).
+            # Real drivers handle small speed differences by lifting throttle,
+            # not by braking. Only trigger braking for significant speed drops
+            # (corner entries, chicanes). This prevents the oscillation between
+            # full throttle and full brakes that caused 174 transitions/lap.
+            if v_current > wp_v_ref * 1.04:
                 # P10: Braking lookahead include 100% della downforce.
                 # Fisicamente corretto: a 345 kph l'auto HA tutta la downforce,
                 # e i freni carbon-ceramici F1 possono usare tutto il grip disponibile.
@@ -1037,12 +1174,30 @@ def integrate_waypoint(
                     target_brake_v = min(target_brake_v, wp_v_ref)
                     break
                     
+        # FIX V5.4.4: Graduated throttle — smooth transition before braking.
+        # When must_brake triggers, the sim used to go directly from full throttle
+        # to full brakes, causing oscillation (brake→accelerate→brake→...).
+        # Now we implement a smooth transition:
+        #   - When must_brake first triggers, start with LIGHT braking
+        #   - Gradually increase braking force over the next few waypoints
+        #   - This mimics real driver behavior: initial brake application → increasing pressure
+        #
+        # The "braking intensity" ramps from 0.3 (initial touch) to 1.0 (full brakes)
+        # based on how close we are to the target brake speed.
         if must_brake:
             state.is_braking = True
-            # Forza di frenata target (include compensazione drag per decelerazione lineare)
-            f_target_decel = mass_kg * max_brake_decel
+            # Compute braking intensity: how hard do we need to brake?
+            # If v_current is much above target → full brakes
+            # If v_current is just above target → gentle braking
+            if target_brake_v < v_current:
+                speed_headroom = (v_current - target_brake_v) / max(v_current, 1.0)
+                # Ramp from 0.3 (just started braking) to 1.0 (need full brakes)
+                brake_intensity = min(1.0, 0.3 + 0.7 * min(speed_headroom / 0.15, 1.0))
+            else:
+                brake_intensity = 0.3  # Light initial application
+            
+            f_target_decel = mass_kg * max_brake_decel * brake_intensity
             state.f_engine = -f_target_decel + state.f_drag + state.f_gravity
-            # Limita alla potenza frenante massima
             state.f_engine = max(state.f_engine, -f_grip_total)
         else:
             state.is_braking = False
@@ -1084,11 +1239,26 @@ def integrate_waypoint(
     # Limita la velocità al grip fisico disponibile (v_max_corner_ms)
     v_new_ms = min(v_new_ms, v_max_corner_ms)
     
-    # RIMOSSI section_exit_guidance e section_entry_guidance: sono guide empiriche che "inquinano" la fisica
-    # La velocità deve essere determinata solo da: grip, aero, PU, driver skill
+    # FIX V5.4.3: Limit speed drop at section boundary transitions.
+    # At section boundaries, the first waypoint of the incoming section
+    # carries the APEX minimum radius (e.g. 77m for Monaco T1) instead of
+    # the actual radius at that track position (e.g. 4660m at corner entry).
+    # This causes v_max_corner to drop catastrophically in a single step.
+    # Detection: short steps (dist_step < 1.0m) where radius drops by >80%.
+    # At these points, limit the speed drop to 30 kph per step.
+    # At normal 5m steps, the car has enough distance to brake properly.
+    is_boundary_transition = False
+    if dist_step < 1.0 and waypoints is not None and waypoint_idx > 0:
+        prev_wp = waypoints[waypoint_idx - 1]
+        prev_radius = prev_wp.get('radius_m', 9999.0)
+        if radius_m < prev_radius * 0.2 and prev_radius > 100:
+            is_boundary_transition = True
+    if dist_step < 0.02:  # Also apply at boundary duplicates
+        is_boundary_transition = True
+    if is_boundary_transition:
+        max_drop_ms = 30.0 / 3.6  # 30 kph in m/s
+        v_new_ms = max(v_new_ms, state.velocity_ms - max_drop_ms)
     
-    # Clampa a limiti fisici
-    v_new_ms = min(v_new_ms, v_max_corner_ms)
     v_new_ms = max(v_new_ms, 1.0)  # Floor numerico minimo per stabilità
     
     # ============================================================
@@ -1161,6 +1331,7 @@ def integrate_lap_hd(
     # Quando >0, la curva di potenza usa RPM reali dalla PU Lookup
     # per modellare la dipendenza RPM-potenza del motore.
     pu_lookup_blend: float = 0.0,
+    pu_config: Optional[Dict] = None,  # V5.4: {"engine_map": "QUALIFY"} activates PU stateful model
 ) -> Dict[str, Any]:
     """
     Simula giro completo su circuito HD.
@@ -1215,6 +1386,18 @@ def integrate_lap_hd(
                       f"speed {speed_min:.0f}-{speed_max:.0f} kph, blend={pu_lookup_blend:.2f}")
         elif verbose:
             print(f"  ⚠️ PU Lookup non trovato per {circuit_id}, blend disabilitato")
+    
+    # V5.4: Inizializza PU stateful model se pu_config fornito
+    pu_ctx = None
+    if pu_config is not None:
+        engine_map = pu_config.get("engine_map", "QUALIFY")
+        pu_ctx = init_pu_context(circuit_id, engine_map)
+        if verbose:
+            print(f"  ⚡ V5.4 PU Stateful: map={engine_map}, "
+                  f"deploy={pu_ctx.deploy_mj_per_lap:.2f} MJ, "
+                  f"harvest={pu_ctx.harvest_mj_per_lap:.2f} MJ, "
+                  f"mguh_power={pu_ctx.mguh_power_kw:.1f} kW, "
+                  f"ers_output={pu_ctx.ers_output_kw:.1f} kW")
     
     if not waypoints:
         raise ValueError(f"Nessun waypoint trovato per {circuit_id}")
@@ -1337,6 +1520,11 @@ def integrate_lap_hd(
     # li usa direttamente. Altrimenti converte da slider (backward compatibility).
     susp_effects = _compute_suspension_effects(suspension_setup)
 
+    # V5.4.3: Boundary duplicate speed collapse fix is in integrate_waypoint().
+    # At section boundaries (dist_step < 0.02m), v_max_corner clamp is skipped
+    # because the duplicate carries the apex minimum radius of the incoming
+    # section, not the actual radius at that track position.
+
     for i in range(len(waypoints) - 1):
         wp = waypoints[i]
         wp_next = waypoints[i + 1]
@@ -1382,6 +1570,9 @@ def integrate_lap_hd(
             reference_pull_strength=reference_pull_strength,
             pu_lookup_interpolator=pu_lookup_interpolator,
             pu_lookup_blend=pu_lookup_blend,
+            pu_config=pu_config,
+            pu_ctx=pu_ctx,
+            # v_max_corner_smooth_ms removed (V5.4.3 EMA removed)
         )
         
         # Aggiorna statistiche
@@ -1412,8 +1603,14 @@ def integrate_lap_hd(
         print(f"  V_max: {v_max_kph:.1f} kph")
         print(f"  V_min: {v_min_kph:.1f} kph")
         print(f"  V_avg: {v_avg_kph:.1f} kph")
+        if pu_ctx is not None:
+            print(f"  ⚡ PU V5.4: deploy={pu_ctx.lap_deploy_mj:.3f} MJ, "
+                  f"harvest={pu_ctx.lap_harvest_mj:.3f} MJ, "
+                  f"mguh_direct={pu_ctx.lap_mguh_direct_mj:.3f} MJ, "
+                  f"soc_end={pu_ctx.soc_mj:.3f} MJ ({pu_ctx.soc_mj/BATTERY_CAPACITY_MJ*100:.1f}%), "
+                  f"ers_temp={pu_ctx.ers_temp_c:.1f}°C")
     
-    return {
+    result = {
         "lap_time_s": lap_time_s,
         "sector_times": sector_times,
         "v_max_kph": v_max_kph,
@@ -1425,3 +1622,32 @@ def integrate_lap_hd(
         "aero_setup": aero_setup,
         "aero_calibration": aero_calibration,
     }
+    
+    # V5.4: Add PU stateful results
+    if pu_ctx is not None:
+        # Deployment zones summary
+        zones_summary = []
+        for z in pu_ctx.deployment_zones:
+            zones_summary.append({
+                "name": z.name,
+                "type": z.zone_type,
+                "start_m": round(z.start_m, 1),
+                "end_m": round(z.end_m, 1),
+                "allocated_mj": round(z.allocated_mj, 3),
+                "remaining_mj": round(z.remaining_mj, 3),
+                "target_power_kw": round(z.target_power_kw, 1),
+            })
+
+        result["pu_v54"] = {
+            "engine_map": pu_ctx.engine_map,
+            "lap_deploy_mj": round(pu_ctx.lap_deploy_mj, 4),
+            "lap_harvest_mj": round(pu_ctx.lap_harvest_mj, 4),
+            "lap_mguh_direct_mj": round(pu_ctx.lap_mguh_direct_mj, 4),
+            "soc_end_mj": round(pu_ctx.soc_mj, 4),
+            "soc_end_pct": round(pu_ctx.soc_mj / BATTERY_CAPACITY_MJ * 100, 1),
+            "ers_temp_end_c": round(pu_ctx.ers_temp_c, 1),
+            "deployment_zones": zones_summary,
+            "energy_trace": pu_ctx.energy_trace,
+        }
+    
+    return result

@@ -1,20 +1,21 @@
 ---
-title: Physics Engine V5.0 - Checklist Operativa
+title: Physics Engine V5.x — Checklist Operativa
 date: 2026-04-12
-version: 5.2
-status: VALIDATED - 24 CIRCUITI COMPLETATI (MEDIA 0.38% ERRORE, TARGET <0.5% RAGGIUNTO)
+version: 5.4
+status: V5.3 VALIDATED (0.21% avg) — V5.4 IN IMPLEMENTATION
 ---
 
-# Physics Engine V5.0 — Checklist Operativa
+# Physics Engine V5.x — Checklist Operativa
 
-Questa checklist è la versione eseguibile della spec V5.0.
+Questa checklist è la versione eseguibile delle spec V5.x.
 Serve per sapere, in ogni momento:
 - cosa è già pronto;
 - cosa va verificato prima di toccare il runtime;
 - cosa manca per calibrazione, ottimizzazione e integrazione.
 
 Riferimenti:
-- `docs/physics-engine-v5-telemetry-bridge.md` — Spec V5.0 completa (24 circuiti)
+- `docs/physics-engine-v5-telemetry-bridge.md` — Spec V5.0-V5.3 completa (24 circuiti)
+- `docs/physics-engine-v5.4-pu-stateful.md` — Spec V5.4 PU Stateful (NUOVO)
 - `docs/physics-engine-v4-spec.md` — Spec V4 di riferimento (archivio storico)
 
 ## 1. Input minimi del motore
@@ -302,7 +303,66 @@ Dove:
 - [x] Rimosso `docs/physics-engine-v4-checklist.md` — Contenuto obsoleto e duplicato, consolidato in V5.1.
 - [x] Rimossi 12 doc obsoleti/superati (V4.6 validation, V5.0 validation, V0.5 spec, V2 analysis, ecc.).
 
-## 7. Stato attuale sintetico (2026-04-11)
+## 7. Stato attuale sintetico (2026-04-12)
+
+### V5.3 — Già pronto ✅
+- [x] Core fisico base (40 moduli, 3,500+ LOC).
+- [x] Aero componenti (7 componenti → forze fisiche).
+- [x] Massa / CG / inerzia.
+- [x] Sospensioni. ✅ P4-P5: valori reali (N/mm, Nm/deg), setup ottimale → penalità 0% (era 900%).
+- [x] Power Unit (ICE + ERS) — **Modello flat-power V5.3**.
+- [x] Tyres (Pirelli, termico, usura, grip).
+- [x] Brakes (carbon-carbon, cooling, bias).
+- [x] Driver model (skill, traiettoria).
+- [x] Vehicle dynamics (load transfer, Kamm circle, handling).
+- [x] Setup translation (slider → physics). ✅ P4: `slider_to_real()` centralizza conversioni. P6: ride height collegato all'aero.
+- [x] Waypoint integrator (HD, 5m passo).
+- [x] **Telemetry Bridge** — Download, smoothing, raggio dinamico, Reference Pull.
+- [x] **Raggio Dinamico** — 3 metodi + hybrid blending per 24 circuiti.
+- [x] **Reference Pull** — Profilo velocità reale per correzione f_engine.
+- [x] **PU Lookup Table** — Mappa RPM/Gear/Speed per 24 circuiti.
+- [x] **Aero Calibration** — mu_mechanical e k_wing_coupling per 24 circuiti.
+- [x] **Validazione 24 circuiti** — Media errore 0.21% (V5.3 calibration), target <0.5% RAGGIUNTO.
+- [x] **Calibration V5.3** — Suspension (3 categorie), mu_mechanical (17 circuiti adjusted), aero calibration.
+
+### V5.4 — In Implementazione ⏳
+- [ ] **Fase 1**: PU_Context + Torque Model (in-progress)
+  - [ ] Creare `PU_Context` dataclass in `waypoint_integrator.py`
+  - [ ] Implementare `init_pu_context()` con caricamento da `pu_maps.json`
+  - [ ] Implementare torque curve lookup (`ICE_TORQUE_LUT`)
+  - [ ] Implementare `get_optimal_gear()` (synthetic gearbox)
+  - [ ] Aggiungere `pu_config` parametro a `integrate_lap_hd()`
+  - [ ] **Test**: Verificare che `pu_config=None` → comportamento V5.3 identico
+
+- [ ] **Fase 2**: Bucket + SOC + Harvesting
+  - [ ] Implementare `_resolve_bucket()` con euristiche
+  - [ ] Implementare `compute_mguk_torque()` con bucket + SOC
+  - [ ] Implementare `compute_mguk_harvest()` e `compute_mguh_es_harvest()`
+  - [ ] Implementare `compute_mguh_direct_torque()` (MGU-H direct)
+  - [ ] **Test**: Verificare SOC a fine giro ≈ target
+
+- [ ] **Fase 3**: Thermal Model
+  - [ ] Implementare `update_thermal_state()`
+  - [ ] Implementare `_compute_thermal_eta()`
+  - [ ] Integrare thermal clipping in MGU-K e MGU-H
+  - [ ] **Test**: Verificare temperatura a Monza (deve salire nei rettilinei)
+
+- [ ] **Fase 4**: Calibration + Validation
+  - [ ] Normalizzazione energetica (scala η se necessario)
+  - [ ] Validazione su 5 circuiti (Monza, Monaco, Suzuka, Spa, Austin)
+  - [ ] Test mappe: QUALIFY < RACE < PRACTICE < SAFETY_CAR
+  - [ ] Aggiornare `validate_v53.py` con opzione `--pu-config`
+  - [ ] **Target**: Errore < 0.5% con QUALIFY map
+
+- [ ] **Fase 5**: CHECK SETUP Tests (TUTTI dopo V5.4 completato)
+  - [ ] Aero sweep
+  - [ ] Suspension sweep
+  - [ ] Fuel load
+  - [ ] Tyre compounds
+  - [ ] ICE/ERS mapping
+  - [ ] Push level
+
+### V5.3 — Già pronto ✅ (archivio)
 
 ### Già pronto ✅
 - [x] Core fisico base (40 moduli, 3,500+ LOC).

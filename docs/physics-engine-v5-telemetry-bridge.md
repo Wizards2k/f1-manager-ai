@@ -1,10 +1,11 @@
-# F1 Physics Engine V5.1 — Dynamic Curvature, Telemetry Bridge & Compound-Specific Grip
+# F1 Physics Engine V5.x — Dynamic Curvature, Telemetry Bridge & Compound-Specific Grip
 
 > **Data**: 11 Aprile 2026  
-> **Stato**: ✅ Validato su 24 circuiti — Errore medio globale **0.46%** (target < 0.5% RAGGIUNTO)  
+> **Stato**: ✅ Validato su 24 circuiti — Errore medio globale **0.21%** (V5.3 calibration)  
 > **Modello V5.1**: Compound-specific mu_mechanical + CL*A lookup  
 > **Reference Pull**: ✅ Attivo con `strength=0.02` (correzione ±20% f_engine)  
-> **Aero Calibration**: ✅ Compound-specific mu + CL*A lookup (0/24 negativi)
+> **Aero Calibration**: ✅ Compound-specific mu + CL*A lookup (0/24 negativi)  
+> **V5.4 PU Stateful**: ⏳ In implementazione (vedi `docs/physics-engine-v5.4-pu-stateful.md`)
 
 ## 1. Panoramica
 
@@ -317,6 +318,24 @@ CIRCUIT_MAP = {
 - **Driver di riferimento**: NOR (Norris), VER (Verstappen), PIA (Piastri), RUS (Russell), LEC (Leclerc)
 
 ## 10. Evoluzione del Modello
+
+### V5.3 → V5.4: Power Unit Stateful Model (In Implementazione)
+
+Il modello V5.4 sostituisce il flat-power V5.3 (910 kW costanti) con un modello PU stateful completo:
+
+- **Torque curve RPM-dipendente** (da EngineData2025.md)
+- **Gestione SOC batteria** (4 MJ capacity, si scarica/ricarica)
+- **Bucket system ERS** (Primary/Secondary/Exit con percentuali circuito-specifiche)
+- **MGU-H direct path** (energia termica → MGU-K bypassando batteria)
+- **Thermal clipping** (derating progressivo oltre 102°C, shutdown a 122°C)
+- **Harvesting in frenata** (MGU-K + MGU-H ES ricaricano batteria)
+- **Mappe motore** (QUALIFY, RACE, PRACTICE, SAFETY_CAR, ECONOMY, RECHARGE)
+- **Dynamic SOC Floor** (floor variabile con lap_progress)
+- **Priority Scoring** (soglie push/defense/DRS per deploy decision)
+
+**Stato**: Specifica completa (`docs/Pu-ModelV5-Gemini.md`, `docs/physics-engine-v5.4-roadmap.md`), implementazione in corso.
+
+**Target**: Mantenere errore < 0.5% con modello fisicamente corretto.
 
 ### V5.0 → V5.1: Bug Fix mu_aero_contribution
 
