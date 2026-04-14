@@ -90,7 +90,14 @@ class PhysicsState:
     is_braking: bool = False
     is_throttle: bool = False
     is_drs_active: bool = False
-    
+
+    # V5.5: Brake state commitment (anti-chatter hysteresis)
+    # Quando il lookahead decide di frenare, salva la velocità target.
+    # La frenata resta attiva finché velocity_ms <= brake_target_v_ms + EPS,
+    # ignorando le decisioni per-step. Eliminato il chatter brake/throttle
+    # vicino alla velocità target (Monaco: 174 → ~12 transizioni).
+    brake_target_v_ms: Optional[float] = None
+
     # Telemetria
     telemetry_points: List[Dict] = None
     
@@ -120,7 +127,8 @@ def load_hd_waypoints(circuit_id: str) -> List[Dict]:
     from pathlib import Path
     import json
     
-    circuits_dir = Path("/Users/wizards/Sviluppo/F1 Manager AI/python_backend/data/circuits/2025")
+    # Resolve circuits directory relative to this file (cross-platform)
+    circuits_dir = Path(__file__).resolve().parents[3] / "data" / "circuits" / "2025"
     hd_file = circuits_dir / f"{circuit_id}_HD.json"
     
     if not hd_file.exists():
@@ -1085,24 +1093,21 @@ def integrate_waypoint(
     # Deve iniziare a frenare ESATTAMENTE a distanza D dal punto
     # più lento della curva successiva.
     #
-    # FIX V5.4.2: Graduated throttle reduction.
-    # When v_current slightly exceeds v_ref, real drivers lift throttle
-    # gradually instead of slamming the brakes. This prevents the
-    # oscillation between full throttle and full brakes that caused
-    # 174 transitions/lap and catastrophic speed drops at Monaco.
-    # The sim now has 3 regimes:
-    #   1. v_current <= v_ref * 1.02: full throttle (2% tolerance)
-    #   2. v_ref * 1.02 < v_current < v_ref * 1.08: lift & coast (reduce throttle)
-    #   3. v_current >= v_ref * 1.08 OR braking lookahead triggers: full brakes
-    
+    # V5.5: Frenata con commitment (anti-chatter hysteresis).
+    # Il lookahead V5.3 decide WHEN iniziare a frenare (logica fisica invariata).
+    # Una volta committato, la frenata resta attiva finché v <= target + EPS,
+    # ignorando le decisioni per-step. Questo elimina il chatter brake/throttle
+    # vicino alla velocità target che causava 174 transizioni a Monaco.
+    # Nessuna dipendenza dalla telemetria: funziona su tutti i 24 circuiti.
+
     v_target_ms = v_ref_kph / 3.6
     if section_speed_scale > 0.0:
         v_target_ms *= section_speed_scale
-    
+
     # Trova il punto più lento della prossima curva (minimo v_ref nei prossimi waypoint)
     min_corner_v_ms = v_target_ms
     min_corner_dist_m = waypoint.get('dist_m', 0.0)
-    
+
     if waypoints is not None:
         # Dynamic lookahead: at least 150m, up to ~350m at top speed (velocità in m/s * 4.0s)
         # Aumentato da 3.5s a 4.0s per permettere frenate più aggressive
@@ -1119,84 +1124,89 @@ def integrate_waypoint(
         # combined limit.
         max_brake_decel_phys = f_grip_total_longitudinal / mass_kg
         max_brake_decel = min(max_brake_decel_g * G, max_brake_decel_phys)
-        
-        # Lookahead: search until we reach max distance or end of array
+        brake_decel = max_brake_decel  # default: frenata piena
+
+        # V5.5: Lookahead V5.3 (decisione "istantanea" — invariato dal baseline).
+        # Trova il primo waypoint nel range di lookahead per cui la distanza
+        # residua è inferiore alla distanza di frenata richiesta dalla fisica.
+        must_brake_now = False
+        target_v_now = v_current
         for i in range(waypoint_idx + 1, len(waypoints)):
             wp = waypoints[i]
             wp_dist = wp.get('dist_m', 0.0)
-            
             if wp_dist - base_dist > lookahead_distance_max:
                 break
-                
             wp_v_ref = wp.get('v_ref_kph', 200.0) / 3.6
-            
-            # Quanta distanza serve per rallentare da v_current a wp_v_ref?
-            # FIX V5.4.2: Skip waypoints where speed difference is small (< 4%).
-            # Real drivers handle small speed differences by lifting throttle,
-            # not by braking. Only trigger braking for significant speed drops
-            # (corner entries, chicanes). This prevents the oscillation between
-            # full throttle and full brakes that caused 174 transitions/lap.
-            if v_current > wp_v_ref * 1.04:
+            # V5.3 baseline: frena per qualsiasi differenza > 1 m/s
+            if v_current > wp_v_ref + 1.0:
                 # P10: Braking lookahead include 100% della downforce.
-                # Fisicamente corretto: a 345 kph l'auto HA tutta la downforce,
-                # e i freni carbon-ceramici F1 possono usare tutto il grip disponibile.
-                # Il 50% era un compromesso che causava frenate troppo lunghe ad alta velocità
-                # (Monza T1: 189m calcolati vs 155m reali con 50%, 138m con 100%).
-                # Con 100% DF + load sensitivity (K=0.010), il feedback loop è controllato:
-                # più downforce → più carico → grip specifico minore → rendimenti decrescenti.
-                # La velocità media di frenata è circa (v_current + v_target) / 2.
-                # FIX V4.14: Scala f_downforce per velocità media di frenata
-                # (downforce ∝ v², quindi scala con rapporto q)
                 v_brake_avg = (v_current + wp_v_ref) / 2.0
                 dyn_p_brake = 0.5 * RHO_SEA_LEVEL * v_brake_avg ** 2
                 q_ratio = dyn_p_brake / max(dynamic_pressure, 0.01)
                 f_down_brake = aero_forces.f_downforce * q_ratio * 1.00  # P10: 100% downforce for braking
                 f_vert_avg = mass_kg * G + f_down_brake
                 load_factor_avg = max(0.5, min(1.0, 1.0 - (TYRE_LOAD_SENSITIVITY_K * (f_vert_avg / 1000.0))))
-                # FIX V4.7: In straight-line braking (steer < 5°) load transfer
-                # moves weight to front axle, which HELPS braking grip.
-                # Only apply -15% penalty when steering is significant (trail braking).
                 steering_now = abs(waypoint.get('steering_angle_deg', 0.0))
                 lt_penalty = 0.92 if steering_now < 5.0 else 0.85
                 f_grip_avg = mu_base_val * f_vert_avg * load_factor_avg * lt_penalty
                 max_brake_decel_avg = f_grip_avg / mass_kg
                 max_brake_decel_avg = min(max_brake_decel_g * G, max_brake_decel_avg)
-
                 braking_dist_req = ((v_current ** 2) - (wp_v_ref ** 2)) / (2 * max_brake_decel_avg)
-                # P10: Margine sicurezza 1.10 (ridotto da 1.20 perché ora usiamo 100% DF).
-                # Con 100% DF il modello è più realistico, serve meno margine.
-                # Compensa: tempo reazione pilota, usura gomme, transizione throttle→brake.
-                braking_dist_req *= 1.30
-                
+                # V5.5: con brake commitment (duty-cycle 100%), il margine 1.30
+                # del V5.3 (che compensava la chatter ~50% duty-cycle) è
+                # eccessivo. Margine 1.11 empirico bilancia i 24 circuiti.
+                braking_dist_req *= 1.11
                 dist_to_wp = wp_dist - base_dist
                 if dist_to_wp <= braking_dist_req:
-                    must_brake = True
-                    target_brake_v = min(target_brake_v, wp_v_ref)
+                    must_brake_now = True
+                    target_v_now = wp_v_ref
                     break
-                    
-        # FIX V5.4.4: Graduated throttle — smooth transition before braking.
-        # When must_brake triggers, the sim used to go directly from full throttle
-        # to full brakes, causing oscillation (brake→accelerate→brake→...).
-        # Now we implement a smooth transition:
-        #   - When must_brake first triggers, start with LIGHT braking
-        #   - Gradually increase braking force over the next few waypoints
-        #   - This mimics real driver behavior: initial brake application → increasing pressure
+
+        # V5.5: BRAKE STATE COMMITMENT (anti-chatter hysteresis).
+        # ----------------------------------------------------------------
+        # Una volta che il lookahead committa una frenata, la frenata resta
+        # attiva finché velocità ≤ target_committato + EPS_RELEASE. Questo
+        # elimina il chatter brake/throttle near-target che causa 174
+        # transizioni a Monaco (vs ~12 reali del pilota). Sui circuiti con
+        # rettilinei lunghi (Monza, Spa, ecc.) la commitment è trasparente:
+        # la frenata raggiunge il target in pochi step e rilascia subito,
+        # quindi il comportamento è identico al V5.3 baseline.
         #
-        # The "braking intensity" ramps from 0.3 (initial touch) to 1.0 (full brakes)
-        # based on how close we are to the target brake speed.
+        # Caso curve consecutive: durante una frenata committata, se il
+        # lookahead trova un target ANCORA più basso, lo aggiorniamo senza
+        # rilasciare il commitment (frenata continua, target più stretto).
+        # ----------------------------------------------------------------
+        EPS_RELEASE_MS = 0.3  # m/s di tolleranza per rilasciare il freno
+
+        if state.brake_target_v_ms is not None:
+            # In commitment: stiamo già frenando verso un target salvato
+            if state.velocity_ms <= state.brake_target_v_ms + EPS_RELEASE_MS:
+                # Target raggiunto → rilascia
+                state.brake_target_v_ms = None
+                # Ricontrolla immediatamente: serve una NUOVA frenata?
+                # (necessario per curve consecutive: appena raggiunto T1
+                # potrebbe servire frenare per T2 che è molto vicina)
+                if must_brake_now:
+                    state.brake_target_v_ms = target_v_now
+                    must_brake = True
+                else:
+                    must_brake = False
+            else:
+                # Continua a frenare. Se troviamo un target ancora più
+                # stretto, abbassa quello salvato (curve a catena).
+                if must_brake_now and target_v_now < state.brake_target_v_ms:
+                    state.brake_target_v_ms = target_v_now
+                must_brake = True
+        else:
+            # Nessuna frenata in corso: applica decisione del lookahead
+            must_brake = must_brake_now
+            if must_brake:
+                state.brake_target_v_ms = target_v_now
+
+        # V5.5: Applicazione frenata
         if must_brake:
             state.is_braking = True
-            # Compute braking intensity: how hard do we need to brake?
-            # If v_current is much above target → full brakes
-            # If v_current is just above target → gentle braking
-            if target_brake_v < v_current:
-                speed_headroom = (v_current - target_brake_v) / max(v_current, 1.0)
-                # Ramp from 0.3 (just started braking) to 1.0 (need full brakes)
-                brake_intensity = min(1.0, 0.3 + 0.7 * min(speed_headroom / 0.15, 1.0))
-            else:
-                brake_intensity = 0.3  # Light initial application
-            
-            f_target_decel = mass_kg * max_brake_decel * brake_intensity
+            f_target_decel = mass_kg * brake_decel
             state.f_engine = -f_target_decel + state.f_drag + state.f_gravity
             state.f_engine = max(state.f_engine, -f_grip_total)
         else:
@@ -1286,6 +1296,7 @@ def integrate_waypoint(
         is_braking=state.is_braking,
         is_throttle=state.is_throttle,
         is_drs_active=drs_active,
+        brake_target_v_ms=state.brake_target_v_ms,  # V5.5: propaga commitment fra step
         telemetry_points=state.telemetry_points
     )
     

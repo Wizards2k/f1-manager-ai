@@ -620,18 +620,28 @@ class TelemetryBridge:
 
     @staticmethod
     def load_reference_pull(circuit_id: str) -> Optional[Dict]:
-        """Carica un Reference Pull precedentemente salvato."""
+        """Carica un Reference Pull precedentemente salvato.
+        
+        V5.5: Supporta sia il formato v1 (brake_pct continuo) che il formato v2
+        (brake binario + decel_g reale). Il formato v2 è preferito perché
+        il brake_pct del formato v1 ha artefatti (valori negativi, >1.0).
+        
+        Formato v1: {data: {dist_m, speed_kph, brake_pct, throttle_pct, gear, rpm, radius_m}}
+        Formato v2: {data: {dist_m, speed_kph, brake (0/1), throttle_pct, decel_g}}
+        """
         # Cerca in entrambe le posizioni possibili
         search_dirs = [
             DATA_DIR.parent / "reference_pull",
             Path(__file__).resolve().parents[2] / "data" / "circuits" / "reference_pull",
             Path("/Users/wizards/Sviluppo/F1 Manager AI/python_backend/data/circuits/reference_pull"),
         ]
-        for ref_dir in search_dirs:
-            ref_path = ref_dir / f"{circuit_id}_reference_pull.json"
-            if ref_path.exists():
-                with open(ref_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
+        # V5.5: Preferisci formato v2 (più pulito)
+        for suffix in ["_reference_pull_v2", "_reference_pull"]:
+            for ref_dir in search_dirs:
+                ref_path = ref_dir / f"{circuit_id}{suffix}.json"
+                if ref_path.exists():
+                    with open(ref_path, "r", encoding="utf-8") as f:
+                        return json.load(f)
         return None
 
 

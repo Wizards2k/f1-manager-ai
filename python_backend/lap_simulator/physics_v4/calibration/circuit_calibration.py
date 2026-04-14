@@ -31,7 +31,7 @@ CIRCUIT_CALIBRATIONS: Dict[str, Dict[str, Any]] = {
         "mu_override": {"C6": 2.33, "C5": 2.26, "C4": 2.10, "C3": 1.96},  # +8% grip
         "max_brake_decel_g": 4.8,  # -26% frenata più dolce
         "max_lateral_g": 8.0,  # +45% più carico laterale
-        "notes": "V4.15: mu ridotto per rendere downforce premiante. Floor coupling attivo.",
+        "notes": "V5.5: brake state commitment (anti-chatter) elimina oscillazione frenata senza bisogno di telemetria. V4.15: mu ridotto per rendere downforce premiante.",
         "accuracy_pct": 0.5,
     },
     
