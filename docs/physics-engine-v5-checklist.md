@@ -1,8 +1,8 @@
 ---
 title: Physics Engine V5.x — Checklist Operativa
-date: 2026-04-12
-version: 5.4
-status: V5.3 VALIDATED (0.21% avg) — V5.4 IN IMPLEMENTATION
+date: 2026-04-14
+version: 5.5
+status: V5.5 BRAKE COMMITMENT — RE-CALIBRATION NEEDED (0.52% avg, 13/24 < 0.5%)
 ---
 
 # Physics Engine V5.x — Checklist Operativa
@@ -15,7 +15,9 @@ Serve per sapere, in ogni momento:
 
 Riferimenti:
 - `docs/physics-engine-v5-telemetry-bridge.md` — Spec V5.0-V5.3 completa (24 circuiti)
-- `docs/physics-engine-v5.4-pu-stateful.md` — Spec V5.4 PU Stateful (NUOVO)
+- `docs/physics-engine-v5.4-pu-stateful.md` — Spec V5.4 PU Stateful
+- `docs/v55-brake-commitment-session-report.md` — Session report V5.5 brake commitment
+- `docs/v54-braking-fix-session-report.md` — Session report V5.4 braking investigation
 - `docs/physics-engine-v4-spec.md` — Spec V4 di riferimento (archivio storico)
 
 ## 1. Input minimi del motore
@@ -56,36 +58,64 @@ Riferimenti:
 - [x] PU Lookup Table generata per tutti i 24 circuiti.
 - [x] Aero Calibration generata per tutti i 24 circuiti.
 
-### Risultati Validazione V5.0 — 24 Circuiti
+### Risultati Validazione V5.5 — 24 Circuiti (Brake Commitment)
 
-| # | Circuito | Driver | Reale | Sim | Errore | Status |
-|---|----------|--------|-------|-----|--------|--------|
-| 1 | Baku | VER | 101.117 | 101.144 | **0.03%** | ✅ |
-| 2 | Spa | NOR | 100.562 | 100.627 | **0.06%** | ✅ |
-| 3 | Shanghai | PIA | 90.641 | 90.583 | **0.06%** | ✅ |
-| 4 | Sakhir | PIA | 89.841 | 89.894 | **0.06%** | ✅ |
-| 5 | Melbourne | NOR | 75.096 | 75.038 | **0.08%** | ✅ |
-| 6 | Yas Marina | VER | 82.207 | 82.057 | **0.18%** | ✅ |
-| 7 | Barcelona | PIA | 71.546 | 71.408 | **0.19%** | ✅ |
-| 8 | Jeddah | VER | 87.294 | 87.119 | **0.20%** | ✅ |
-| 9 | Singapore | RUS | 89.158 | 89.312 | **0.17%** | ✅ |
-| 10 | São Paulo | NOR | 69.511 | 69.628 | **0.17%** | ✅ |
-| 11 | Monaco | NOR | 69.954 | 70.037 | **0.12%** | ✅ |
-| 12 | Suzuka | NOR | 86.995 | 86.703 | **0.34%** | ✅ |
-| 13 | Silverstone | NOR | 85.010 | 84.725 | **0.33%** | ✅ |
-| 14 | Zandvoort | PIA | 68.662 | 68.400 | **0.38%** | ✅ |
-| 15 | Budapest | LEC | 75.372 | 75.071 | **0.40%** | ✅ |
-| 16 | Monza | NOR | 78.869 | 79.152 | **0.36%** | ✅ |
-| 17 | Montreal | RUS | 70.899 | 71.218 | **0.45%** | ✅ |
-| 18 | Imola | PIA | 74.670 | 75.026 | **0.48%** | ✅ |
-| 19 | Mexico City | NOR | 75.586 | 75.943 | **0.47%** | ✅ |
-| 20 | Miami | VER | 86.204 | 86.369 | **0.19%** | ✅ |
-| 21 | Lusail | PIA | 79.387 | 78.925 | **0.58%** | ⚠️ |
-| 22 | Spielberg | NOR | 63.971 | 64.333 | **0.57%** | ⚠️ |
-| 23 | Austin | VER | 92.510 | 93.945 | **1.55%** | ⚠️ |
-| 24 | Las Vegas | NOR | 107.934 | 106.194 | **1.61%** | ⚠️ |
+| # | Circuito | Driver | Reale | Sim | Errore | Status V5.3 | Status V5.5 | Delta |
+|---|----------|--------|-------|-----|--------|-------------|-------------|-------|
+| 1 | Silverstone | NOR | 85.010 | 84.984 | **0.03%** | ✅ 0.33% | ✅ 0.03% | ✅ |
+| 2 | Suzuka | NOR | 86.995 | 87.021 | **0.03%** | ✅ 0.34% | ✅ 0.03% | ✅ |
+| 3 | Mexico City | NOR | 75.586 | 75.541 | **0.06%** | ✅ 0.47% | ✅ 0.06% | ✅ |
+| 4 | Budapest | LEC | 75.372 | 75.239 | **0.18%** | ✅ 0.40% | ✅ 0.18% | ✅ |
+| 5 | Jeddah | VER | 87.294 | 87.145 | **0.17%** | ✅ 0.20% | ✅ 0.17% | ✅ |
+| 6 | Monaco | NOR | 69.954 | 69.844 | **0.16%** | ⚠️ 1.75% | ✅ 0.16% | ✅✅ |
+| 7 | Baku | VER | 101.117 | 101.509 | **0.39%** | ✅ 0.03% | ✅ 0.39% | ⚠️ |
+| 8 | São Paulo | NOR | 69.511 | 69.251 | **0.37%** | ✅ 0.17% | ✅ 0.37% | ⚠️ |
+| 9 | Zandvoort | PIA | 68.662 | 68.374 | **0.42%** | ✅ 0.38% | ✅ 0.42% | ⚠️ |
+| 10 | Singapore | RUS | 89.158 | 88.767 | **0.44%** | ✅ 0.17% | ✅ 0.44% | ⚠️ |
+| 11 | Monza | NOR | 78.869 | 79.239 | **0.47%** | ✅ 0.36% | ✅ 0.47% | ⚠️ |
+| 12 | Miami | VER | 86.204 | 85.862 | **0.40%** | ✅ 0.19% | ✅ 0.40% | ⚠️ |
+| 13 | Montreal | RUS | 70.899 | 71.113 | **0.30%** | ✅ 0.45% | ✅ 0.30% | ✅ |
+| 14 | Melbourne | NOR | 75.096 | 75.507 | **0.55%** | ✅ 0.08% | 🟡 0.55% | ⚠️ |
+| 15 | Barcelona | PIA | 71.546 | 71.145 | **0.56%** | ✅ 0.19% | 🟡 0.56% | ⚠️ |
+| 16 | Lusail | PIA | 79.387 | 78.926 | **0.58%** | ⚠️ 0.58% | 🟡 0.58% | → |
+| 17 | Spielberg | NOR | 63.971 | 63.585 | **0.60%** | ⚠️ 0.57% | 🟡 0.60% | → |
+| 18 | Montreal | RUS | 70.899 | 71.113 | **0.30%** | ✅ 0.45% | ✅ 0.30% | ✅ |
+| 19 | Imola | PIA | 74.670 | 74.077 | **0.79%** | ✅ 0.48% | 🟡 0.79% | ⚠️ |
+| 20 | Sakhir | PIA | 89.841 | 89.082 | **0.84%** | ✅ 0.06% | 🟡 0.84% | ⚠️ |
+| 21 | Austin | VER | 92.510 | 91.673 | **0.91%** | ⚠️ 1.55% | 🟡 0.91% | ✅ |
+| 22 | Spa | NOR | 100.562 | 101.330 | **0.76%** | ✅ 0.06% | 🟡 0.76% | ⚠️ |
+| 23 | Shanghai | PIA | 90.641 | 91.582 | **1.04%** | ✅ 0.06% | 🔴 1.04% | ⚠️ |
+| 24 | Las Vegas | NOR | 107.934 | 106.779 | **1.07%** | ⚠️ 1.61% | 🔴 1.07% | ✅ |
+| 25 | Yas Marina | VER | 82.207 | 83.329 | **1.36%** | ✅ 0.18% | 🔴 1.36% | ⚠️ |
 
-**Statistiche**: Media 0.38% | Mediana 0.33% | <0.5%: 20/24 | <1.0%: 22/24 | ≥1.0%: 2/24
+**Statistiche V5.5**: Media 0.52% | <0.5%: 13/24 | <1.0%: 21/24 | ≥1.0%: 3/24
+**Statistiche V5.3**: Media 0.21% | <0.5%: 24/24 | <1.0%: 24/24 | ≥1.0%: 0/24
+
+### 🔴 PRIORITÀ: Re-calibrazione V5.5
+
+Il Brake State Commitment (V5.5) ha risolto Monaco (da +1.75% a 0.16%) ma ha degradato
+la calibrazione su 11 circuiti. La causa principale è la riduzione del margine di sicurezza
+da 1.30 a 1.11 nel braking lookahead. Serve re-calibrare:
+
+**3 Outlier (>1.0%) — PRIORITÀ ALTA:**
+- [ ] **Yas Marina** (1.36%) — Sim troppo lento (+1.1s). Provare: aumentare mu_mechanical o ridurre drag.
+- [ ] **Shanghai** (1.04%) — Sim troppo lento (+0.9s). Provare: aumentare mu_mechanical.
+- [ ] **Las Vegas** (1.07%) — Sim troppo veloce (-1.2s). Provare: ridurre mu_mechanical o aumentare drag.
+
+**8 Warning (0.5-1.0%) — PRIORITÀ MEDIA:**
+- [ ] **Melbourne** (0.55%) — Sim troppo lento (+0.4s)
+- [ ] **Barcelona** (0.56%) — Sim troppo veloce (-0.4s)
+- [ ] **Lusail** (0.58%) — Sim troppo veloce (-0.5s)
+- [ ] **Spielberg** (0.60%) — Sim troppo veloce (-0.4s)
+- [ ] **Imola** (0.79%) — Sim troppo veloce (-0.6s)
+- [ ] **Sakhir** (0.84%) — Sim troppo veloce (-0.8s)
+- [ ] **Spa** (0.76%) — Sim troppo lento (+0.8s)
+- [ ] **Austin** (0.91%) — Sim troppo veloce (-0.8s)
+
+**Strategia di re-calibrazione:**
+1. Aumentare il margine di sicurezza da 1.11 a un valore intermedio (es. 1.18-1.22)
+2. Aggiustare mu_mechanical per-circuito per i 3 outlier
+3. Verificare che Monaco resti < 0.5% dopo la re-calibrazione
 
 ### Modello Fisico V5.1 — Grip Meccanico + Aero
 
@@ -254,10 +284,18 @@ Dove:
 - [x] ⚠️ Las Vegas (1.61%)
 - [x] ⚠️ Austin (1.55%)
 
-### Outlier da investigare
-- [ ] Austin (1.55%) — Sim troppo lento, deduplicazione waypoint V5.2 migliorata da 2.02% a 1.55%
-- [ ] Las Vegas (1.61%) — Sim troppo veloce, modello drag ad alta velocità
-- [ ] Spielberg (0.57%) — Sim troppo lento, downforce medio
+### Outlier da investigare (V5.5)
+- [ ] **Yas Marina** (1.36%) — Sim troppo lento (+1.1s). Provare: aumentare mu_mechanical o ridurre drag.
+- [ ] **Shanghai** (1.04%) — Sim troppo lento (+0.9s). Provare: aumentare mu_mechanical.
+- [ ] **Las Vegas** (1.07%) — Sim troppo veloce (-1.2s). Provare: ridurre mu_mechanical o aumentare drag.
+- [ ] **Spa** (0.76%) — Sim troppo lento (+0.8s). Provare: aumentare mu_mechanical.
+- [ ] **Sakhir** (0.84%) — Sim troppo veloce (-0.8s). Provare: ridurre mu_mechanical.
+- [ ] **Austin** (0.91%) — Sim troppo veloce (-0.8s). Provare: ridurre mu_mechanical.
+- [ ] **Imola** (0.79%) — Sim troppo veloce (-0.6s). Provare: ridurre mu_mechanical.
+- [ ] **Melbourne** (0.55%) — Sim troppo lento (+0.4s). Provare: aumentare mu_mechanical.
+- [ ] **Barcelona** (0.56%) — Sim troppo veloce (-0.4s). Provare: ridurre mu_mechanical.
+- [ ] **Lusail** (0.58%) — Sim troppo veloce (-0.5s). Provare: ridurre mu_mechanical.
+- [ ] **Spielberg** (0.60%) — Sim troppo veloce (-0.4s). Provare: ridurre mu_mechanical.
 
 ### Test minimi
 - [x] Il giro si completa senza errori.
@@ -297,72 +335,73 @@ Dove:
 
 ## 6. Manutenzione della documentazione
 
-- [x] `docs/physics-engine-v5-checklist.md` — Questo file, aggiornato a V5.1.
-- [x] `docs/physics-engine-v5-telemetry-bridge.md` — Spec V5.1 completa (24 circuiti).
+- [x] `docs/physics-engine-v5-checklist.md` — Questo file, aggiornato a V5.5.
+- [x] `docs/physics-engine-v5-telemetry-bridge.md` — Spec V5.0-V5.3 completa (24 circuiti).
+- [x] `docs/physics-engine-v5.4-pu-stateful.md` — Spec V5.4 PU Stateful.
+- [x] `docs/v55-brake-commitment-session-report.md` — Session report V5.5 brake commitment.
+- [x] `docs/v54-braking-fix-session-report.md` — Session report V5.4 braking investigation.
 - [x] `docs/physics-engine-v4-spec.md` — Spec V4 di riferimento (archivio storico).
-- [x] Rimosso `docs/physics-engine-v4-checklist.md` — Contenuto obsoleto e duplicato, consolidato in V5.1.
 - [x] Rimossi 12 doc obsoleti/superati (V4.6 validation, V5.0 validation, V0.5 spec, V2 analysis, ecc.).
 
-## 7. Stato attuale sintetico (2026-04-12)
+## 7. Stato attuale sintetico (2026-04-14)
 
-### V5.3 — Già pronto ✅
+### V5.5 — Brake Commitment ✅ (re-calibrazione necessaria)
 - [x] Core fisico base (40 moduli, 3,500+ LOC).
 - [x] Aero componenti (7 componenti → forze fisiche).
 - [x] Massa / CG / inerzia.
-- [x] Sospensioni. ✅ P4-P5: valori reali (N/mm, Nm/deg), setup ottimale → penalità 0% (era 900%).
-- [x] Power Unit (ICE + ERS) — **Modello flat-power V5.3**.
+- [x] Sospensioni. ✅ P4-P5: valori reali (N/mm, Nm/deg), setup ottimale → penalità 0%.
+- [x] Power Unit (ICE + ERS) — **Modello flat-power V5.3** (attivo di default).
+- [x] Power Unit V5.4 — **Modello stateful** (implementato, non attivo di default).
 - [x] Tyres (Pirelli, termico, usura, grip).
 - [x] Brakes (carbon-carbon, cooling, bias).
 - [x] Driver model (skill, traiettoria).
 - [x] Vehicle dynamics (load transfer, Kamm circle, handling).
-- [x] Setup translation (slider → physics). ✅ P4: `slider_to_real()` centralizza conversioni. P6: ride height collegato all'aero.
+- [x] Setup translation (slider → physics).
 - [x] Waypoint integrator (HD, 5m passo).
+- [x] **Brake State Commitment V5.5** — Isteresi anti-chatter, margine 1.11.
 - [x] **Telemetry Bridge** — Download, smoothing, raggio dinamico, Reference Pull.
 - [x] **Raggio Dinamico** — 3 metodi + hybrid blending per 24 circuiti.
 - [x] **Reference Pull** — Profilo velocità reale per correzione f_engine.
 - [x] **PU Lookup Table** — Mappa RPM/Gear/Speed per 24 circuiti.
 - [x] **Aero Calibration** — mu_mechanical e k_wing_coupling per 24 circuiti.
-- [x] **Validazione 24 circuiti** — Media errore 0.21% (V5.3 calibration), target <0.5% RAGGIUNTO.
-- [x] **Calibration V5.3** — Suspension (3 categorie), mu_mechanical (17 circuiti adjusted), aero calibration.
+- [x] **Validazione V5.5** — Media errore 0.52%, 13/24 < 0.5%, 3 outlier > 1%.
+- [ ] **RE-CALIBRAZIONE V5.5** — Portare 24/24 < 0.5% (target: media < 0.3%).
 
-### V5.4 — In Implementazione ⏳
-- [ ] **Fase 1**: PU_Context + Torque Model (in-progress)
-  - [ ] Creare `PU_Context` dataclass in `waypoint_integrator.py`
-  - [ ] Implementare `init_pu_context()` con caricamento da `pu_maps.json`
-  - [ ] Implementare torque curve lookup (`ICE_TORQUE_LUT`)
-  - [ ] Implementare `get_optimal_gear()` (synthetic gearbox)
-  - [ ] Aggiungere `pu_config` parametro a `integrate_lap_hd()`
-  - [ ] **Test**: Verificare che `pu_config=None` → comportamento V5.3 identico
+### Priorità immediate (ordine di importanza)
+1. 🔴 **Re-calibrazione margine frenata** — Provare 1.18-1.22 invece di 1.11.
+2. 🔴 **Re-calibrazione mu_mechanical** — 3 outlier (yas_marina, shanghai, las_vegas).
+3. 🟡 **Re-calibrazione warning** — 8 circuiti tra 0.5-1%.
+4. 🟡 **Verificare Monaco** — Deve restare < 0.5% dopo re-calibrazione.
+5. ⚪ **Attivare PU V5.4** — Dopo che V5.5 è calibrato a < 0.3% medio.
 
-- [ ] **Fase 2**: Bucket + SOC + Harvesting
-  - [ ] Implementare `_resolve_bucket()` con euristiche
-  - [ ] Implementare `compute_mguk_torque()` con bucket + SOC
-  - [ ] Implementare `compute_mguk_harvest()` e `compute_mguh_es_harvest()`
-  - [ ] Implementare `compute_mguh_direct_torque()` (MGU-H direct)
-  - [ ] **Test**: Verificare SOC a fine giro ≈ target
+### V5.5 — Brake State Commitment ✅ (con re-calibrazione necessaria)
+- [x] **Brake State Commitment** — Isteresi anti-chatter: una volta committata, la frenata resta attiva finché v ≤ target + 0.3 m/s.
+- [x] **Margine sicurezza ridotto** — Da 1.30 a 1.11 (il commitment elimina il duty-cycle 50% del V5.3).
+- [x] **Rimossi fix falliti** — V5.4.2 (soglia `*1.04`), V5.4.4 (graduated throttle), telemetria-guided braking.
+- [x] **Monaco risolto** — Da +1.75% a 0.16% (11× miglioramento).
+- [x] **Silverstone** — 0.03% (quasi perfetto).
+- [x] **Suzuka** — 0.03% (quasi perfetto).
+- [x] **Mexico City** — 0.06% (quasi perfetto).
+- [ ] **RE-CALIBRAZIONE NECESSARIA** — 3 outlier >1%, 8 warning 0.5-1%. Media 0.52% (target <0.5%).
+- [ ] Aumentare margine sicurezza da 1.11 a 1.18-1.22 (compromesso tra Monaco e altri).
+- [ ] Aggiustare mu_mechanical per i 3 outlier (yas_marina, shanghai, las_vegas).
+- [ ] Verificare Monaco resti < 0.5% dopo re-calibrazione.
 
-- [ ] **Fase 3**: Thermal Model
-  - [ ] Implementare `update_thermal_state()`
-  - [ ] Implementare `_compute_thermal_eta()`
-  - [ ] Integrare thermal clipping in MGU-K e MGU-H
-  - [ ] **Test**: Verificare temperatura a Monza (deve salire nei rettilinei)
+### V5.4 — PU Stateful (implementato, non attivo di default)
+- [x] **PU_Context dataclass** — Stato PU trasportato tra waypoint.
+- [x] **Torque curve RPM-dipendente** — ICE_TORQUE_LUT da EngineData2025.md.
+- [x] **Deployment Zones** — Zone pre-computate per deploy ERS (primary/exit).
+- [x] **Bucket + SOC + Harvesting** — Gestione energia batteria per giro.
+- [x] **MGU-H Direct** — Energia termica → MGU-K bypassando batteria.
+- [x] **Thermal clipping** — Derating progressivo oltre 115°C, shutdown a 145°C.
+- [x] **Mappe motore** — QUALIFY, RACE, PRACTICE, SAFETY_CAR.
+- [x] **Dynamic SOC Floor** — Floor variabile con lap_progress.
+- [x] **Circuit classification** — low_df/medium_df/high_df per deploy split.
+- [ ] **Calibrazione V5.4** — Validare con pu_config={"engine_map": "QUALIFY"} su 5 circuiti.
+- [ ] **Test mappe** — QUALIFY < RACE < PRACTICE < SAFETY_CAR.
+- [ ] **Integrazione runtime** — Collegare al game loop.
 
-- [ ] **Fase 4**: Calibration + Validation
-  - [ ] Normalizzazione energetica (scala η se necessario)
-  - [ ] Validazione su 5 circuiti (Monza, Monaco, Suzuka, Spa, Austin)
-  - [ ] Test mappe: QUALIFY < RACE < PRACTICE < SAFETY_CAR
-  - [ ] Aggiornare `validate_v53.py` con opzione `--pu-config`
-  - [ ] **Target**: Errore < 0.5% con QUALIFY map
-
-- [ ] **Fase 5**: CHECK SETUP Tests (TUTTI dopo V5.4 completato)
-  - [ ] Aero sweep
-  - [ ] Suspension sweep
-  - [ ] Fuel load
-  - [ ] Tyre compounds
-  - [ ] ICE/ERS mapping
-  - [ ] Push level
-
-### V5.3 — Già pronto ✅ (archivio)
+### V5.3 — Validato ✅ (archivio, 0.21% avg)
 
 ### Già pronto ✅
 - [x] Core fisico base (40 moduli, 3,500+ LOC).
@@ -387,17 +426,19 @@ Dove:
 - [x] **Floor Coupling dinamico V5.2** — Floor 65-72% downforce, setup sensitivity corretta.
 - [x] **Deduplicazione waypoint V5.2** — Keep both boundary waypoints with 0.01m offset.
 
-### In corso / Da fare
-- [x] Rendere effettivo il Reference Pull correction (strength=0.02, ±20% f_engine).
-- [x] Integrare PU Lookup nel simulatore (pu_lookup_blend=0.0 default, Opzione A implementata).
-- [x] Integrare Aero Calibration (mu_mechanical, k_wing_coupling) nel simulatore.
-- [x] Bug fix mu_aero_contribution — Modello compound-specific + CL\*A lookup.
-- [x] Floor Coupling dinamico V5.2 — CL_MAX, wing_coupling, K_FACTOR calibrati.
-- [x] Deduplicazione waypoint V5.2 — Keep both boundary waypoints with 0.01m offset.
-- [x] **P4: Definire conversioni slider→reale** — ✅ `slider_to_real()` e `real_to_slider()` in `car_setup.py`.
-- [x] **P5: Riscrivere _compute_suspension_effects()** — ✅ Valori reali (N/mm, Nm/deg). Setup ottimale → penalità 0%.
-- [x] **P6: Collegare ride height a compute_forces()** — ✅ Floor/sidepods sensibili all'altezza.
-- [x] **P7: Bug sospensioni — unità sbagliate** — ✅ Risolto da P4+P5.
+### In corso / Da fare (V5.5)
+- [x] **V5.5 Brake State Commitment** — Isteresi anti-chatter implementata.
+- [x] **Margine sicurezza ridotto** — Da 1.30 a 1.11 (compensato dal commitment).
+- [x] **Rimossi fix falliti** — V5.4.2 (`*1.04`), V5.4.4 (graduated throttle), telemetria-guided.
+- [x] **Monaco risolto** — Da +1.75% a 0.16%.
+- [ ] **RE-CALIBRAZIONE V5.5** — Portare 24/24 < 0.5% (media target < 0.3%).
+- [ ] **Margine frenata** — Provare 1.18-1.22 come compromesso.
+- [ ] **mu_mechanical per-circuito** — Aggiustare 3 outlier + 8 warning.
+- [ ] **Verificare Monaco** — Deve restare < 0.5% dopo re-calibrazione.
+- [ ] **Attivare PU V5.4** — Dopo che V5.5 è calibrato.
+- [ ] **CHECK SETUP Tests** — Dopo V5.4 attivo e V5.5 calibrato.
+
+### Completato (V5.3 e precedenti)
 - [x] **P8: Bug ride height non passato all'aero** — ✅ Risolto da P6.
 - [x] **P9: Bug ride height mm vs metri** — ✅ Risolto da P4+P6.
 - [ ] **P10: 50% DF braking → 100% + ricalibrazione** — Passare al 100% downforce nella frenata e ricalibrare 24 circuiti.
