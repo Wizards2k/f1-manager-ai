@@ -81,9 +81,11 @@ class EngineCover:
     
     def get_summary(self):
         return {
-            'width_mm': self.config['width'] * 1000,
-            'height_mm': self.config['height'] * 1000,
-            'length_mm': self.config['length'] * 1000,
+            'width_mm': self.WIDTH * 1000,
+            'length_mm': self.LENGTH * 1000,
+            'a_ref_m2': self.A_REF,
+            'cd_base': self.CD_BASE,
+            'cl_venturi': self.CL_Venturi,
         }
 
 

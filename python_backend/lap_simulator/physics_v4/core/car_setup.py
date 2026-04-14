@@ -45,12 +45,12 @@ from .team_driver_data import TeamData, DriverSkill, get_team_data, get_driver_d
 @dataclass
 class AeroSetup:
     """Configurazione aerodinamica completa."""
-    front_wing: float = 20.0  # 1-50
-    rear_wing: float = 22.0   # 1-50
-    floor: float = 25.0       # 1-50
-    sidepods: float = 20.0    # 1-50
-    engine_cover: float = 20.0
-    bwing: float = 20.0
+    front_wing: float = 20.0  # 1-50 (gradi)
+    rear_wing: float = 22.0   # 1-50 (gradi)
+    floor: float = 25.0       # 1-50 (indiretto via wing coupling)
+    sidepods: float = 20.0    # 1-50 (indiretto via wing coupling)
+    engine_cover: float = 0.0  # Valori fissi (nessun slider) — DF e drag costanti
+    bwing: float = 10.0       # 1-20 (gradi, mini-ala posteriore)
     
     # Derived
     cla_total: float = field(default=3.2)
@@ -145,17 +145,22 @@ class CarSetup:
     brakes: BrakeSetup = field(default_factory=BrakeSetup)
     fuel: FuelSetup = field(default_factory=FuelSetup)
     
-    # Massa
-    mass_total_kg: float = 883.0  # minimo regolamentare + driver
+    # Massa (V5.6: driver escluso — solo auto + carburante)
+    mass_total_kg: float = 818.0  # 798 (dry) + 20 (fuel qualifica)
     
     def update_mass(self):
-        """Aggiorna massa totale in base a fuel e setup."""
-        # base_mass = 798 (auto) + 80 (driver) + 5 (carburante minimo) = 883 kg
-        # Qualsiasi carburante oltre i 5 kg minimi si aggiunge linearmente.
-        # Correzione V4.11: soglia era 20.0 (sbagliata), ora corretta a 5.0.
-        base_mass = 883.0  # include già 5 kg carburante minimo
-        fuel_over_min = max(0.0, self.fuel.fuel_kg - 5.0)
-        self.mass_total_kg = base_mass + fuel_over_min
+        """Aggiorna massa totale in base a fuel e setup.
+        
+        V5.6: Il peso del driver è ESCLUSO dalla massa simulata.
+        La FIA pesa l'auto senza pilota (798 kg min), e il driver
+        è gestito separatamente tramite driver_skill (grip/power multiplier).
+        Includere i 80 kg del pilota nella massa altererebbe frenata,
+        accelerazione e velocità in curva, che sono già modulati
+        dal driver_skill factor nel motore fisico.
+        
+        Formula: mass = 798 (dry car) + fuel_kg
+        """
+        self.mass_total_kg = 798.0 + self.fuel.fuel_kg
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -199,7 +204,7 @@ def slider_to_real(param: str, slider_value: float) -> float:
         # Wing angles: slider = gradi (nessuna conversione)
         'front_wing':       lambda v: v,                  # 0-45°
         'rear_wing':        lambda v: v,                  # 0-45°
-        'bwing':            lambda v: v,                  # 0-20°
+        'bwing':            lambda v: v,                  # 1-20°
     }
     if param not in conversions:
         raise ValueError(f"Parametro sconosciuto: {param}. Validi: {list(conversions.keys())}")
@@ -309,7 +314,8 @@ class PhysicsV4Setup:
         front_wing: Optional[float] = None,
         rear_wing: Optional[float] = None,
         floor: Optional[float] = None,
-        sidepods: Optional[float] = None
+        sidepods: Optional[float] = None,
+        bwing: Optional[float] = None
     ):
         """Imposta assetto aerodinamico."""
         if front_wing is not None:
@@ -320,6 +326,8 @@ class PhysicsV4Setup:
             self.car.aero.floor = floor
         if sidepods is not None:
             self.car.aero.sidepods = sidepods
+        if bwing is not None:
+            self.car.aero.bwing = bwing
         
         # Calcola CLA/CDA totali.
         # FIX V4.13: Wing L/D corretto da 2.57 a 4.36 (reale F1 ≈ 4.0-5.0).
@@ -459,6 +467,7 @@ class PhysicsV4Setup:
             "aero": {
                 "front_wing": self.car.aero.front_wing,
                 "rear_wing": self.car.aero.rear_wing,
+                "b_wing": self.car.aero.bwing,
                 "cla_total": self.car.aero.cla_total,
                 "cda_total": self.car.aero.cda_total,
             },

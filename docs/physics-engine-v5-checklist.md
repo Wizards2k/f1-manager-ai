@@ -374,8 +374,12 @@ Peggiore: Spielberg 0.27%. Migliore: Singapore 0.01%.
 1. ✅ ~~Re-calibrazione mu_mechanical~~ — Completata, 16/24 circuiti calibrati.
 2. ✅ ~~Attivare PU V5.4~~ — Attivato come default (QUALIFY map).
 3. ✅ ~~Verificare Monaco~~ — 0.11%, ben sotto 0.5%.
-4. ⚪ **Race map** — Implementare mappa RACE per simulazioni gara.
-5. ⚪ **Optimizer setup** — Implementare ricerca setup ottimale per circuito.
+4. ✅ ~~P10: 50% DF braking~~ — Già risolto: 100% DF braking, margine 1.11.
+5. ✅ ~~P7: Suspension unit mismatch~~ — Già risolto: slider_to_real(), valori reali.
+6. ✅ ~~Bwing + EngineCover setup sensitivity~~ — Bwing integrata (slider 1-20°), EngineCover DF/drag fissi con distribuzione corretta.
+7. ⚪ **Race map PU** — Implementare mappa RACE per simulazioni gara.
+8. ⚪ **CHECK SETUP Tests** — 6 test di sensitività (aero sweep, suspension, fuel, tyres, ICE/ERS, push level).
+9. ⚪ **Optimizer setup** — Implementare ricerca setup ottimale per circuito.
 
 ### V5.5 — Brake Commitment + PU Stateful ✅ (CALIBRATO)
 - [x] **Brake State Commitment** — Isteresi anti-chatter: una volta committata, la frenata resta attiva finché v ≤ target + 0.3 m/s.
@@ -385,6 +389,17 @@ Peggiore: Spielberg 0.27%. Migliore: Singapore 0.01%.
 - [x] **PU Stateful attivo** — QUALIFY map come default, deploy 4.0 MJ/lap.
 - [x] **Calibrazione completata** — 16/24 circuiti calibrati, media 0.12%, 24/24 < 0.5%.
 - [x] **Bug LRU cache risolto** — aero_calibration.py caricato due volte (import relativo vs assoluto).
+
+### V5.6 — Bwing Integration + EngineCover Fix ✅ (CALIBRATO)
+- [x] **Bwing integrata nel pipeline** — Slider 1-20° → `set_aoa()`, `cl_alpha=0.04` per range completo 0-20°.
+- [x] **Bwing passata via aero_setup** — `aero_setup["b_wing"]` → `set_component_angles()` → `bwing.set_aoa()`.
+- [x] **EngineCover 70% rear** — Fix distribuzione: 30% front + 70% rear (prima il 70% rear era perso).
+- [x] **EngineCover valori fissi** — Nessun slider, DF e drag costanti (CL=0.049, CD=0.015).
+- [x] **get_summary() bugs** — Fixati in bwing.py e engine_cover.py (KeyError su chiavi inesistenti).
+- [x] **car_setup.py aggiornato** — `set_aero()` accetta `bwing`, `get_setup_dict()` include `b_wing`.
+- [x] **Default aero_setup** — Aggiunto `b_wing: 10.0` nel default di `waypoint_integrator.py`.
+- [x] **Re-calibrazione** — 5/24 circuiti ricalibrati (Monaco, Las Vegas, Budapest, Sakhir, Spielberg).
+- [x] **Validazione V5.6** — Media errore 0.14%, 24/24 < 0.5%, 0 outlier > 1%.
 
 ### V5.4 — PU Stateful (attivo di default con QUALIFY map)
 - [x] **PU_Context dataclass** — Stato PU trasportato tra waypoint.
@@ -425,24 +440,29 @@ Peggiore: Spielberg 0.27%. Migliore: Singapore 0.01%.
 - [x] **Floor Coupling dinamico V5.2** — Floor 65-72% downforce, setup sensitivity corretta.
 - [x] **Deduplicazione waypoint V5.2** — Keep both boundary waypoints with 0.01m offset.
 
-### In corso / Da fare (V5.5)
+### In corso / Da fare (V5.6)
 - [x] **V5.5 Brake State Commitment** — Isteresi anti-chatter implementata.
 - [x] **Margine sicurezza ridotto** — Da 1.30 a 1.11 (compensato dal commitment).
 - [x] **Rimossi fix falliti** — V5.4.2 (`*1.04`), V5.4.4 (graduated throttle), telemetria-guided.
-- [x] **Monaco risolto** — Da +1.75% a 0.16%.
-- [ ] **RE-CALIBRAZIONE V5.5** — Portare 24/24 < 0.5% (media target < 0.3%).
-- [ ] **Margine frenata** — Provare 1.18-1.22 come compromesso.
-- [ ] **mu_mechanical per-circuito** — Aggiustare 3 outlier + 8 warning.
-- [ ] **Verificare Monaco** — Deve restare < 0.5% dopo re-calibrazione.
-- [ ] **Attivare PU V5.4** — Dopo che V5.5 è calibrato.
-- [ ] **CHECK SETUP Tests** — Dopo V5.4 attivo e V5.5 calibrato.
+- [x] **Monaco risolto** — Da +1.75% a 0.23% (V5.6 calibrato).
+- [x] **RE-CALIBRAZIONE V5.5** — ✅ Completata: 24/24 < 0.5%, media 0.12%.
+- [x] **Margine frenata** — ✅ 1.11 empirico, bilanciato per 24 circuiti con brake commitment.
+- [x] **mu_mechanical per-circuito** — ✅ 21/24 circuiti calibrati (16 V5.5 + 5 V5.6).
+- [x] **Verificare Monaco** — ✅ 0.23%, sotto 0.5%.
+- [x] **Attivare PU V5.4** — ✅ QUALIFY map attiva come default.
+- [x] **V5.6 Bwing integration** — ✅ Slider 1-20°, cl_alpha=0.04, pipeline completa.
+- [x] **V5.6 EngineCover 70% rear** — ✅ Distribuzione corretta, ricalibrato.
+- [x] **V5.6 Re-calibrazione** — ✅ 5/24 circuiti, media 0.14%, 24/24 < 0.5%.
+- [ ] **CHECK SETUP Tests** — 6 test di sensitività (aero sweep, suspension, fuel, tyres, ICE/ERS, push level).
+- [ ] **Race map PU** — Implementare mappa RACE per simulazioni gara.
+- [ ] **Optimizer dell'assetto** — Ricerca setup ottimale per circuito.
 
 ### Completato (V5.3 e precedenti)
 - [x] **P8: Bug ride height non passato all'aero** — ✅ Risolto da P6.
 - [x] **P9: Bug ride height mm vs metri** — ✅ Risolto da P4+P6.
-- [ ] **P10: 50% DF braking → 100% + ricalibrazione** — Passare al 100% downforce nella frenata e ricalibrare 24 circuiti.
-- [ ] **P11: Investigare Austin (1.55%)** — Sim troppo lento. Deduplicazione V5.2 migliorata da 2.02% a 1.55%.
-- [ ] **P12: Investigare Las Vegas (1.61%)** — Sim troppo veloce, drag ad alta velocità.
+- [x] **P10: 50% DF braking → 100%** — ✅ Risolto: `f_down_brake = aero_forces.f_downforce * q_ratio * 1.00` (era 0.50). Calibrazione V5.5 completata.
+- [x] **P11: Austin** — ✅ Risolto: da 1.55% (V5.3) a 0.10% (V5.5 calibrato).
+- [x] **P12: Las Vegas** — ✅ Risolto: da 1.61% (V5.3) a 0.15% (V5.5 calibrato).
 - [ ] **P13: Optimizer dell'assetto** — Ricerca setup ottimale per circuito. Richiede P4-P9 risolti.
 - [ ] **P14: Integrazione runtime gameplay** — Contratto dati input/output. Richiede tutto stabile sopra.
 - [ ] **P15: Aggiornare interfaccia con nuovi range** — Slider UI e documentazione.
@@ -458,16 +478,16 @@ Peggiore: Spielberg 0.27%. Migliore: Singapore 0.01%.
 - [x] **P6: Collegare ride height a compute_forces()** — ✅ `compute_forces()` ora riceve ride_height_front/rear in metri. Floor/sidepods sensibili all'altezza. Conversione mm→m centralizzata.
 
 #### 🐛 Gruppo 3 — Bug del Motore (cose sbagliate)
-- [x] **P7: Bug sospensioni — unità sbagliate** — ✅ Risolto da P4+P5. `set_suspension()` ora salva slider values (non più scalati). `_compute_suspension_effects()` usa valori reali.
+- [x] **P7: Bug sospensioni — unità sbagliate** — ✅ Risolto da P4+P5. `set_suspension()` ora salva slider values (non più scalati). `_compute_suspension_effects()` usa valori reali. `slider_to_real()` centralizza conversioni. Setup ottimale → penalità 0% (era 900%).
 - [x] **P8: Bug ride height non passato all'aero** — ✅ Risolto da P6. `compute_forces()` ora riceve ride_height da `_compute_suspension_effects()`.
 - [x] **P9: Bug ride height unità mm vs metri** — ✅ Risolto da P4+P6. `slider_to_real()` converte in mm, poi `/1000` per metri. Validazione 0.015-0.10m.
 
 #### 🎯 Gruppo 4 — Calibrazioni (dopo i fix)
 - [x] **P3: Validazione setup variati** — ✅ Superato: Monaco High-DF più veloce, Monza Low-DF più veloce, Suzuka campana corretta. Silverstone OK. Spa/Monza ~4° troppo carico (known limitation: 50% DF braking).
-- [x] **P10: 100% DF braking + margine 1.30** — ✅ Frenata usa 100% downforce (era 50%). Margine 1.30. Errore medio 0.59%. Serve ricalibrazione per <0.5%.
-- [ ] **P10b: Ricalibrazione 24 circuiti** — Necessaria per tornare sotto 0.5% medio. Modificare aero_calibration per compensare 100% DF braking.
-- [ ] **P11: Investigare Austin (0.87%)** — Migliorato da 2.40% a 0.87% con P10. Ancora sopra 0.5%.
-- [ ] **P12: Investigare Las Vegas (1.68%)** — Peggiorato con P10. Sim troppo veloce, drag ad alta velocità.
+- [x] **P10: 100% DF braking + margine 1.11** — ✅ Frenata usa 100% downforce (era 50%). Margine 1.11 (ridotto da 1.30 grazie al brake commitment). Calibrazione V5.5 completata: 0.12% medio.
+- [x] **P10b: Ricalibrazione 24 circuiti** — ✅ Completata: 16/24 circuiti calibrati, 24/24 sotto 0.5%.
+- [x] **P11: Austin** — ✅ Risolto: 0.10% (V5.5 calibrato).
+- [x] **P12: Las Vegas** — ✅ Risolto: 0.15% (V5.5 calibrato).
 
 #### 🚀 Gruppo 5 — Feature
 - [ ] **P13: Optimizer dell'assetto** — Ricerca setup ottimale per circuito. Richiede P4-P9 risolti.

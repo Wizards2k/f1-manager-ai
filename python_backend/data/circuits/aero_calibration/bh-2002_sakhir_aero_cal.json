@@ -2,7 +2,7 @@
     "circuit_id": "bh-2002_sakhir",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.4725,
+        "mu_mechanical": 1.5093,
         "mu_aero_contribution": 1.434,
         "c_aero": 0.000297,
         "compound": "C3",
@@ -10,7 +10,7 @@
         "low_speed_points": 315,
         "high_speed_points": 250,
         "notes": {
-            "v55_calibration": "V5.5: mu_mechanical=1.4725 for <0.5% error (PU stateful)"
+            "v55_calibration": "V5.5: mu_mechanical=1.5093 for <0.5% error (PU stateful)"
         }
     },
     "floor_data": {

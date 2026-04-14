@@ -2,15 +2,15 @@
     "circuit_id": "at-1969_spielberg",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.5306,
+        "mu_mechanical": 1.4923,
         "mu_aero_contribution": 1.622,
         "c_aero": 0.000336,
-        "compound": "C3",
+        "compound": "C5",
         "cla_estimated": 4.3,
         "low_speed_points": 222,
         "high_speed_points": 181,
         "notes": {
-            "v55_calibration": "V5.5: mu_mechanical=1.5306 for <0.5% error (PU stateful)"
+            "v55_calibration": "V5.5: mu_mechanical=1.4923 for <0.5% error (PU stateful)"
         }
     },
     "floor_data": {

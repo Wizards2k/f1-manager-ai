@@ -30,8 +30,8 @@ FUEL_RACE_START_KG = 110.0  # kg benzina inizio gara (max 110kg)
 FUEL_QUALY_KG = 5.0  # kg benzina qualifica (minimo necessario)
 FUEL_LAP_CONSUMPTION_KG = 2.5  # kg consumo medio per giro (Monza ~2.2, Monaco ~2.8)
 
-# Massa totale qualifica
-MASS_TOTAL_QUALY_KG = MASS_DRY_KG + MASS_DRIVER_KG + FUEL_QUALY_KG  # ~883 kg
+# Massa totale qualifica (V5.6: driver escluso — gestito via driver_skill)
+MASS_TOTAL_QUALY_KG = MASS_DRY_KG + FUEL_QUALY_KG  # ~803 kg (798 + 5)
 
 # ============================================================================
 # POWER UNIT F1 2025

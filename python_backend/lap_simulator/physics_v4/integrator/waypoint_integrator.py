@@ -207,6 +207,46 @@ def _find_section_id_by_distance(reference_sections: Dict[str, Dict[str, Any]], 
     return ''
 
 
+def _load_soft_compound(circuit_id: str) -> str:
+    """Carica la mescola SOFT dal file Telemetry del circuito.
+    
+    La telemetria di qualifica usa sempre la gomma SOFT, che varia per circuito
+    (es. C3 a Sakhir, C4 a Spa, C5 a Monza, C6 a Monaco).
+    Questo è il compound di riferimento per la calibrazione mu_mechanical.
+    
+    Returns:
+      Compound ID (es. "C5") oppure "C3" come fallback.
+    """
+    from pathlib import Path
+    import json
+    
+    circuits_dir = Path(__file__).resolve().parents[3] / "data" / "circuits" / "2025"
+    telemetry_file = circuits_dir / f"{circuit_id}_Telemetry.json"
+    
+    if not telemetry_file.exists():
+        return "C3"  # Fallback
+    
+    try:
+        with open(telemetry_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        # Percorso 1: tyres.pirelli_package.nomination.soft (la maggior parte dei circuiti)
+        nomination = (((data or {}).get("tyres") or {}).get("pirelli_package") or {}).get("nomination") or {}
+        soft = nomination.get("soft")
+        if soft:
+            return soft
+        
+        # Percorso 2: tyre_allocation.dry_compounds.soft (es. Silverstone)
+        dry_compounds = (((data or {}).get("tyre_allocation") or {}).get("dry_compounds") or {})
+        soft = dry_compounds.get("soft")
+        if soft:
+            return soft
+        
+        return "C3"  # Fallback
+    except (json.JSONDecodeError, KeyError, TypeError):
+        return "C3"  # Fallback
+
+
 def _apply_aero_calibration(aero_forces: AeroForces, aero_calibration: Optional[Dict[str, Any]]) -> AeroForces:
     """Applica un profilo aero calibrato ai coefficienti calcolati dal modello fisico.
     
@@ -905,9 +945,20 @@ def integrate_waypoint(
                 aero_cal_mu_mechanical = None
     
     if aero_cal_mu_mechanical is not None and aero_cal_mu_mechanical > 0:
-        # Sostituisci mu_base con mu_mechanical dalla calibrazione aero.
-        # Questo è il grip reale a bassa velocità per questo circuito.
-        mu_base_val = aero_cal_mu_mechanical
+        # V5.6: Scala mu_mechanical per il compound rispetto alla SOFT di calibrazione.
+        # La calibrazione aero è fatta con la SOFT del weekend (telemetria qualifica).
+        # La soft varia per circuito: C3 (Sakhir), C4 (Spa), C5 (Monza), C6 (Monaco).
+        # Il compound ratio preserva la differenza tra mescole:
+        #   Se soft=C5 e usiamo C3: ratio = MU_BASE[C3]/MU_BASE[C5] = 0.907/1.154 = 0.786
+        #   Se soft=C5 e usiamo C5: ratio = 1.000 (nessun cambio)
+        #   Se soft=C5 e usiamo C6: ratio = MU_BASE[C6]/MU_BASE[C5] = 1.187/1.154 = 1.029
+        calibration_compound = "C3"  # Default fallback
+        if aero_calibration is not None:
+            calibration_compound = aero_calibration.get("calibration_compound", "C3")
+        cal_mu = mu_base.get(calibration_compound, 1.82)
+        target_mu = mu_base.get(tyre_compound, 1.65)
+        compound_ratio = target_mu / cal_mu if cal_mu > 0 else 1.0
+        mu_base_val = aero_cal_mu_mechanical * compound_ratio
     elif reference_pull is not None:
         # Fallback: Se non abbiamo mu_mechanical dalla calibrazione aero,
         # usiamo il Reference Pull con mu_mechanical derivato dalla telemetria.
@@ -1429,6 +1480,7 @@ def integrate_lap_hd(
         aero_setup = {
             "front_wing": 20.0,
             "rear_wing": 22.0,
+            "b_wing": 10.0,
         }
     
     aero.set_component_angles(aero_setup)
@@ -1478,6 +1530,16 @@ def integrate_lap_hd(
 
     if aero_calibration is None:
         aero_calibration = get_aero_calibration(circuit_id)
+
+    # V5.6: Carica la mescola SOFT dal Telemetry JSON.
+    # La calibrazione mu_mechanical è fatta con la SOFT (telemetria qualifica).
+    # La soft varia per circuito (C3 a Sakhir, C5 a Monza, C6 a Monaco).
+    # Questo è il compound di riferimento per lo scaling tra mescole.
+    calibration_compound = _load_soft_compound(circuit_id)
+    if aero_calibration is not None:
+        aero_calibration["calibration_compound"] = calibration_compound
+    else:
+        aero_calibration = {"calibration_compound": calibration_compound}
 
     # V5.0: Applica k_wing_coupling dalla calibrazione aero all'AeroAssembly.
     # Questo modifica il coupling ala-floor per riflettere la sensibilità

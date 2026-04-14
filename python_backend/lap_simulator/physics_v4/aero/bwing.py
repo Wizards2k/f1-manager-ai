@@ -39,6 +39,8 @@ class BWing:
         self.A_REF_COMMON = 1.60  # m²
         
         # Parametri aerodinamici
+        # V5.6: cl_alpha ridotto da 0.10 a 0.04 per range operativo 0-20°
+        # (era 0.10 → saturava a 10°, ora 0.04 × 20° = 0.80 = CL_MAX)
         self.CL_MAX = 0.80
         self.CD_MIN = 0.020
         self.K_FACTOR = 0.080
@@ -64,7 +66,9 @@ class BWing:
         aoa = np.clip(self.config['aoa'], 0, 20)
         
         # Calcola CL
-        cl_alpha = 0.10
+        # V5.6: cl_alpha = 0.04 per range operativo completo 0-20°
+        # 0.04 × 20° = 0.80 = CL_MAX (satura solo al max slider)
+        cl_alpha = 0.04
         cl = cl_alpha * aoa
         
         # Clamp CL
@@ -99,7 +103,9 @@ class BWing:
         return {
             'aoa': self.config['aoa'],
             'active': self.config['active'],
-            'width_mm': self.config['width'] * 1000,
+            'span_mm': self.SPAN * 1000,
+            'chord_mm': self.CHORD * 1000,
+            'a_ref_m2': self.A_REF,
         }
 
 

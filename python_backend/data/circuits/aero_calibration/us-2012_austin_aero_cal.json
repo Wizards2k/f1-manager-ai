@@ -5,7 +5,7 @@
         "mu_mechanical": 1.6938,
         "mu_aero_contribution": 1.622,
         "c_aero": 0.000336,
-        "compound": "C3",
+        "compound": "C4",
         "cla_estimated": 4.3,
         "low_speed_points": 402,
         "high_speed_points": 350,

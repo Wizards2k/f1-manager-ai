@@ -225,6 +225,7 @@ class AeroAssembly:
             forces['rear_wing']['lift'] +
             forces['floor_rear']['lift'] +
             forces['sidepods']['lift'] * 0.5 +
+            forces['engine_cover']['lift'] * 0.7 +
             forces['bwing']['lift']
         )
         
