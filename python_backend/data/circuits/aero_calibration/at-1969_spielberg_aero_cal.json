@@ -2,7 +2,7 @@
     "circuit_id": "at-1969_spielberg",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.4923,
+        "mu_mechanical": 1.5625,
         "mu_aero_contribution": 1.622,
         "c_aero": 0.000336,
         "compound": "C5",

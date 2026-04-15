@@ -2,7 +2,7 @@
     "circuit_id": "ca-1978_montreal",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.628,
+        "mu_mechanical": 1.75,
         "mu_aero_contribution": 1.509,
         "c_aero": 0.000313,
         "compound": "C6",

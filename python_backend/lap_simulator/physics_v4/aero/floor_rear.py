@@ -95,12 +95,15 @@ class FloorRear:
         # Clamp CL
         cl = np.clip(cl, self.CL_MIN, self.CL_MAX)
         
-        # FIX V5.2: Drag da diffusore con coupling
+        # FIX V5.7: Drag da diffusore con coupling
         # Più carico (wing_coupling alto) → più downforce MA anche più drag
         # Il diffusore non è "gratis": estrazione più forte = più resistenza
-        # K_floor = 0.18 (era 0.10) per L/D diffusore ~3.0-3.5 (reale F1)
-        # Compromesso: abbastanza drag per setup variati, non troppo per Monza
-        cd = self.CD_BASE + 0.18 * (cl ** 2)
+        # V5.7: K_floor aumentato da 0.18 a 0.20 per rendere il drag del diffusore
+        # più sensibile al wing_coupling. Insieme al K_FACTOR delle ali (FW=0.35,
+        # RW=0.40), questo assicura che setup High-DF paghino un drag penalty
+        # significativo, rendendo Low-DF più veloce a Monza.
+        # CD_BASE=0.15 + K=0.20 dà L/D ~4.5 a CL=2.0 — realistico per diffusore.
+        cd = self.CD_BASE + 0.20 * (cl ** 2)
         
         # Forze
         q = 0.5 * rho * (v ** 2)

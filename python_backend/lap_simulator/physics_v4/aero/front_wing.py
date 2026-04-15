@@ -59,11 +59,13 @@ class FrontWing:
         self.CL_MAX = 2.50        # Portanza massima (stallo) - multi-element F1
         self.CL_MIN = -0.50       # Portanza negativa (inverted wing)
         self.CD_MIN = 0.025       # Drag minimo (profili ottimizzati)
-        # FIX V5.2: K_FACTOR aumentato da 0.150 a 0.200 per rendere il drag
-        # più sensibile all'angolo dell'ala. Questo assicura che setup High-DF
-        # paghino un drag penalty significativo sui rettilinei, rendendo Low-DF
-        # più veloce a Monza e Spa. L/D range: ~4.5 (Low-DF) a ~3.0 (High-DF).
-        self.K_FACTOR = 0.200     # Induced drag: CDA range realistico (Monza→Monaco ~100%)
+        # FIX V5.7: K_FACTOR aumentato da 0.200 a 0.35 per rendere il drag
+        # più sensibile all'angolo dell'ala. Il V5.2 (K=0.200) dava L/D troppo
+        # alto a bassi angoli (7.06 a 8°), rendendo High-DF sempre conveniente
+        # anche a Monza. In F1 reale, L/D range è ~5.0 (Low-DF) a ~3.0 (High-DF).
+        # K=0.35 dà: L/D@8°=5.21, L/D@20°=3.09, L/D@38°=1.74 — realistico.
+        # NOTA: Il fix principale per Monza è nel floor drag (vedi floor_front.py).
+        self.K_FACTOR = 0.350     # Induced drag: L/D range realistico F1
         
         # Parametri DRS
         self.DRS_CL_BOOST = 0.35  # Incremento portanza con DRS

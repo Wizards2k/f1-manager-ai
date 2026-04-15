@@ -168,7 +168,7 @@ ALL_CIRCUITS = {
     },
     "monza": {
         "circuit_id": "it-1922_monza",
-        "front_wing": 8.0, "rear_wing": 10.0,
+        "front_wing": 12.0, "rear_wing": 14.0,
         "compound": "C5", "fuel_kg": 20.0,
         "ref_time": 78.869,
         "susp_source": "monza",

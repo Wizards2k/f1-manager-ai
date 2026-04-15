@@ -2,7 +2,7 @@
     "circuit_id": "au-1953_melbourne",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.4487,
+        "mu_mechanical": 1.5625,
         "mu_aero_contribution": 1.434,
         "c_aero": 0.000297,
         "compound": "C5",

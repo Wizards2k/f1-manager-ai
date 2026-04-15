@@ -98,12 +98,15 @@ class FloorFront:
         # Clamp CL
         cl = np.clip(cl, self.CL_MIN, self.CL_MAX)
         
-        # FIX V5.2: Drag da ground effect con coupling
+        # FIX V5.7: Drag da ground effect con coupling
         # Più carico (wing_coupling alto) → più downforce MA anche più drag
         # Il ground effect non è "gratis": flusso più energico = più resistenza
-        # K_floor = 0.14 (era 0.08) per L/D floor ~3.0-3.5 (reale F1)
-        # Compromesso: abbastanza drag per setup variati, non troppo per Monza
-        cd = self.CD_BASE + 0.14 * (cl ** 2)
+        # V5.7: K_floor aumentato da 0.14 a 0.16 per rendere il drag del floor
+        # più sensibile al wing_coupling. Insieme al K_FACTOR delle ali (FW=0.35,
+        # RW=0.40), questo assicura che setup High-DF paghino un drag penalty
+        # significativo, rendendo Low-DF più veloce a Monza.
+        # CD_BASE=0.12 + K=0.16 dà L/D ~5.0 a CL=1.5 — realistico per floor.
+        cd = self.CD_BASE + 0.16 * (cl ** 2)
         
         # Forze
         q = 0.5 * rho * (v ** 2)

@@ -60,11 +60,13 @@ class RearWing:
         self.CL_MAX = 2.50        # Portanza massima (stallo) - multi-element F1
         self.CL_MIN = -0.80       # Portanza negativa
         self.CD_MIN = 0.035       # Drag minimo (profili ottimizzati)
-        # FIX V5.2: K_FACTOR aumentato da 0.220 a 0.280 per rendere il drag
+        # FIX V5.7: K_FACTOR aumentato da 0.280 a 0.40 per rendere il drag
         # più sensibile all'angolo dell'ala. La rear wing ha aspect ratio più basso
         # del front wing → più drag indotto per unità di downforce.
-        # K rear > K front è fisicamente corretto.
-        self.K_FACTOR = 0.280     # Induced drag: CDA range realistico (Monza→Monaco ~120%)
+        # K rear > K front è fisicamente corretto (0.40 > 0.35).
+        # K=0.40 dà: L/D@10°=4.10, L/D@22°=2.66, L/D@42°=1.51 — realistico.
+        # NOTA: Il fix principale per Monza è nel floor drag (vedi floor_rear.py).
+        self.K_FACTOR = 0.400     # Induced drag: L/D range realistico F1
         
         # Parametri DRS
         self.DRS_CL_BOOST = 0.50  # Incremento portanza con DRS

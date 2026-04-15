@@ -2,7 +2,7 @@
     "circuit_id": "us-2022_miami",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.6,
+        "mu_mechanical": 1.75,
         "mu_aero_contribution": 1.509,
         "c_aero": 0.000313,
         "compound": "C5",
