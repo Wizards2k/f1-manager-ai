@@ -1372,9 +1372,16 @@ def integrate_waypoint(
     # V6.0: Il target di velocità è physics-driven (v_max_corner) non telemetry-driven (v_ref).
     # Il lookahead (compute_braking_zones_v6) identifica QUANDO frenare, non il target.
 
-    # Inizializza v_target_ms da v_max_corner se disponibile, altrimenti fallback a v_ref_kph
+    # V6.0 FIX: Inizializza v_target_ms da v_max_corner se è una curva (< 999),
+    # altrimenti usa v_ref_kph per i rettilinei. Questo previene il problema di Las Vegas
+    # dove v_max_corner=999 causava il car a non frenare mai poiché state.velocity < 999.
     if v_max_corner_array is not None and 0 <= waypoint_idx < len(v_max_corner_array):
-        v_target_ms = v_max_corner_array[waypoint_idx]
+        v_mc = v_max_corner_array[waypoint_idx]
+        # Se v_max_corner è 999 (rettilineo = no constraint), usa v_ref di telemetria
+        if v_mc < 999.0:  # È una curva: usa v_max_corner fisico
+            v_target_ms = v_mc
+        else:  # È un rettilineo: usa v_ref di telemetria
+            v_target_ms = v_ref_kph / 3.6
     else:
         # Fallback a V5.7 se v_max_corner_array non disponibile (backward compatibility)
         v_target_ms = v_ref_kph / 3.6
