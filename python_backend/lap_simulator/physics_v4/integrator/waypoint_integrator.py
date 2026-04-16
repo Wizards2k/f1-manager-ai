@@ -491,7 +491,6 @@ def integrate_waypoint(
     pu_lookup_blend: float = 0.0,  # V5.0: RPM blend from Reference Pull (0.0=constant power, 1.0=RPM from ref pull)
     pu_config: Optional[Dict] = None,  # V5.4: PU stateful config (None=V5.3 legacy)
     pu_ctx: Optional[PU_Context] = None,  # V5.4: PU state (passed between waypoints)
-    v_limit_current: float = 999.0,  # V6.0: Pre-computed v_limit from dual-pass (m/s)
 ) -> PhysicsState:
     """
     Integra fisica per un singolo waypoint.
@@ -1150,28 +1149,119 @@ def integrate_waypoint(
     # Una volta committato, la frenata resta attiva finché v <= target + EPS,
     # ignorando le decisioni per-step. Questo elimina il chatter brake/throttle
     # vicino alla velocità target che causava 174 transizioni a Monaco.
-    # ============================================================
-    # V6.0: SIMPLIFIED BRAKING - USE PRE-COMPUTED v_limit
-    # ============================================================
-    # Il v_limit è pre-calcolato nel Pass 1A/1B (dual-pass).
-    # Non usiamo più lookahead locale (riga 1162-1213 rimosso).
-    # Logica di frenata semplificata: frena se v_current > v_target + EPS
+    # Nessuna dipendenza dalla telemetria: funziona su tutti i 24 circuiti.
 
-    v_target_ms = v_limit_current  # Pre-computed from dual-pass
+    v_target_ms = v_ref_kph / 3.6
+    if section_speed_scale > 0.0:
+        v_target_ms *= section_speed_scale
 
-    EPS_BRAKE_MS = 0.5  # Tolleranza frenata [m/s]
+    # Trova il punto più lento della prossima curva (minimo v_ref nei prossimi waypoint)
+    min_corner_v_ms = v_target_ms
+    min_corner_dist_m = waypoint.get('dist_m', 0.0)
 
-    # FIX V4.7: Use longitudinal grip for braking decel limit
-    max_brake_decel_phys = f_grip_total_longitudinal / mass_kg
-    max_brake_decel = min(max_brake_decel_g * G, max_brake_decel_phys)
+    if waypoints is not None:
+        # Dynamic lookahead: at least 150m, up to ~350m at top speed (velocità in m/s * 4.0s)
+        # Aumentato da 3.5s a 4.0s per permettere frenate più aggressive
+        lookahead_distance_max = max(150.0, state.velocity_ms * 4.0)
+        base_dist = waypoint.get('dist_m', 0.0)
+        
+        v_current = state.velocity_ms
+        must_brake = False
+        target_brake_v = v_current
+        
+        # FIX V4.7: Use longitudinal grip for braking decel limit, not the
+        # combined/lateral grip.  In straight-line braking the full longitudinal
+        # grip is available; only trail-braking into a corner needs the lower
+        # combined limit.
+        max_brake_decel_phys = f_grip_total_longitudinal / mass_kg
+        max_brake_decel = min(max_brake_decel_g * G, max_brake_decel_phys)
+        brake_decel = max_brake_decel  # default: frenata piena
 
-    # V6.0: Frenata semplice — se siamo sopra il target, frena
-    if state.velocity_ms > v_target_ms + EPS_BRAKE_MS:
-        state.is_braking = True
-        brake_decel = max_brake_decel
-        f_target_decel = mass_kg * brake_decel
-        state.f_engine = -f_target_decel + state.f_drag + state.f_gravity
-        state.f_engine = max(state.f_engine, -f_grip_total)
+        # V5.5: Lookahead V5.3 (decisione "istantanea" — invariato dal baseline).
+        # Trova il primo waypoint nel range di lookahead per cui la distanza
+        # residua è inferiore alla distanza di frenata richiesta dalla fisica.
+        must_brake_now = False
+        target_v_now = v_current
+        for i in range(waypoint_idx + 1, len(waypoints)):
+            wp = waypoints[i]
+            wp_dist = wp.get('dist_m', 0.0)
+            if wp_dist - base_dist > lookahead_distance_max:
+                break
+            wp_v_ref = wp.get('v_ref_kph', 200.0) / 3.6
+            # V5.3 baseline: frena per qualsiasi differenza > 1 m/s
+            if v_current > wp_v_ref + 1.0:
+                # P10: Braking lookahead include 100% della downforce.
+                v_brake_avg = (v_current + wp_v_ref) / 2.0
+                dyn_p_brake = 0.5 * RHO_SEA_LEVEL * v_brake_avg ** 2
+                q_ratio = dyn_p_brake / max(dynamic_pressure, 0.01)
+                f_down_brake = aero_forces.f_downforce * q_ratio * 1.00  # P10: 100% downforce for braking
+                f_vert_avg = mass_kg * G + f_down_brake
+                load_factor_avg = max(0.5, min(1.0, 1.0 - (TYRE_LOAD_SENSITIVITY_K * (f_vert_avg / 1000.0))))
+                steering_now = abs(waypoint.get('steering_angle_deg', 0.0))
+                lt_penalty = 0.92 if steering_now < 5.0 else 0.85
+                f_grip_avg = mu_base_val * f_vert_avg * load_factor_avg * lt_penalty
+                max_brake_decel_avg = f_grip_avg / mass_kg
+                max_brake_decel_avg = min(max_brake_decel_g * G, max_brake_decel_avg)
+                braking_dist_req = ((v_current ** 2) - (wp_v_ref ** 2)) / (2 * max_brake_decel_avg)
+                # V5.5: con brake commitment (duty-cycle 100%), il margine 1.30
+                # del V5.3 (che compensava la chatter ~50% duty-cycle) è
+                # eccessivo. Margine 1.11 empirico bilancia i 24 circuiti.
+                braking_dist_req *= 1.11
+                dist_to_wp = wp_dist - base_dist
+                if dist_to_wp <= braking_dist_req:
+                    must_brake_now = True
+                    target_v_now = wp_v_ref
+                    break
+
+        # V5.5: BRAKE STATE COMMITMENT (anti-chatter hysteresis).
+        # ----------------------------------------------------------------
+        # Una volta che il lookahead committa una frenata, la frenata resta
+        # attiva finché velocità ≤ target_committato + EPS_RELEASE. Questo
+        # elimina il chatter brake/throttle near-target che causa 174
+        # transizioni a Monaco (vs ~12 reali del pilota). Sui circuiti con
+        # rettilinei lunghi (Monza, Spa, ecc.) la commitment è trasparente:
+        # la frenata raggiunge il target in pochi step e rilascia subito,
+        # quindi il comportamento è identico al V5.3 baseline.
+        #
+        # Caso curve consecutive: durante una frenata committata, se il
+        # lookahead trova un target ANCORA più basso, lo aggiorniamo senza
+        # rilasciare il commitment (frenata continua, target più stretto).
+        # ----------------------------------------------------------------
+        EPS_RELEASE_MS = 0.3  # m/s di tolleranza per rilasciare il freno
+
+        if state.brake_target_v_ms is not None:
+            # In commitment: stiamo già frenando verso un target salvato
+            if state.velocity_ms <= state.brake_target_v_ms + EPS_RELEASE_MS:
+                # Target raggiunto → rilascia
+                state.brake_target_v_ms = None
+                # Ricontrolla immediatamente: serve una NUOVA frenata?
+                # (necessario per curve consecutive: appena raggiunto T1
+                # potrebbe servire frenare per T2 che è molto vicina)
+                if must_brake_now:
+                    state.brake_target_v_ms = target_v_now
+                    must_brake = True
+                else:
+                    must_brake = False
+            else:
+                # Continua a frenare. Se troviamo un target ancora più
+                # stretto, abbassa quello salvato (curve a catena).
+                if must_brake_now and target_v_now < state.brake_target_v_ms:
+                    state.brake_target_v_ms = target_v_now
+                must_brake = True
+        else:
+            # Nessuna frenata in corso: applica decisione del lookahead
+            must_brake = must_brake_now
+            if must_brake:
+                state.brake_target_v_ms = target_v_now
+
+        # V5.5: Applicazione frenata
+        if must_brake:
+            state.is_braking = True
+            f_target_decel = mass_kg * brake_decel
+            state.f_engine = -f_target_decel + state.f_drag + state.f_gravity
+            state.f_engine = max(state.f_engine, -f_grip_total)
+        else:
+            state.is_braking = False
     else:
         state.is_braking = False
     
@@ -1185,19 +1275,18 @@ def integrate_waypoint(
     # 8. LIMITI FISICI
     # ============================================================
     
-    # V6.0: Limiti fisici già incorporati in v_limit (dual-pass)
-    # Non serve il ceiling v_max_corner_ms qui perché è già stato
-    # propagato nel backward sweep
-
     # Limita accelerazione laterale in curva
     if is_corner:
         a_lat = state.velocity_ms ** 2 / radius_m
         a_lat_g = a_lat / G
-
+        
         if a_lat_g > max_lateral_g:
             # Troppa accelerazione laterale: riduci velocità
             v_max_safe_ms = math.sqrt(max_lateral_g * G * radius_m)
             v_target_ms = min(v_target_ms, v_max_safe_ms)
+    
+    # Limita velocità in curva dal grip disponibile
+    v_target_ms = min(v_target_ms, v_max_corner_ms)
     
     # ============================================================
     # 9. INTEGRA CINEMATICA - FISICA PURA
@@ -1207,14 +1296,10 @@ def integrate_waypoint(
     v_squared_new = max(0.0, v_squared_new)  # Evita sqrt negativo
     
     v_new_ms = math.sqrt(v_squared_new)
-
-    # V6.0: CRITICAL - Clamp velocity to v_limit_current (dual-pass constraint)
-    # v_limit già incorpora:
-    #   - v_max_corner fisico (Pass 1A con downforce)
-    #   - limiti frenata cinematica (Pass 1B backward sweep)
-    # Senza questo clamp, il car può superare v_limit tramite accelerazione
-    v_new_ms = min(v_new_ms, v_target_ms)
-
+    
+    # Limita la velocità al grip fisico disponibile (v_max_corner_ms)
+    v_new_ms = min(v_new_ms, v_max_corner_ms)
+    
     # FIX V5.4.3: Limit speed drop at section boundary transitions.
     # At section boundaries, the first waypoint of the incoming section
     # carries the APEX minimum radius (e.g. 77m for Monaco T1) instead of
@@ -1280,239 +1365,6 @@ def integrate_waypoint(
     })
     
     return new_state
-
-
-# ============================================================
-# V6.0: DUAL-PASS CORNER MODEL REDESIGN (FIXED)
-# ============================================================
-# Separa pianificazione (Pass 1A: calcolo profilo velocità globale + circuit-specific factors)
-# da simulazione (Pass 2: integrazione forward con profilo fisso)
-
-def analyze_circuit_profile(waypoints: List[Dict]) -> str:
-    """
-    Classifica il circuito in base al profilo dei raggi di curvatura.
-
-    Questo determina il safety factor appropriato da applicare a v_max_corner:
-    - Circuiti tight (Monaco, Budapest): fisicamente meno ottimisti
-    - Circuiti fast (Silverstone, Monza): fisicamente più ottimisti (occorre constraint maggiore)
-
-    Returns: "TIGHT", "MIXED", "BALANCED", "FAST", o "STRAIGHT"
-    """
-    radii = [wp.get('radius_m', 999999.0) for wp in waypoints]
-    corners = [r for r in radii if r < 400.0]
-
-    if not corners:
-        return "STRAIGHT"
-
-    avg_radius = sum(corners) / len(corners)
-    tight_count = sum(1 for r in corners if r < 100.0)
-    tight_pct = (tight_count / len(corners)) * 100.0
-
-    # Classificazione per percentuale di curve tight (r < 100m)
-    if tight_pct > 40:
-        return "TIGHT"  # Monaco (75%), Budapest (63%), Singapore (58%)
-    elif avg_radius < 120:
-        return "MIXED"  # Barcelona, Suzuka, Imola
-    elif tight_pct < 15 and avg_radius > 150:
-        return "FAST"  # Silverstone, Monza, Spa, Austin
-    else:
-        return "BALANCED"  # Most circuits
-
-
-def get_safety_factor(circuit_type: str, circuit_id: str) -> float:
-    """
-    Determina il safety factor per v_max_corner in base al tipo di circuito.
-
-    Safety factor = quanto conservativi essere sulla physics-based v_max
-    - Tight corners: fisicamente meno ottimisti, factor più alto (0.80-0.85)
-    - Fast corners: fisicamente più ottimisti, factor più basso (0.65-0.72)
-
-    Formula: v_limit = v_max_corner * safety_factor
-
-    V6.0 tuning empirico basato su testing:
-    - Austin -2.90% at 0.78 → good
-    - Monza -8.44% at 0.73 → needs 0.68
-    - Silverstone -14.49% at 0.74 → needs 0.64
-    - Monaco -16.16% at 0.88 → needs 0.78
-    - Las Vegas catastrophic at 0.76 → needs floor + blending
-    """
-    # Default per tipo di circuito (più aggressivi che prima)
-    defaults = {
-        "TIGHT": 0.82,      # Monaco, Budapest: 0.88 was too high → 0.82
-        "MIXED": 0.85,      # Suzuka, Barcelona: middle ground, more aggressive
-        "BALANCED": 0.85,   # Default, more aggressive
-        "FAST": 0.68,       # Silverstone, Monza, Spa: molto più aggressivi per fast corners
-        "STRAIGHT": 0.92,   # No corners
-    }
-
-    # Override per-circuito (tuned empiricamente da smoke test)
-    overrides = {
-        "mc-1929_monaco": 0.78,         # Was 0.88 (-16%), try 0.78
-        "gb-1948_silverstone": 0.64,    # Was 0.74 (-14.5%), try 0.64
-        "it-1922_monza": 0.68,          # Was 0.73 (-8.4%), try 0.68
-        "us-2012_austin": 0.78,         # Already good at 0.78
-        "us-2023_las_vegas": 0.75,      # Catastrophic at 0.76, special handling needed
-        "at-1969_spielberg": 0.80,      # Estimate: tight corners, conservative
-        "be-1925_spa_francorchamps": 0.64,  # Fast circuit like Silverstone
-        "jp-1962_suzuka": 0.80,         # Tight-medium, conservative
-    }
-
-    # Controlla override per-circuito first
-    if circuit_id in overrides:
-        return overrides[circuit_id]
-
-    # Fallback al default per tipo
-    return defaults.get(circuit_type, 0.85)
-
-def compute_v_max_corners(
-    waypoints: List[Dict],
-    aero: AeroAssembly,
-    aero_calibration: Optional[Dict[str, Any]],
-    mass_kg: float,
-    tyre_compound: str,
-    mu_base: Dict[str, float],
-    suspension_effects: Optional[Dict[str, float]],
-    n_iter: int = 3,
-) -> List[float]:
-    """
-    Calcola velocità massima fisica in ogni waypoint (curva o rettilineo).
-
-    Usa iterazione (converge in 3 step) perché:
-      v_max_corner = sqrt(f_grip * cu * r / mass)
-    dipende da downforce che dipende da v².
-
-    Stima iniziale: usa v_ref_kph per il calcolo downforce.
-
-    Args:
-        waypoints: lista completa waypoints con radius_m, v_ref_kph, ecc.
-        aero: assembler aerodinamico
-        aero_calibration: profilo aero calibrato
-        mass_kg: massa totale
-        tyre_compound: mescola gomme
-        mu_base: dizionario grip base
-        suspension_effects: effetti sospensioni pre-calcolati
-        n_iter: numero iterazioni di convergenza (default 3)
-
-    Returns:
-        Lista v_max_corner [m/s] per ogni waypoint
-    """
-    v_max_corner_array = [999.0] * len(waypoints)
-    mu_base_val = mu_base.get(tyre_compound, 1.65)
-
-    # Estrai fattori di scaling aero dalla calibrazione
-    def _as_float(value, default):
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            return default
-
-    downforce_scale = 1.0
-    if aero_calibration is not None:
-        ds = _as_float(aero_calibration.get("downforce_index"), None)
-        if ds is not None:
-            downforce_scale = ds
-        # V5 format: no scaling applied if no downforce_index
-        elif aero_calibration.get("format") == "v5":
-            downforce_scale = 1.0
-
-    for i, wp in enumerate(waypoints):
-        radius_m = wp.get('radius_m', 999999.0)
-
-        # Rettilineo: no corner speed limit
-        if radius_m > 400.0:
-            v_max_corner_array[i] = 999.0
-            continue
-
-        # Curva: calcola v_max con stima iterativa downforce
-        v_est = wp.get('v_ref_kph', 200.0) / 3.6  # stima iniziale
-
-        for _ in range(n_iter):
-            # Calcola downforce a questa velocità
-            rho = RHO_SEA_LEVEL
-            aero_forces = aero.compute_forces(
-                speed_ms=v_est,
-                air_density=rho,
-                ride_height_front=0.040,
-                ride_height_rear=0.050,
-                drs_active=False
-            )
-            f_downforce = aero_forces.f_downforce * downforce_scale
-
-            # Calcola grip laterale (curva)
-            f_vertical = mass_kg * G + f_downforce
-            load_sensitivity_k = TYRE_LOAD_SENSITIVITY_K
-            f_vertical_kn = f_vertical / 1000.0
-            lat_load_factor = 1.0 - (load_sensitivity_k * f_vertical_kn)
-            lat_load_factor = max(0.75, min(1.0, lat_load_factor))
-            f_grip = mu_base_val * f_vertical * lat_load_factor
-
-            # Cornering utilization formula
-            cu = min(0.95, 0.35 + radius_m / 150.0)
-
-            # Calcola v_max con questa stima
-            v_est_new = math.sqrt(f_grip * cu * radius_m / mass_kg)
-
-            # Convergenza: se cambio < 0.1%, stop
-            if abs(v_est_new - v_est) / max(v_est, 1.0) < 0.001:
-                break
-            v_est = v_est_new
-
-        v_max_corner_array[i] = v_est
-
-    # V6.0: Apply floor based on v_ref to prevent catastrophic under-constraining
-    # (e.g., Las Vegas where v_max was being set impossibly low)
-    # v_max_corner should be at least 80% of v_ref (telemetry is conservative baseline)
-    for i, wp in enumerate(waypoints):
-        if v_max_corner_array[i] < 999.0:  # Not a straight
-            v_ref_ms = wp.get('v_ref_kph', 200.0) / 3.6
-            v_min_allowed = v_ref_ms * 0.80  # At least 80% of reference
-            v_max_corner_array[i] = max(v_max_corner_array[i], v_min_allowed)
-
-    return v_max_corner_array
-
-
-def propagate_braking_limits(
-    v_max_corner: List[float],
-    waypoints: List[Dict],
-    a_brake_max: float = 30.0,  # m/s² tipico
-) -> List[float]:
-    """
-    Backward sweep: propaga limiti di decelerazione da destra a sinistra.
-
-    Garantisce che la velocità ad ogni punto sia raggiungibile con la
-    fisica di frenata (senza "teleportare" la velocità).
-
-    Algoritmo:
-        v_limit[i] = min(v_max_corner[i], velocità raggiungibile frenando dal punto i+1)
-
-    Args:
-        v_max_corner: velocità max corner array dal Pass 1A
-        waypoints: lista waypoints con dist_m
-        a_brake_max: decelerazione massima di frenata [m/s²]
-
-    Returns:
-        Lista v_limit [m/s] per ogni waypoint
-    """
-    n = len(waypoints)
-    v_limit = v_max_corner.copy()
-
-    # Backward sweep: da ultimo waypoint al primo
-    for i in range(n - 2, -1, -1):
-        dist = waypoints[i + 1]['dist_m'] - waypoints[i]['dist_m']
-        if dist <= 0:
-            continue
-
-        # v² = v_next² + 2 * a * d
-        # Se al punto i+1 devo essere a v_limit[i+1], qual è il max al punto i?
-        v_next = v_limit[i + 1]
-        v_max_from_next = math.sqrt(max(0, v_next ** 2 + 2 * a_brake_max * dist))
-
-        # Il limite al punto i è il minore tra:
-        # - il limite fisico (curva)
-        # - il limite cinematico (frenata)
-        v_limit[i] = min(v_limit[i], v_max_from_next)
-
-    return v_limit
 
 
 def integrate_lap_hd(
@@ -1744,43 +1596,6 @@ def integrate_lap_hd(
     # li usa direttamente. Altrimenti converte da slider (backward compatibility).
     susp_effects = _compute_suspension_effects(suspension_setup)
 
-    # ============================================================
-    # V6.0: DUAL-PASS CORNER MODEL
-    # ============================================================
-    # V6.0 Phase 1: Circuit Classification
-    # Determina il profilo del circuito (tight/fast/balanced) per tuning intelligente
-    circuit_type = analyze_circuit_profile(waypoints)
-    safety_factor = get_safety_factor(circuit_type, circuit_id)
-
-    if verbose:
-        print(f"  🏁 V6.0 Circuit profile: {circuit_type} (safety_factor={safety_factor:.2f})")
-
-    # Pass 1A: Calcola v_max_corner iterativamente per ogni waypoint
-    #   Converge in 3 iterazioni: downforce dipende da v che è calcolato da downforce
-    if verbose:
-        print("  📐 V6.0 Pass 1A: Computing v_max_corner (iterative)...")
-    v_max_corner = compute_v_max_corners(
-        waypoints=waypoints,
-        aero=aero,
-        aero_calibration=aero_calibration,
-        mass_kg=mass_kg,
-        tyre_compound=tyre_compound,
-        mu_base=mu_base_local,
-        suspension_effects=susp_effects,
-        n_iter=3
-    )
-
-    # V6.0 Phase 2: Apply circuit-specific safety factor
-    # Physics-based speeds are optimistic vs real driver behavior
-    # Safety factor dipende dal profilo del circuito (non uniforme!)
-    v_max_corner = [v * safety_factor for v in v_max_corner]
-
-    # V6.0: SIMPLIFIED - Just use v_max_corner with circuit-specific safety factor
-    # Removed backward sweep (was too aggressive, causing 50-100% errors on some circuits)
-    if verbose:
-        print(f"  📐 V6.0 Using v_max_corner with safety_factor {safety_factor:.2f} (no backward sweep)")
-    v_limit = v_max_corner
-
     # V5.4.3: Boundary duplicate speed collapse fix is in integrate_waypoint().
     # At section boundaries (dist_step < 0.02m), v_max_corner clamp is skipped
     # because the duplicate carries the apex minimum radius of the incoming
@@ -1833,7 +1648,7 @@ def integrate_lap_hd(
             pu_lookup_blend=pu_lookup_blend,
             pu_config=pu_config,
             pu_ctx=pu_ctx,
-            v_limit_current=v_limit[i],  # V6.0: Pass v_limit from pre-computed array
+            # v_max_corner_smooth_ms removed (V5.4.3 EMA removed)
         )
         
         # Aggiorna statistiche
