@@ -2,7 +2,7 @@
     "circuit_id": "ae-2009_yas_marina",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.5625,
+        "mu_mechanical": 1.55,
         "mu_aero_contribution": 1.509,
         "c_aero": 0.000313,
         "compound": "C5",

@@ -2,7 +2,7 @@
     "circuit_id": "sg-2008_singapore",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 2.125,
+        "mu_mechanical": 1.55,
         "mu_aero_contribution": 2.075,
         "c_aero": 0.00043,
         "compound": "C5",
