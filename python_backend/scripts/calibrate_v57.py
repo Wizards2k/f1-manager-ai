@@ -124,7 +124,9 @@ def calibrate_circuit(name, cfg, target_pct=0.3):
         return current_mu
     
     # Binary search
-    lo, hi = 1.0, 2.5
+    # V6.0: Espandi range a [0.6, 2.5] perché senza v_ref ceiling,
+    # il simulatore va più veloce in curva → serve meno mu sui circuiti veloci
+    lo, hi = 0.6, 2.5
     best_mu = current_mu
     best_pct = current_pct
     
