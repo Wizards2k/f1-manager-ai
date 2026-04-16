@@ -2,7 +2,7 @@
     "circuit_id": "nl-1948_zandvoort",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.55,
+        "mu_mechanical": 1.7281250000000001,
         "mu_aero_contribution": 1.962,
         "c_aero": 0.000407,
         "compound": "C4",

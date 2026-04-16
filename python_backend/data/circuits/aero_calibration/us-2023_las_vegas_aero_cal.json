@@ -2,7 +2,7 @@
     "circuit_id": "us-2023_las_vegas",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.55,
+        "mu_mechanical": 2.4999420166015627,
         "mu_aero_contribution": 1.207,
         "c_aero": 0.00025,
         "compound": "C5",

@@ -2,7 +2,7 @@
     "circuit_id": "mc-1929_monaco",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.55,
+        "mu_mechanical": 1.4015624999999998,
         "mu_aero_contribution": 2.188,
         "c_aero": 0.000454,
         "compound": "C6",

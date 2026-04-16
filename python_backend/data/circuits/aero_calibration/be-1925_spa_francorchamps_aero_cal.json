@@ -2,7 +2,7 @@
     "circuit_id": "be-1925_spa_francorchamps",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.55,
+        "mu_mechanical": 0.6000579833984374,
         "mu_aero_contribution": 1.321,
         "c_aero": 0.000274,
         "compound": "C4",

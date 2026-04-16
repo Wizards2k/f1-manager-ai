@@ -2,7 +2,7 @@
     "circuit_id": "bh-2002_sakhir",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.55,
+        "mu_mechanical": 0.9562499999999999,
         "mu_aero_contribution": 1.434,
         "c_aero": 0.000297,
         "compound": "C3",

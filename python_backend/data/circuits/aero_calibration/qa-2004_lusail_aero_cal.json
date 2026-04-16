@@ -2,7 +2,7 @@
     "circuit_id": "qa-2004_lusail",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.55,
+        "mu_mechanical": 1.0453125,
         "mu_aero_contribution": 1.509,
         "c_aero": 0.000313,
         "compound": "C3",

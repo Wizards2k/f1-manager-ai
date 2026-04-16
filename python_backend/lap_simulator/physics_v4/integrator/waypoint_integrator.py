@@ -663,11 +663,12 @@ def compute_braking_zones_v6(
             # a = (v_current² - v_target²) / (2*d)
             a_needed = (v_current**2 - v_target**2) / (2.0 * dist_to_wp)
 
-            # Margine empirico 1.11 (da V5.5 baseline, anti-chatter)
-            a_needed_with_margin = a_needed * 1.11
+            # Margine empirico: 1.20 per V6.0 (più aggressivo senza brake commitment)
+            # V5.5 aveva 1.30 ma con brake commitment; V6.0 senza commitment serve 1.20
+            a_needed_with_margin = a_needed * 1.20
 
             # Se la decelerazione richiesta supera il max, serve frenare ORA
-            if a_needed_with_margin > a_max + 0.5:  # +0.5 m/s² buffer
+            if a_needed_with_margin > a_max:
                 must_brake_now = True
                 break
 
