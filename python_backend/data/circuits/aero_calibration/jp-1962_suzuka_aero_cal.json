@@ -2,7 +2,7 @@
     "circuit_id": "jp-1962_suzuka",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.375,
+        "mu_mechanical": 1.55,
         "mu_aero_contribution": 1.811,
         "c_aero": 0.000376,
         "compound": "C3",

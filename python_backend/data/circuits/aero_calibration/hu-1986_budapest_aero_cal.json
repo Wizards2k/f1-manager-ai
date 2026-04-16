@@ -2,7 +2,7 @@
     "circuit_id": "hu-1986_budapest",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.46875,
+        "mu_mechanical": 1.55,
         "mu_aero_contribution": 1.887,
         "c_aero": 0.000391,
         "compound": "C5",

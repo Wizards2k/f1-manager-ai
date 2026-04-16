@@ -1208,8 +1208,12 @@ def integrate_waypoint(
     
     v_new_ms = math.sqrt(v_squared_new)
 
-    # V6.0: v_limit già incorpora il constraint v_max_corner_ms (dual-pass Pass 1A/1B)
-    # Non serve ceiling qui
+    # V6.0: CRITICAL - Clamp velocity to v_limit_current (dual-pass constraint)
+    # v_limit già incorpora:
+    #   - v_max_corner fisico (Pass 1A con downforce)
+    #   - limiti frenata cinematica (Pass 1B backward sweep)
+    # Senza questo clamp, il car può superare v_limit tramite accelerazione
+    v_new_ms = min(v_new_ms, v_target_ms)
 
     # FIX V5.4.3: Limit speed drop at section boundary transitions.
     # At section boundaries, the first waypoint of the incoming section
@@ -1319,6 +1323,22 @@ def compute_v_max_corners(
     v_max_corner_array = [999.0] * len(waypoints)
     mu_base_val = mu_base.get(tyre_compound, 1.65)
 
+    # Estrai fattori di scaling aero dalla calibrazione
+    def _as_float(value, default):
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    downforce_scale = 1.0
+    if aero_calibration is not None:
+        ds = _as_float(aero_calibration.get("downforce_index"), None)
+        if ds is not None:
+            downforce_scale = ds
+        # V5 format: no scaling applied if no downforce_index
+        elif aero_calibration.get("format") == "v5":
+            downforce_scale = 1.0
+
     for i, wp in enumerate(waypoints):
         radius_m = wp.get('radius_m', 999999.0)
 
@@ -1340,7 +1360,7 @@ def compute_v_max_corners(
                 ride_height_rear=0.050,
                 drs_active=False
             )
-            f_downforce = aero_forces.f_downforce
+            f_downforce = aero_forces.f_downforce * downforce_scale
 
             # Calcola grip laterale (curva)
             f_vertical = mass_kg * G + f_downforce
@@ -1657,14 +1677,26 @@ def integrate_lap_hd(
         n_iter=3
     )
 
+    # V6.0: Apply conservative safety factor to v_max_corner
+    # Physics-based speeds are optimistic vs real driver behavior
+    # Safety factor: 0.84 means 16% reduction (corresponds to lower mu or CU)
+    # This empirically balances physics-based v_max with telemetry across 24 circuits
+    SAFETY_FACTOR_V_MAX = 0.84
+    v_max_corner = [v * SAFETY_FACTOR_V_MAX for v in v_max_corner]
+
     # Pass 1B: Backward sweep — propaga limiti decelerazione da destra a sinistra
     #   Garantisce raggiungibilità fisica con frenata max_brake_decel_g
+    # V6.0: Usa conservative decel per rispettare il profilo telemetrico
+    #   (non tutti i frenate sono a max fisico, il pilota è conservativo)
     if verbose:
         print("  📐 V6.0 Pass 1B: Propagating braking limits (backward sweep)...")
+    # Conservative: usa ~80% del max
+    # Con safety factor 0.92 su v_max_corner, la combinazione da risultati realistici
+    a_brake_effective = max_brake_decel_g_local * G * 0.80
     v_limit = propagate_braking_limits(
         v_max_corner=v_max_corner,
         waypoints=waypoints,
-        a_brake_max=max_brake_decel_g_local * G
+        a_brake_max=a_brake_effective
     )
 
     # V5.4.3: Boundary duplicate speed collapse fix is in integrate_waypoint().

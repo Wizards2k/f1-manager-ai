@@ -2,7 +2,7 @@
     "circuit_id": "it-1953_imola",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.4,
+        "mu_mechanical": 1.55,
         "mu_aero_contribution": 1.698,
         "c_aero": 0.000352,
         "compound": "C6",
