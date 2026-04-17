@@ -12,20 +12,20 @@
         "ARB_rear": 17.0,
         "ride_height_front": 6.0,
         "ride_height_rear": 13.0,
-        "mu_mechanical": 0.8374999999999999,
+        "mu_mechanical": 0.6437499999999999,
         "compound": "C5"
     },
     "calibration_results": {
         "ref_time_s": 87.294,
-        "sim_time_cal_s": 86.11885895926167,
-        "error_pct": 1.3461876426081114
+        "sim_time_cal_s": 87.08583133042414,
+        "error_pct": 0.23846847386516246
     },
     "congruence_test": {
         "congruent": false,
-        "t_low": 86.08715435381573,
-        "t_cal": 86.11885895926167,
-        "t_high": 86.93347650197892,
-        "d_low_vs_cal": 0.03170460544593823,
-        "d_high_vs_cal": 0.8146175427172437
+        "t_low": 87.05769326899619,
+        "t_cal": 87.08583133042414,
+        "t_high": 87.94399887106508,
+        "d_low_vs_cal": 0.02813806142795272,
+        "d_high_vs_cal": 0.8581675406409346
     }
 }

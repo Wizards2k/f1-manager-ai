@@ -3,7 +3,7 @@
     "circuit_id": "hu-1986_budapest",
     "calibration_version": "v60",
     "optimal_setup": {
-        "front_wing": 42.0,
+        "front_wing": 26.0,
         "rear_wing": 30.0,
         "bwing": 18.0,
         "spring_front": 10,
@@ -12,20 +12,20 @@
         "ARB_rear": 24.0,
         "ride_height_front": 10.0,
         "ride_height_rear": 17.0,
-        "mu_mechanical": 1.3125,
+        "mu_mechanical": 0.9875,
         "compound": "C5"
     },
     "calibration_results": {
         "ref_time_s": 75.372,
-        "sim_time_cal_s": 75.0174298043377,
-        "error_pct": 0.47042694324458
+        "sim_time_cal_s": 75.34038256753666,
+        "error_pct": 0.04194851199826878
     },
     "congruence_test": {
         "congruent": false,
-        "t_low": 74.39502079453975,
-        "t_cal": 75.0174298043377,
-        "t_high": 75.96714901223068,
-        "d_low_vs_cal": 0.6224090097979484,
-        "d_high_vs_cal": 0.9497192078929828
+        "t_low": 74.00343325723459,
+        "t_cal": 75.34038256753666,
+        "t_high": 76.66309886888043,
+        "d_low_vs_cal": 1.3369493103020744,
+        "d_high_vs_cal": 1.3227163013437604
     }
 }

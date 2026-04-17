@@ -2,7 +2,7 @@
     "circuit_id": "us-2012_austin",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.846875,
+        "mu_mechanical": 0.9875,
         "mu_aero_contribution": 1.622,
         "c_aero": 0.000336,
         "compound": "C4",

@@ -2,7 +2,7 @@
     "circuit_id": "gb-1948_silverstone",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 0.8078124999999999,
+        "mu_mechanical": 0.4375,
         "mu_aero_contribution": 1.698,
         "c_aero": 0.000352,
         "compound": "C5",

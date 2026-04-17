@@ -2,7 +2,7 @@
     "circuit_id": "it-1922_monza",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 1.1046874999999998,
+        "mu_mechanical": 0.85,
         "mu_aero_contribution": 1.132,
         "c_aero": 0.000235,
         "compound": "C5",

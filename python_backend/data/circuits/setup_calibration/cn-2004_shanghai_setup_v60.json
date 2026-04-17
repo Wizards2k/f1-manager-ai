@@ -3,7 +3,7 @@
     "circuit_id": "cn-2004_shanghai",
     "calibration_version": "v60",
     "optimal_setup": {
-        "front_wing": 8.0,
+        "front_wing": 12.0,
         "rear_wing": 10.0,
         "bwing": 10.0,
         "spring_front": 25,
@@ -12,20 +12,20 @@
         "ARB_rear": 24.0,
         "ride_height_front": 2,
         "ride_height_rear": 9,
-        "mu_mechanical": 1.90625,
+        "mu_mechanical": 0.5406249999999999,
         "compound": "C4"
     },
     "calibration_results": {
         "ref_time_s": 90.641,
-        "sim_time_cal_s": 90.54581449304789,
-        "error_pct": 0.10501374317595803
+        "sim_time_cal_s": 90.64089920942696,
+        "error_pct": 0.00011119755192820161
     },
     "congruence_test": {
         "congruent": true,
-        "t_low": 90.58912796958188,
-        "t_cal": 90.54581449304789,
-        "t_high": 91.39398364733866,
-        "d_low_vs_cal": 0.043313476533995754,
-        "d_high_vs_cal": 0.8481691542907726
+        "t_low": 91.06764088504934,
+        "t_cal": 90.64089920942696,
+        "t_high": 91.65396500665976,
+        "d_low_vs_cal": 0.42674167562238097,
+        "d_high_vs_cal": 1.013065797232798
     }
 }

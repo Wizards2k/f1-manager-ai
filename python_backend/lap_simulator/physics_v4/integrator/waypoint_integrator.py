@@ -155,13 +155,28 @@ def load_hd_waypoints(circuit_id: str) -> List[Dict]:
     # deceleration limit (see V5.4.3 in integrate_waypoint).
     if len(raw_waypoints) > 1:
         deduped = [raw_waypoints[0]]
-        for wp in raw_waypoints[1:]:
+        for idx, wp in enumerate(raw_waypoints[1:], start=1):
             prev_dist = deduped[-1].get('dist_m', -999)
             wp_dist = wp.get('dist_m', -998)
             if abs(wp_dist - prev_dist) < 0.01:
                 # Duplicate distance: keep BOTH waypoints with tiny offset
                 wp_copy = dict(wp)
                 wp_copy['dist_m'] = prev_dist + 0.01  # Tiny offset
+                # FIX V6.0: Boundary artifact correction.
+                # The incoming section's first waypoint carries the APEX minimum
+                # radius of that section, not the real radius at this track point.
+                # If R_in is very small (<100m) while both the outgoing waypoint
+                # and the NEXT non-boundary waypoint have large radius (>400m),
+                # this is a data artifact — replace with outgoing radius.
+                # This prevents catastrophic braking at section boundaries
+                # (Las Vegas: +80s lost at boundary R=25m on a straight).
+                r_out = deduped[-1].get('radius_m', 999999.0)
+                r_in = wp_copy.get('radius_m', 999999.0)
+                r_next = 999999.0
+                if idx + 1 < len(raw_waypoints):
+                    r_next = raw_waypoints[idx + 1].get('radius_m', 999999.0)
+                if r_in < 100 and r_out > 400 and r_next > 400:
+                    wp_copy['radius_m'] = r_out
                 deduped.append(wp_copy)
             else:
                 deduped.append(wp)
@@ -520,7 +535,7 @@ def compute_v_max_corners(
             # Load sensitivity factor (laterale)
             # FIX V6.0: Usa lo stesso load_sensitivity_k che viene usato in integrate_waypoint()
             # Per ora manteniamo K=0.010 per matching tra pre-computed e real-time
-            load_sensitivity_k = 0.010  # DEVE MATCHARE integrate_waypoint() line 1236
+            load_sensitivity_k = 0.010  # DEVE MATCHARE integrate_waypoint() line 1239
             f_vertical_kn = f_vertical / 1000.0
             lat_load_factor = 1.0 - (load_sensitivity_k * f_vertical_kn)
             lat_load_factor = max(0.75, min(1.0, lat_load_factor))

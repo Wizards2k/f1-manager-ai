@@ -260,7 +260,7 @@ def phase3_mu_search(circuit_id, cfg, fw, rw, bwing, susp, ref_time, target_pct=
     cal = _load_aero_cal(circuit_id)
     current_mu = cal["grip_data"]["mu_mechanical"] if cal else 1.55
 
-    lo, hi = 0.6, 2.5
+    lo, hi = 0.3, 2.5
     best_mu, best_time, best_pct = current_mu, None, float('inf')
 
     for i in range(20):
