@@ -601,7 +601,8 @@ def get_safety_factor_v6(circuit_type: str, circuit_id: str) -> float:
         "mc-1929_monaco": 0.82,
         "gb-1948_silverstone": 0.60,  # Molto conservativo
         "it-1922_monza": 0.60,         # Molto conservativo
-        "be-1925_spa_francorchamps": 0.60,  # Molto conservativo
+        "be-1925_spa_francorchamps": 0.68,  # Aumentato da 0.60 (v_target fallback fix)
+        "mx-1962_mexico_city": 0.82,   # Ridotto da BALANCED 0.88
         "jp-1962_suzuka": 0.85,
         "es-1991_barcelona": 0.87,
     }
@@ -1372,16 +1373,9 @@ def integrate_waypoint(
     # V6.0: Il target di velocità è physics-driven (v_max_corner) non telemetry-driven (v_ref).
     # Il lookahead (compute_braking_zones_v6) identifica QUANDO frenare, non il target.
 
-    # V6.0 FIX: Inizializza v_target_ms da v_max_corner se è una curva (< 999),
-    # altrimenti usa v_ref_kph per i rettilinei. Questo previene il problema di Las Vegas
-    # dove v_max_corner=999 causava il car a non frenare mai poiché state.velocity < 999.
+    # Inizializza v_target_ms da v_max_corner se disponibile, altrimenti fallback a v_ref_kph
     if v_max_corner_array is not None and 0 <= waypoint_idx < len(v_max_corner_array):
-        v_mc = v_max_corner_array[waypoint_idx]
-        # Se v_max_corner è 999 (rettilineo = no constraint), usa v_ref di telemetria
-        if v_mc < 999.0:  # È una curva: usa v_max_corner fisico
-            v_target_ms = v_mc
-        else:  # È un rettilineo: usa v_ref di telemetria
-            v_target_ms = v_ref_kph / 3.6
+        v_target_ms = v_max_corner_array[waypoint_idx]
     else:
         # Fallback a V5.7 se v_max_corner_array non disponibile (backward compatibility)
         v_target_ms = v_ref_kph / 3.6
