@@ -518,8 +518,11 @@ def compute_v_max_corners(
             f_vertical = mass_kg * G + f_downforce
 
             # Load sensitivity factor (laterale)
+            # FIX V6.0: Usa lo stesso load_sensitivity_k che viene usato in integrate_waypoint()
+            # Per ora manteniamo K=0.010 per matching tra pre-computed e real-time
+            load_sensitivity_k = 0.010  # DEVE MATCHARE integrate_waypoint() line 1236
             f_vertical_kn = f_vertical / 1000.0
-            lat_load_factor = 1.0 - (TYRE_LOAD_SENSITIVITY_K * f_vertical_kn)
+            lat_load_factor = 1.0 - (load_sensitivity_k * f_vertical_kn)
             lat_load_factor = max(0.75, min(1.0, lat_load_factor))
 
             # Grip laterale totale
