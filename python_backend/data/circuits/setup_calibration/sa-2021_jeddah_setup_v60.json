@@ -1,0 +1,31 @@
+{
+    "circuit_name": "jeddah",
+    "circuit_id": "sa-2021_jeddah",
+    "calibration_version": "v60",
+    "optimal_setup": {
+        "front_wing": 7.0,
+        "rear_wing": 6.0,
+        "bwing": 5.0,
+        "spring_front": 25,
+        "spring_rear": 33,
+        "ARB_front": 10.0,
+        "ARB_rear": 17.0,
+        "ride_height_front": 6.0,
+        "ride_height_rear": 13.0,
+        "mu_mechanical": 0.8374999999999999,
+        "compound": "C5"
+    },
+    "calibration_results": {
+        "ref_time_s": 87.294,
+        "sim_time_cal_s": 86.11885895926167,
+        "error_pct": 1.3461876426081114
+    },
+    "congruence_test": {
+        "congruent": false,
+        "t_low": 86.08715435381573,
+        "t_cal": 86.11885895926167,
+        "t_high": 86.93347650197892,
+        "d_low_vs_cal": 0.03170460544593823,
+        "d_high_vs_cal": 0.8146175427172437
+    }
+}

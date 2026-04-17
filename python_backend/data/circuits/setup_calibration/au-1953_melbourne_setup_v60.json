@@ -1,0 +1,31 @@
+{
+    "circuit_name": "melbourne",
+    "circuit_id": "au-1953_melbourne",
+    "calibration_version": "v60",
+    "optimal_setup": {
+        "front_wing": 8.0,
+        "rear_wing": 10.0,
+        "bwing": 10.0,
+        "spring_front": 25,
+        "spring_rear": 33,
+        "ARB_front": 19.0,
+        "ARB_rear": 24.0,
+        "ride_height_front": 2,
+        "ride_height_rear": 9,
+        "mu_mechanical": 0.71875,
+        "compound": "C5"
+    },
+    "calibration_results": {
+        "ref_time_s": 75.096,
+        "sim_time_cal_s": 75.43862847053192,
+        "error_pct": 0.4562539556460004
+    },
+    "congruence_test": {
+        "congruent": true,
+        "t_low": 75.47220509034668,
+        "t_cal": 75.43862847053192,
+        "t_high": 76.28066098247996,
+        "d_low_vs_cal": 0.03357661981475246,
+        "d_high_vs_cal": 0.8420325119480339
+    }
+}

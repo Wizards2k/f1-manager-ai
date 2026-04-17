@@ -1,0 +1,31 @@
+{
+    "circuit_name": "sao_paulo",
+    "circuit_id": "br-1940_sao_paulo",
+    "calibration_version": "v60",
+    "optimal_setup": {
+        "front_wing": 12.0,
+        "rear_wing": 10.0,
+        "bwing": 10.0,
+        "spring_front": 25,
+        "spring_rear": 33,
+        "ARB_front": 19.0,
+        "ARB_rear": 24.0,
+        "ride_height_front": 2,
+        "ride_height_rear": 9,
+        "mu_mechanical": 0.9562499999999999,
+        "compound": "C4"
+    },
+    "calibration_results": {
+        "ref_time_s": 69.511,
+        "sim_time_cal_s": 69.44236176801918,
+        "error_pct": 0.09874441740273224
+    },
+    "congruence_test": {
+        "congruent": true,
+        "t_low": 69.73366830129241,
+        "t_cal": 69.44236176801918,
+        "t_high": 69.74815848615476,
+        "d_low_vs_cal": 0.29130653327322875,
+        "d_high_vs_cal": 0.30579671813558207
+    }
+}

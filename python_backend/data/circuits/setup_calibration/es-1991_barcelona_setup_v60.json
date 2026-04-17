@@ -1,0 +1,31 @@
+{
+    "circuit_name": "barcelona",
+    "circuit_id": "es-1991_barcelona",
+    "calibration_version": "v60",
+    "optimal_setup": {
+        "front_wing": 8.0,
+        "rear_wing": 10.0,
+        "bwing": 10.0,
+        "spring_front": 25,
+        "spring_rear": 33,
+        "ARB_front": 19.0,
+        "ARB_rear": 24.0,
+        "ride_height_front": 2,
+        "ride_height_rear": 9,
+        "mu_mechanical": 0.9562499999999999,
+        "compound": "C3"
+    },
+    "calibration_results": {
+        "ref_time_s": 71.546,
+        "sim_time_cal_s": 71.5315603773975,
+        "error_pct": 0.020182291955538275
+    },
+    "congruence_test": {
+        "congruent": false,
+        "t_low": 71.5013705816016,
+        "t_cal": 71.5315603773975,
+        "t_high": 72.25541923867027,
+        "d_low_vs_cal": 0.030189795795891428,
+        "d_high_vs_cal": 0.7238588612727739
+    }
+}

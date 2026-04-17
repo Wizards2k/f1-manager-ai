@@ -1,0 +1,31 @@
+{
+    "circuit_name": "monaco",
+    "circuit_id": "mc-1929_monaco",
+    "calibration_version": "v60",
+    "optimal_setup": {
+        "front_wing": 42.0,
+        "rear_wing": 30.0,
+        "bwing": 18.0,
+        "spring_front": 10,
+        "spring_rear": 18,
+        "ARB_front": 19.0,
+        "ARB_rear": 24.0,
+        "ride_height_front": 10.0,
+        "ride_height_rear": 17.0,
+        "mu_mechanical": 1.43125,
+        "compound": "C6"
+    },
+    "calibration_results": {
+        "ref_time_s": 69.954,
+        "sim_time_cal_s": 69.47127211374102,
+        "error_pct": 0.6900647371972594
+    },
+    "congruence_test": {
+        "congruent": false,
+        "t_low": 69.18078243914096,
+        "t_cal": 69.47127211374102,
+        "t_high": 69.96655263150257,
+        "d_low_vs_cal": 0.29048967460006736,
+        "d_high_vs_cal": 0.49528051776154314
+    }
+}

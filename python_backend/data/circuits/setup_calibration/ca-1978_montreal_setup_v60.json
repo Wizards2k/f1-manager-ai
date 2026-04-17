@@ -1,0 +1,31 @@
+{
+    "circuit_name": "montreal",
+    "circuit_id": "ca-1978_montreal",
+    "calibration_version": "v60",
+    "optimal_setup": {
+        "front_wing": 12.0,
+        "rear_wing": 10.0,
+        "bwing": 10.0,
+        "spring_front": 25,
+        "spring_rear": 33,
+        "ARB_front": 19.0,
+        "ARB_rear": 24.0,
+        "ride_height_front": 2,
+        "ride_height_rear": 9,
+        "mu_mechanical": 0.71875,
+        "compound": "C6"
+    },
+    "calibration_results": {
+        "ref_time_s": 70.899,
+        "sim_time_cal_s": 69.9952925388237,
+        "error_pct": 1.2746406312871776
+    },
+    "congruence_test": {
+        "congruent": true,
+        "t_low": 70.09018843077966,
+        "t_cal": 69.9952925388237,
+        "t_high": 70.56462312041197,
+        "d_low_vs_cal": 0.09489589195595727,
+        "d_high_vs_cal": 0.569330581588261
+    }
+}

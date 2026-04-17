@@ -1,0 +1,31 @@
+{
+    "circuit_name": "spielberg",
+    "circuit_id": "at-1969_spielberg",
+    "calibration_version": "v60",
+    "optimal_setup": {
+        "front_wing": 8.0,
+        "rear_wing": 10.0,
+        "bwing": 10.0,
+        "spring_front": 25,
+        "spring_rear": 33,
+        "ARB_front": 19.0,
+        "ARB_rear": 24.0,
+        "ride_height_front": 2,
+        "ride_height_rear": 9,
+        "mu_mechanical": 0.9562499999999999,
+        "compound": "C5"
+    },
+    "calibration_results": {
+        "ref_time_s": 63.971,
+        "sim_time_cal_s": 64.55226242808108,
+        "error_pct": 0.908634268779732
+    },
+    "congruence_test": {
+        "congruent": true,
+        "t_low": 64.66084794355022,
+        "t_cal": 64.55226242808108,
+        "t_high": 64.98533764937046,
+        "d_low_vs_cal": 0.10858551546914441,
+        "d_high_vs_cal": 0.4330752212893856
+    }
+}
