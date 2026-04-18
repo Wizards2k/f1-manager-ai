@@ -79,9 +79,10 @@
     "optimal_rw": 9,
     "delta_fw": 5,
     "delta_rw": -3,
-    "optimal_time": 104.78519471606936,
+    "optimal_time": 107.771,
     "ref_time": 107.934,
-    "n_sims": 128
+    "n_sims": 128,
+    "v62_drag_fix": "drag_index=1.20 applied in aero_cal to compensate missing parasitic drag. Error -2.86% -> -0.15%."
   },
   "lusail": {
     "circuit_id": "qa-2004_lusail",

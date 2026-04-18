@@ -1,27 +1,35 @@
 {
-    "circuit_id": "us-2023_las_vegas",
-    "source": "TracingInsights-Archive/2025",
-    "grip_data": {
-        "mu_mechanical": 0.3,
-        "mu_aero_contribution": 1.207,
-        "c_aero": 0.00025,
-        "compound": "C5",
-        "cla_estimated": 3.2,
-        "low_speed_points": 311,
-        "high_speed_points": 182,
-        "notes": {
-            "v53_calibration": "V5.3: mu_mechanical calibrated to 1.361 for <0.5% lap time error",
-            "v55_calibration": "V5.5: mu_mechanical=1.2861 for <0.5% error (PU stateful)"
-        }
-    },
-    "floor_data": {
-        "k_wing_coupling": 0.032,
-        "cla_floor_dynamic": 1.206,
-        "mu_by_speed": {
-            "slow": 1.2323580137197925,
-            "medium": 1.2017973051408002,
-            "fast": 1.100461411977993,
-            "very_fast": 1.1116069648519151
-        }
+  "circuit_id": "us-2023_las_vegas",
+  "source": "TracingInsights-Archive/2025",
+  "grip_data": {
+    "mu_mechanical": 0.3,
+    "mu_aero_contribution": 1.207,
+    "c_aero": 0.00025,
+    "compound": "C5",
+    "cla_estimated": 3.2,
+    "low_speed_points": 311,
+    "high_speed_points": 182,
+    "notes": {
+      "v53_calibration": "V5.3: mu_mechanical calibrated to 1.361 for <0.5% lap time error",
+      "v55_calibration": "V5.5: mu_mechanical=1.2861 for <0.5% error (PU stateful)"
     }
+  },
+  "floor_data": {
+    "k_wing_coupling": 0.032,
+    "cla_floor_dynamic": 1.206,
+    "mu_by_speed": {
+      "slow": 1.2323580137197925,
+      "medium": 1.2017973051408002,
+      "fast": 1.100461411977993,
+      "very_fast": 1.1116069648519151
+    }
+  },
+  "aero": {
+    "drag_index": 1.20,
+    "downforce_index": 1.0,
+    "aero_balance_target": 0.0,
+    "notes": {
+      "v62_drag_fix": "drag_index=1.20 compensates for missing parasitic drag (wheels, brake ducts, radiators ~20-25% of real F1 drag). Las Vegas has 87% straights and car reaches terminal velocity (sim 369 kph vs real 332 kph). Fix brings sim to 107.771s (-0.15% vs ref 107.934s). CAL(15/9) preference wins: LOW+0.3s, HIGH+0.6s."
+    }
+  }
 }
