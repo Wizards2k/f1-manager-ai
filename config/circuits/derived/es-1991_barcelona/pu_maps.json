@@ -40,7 +40,7 @@
       "ers_output_kw": 107.08,
       "deploy_mj_per_lap": 1.943,
       "harvest_mj_per_lap": 1.717,
-      "mguh_direct_ratio": 0.26,
+      "mguh_direct_ratio": 0.15,
       "target_soc_end_lap": 0.766,
       "torque_bias": -0.0253,
       "notes": {
@@ -90,7 +90,7 @@
       "ers_output_kw": 200,
       "deploy_mj_per_lap": 4.0,
       "harvest_mj_per_lap": 0.681,
-      "mguh_direct_ratio": 0.56,
+      "mguh_direct_ratio": 1.0,
       "target_soc_end_lap": 0.05,
       "torque_bias": 0.1047,
       "notes": {
@@ -113,7 +113,7 @@
       "ers_output_kw": 93.7,
       "deploy_mj_per_lap": 0.5,
       "harvest_mj_per_lap": 2.0,
-      "mguh_direct_ratio": 0.41,
+      "mguh_direct_ratio": 0.15,
       "target_soc_end_lap": 0.98,
       "torque_bias": -0.0353,
       "notes": {
@@ -179,7 +179,7 @@
         "deploy_mj_per_lap": 0.5,
         "harvest_mj_per_lap": 2.0,
         "target_soc_end_lap": 0.98,
-        "mguh_direct_ratio": 0.45,
+        "mguh_direct_ratio": 0.15,
         "deploy_ratio": 0.125,
         "harvest_ratio": 1.0,
         "bucket_primary_es_deploy_pct": 0.0,
@@ -223,17 +223,17 @@
     },
     "warnings": [
       "RACE: deploy at 95% of MGU-K limit",
-      "RACE: SOC target very low (0.05) – plan recharge lap",
+      "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
       "QUALIFY: deploy at 100% of MGU-K limit",
       "QUALIFY: harvest insufficient vs deploy (ratio 0.34)",
-      "QUALIFY: SOC target very low (0.05) – plan recharge lap"
+      "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
     ]
   },
   "soc_warnings": [
     "RACE: deploy at 95% of MGU-K limit",
-    "RACE: SOC target very low (0.05) – plan recharge lap",
+    "RACE: SOC target very low (0.05) \u2013 plan recharge lap",
     "QUALIFY: deploy at 100% of MGU-K limit",
     "QUALIFY: harvest insufficient vs deploy (ratio 0.34)",
-    "QUALIFY: SOC target very low (0.05) – plan recharge lap"
+    "QUALIFY: SOC target very low (0.05) \u2013 plan recharge lap"
   ]
 }

@@ -71,13 +71,13 @@
         "deploy_mj_per_lap": 0.6,
         "harvest_mj_per_lap": 2.2,
         "target_soc_end_lap": 0.92,
-        "mguh_direct_ratio": 0.45
+        "mguh_direct_ratio": 0.15
       },
       "PRACTICE": {
         "deploy_mj_per_lap": 2.6,
         "harvest_mj_per_lap": 1.8,
         "target_soc_end_lap": 0.72,
-        "mguh_direct_ratio": 0.45
+        "mguh_direct_ratio": 0.15
       },
       "RACE": {
         "deploy_mj_per_lap": 3.4,
@@ -89,7 +89,7 @@
         "deploy_mj_per_lap": 4.0,
         "harvest_mj_per_lap": 0.8,
         "target_soc_end_lap": 0.10,
-        "mguh_direct_ratio": 0.45
+        "mguh_direct_ratio": 1.0
       }
     }
   }

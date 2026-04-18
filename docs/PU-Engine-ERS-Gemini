@@ -1,0 +1,57 @@
+Ecco un riassunto tecnico e strutturato del funzionamento dell'ERS (Energy Recovery System) basato sui regolamenti FIA 2025 e sui modelli fisici che abbiamo integrato nel simulatore.
+
+---
+
+# ⚡ F1 2025: Architettura e Funzionamento dell'ERS
+
+Il sistema ERS della stagione 2025 rappresenta l'apice della tecnologia ibrida prima del cambio regolamentare del 2026. Si basa sulla sinergia tra due motori elettrici e un pacco batterie.
+
+## 1. Componenti Principali
+
+| Componente | Nome | Funzione Primaria | Limiti Regolamentari |
+|:---|:---|:---|:---|
+| **MGU-K** | *Motor Generator Unit - Kinetic* | Recupera energia in frenata; eroga coppia in accelerazione. | Max **120 kW** (161 CV) |
+| **MGU-H** | *Motor Generator Unit - Heat* | Recupera energia dai gas di scarico tramite la turbina. | **Illimitato** (No cap energia) |
+| **ES** | *Energy Store (Batteria)* | Accumula l'energia recuperata dai due motori. | **4.0 MJ** utilizzabili/giro |
+
+---
+
+## 2. Flussi Energetici e Logica di Funzionamento
+
+Il sistema 2025 è unico per la sua capacità di gestire l'energia in tre direzioni diverse:
+
+### A. Recupero (Harvesting)
+* **Cinetico (K):** In frenata, l'MGU-K agisce come un generatore, rallentando l'auto e inviando energia alla batteria. Il limite è di **2.0 MJ per giro**.
+* **Termico (H):** L'MGU-H recupera energia ogni volta che il pilota accelera. Poiché non ha limiti di recupero, è il componente chiave per mantenere la batteria carica nei circuiti veloci (es. Spa, Monza).
+
+### B. Erogazione (Deployment)
+L'energia può arrivare alle ruote in due modi:
+1.  **Batteria → MGU-K:** L'energia stoccata viene usata per spingere l'albero motore (Max 4.0 MJ per giro).
+2.  **MGU-H → MGU-K (Direct Path):** Questo è il "trucco" tecnico più importante. L'energia prodotta dall'MGU-H può bypassare la batteria e andare direttamente all'MGU-K. **Questa energia non conta nel limite dei 4.0 MJ**, permettendo alle auto di avere boost elettrico per quasi tutto il rettilineo.
+
+---
+
+## 3. Gestione Strategica: Il "Bucket System"
+
+Nel nostro simulatore (e nella realtà), l'energia non viene scaricata a caso, ma divisa in "secchielli" (Buckets) in base alla sezione del circuito:
+
+* **Exit Bucket:** Massima coppia in uscita dalle curve lente per eliminare il turbo-lag.
+* **Primary Bucket:** Spinta costante sui rettilinei principali.
+* **Secondary Bucket:** Mantenimento della velocità nelle curve veloci e tratti medi.
+
+---
+
+## 4. Vincoli Fisici e Limitazioni
+
+Nonostante la potenza, il sistema ha dei "nemici" naturali che ne limitano la resa:
+
+1.  **Thermal Clipping (Derating):** Se l'inverter o la batteria superano i **102°C**, il sistema taglia automaticamente la potenza elettrica per evitare guasti, riducendo la spinta fino a zero se si raggiungono i 122°C.
+2.  **SOC Floor (State of Charge):** Per preservare la vita della batteria, il sistema non scende mai sotto una soglia minima di sicurezza (es. 10% della capacità totale).
+3.  **Clipping Finale:** Quando un pilota esaurisce i 4.0 MJ prima della fine del giro (tipico a Spa o Baku), l'auto subisce un improvviso calo di velocità a fine rettilineo (l'auto "parcheggia").
+
+---
+
+## 5. Sintesi delle Performance (Qualifica vs Gara)
+
+* **In Qualifica (Hot Lap):** Il sistema è impostato per scaricare tutti i 4.0 MJ in un unico giro, finendo con la batteria quasi a zero.
+* **In Gara (SOC Neutral):** Il sistema cerca un equilibrio. Tanta energia viene consumata, quanta ne deve essere recuperata, per garantire la stessa spinta ad ogni giro.
