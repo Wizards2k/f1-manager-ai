@@ -223,6 +223,41 @@ while not converged:
 
 **Total per circuito:** ~128 sims, ~3s per sim = ~6.4 min per circuito.
 
+### 3.5 Power Unit (PU) e ERS — Stato Implementativo
+
+**File:** `lap_simulator/physics_v4/integrator/pu_stateful_v2.py` (V5.4 stateful model, pienamente attivo)
+
+**Stato:** ✅ **COMPLETAMENTE IMPLEMENTATO E FUNZIONANTE** — il modello PU stateful V5.4 è attivo in OGNI simulazione.
+
+**Cosa funziona:**
+
+| Componente | Dettagli | Status |
+|---|---|---|
+| **ICE Torque LUT** | Peak 676 Nm @ 8500 RPM, scaling via `torque_ramp` per map | ✅ Active |
+| **ERS Deployment** | Deployment zones su rettilei, budget `deploy_mj_per_lap` per map | ✅ Active |
+| **MGU-K Harvest** | Regen in frenata, max 120 kW, alimenta batteria | ✅ Active |
+| **MGU-H → ES** | Energy recovery da scarico motore → batteria | ✅ Active |
+| **MGU-H Direct** | Bypass path diretto da scarico → MGU-K wheels (per-circuito `mguh_power_kw`) | ✅ Active |
+| **SOC Tracking** | 0–4 MJ con floor dinamico, tracking per lap | ✅ Active |
+| **Thermal Model** | Derating ERS da 102°C (onset) a 122°C (shutdown), K_joule=0.000012 | ✅ Active |
+| **Per-Circuit Maps** | 24 file `config/circuits/derived/{circuit_id}/pu_maps.json` | ✅ Complete |
+
+**Architettura:** Il sistema usa **deployment zones pre-calcolate** dai waypoints reali (sostituzione del bucket system). Per ogni circuito, le zone di rettilini vengono identificate automaticamente per massimizzare il deploy ERS dove serve.
+
+**Limitazione V6.0.1:** Tutte le simulazioni usano SEMPRE la map `QUALIFY`:
+```python
+# waypoint_integrator.py:1623
+pu_ctx = init_pu_context(circuit_id, "QUALIFY")  # Hardcoded, non selezionabile
+```
+
+**Mappe disponibili (non usate da V6.0.1, ma already implemented):**
+- `QUALIFY`: max ICE power (100% LUT), deploy 4.0 MJ, ers_output 200 kW
+- `RACE`: 84% ICE, deploy 3.84 MJ, ers_output 182 kW
+- `PRACTICE`: 35% ICE, deploy 1.96 MJ, ers_output 97 kW
+- `SAFETY_CAR`: 43% ICE, deploy 0.5 MJ, ers_output 85 kW
+
+**Per-circuito MGU-H Recovery (da `pu_maps.json`):** Ogni circuito ha `mguh_power_kw` e `mguh_direct_ratio` specifici. Es. Las Vegas: totale recupero ~5.0 MJ (tra i più alti insieme a Spa).
+
 ---
 
 ## 4. Output e Artefatti
@@ -401,23 +436,31 @@ I seguenti task sono **OUT OF SCOPE** per V6.0.1 perché raggiungono diminishing
 | # | Task | Impatto | Priorità | Nota |
 |---|------|--------|----------|------|
 | **V6.1-1** | Las Vegas straight speed tuning | 🟡 Medio | Bassa | Singolo circuito. Richiede PU lookup bassa altitudine. |
-| **V6.1-2** | Implementare mappe motore (QUALIFY/RACE/PRACTICE/SC) | 🟡 Medio | Media | Attualmente V6.0.1 usa solo `quali_deploy`. RACE mode con diverso deploy/thermal. Critico per sim multi-lap e race strategy. |
+| **V6.1-2** | **WIRING** mappe motore (QUALIFY/RACE/PRACTICE/SC) | 🟢 Basso | Media | 2 edit in `car_setup.py`: mappare `set_ers_mode()` → engine_map, passare `pu_config` a `integrate_lap_hd()`. Mappe già implementate, solo da collegare. |
+| **V6.1-2b** | Verifica per-circuito MGU-H + test engine maps | 🟢 Basso | Media | New script `test_engine_maps.py`: verifica QUALIFY < RACE < PRACTICE su 3 circuiti. Spot-check Las Vegas 3.5 MJ direct. |
 | **V6.1-3** | CHECK SETUP Tests (6 test sensitività) | 🟢 Basso | Bassa | Validazione: aero sweep, suspension, fuel, tyres, ICE/ERS, push level. |
-| **V6.1-4** | Switchare mappe in base session type | 🟡 Medio | Media | Post V6.1-2: `set_engine_map("RACE")` → deploy ridotto, thermal limits attivi. |
+| **V6.1-4** | Switchare mappe in base session type | 🟢 Basso | Media | Post V6.1-2: auto-map `session="qualifying"` → QUALIFY, `"race"` → RACE, `"fp*"` → PRACTICE. Implementato in `_SESSION_TO_ENGINE_MAP`. |
 | **V6.2+** | Optimizer generico setup | 🔵 Visione | Molto bassa | Futuro: algoritmo generico su ali+sospensioni+fuel. Richiede V6.1 stabile. |
 
 ### 7.3 Limitazioni Intenzionali di V6.0.1
 
 **V6.0.1 è calibrato SOLO per QUALIFYING:**
-- ✅ Usa `quali_deploy` (massimo ERS deploy)
-- ✅ ICE torque curve fissa (nessun thermal derating necessario in singolo giro)
-- ❌ Mappe RACE/PRACTICE/SAFETY_CAR non implementate
-- ❌ Non supporta multi-lap race simulations
+- ✅ Usa hardcoded map `QUALIFY` (massimo ERS deploy: 4.0 MJ, 200 kW)
+- ✅ ICE torque curve a max power (100% LUT, 676 Nm peak)
+- ✅ Thermal model implementato (ma non attivo in single-lap, temperature stabile)
+- ⚠️ Mappe RACE/PRACTICE/SAFETY_CAR sono **implementate ma non selezionabili** da car_setup.py
+- ❌ Non supporta multi-lap race simulations (servono switching di mappa mid-lap)
 
-**Per race simulations, servono V6.1-2 e V6.1-4** (implementare e switchare mappe).
+**PU/ERS Status:**
+- ✅ V5.4 stateful model è **fully active** (ICE LUT, deployment zones, MGU-H direct, harvesting)
+- ✅ Tutte le 4 mappe motore sono **già create** con parametri per-circuito in `config/circuits/derived/*/pu_maps.json`
+- ❌ **Manca solo il wiring** (car_setup.py → waypoint_integrator.py): passare engine_map dalla session/mode
+
+**Per race simulations, servono V6.1-2a (wiring) + V6.1-4 (switchare mappe per session type)**.
 
 ### 7.4 Checklist Completamento V6.0.1
 
+**Physics & Calibration (Core V6.0.1):**
 - [x] Coerenza fisica (dual-pass, load K unified, K_FACTOR ribilanciato)
 - [x] Setup congruence preference test (24/24 LOW/CAL/HIGH)
 - [x] Typological congruence (91.7% strict, 95.8% lenient)
@@ -425,12 +468,22 @@ I seguenti task sono **OUT OF SCOPE** per V6.0.1 perché raggiungono diminishing
 - [x] Grid search wing optimization (3-fase, 24 circuiti)
 - [x] mu_mechanical recalibration (binary search, 23/24 converged)
 - [x] Documentation (spec tecnica + funzionale)
-- [ ] Las Vegas fix (deferred V6.1-1)
-- [ ] Engine map switching (deferred V6.1-2, V6.1-4)
+
+**PU/ERS Implementation Status:**
+- [x] V5.4 stateful model (pu_stateful_v2.py) — **already fully active**
+- [x] All 4 engine maps (QUALIFY/RACE/PRACTICE/SAFETY_CAR) — **already in pu_maps.json**
+- [x] Deployment zones, MGU-K harvest, MGU-H direct, thermal — **already implemented**
+- [ ] **Wiring engine_map to car_setup.py** (V6.1-2: 2 small edits)
+- [ ] **Per-circuit MGU-H verification** (V6.1-2b: spot-check Las Vegas, Spa)
+- [ ] **Engine map switching test** (V6.1-2b: test_engine_maps.py QUALIFY < RACE < PRACTICE)
+
+**Deferred to V6.1:**
+- [ ] Las Vegas fix (straight speed tuning, deferred V6.1-1)
+- [ ] Auto-map session type to engine_map (deferred V6.1-4)
 - [ ] CHECK SETUP tests (optional, deferred V6.1-3)
 
 **V6.0.1 è COMPLETO per qualifying + setup congruence.**
-**Per race simulations, richiede V6.1 (mappe motore).**
+**PU/ERS core è fully implemented; V6.1-2 aggiunge solo wiring per race simulations.**
 
 ---
 
@@ -447,10 +500,22 @@ I seguenti task sono **OUT OF SCOPE** per V6.0.1 perché raggiungono diminishing
 - ✅ Trovare assetti fisicamente ottimali per ogni circuito
 - ✅ Differenziare setup realisticamente per tipologia di tracciato (fast/medium/slow)
 - ✅ Penalizzare correttamente le variazioni (LOW/HIGH) rispetto all'ottimo
+- ✅ **Simulare il Power Unit con modello V5.4 stateful** (ICE LUT, ERS deployment, MGU-H direct, thermal)
+- ✅ **Supportare 4 mappe motore** (QUALIFY/RACE/PRACTICE/SAFETY_CAR) con parametri per-circuito
+
+**PU Status (Riassunto):**
+Il modello V5.4 stateful è **fully implemented and active** in tutte le simulazioni:
+- Deployment zones dinamiche sui rettilini (ERS 0–4 MJ per map)
+- MGU-K harvest (regen braking, max 120 kW)
+- MGU-H direct path (per-circuito, non capped dai 4 MJ)
+- Thermal derating (onset 102°C, shutdown 122°C)
+- 24 circuit-specific `pu_maps.json` con QUALIFY/RACE/PRACTICE/SAFETY_CAR variant
+
+V6.0.1 usa hardcoded map QUALIFY. V6.1-2 aggiungerà wiring per switchare mappa da session type.
 
 **Limitazioni accettate:**
-- Barcelona: limite single-lap quali vs race strategy
-- Las Vegas: issue straight speed (non mu), richiede fix separato
+- Barcelona: limite single-lap quali vs race strategy (tipologia setup incompatibile con race)
+- Las Vegas: issue straight speed (bassa altitudine 600m + K_FACTOR rebalance), non grip-related. Richiede fix PU separato (V6.1-1)
 
 ---
 
