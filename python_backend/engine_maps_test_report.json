@@ -1,0 +1,74 @@
+{
+  "test_circuits": [
+    "monza",
+    "silverstone",
+    "monaco"
+  ],
+  "results": [
+    {
+      "circuit": "monza",
+      "results": {
+        "QUALIFY": {
+          "lap_time": 80.79998200244927,
+          "max_speed": 0,
+          "ers_deploy": 0.0
+        },
+        "RACE": {
+          "lap_time": 85.80031363719476,
+          "max_speed": 0,
+          "ers_deploy": 0.0
+        },
+        "PRACTICE": {
+          "lap_time": 109.65669827219205,
+          "max_speed": 0,
+          "ers_deploy": 0.0
+        }
+      },
+      "monotonic": true
+    },
+    {
+      "circuit": "silverstone",
+      "results": {
+        "QUALIFY": {
+          "lap_time": 85.80999398907602,
+          "max_speed": 0,
+          "ers_deploy": 0.0
+        },
+        "RACE": {
+          "lap_time": 90.84656736931666,
+          "max_speed": 0,
+          "ers_deploy": 0.0
+        },
+        "PRACTICE": {
+          "lap_time": 117.31333432944923,
+          "max_speed": 0,
+          "ers_deploy": 0.0
+        }
+      },
+      "monotonic": true
+    },
+    {
+      "circuit": "monaco",
+      "results": {
+        "QUALIFY": {
+          "lap_time": 70.13648256236506,
+          "max_speed": 0,
+          "ers_deploy": 0.0
+        },
+        "RACE": {
+          "lap_time": 74.4869397375213,
+          "max_speed": 0,
+          "ers_deploy": 0.0
+        },
+        "PRACTICE": {
+          "lap_time": 92.23256375857379,
+          "max_speed": 0,
+          "ers_deploy": 0.0
+        }
+      },
+      "monotonic": true
+    }
+  ],
+  "monotonic_count": 3,
+  "total": 3
+}

@@ -87,7 +87,8 @@ class PowerUnitSetup:
     ers_deploy_mode: str = "balanced"  # balanced, quali_deploy, race_save
     ers_harvest_mode: str = "balanced"  # balanced, max_harvest, min_harvest
     brake_migration: float = 0.5  # 0-1 (0=front, 1=rear)
-    
+    engine_map: str = "QUALIFY"  # QUALIFY, RACE, PRACTICE, SAFETY_CAR (v6.1+)
+
     # Energy management
     soc_target_start: float = 100.0  # %
     soc_target_end: float = 0.0      # %
@@ -292,22 +293,25 @@ class PhysicsV4Setup:
             self.car.fuel.fuel_kg = 20.0  # Solo per 1-2 giri
             self.car.fuel.fuel_mix = "rich"
             self.car.power_unit.ers_deploy_mode = "quali_deploy"
+            self.car.power_unit.engine_map = "QUALIFY"
             self.car.power_unit.ice_mode = "aggressive"
             self.car.update_mass()
-            
+
         elif self.session == "race":
             # Gara: fuel completo, gestione ERS
             self.car.fuel.fuel_kg = 100.0  # ~100 kg per race start
             self.car.fuel.fuel_mix = "balanced"
             self.car.power_unit.ers_deploy_mode = "balanced"
+            self.car.power_unit.engine_map = "RACE"
             self.car.power_unit.ice_mode = "balanced"
             self.car.update_mass()
-            
+
         elif self.session == "practice":
             # Prove: fuel medio, test setup
             self.car.fuel.fuel_kg = 50.0
             self.car.fuel.fuel_mix = "balanced"
             self.car.power_unit.ers_deploy_mode = "balanced"
+            self.car.power_unit.engine_map = "PRACTICE"
     
     def set_aero(
         self,
@@ -409,20 +413,31 @@ class PhysicsV4Setup:
     def set_ers_mode(self, mode: str):
         """
         Imposta modalità ERS.
-        
+
         Modes:
-        - quali_deploy: massimo deploy (120kW) per tutto il giro
-        - balanced: deploy bilanciato (60-80kW)
-        - race_save: risparmio ERS per gara lunga
+        - quali_deploy: massimo deploy (120kW) per tutto il giro → QUALIFY map
+        - balanced: deploy bilanciato (60-80kW) → RACE map
+        - race_save: risparmio ERS per gara lunga → PRACTICE map
         """
         self.car.power_unit.ers_deploy_mode = mode
-        
+
+        # Map ers mode to PU engine_map (v6.1+)
+        _ERS_MODE_TO_ENGINE_MAP = {
+            "quali_deploy": "QUALIFY",
+            "balanced": "RACE",
+            "race_save": "PRACTICE",
+            "safety_car": "SAFETY_CAR",
+        }
+        self.car.power_unit.engine_map = _ERS_MODE_TO_ENGINE_MAP.get(mode, "QUALIFY")
+
         if mode == "quali_deploy":
             self.car.power_unit.deploy_per_km = 0.67  # 4 MJ / 6 km
         elif mode == "balanced":
             self.car.power_unit.deploy_per_km = 0.50
         elif mode == "race_save":
             self.car.power_unit.deploy_per_km = 0.33
+        elif mode == "safety_car":
+            self.car.power_unit.deploy_per_km = 0.10
     
     def set_brakes(
         self,
@@ -533,6 +548,10 @@ class PhysicsV4Setup:
             self.car.power_unit.deploy_per_km / _ERS_DEPLOY_MAX
         ))
 
+        # V6.1: PU engine map selection (QUALIFY/RACE/PRACTICE/SAFETY_CAR)
+        engine_map = getattr(self.car.power_unit, 'engine_map', 'QUALIFY')
+        pu_config = {"engine_map": engine_map}
+
         # Esegui simulazione
         result = integrate_lap_hd(
             circuit_id=self.circuit,
@@ -543,6 +562,7 @@ class PhysicsV4Setup:
             aero_calibration=aero_calibration,
             suspension_setup=setup.get("suspension"),
             ers_power_fraction=ers_power_fraction,
+            pu_config=pu_config,
             verbose=verbose
         )
         
