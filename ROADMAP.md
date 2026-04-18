@@ -152,9 +152,17 @@ Estendere grid search da ali a sospensioni + fuel. Goal: trovare **multi-paramet
 
 | Issue | Severity | Assignee | Status |
 |-------|----------|----------|--------|
-| **Las Vegas -2.9% error** | Medium | Deferred V6.2 | Need investigation |
+| **Las Vegas -2.9% error** | Medium | V6.2-1 WIP | Altitude fix implemented, error persists (-2.98%). Root cause investigation needed. |
 | **Barcelona typology (9° vs 22°)** | Low | Accepted limit | Single-lap physics |
 | **Spa borderline typology** | Low | Accepted (lenient range) | Boundary case |
+
+**V6.2-1 Altitude Fix Status:**
+- ✅ Implemented ISA barometric air density model
+- ✅ Las Vegas elevation 610m → rho = 1.1390 kg/m³ (-7.02% vs sea level)
+- ✅ compute_v_max_corners now uses altitude-corrected air_density
+- ❌ Las Vegas time unchanged: 104.785s → 104.715s (still -2.98% error)
+- **Diagnosis:** v_max_corner likely not limiting factor (98% of lap is corners/braking at lower speeds)
+- **Next:** Investigate power unit, braking dynamics, or fundamental modeling constraint
 
 ### Resolved Issues
 
