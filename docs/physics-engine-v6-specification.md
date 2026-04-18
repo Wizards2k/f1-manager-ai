@@ -1,12 +1,12 @@
 ---
-title: Physics Engine V6.1 - Specifica Tecnica e Funzionale
-date: 2026-04-18
-version: 1.1
+title: Physics Engine V6.2 - Specifica Tecnica e Funzionale
+date: 2026-04-19
+version: 1.2
 author: Claude Opus 4.7
-status: V6.1 Complete (Engine Maps + FIA ERS Compliance)
+status: V6.2 Partial (Altitude ISA fix landed; Las Vegas straight-speed still open)
 ---
 
-# Physics Engine V6.1 — Specifica Completa
+# Physics Engine V6.2 — Specifica Completa
 
 ## Sommario Esecutivo
 
@@ -24,6 +24,14 @@ status: V6.1 Complete (Engine Maps + FIA ERS Compliance)
 - **Multi-Session Support**: Fully functional per qualifying, race (multi-lap), practice
 - **Test Coverage**: 3/3 engine map tests PASS con monotonic ordering QUALIFY < RACE < PRACTICE
 - **Status**: ✅ Ready for game integration con supporto completo a tutti i session type
+
+### Aggiunta V6.2 (Altitude Correction - PARZIALE)
+- **ISA Barometric Model**: `calculate_air_density(elevation_m)` in `constants.py` (International Standard Atmosphere)
+- **Full Propagation**: `air_density` ora passato sia in `compute_v_max_corners` sia in `integrate_waypoint` (main loop). Prima il main loop usava ρ=1.225 (sea level) a prescindere dall'elevation.
+- **Mexico City Recalibration**: A 2232m (ρ -24%), il calo di downforce ha spostato l'ottimo verso più wing. CAL ricalibrata 16/9 → **22/14** per mantenere 24/24 preference-test congruence.
+- **Las Vegas (610m, ρ -7%)**: effetti drag↓ e df↓ quasi si compensano (~0.1s impact). Errore vs reference rimane **-3.0%** → non è un problema di altitudine.
+- **Preference Test**: 24/24 mantenuto dopo il fix (Monza 79.03s invariato, Mexico ricalibrato, altri 21 invariati).
+- **Status**: ✅ Altitude propagation corretta · ⏳ Las Vegas straight-speed ancora aperto (root cause: PU/drag/braking, non grip né altitudine)
 
 ---
 
@@ -419,29 +427,32 @@ Conferma che K_FACTOR ha effetto quadratico coerente.
 
 **Status:** Accettato come limite fisiologico. 91.7% typology è già eccellente.
 
-### 6.2 Las Vegas (1/24 Lap Time)
+### 6.2 Las Vegas (1/24 Lap Time) — V6.2 UPDATE
 
-**Situazione:** t_sim = 104.785s vs ref = 107.934s → -2.9% error. mu al minimo 0.3 ma ancora troppo veloce.
+**Situazione:** t_sim = 104.68s vs ref = 107.934s → **-3.0% error** (V6.2). mu al minimo 0.3, già clampato.
 
-**Root Cause:** Straight speed troppo alta. Issue non è grip (mu) ma:
-- Drag insufficiente
-- PU power non correttamente calibrato
-- Altezza guida non realistico
+**V6.2 Altitude Verdict — NON È L'ALTITUDINE:**
+- Fix ISA air density landed in main integration loop
+- Las Vegas 610m → ρ 1.139 (-7%) → effetto netto **~0.1s** (drag↓ e df↓ si compensano)
+- Errore residuo -3.0% **identico** a prima del fix
 
-**Fix Richiesto:** Separato dalla ricalibrazione mu. Richiede review PU e drag modeling.
+**Root Cause rimane aperto:**
+- NON grip (μ già a floor 0.3)
+- NON altitudine (testato e confutato in V6.2)
+- Candidati: PU power curve, braking dynamics, long-straight drag under-modelling, o qualità telemetria di riferimento
 
-### 6.2 Las Vegas (1/24 Lap Time)
+**Fix Richiesto:** Investigazione separata PU/drag/braking. Deferred a V6.3.
 
-**Situazione:** t_sim = 104.785s vs ref = 107.934s → -2.9% error. mu al minimo 0.3 ma ancora troppo veloce.
+### 6.2bis Mexico City — V6.2 Recalibration
 
-**Root Cause:** Straight speed troppo alta. Issue non è grip (mu) ma:
-- Drag insufficiente su lunghi rettilini (K_FACTOR=0.18 meno penalizzante)
-- Potenza PU potrebbe non essere calibrata per bassa altitudine (Las Vegas 600m)
-- Densità aria 7% più bassa del livello mare
+**Situazione:** A 2232m (ρ -24%), il V6.2 altitude fix ha spostato l'ottimo verso più wing (meno downforce disponibile → HIGH-wing vince su CAL 16/9 originale).
 
-**Nota:** Tutti gli altri 23 circuiti convergono normalmente. Las Vegas è outlier su rettilini lunghi.
+**Fix Applicato:**
+- Grid search 24 combinazioni FW×RW → nuovo CAL **22/14** (t = 75.305s)
+- Saved in `optimal_wings_v60.json` con flag `v62_altitude_recal`
+- Preference test ripristinato a 24/24 congruenti
 
-**Fix Richiesto:** Tuning PU lookup per bassa altitudine, separato dalla ricalibrazione V6.0.1.
+**Lezione:** Calibrazioni wing baked a ρ sea-level vanno ri-verificate per circuiti ad alta altitudine dopo ogni modifica al modello aero.
 
 ### 6.3 Spa (1/24 Borderline Typology)
 
@@ -550,13 +561,23 @@ I seguenti task sono **OUT OF SCOPE** per V6.0.1 perché raggiungono diminishing
   - `session="race"` → RACE
   - `session="fp1"/"fp2"/"fp3"` → PRACTICE
 
-**Deferred to V6.2+:**
-- [ ] Las Vegas straight speed fix (V6.1-1: bassa altitudine PU tuning)
+**V6.2 (PARZIALE):**
+- [x] **ISA Barometric Air Density Model** (`constants.py::calculate_air_density()`)
+- [x] **Circuit elevation loader** (`waypoint_integrator.py::get_circuit_elevation_m()` da `config/circuits/*.json` properties.altitude)
+- [x] **Altitude propagation in `compute_v_max_corners`** (planning phase)
+- [x] **Altitude propagation in `integrate_waypoint`** (main loop — era il bug critico, ρ era hardcoded a 1.225)
+- [x] **Mexico City wing recalibration** (16/9 → 22/14) per preservare congruenza a 2232m
+- [x] **Preference test 24/24 ripristinato** dopo il fix
+- [ ] **Las Vegas straight speed** — altitude NON era la root cause; deferred a V6.3 (investigazione PU/drag/braking)
+
+**Deferred to V6.3+:**
+- [ ] Las Vegas straight speed investigation (PU power curve / drag / braking dynamics)
 - [ ] CHECK SETUP tests (V6.1-3: optional sensitivity validation)
-- [ ] Optimizer generico setup (V6.2: multi-parametric optimization)
+- [ ] Optimizer generico setup (multi-parametric optimization)
 
 **✅ V6.1 è COMPLETO: Qualify + Race + Practice simulations con FIA-compliant PU/ERS.**
-**Multi-map selection fully functional and tested. Ready for game integration.**
+**✅ V6.2 altitude correction LANDED: main loop finalmente altitude-aware, 24/24 congruence mantenuto.**
+**⏳ V6.2 Las Vegas: altitude non è la causa, investigazione separata richiesta.**
 
 ---
 
@@ -594,7 +615,7 @@ Il modello V5.4 stateful è **fully implemented, active, and FIA-compliant** in 
 
 **Limitazioni accettate:**
 - Barcelona: limite single-lap quali vs race strategy (tipologia setup 9° vs attesa 22°) — 91.7% typology congruence è già eccellente
-- Las Vegas: -2.9% error su straight speed (bassa altitudine 600m), non grip-related. Richiede PU bassa-altitudine tuning (V6.2 optional)
+- Las Vegas: -3.0% error su straight speed. **V6.2 ha escluso l'altitudine come causa** (fix ISA applicato, impatto ~0.1s). Root cause residuo: PU / drag / braking — investigazione deferred a V6.3.
 
 ---
 
@@ -609,6 +630,9 @@ Il modello V5.4 stateful è **fully implemented, active, and FIA-compliant** in 
 | `preference_v60_optimal.py` | NEW: preference test | 85bdf02 |
 | `recalibrate_mu_v60.py` | NEW: binary search mu | 67d6946 |
 | `aero_calibration/*.json` | 23/24 mu updated | 67d6946 |
+| `constants.py` | V6.2: `calculate_air_density(elevation_m)` ISA model | 528d553 |
+| `waypoint_integrator.py` | V6.2: `air_density` arg in `integrate_waypoint`, altitude propagation in `integrate_lap_hd` | 9d05664 |
+| `optimal_wings_v60.json` | V6.2: Mexico City 16/9 → 22/14 (altitude recalibration) | 9d05664 |
 
 ---
 
@@ -641,5 +665,5 @@ python scripts/recalibrate_mu_v60.py --quick
 
 ---
 
-**Documento redatto: 2026-04-18**
-**Version: 1.0 - Final**
+**Documento redatto: 2026-04-18** · **Aggiornato: 2026-04-19 (V6.2)**
+**Version: 1.2 — V6.2 altitude correction landed, Las Vegas remains open**
