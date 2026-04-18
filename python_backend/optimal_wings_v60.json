@@ -111,13 +111,14 @@
     "circuit_id": "mx-1962_mexico_city",
     "initial_fw": 22,
     "initial_rw": 26,
-    "optimal_fw": 16,
-    "optimal_rw": 9,
-    "delta_fw": -6,
-    "delta_rw": -17,
-    "optimal_time": 75.37835785887094,
+    "optimal_fw": 22,
+    "optimal_rw": 14,
+    "delta_fw": 0,
+    "delta_rw": -12,
+    "optimal_time": 75.305,
     "ref_time": 75.586,
-    "n_sims": 128
+    "n_sims": 24,
+    "v62_altitude_recal": "Recalibrated after V6.2 altitude fix (2232m -> -24% air density). Old CAL 16/9 broke congruence."
   },
   "miami": {
     "circuit_id": "us-2022_miami",

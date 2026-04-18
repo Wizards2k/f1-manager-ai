@@ -23,27 +23,27 @@
 
 ## ⏳ Prossimi Task (V6.2+)
 
-### 🔴 **P1 — OPTIONAL: Las Vegas Straight Speed Fix (V6.1-1)**
+### 🔴 **P1 — OPEN: Las Vegas Straight Speed (altitude NOT the root cause)**
 
 **Priorità:** Bassa (singolo circuito)  
 **Impatto:** 🟡 Medio
 
-**Problema:**
-- Las Vegas: t_sim = 104.785s vs ref = 107.934s → **-2.9% error**
-- mu al minimo (0.3) ma ancora troppo veloce → non è grip, è **straight speed**
-- Bassa altitudine (600m): densità aria -7% vs livello mare
-- K_FACTOR ribilanciato (0.18/0.22) penalizza drag su lunghi rettilini
+**V6.2 altitude fix landed, Las Vegas NOT solved:**
+- V6.2 ISA air density propagated through `compute_v_max_corners` AND `integrate_waypoint` main loop (previously only v_max_corners)
+- Result at 610m (ρ = 1.139, -7%): 104.79s → 104.68s (**~0.1s, effects cancel**)
+- Reference 107.934s → still **-3.00% error**
 
-**Root cause:** 
-- PU power lookup non calibrato per bassa altitudine
-- Oppure drag insufficiente su rettilini lunghi
+**Collateral: Mexico City (2232m, -24% ρ) needed wing recalibration**
+- Old CAL 16/9 broke congruence (HIGH-wing began winning as downforce ↓ 24%)
+- New CAL: **22/14** → 24/24 restored
+- Saved in `optimal_wings_v60.json` with `v62_altitude_recal` note
 
-**Soluzione suggerita:**
-1. Investigare density-altitude effect su ICE power output
-2. Eventuale adjustment PU per bassa altitudine
-3. Oppure K_FACTOR adjustment locale Las Vegas
+**Real root cause for Las Vegas — still open:**
+- μ already clamped at floor 0.3 → not grip
+- Altitude only accounts for ~0.1s of the 3.1s gap
+- Candidates: PU power curve, braking dynamics, long-straight drag under-modelling, or telemetry reference quality
 
-**Status:** Deferrito a V6.2 (non blocca V6.1)
+**Status:** V6.2-altitude done ✅ · straight-speed investigation **deferred**
 
 ---
 

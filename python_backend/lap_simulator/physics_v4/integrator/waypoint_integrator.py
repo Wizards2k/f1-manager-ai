@@ -762,6 +762,8 @@ def integrate_waypoint(
     # V6.0: Physics-driven corner model
     v_max_corner_array: Optional[List[float]] = None,  # Pre-computed v_max per waypoint
     brake_needed: Optional[List[bool]] = None,  # Pre-computed braking zones
+    # V6.2: Altitude-corrected air density (sea level default)
+    air_density: float = 1.225,
 ) -> PhysicsState:
     """
     Integra fisica per un singolo waypoint.
@@ -859,6 +861,7 @@ def integrate_waypoint(
     
     aero_forces = aero.compute_forces(
         speed_ms=state.velocity_ms,
+        air_density=air_density,
         ride_height_front=rh_front_m,
         ride_height_rear=rh_rear_m,
         drs_active=drs_active
@@ -1789,6 +1792,13 @@ def integrate_lap_hd(
         if max_lateral_g_override:
             print(f"  Lateral override: {max_lateral_g_override}g")
     
+    # V6.2: Calcola air_density una volta per giro (altitude correction)
+    lap_elevation_m = get_circuit_elevation_m(circuit_id)
+    lap_air_density = calculate_air_density(lap_elevation_m)
+    if verbose:
+        print(f"  🌄 Altitude: {lap_elevation_m:.0f}m → air_density: {lap_air_density:.4f} kg/m³ "
+              f"({100*(lap_air_density/1.225 - 1):+.2f}% vs sea level)")
+
     # Pre-calcola effetti sospensioni (costanti per tutto il giro)
     # P4/P5: _compute_suspension_effects ora usa valori reali (N/mm, Nm/deg)
     # e restituisce anche ride_height_aero_factor e ride_height in metri.
@@ -1905,6 +1915,8 @@ def integrate_lap_hd(
             # V6.0: Physics-driven corner model
             v_max_corner_array=v_max_corner_array,
             brake_needed=brake_needed,
+            # V6.2: Altitude-corrected air density
+            air_density=lap_air_density,
         )
         
         # Aggiorna statistiche
