@@ -2,7 +2,7 @@
     "circuit_id": "cn-2004_shanghai",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 0.5406249999999999,
+        "mu_mechanical": 0.575,
         "mu_aero_contribution": 1.509,
         "c_aero": 0.000313,
         "compound": "C4",

@@ -2,7 +2,7 @@
     "circuit_id": "sa-2021_jeddah",
     "source": "TracingInsights-Archive/2025",
     "grip_data": {
-        "mu_mechanical": 0.6437499999999999,
+        "mu_mechanical": 0.6437,
         "mu_aero_contribution": 1.321,
         "c_aero": 0.000274,
         "compound": "C5",
