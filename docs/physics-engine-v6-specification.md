@@ -401,11 +401,22 @@ I seguenti task sono **OUT OF SCOPE** per V6.0.1 perché raggiungono diminishing
 | # | Task | Impatto | Priorità | Nota |
 |---|------|--------|----------|------|
 | **V6.1-1** | Las Vegas straight speed tuning | 🟡 Medio | Bassa | Singolo circuito. Richiede PU lookup bassa altitudine. |
-| **V6.1-2** | CHECK SETUP Tests (6 test sensitività) | 🟢 Basso | Bassa | Validazione: aero sweep, suspension, fuel, tyres, ICE/ERS, push level. |
-| **V6.1-3** | Race Map PU | 🟢 Basso | Media | RACE mode con deploy diverso da QUALIFY. Non critico per quali. |
+| **V6.1-2** | Implementare mappe motore (QUALIFY/RACE/PRACTICE/SC) | 🟡 Medio | Media | Attualmente V6.0.1 usa solo `quali_deploy`. RACE mode con diverso deploy/thermal. Critico per sim multi-lap e race strategy. |
+| **V6.1-3** | CHECK SETUP Tests (6 test sensitività) | 🟢 Basso | Bassa | Validazione: aero sweep, suspension, fuel, tyres, ICE/ERS, push level. |
+| **V6.1-4** | Switchare mappe in base session type | 🟡 Medio | Media | Post V6.1-2: `set_engine_map("RACE")` → deploy ridotto, thermal limits attivi. |
 | **V6.2+** | Optimizer generico setup | 🔵 Visione | Molto bassa | Futuro: algoritmo generico su ali+sospensioni+fuel. Richiede V6.1 stabile. |
 
-### 7.3 Checklist Completamento V6.0.1
+### 7.3 Limitazioni Intenzionali di V6.0.1
+
+**V6.0.1 è calibrato SOLO per QUALIFYING:**
+- ✅ Usa `quali_deploy` (massimo ERS deploy)
+- ✅ ICE torque curve fissa (nessun thermal derating necessario in singolo giro)
+- ❌ Mappe RACE/PRACTICE/SAFETY_CAR non implementate
+- ❌ Non supporta multi-lap race simulations
+
+**Per race simulations, servono V6.1-2 e V6.1-4** (implementare e switchare mappe).
+
+### 7.4 Checklist Completamento V6.0.1
 
 - [x] Coerenza fisica (dual-pass, load K unified, K_FACTOR ribilanciato)
 - [x] Setup congruence preference test (24/24 LOW/CAL/HIGH)
@@ -414,11 +425,12 @@ I seguenti task sono **OUT OF SCOPE** per V6.0.1 perché raggiungono diminishing
 - [x] Grid search wing optimization (3-fase, 24 circuiti)
 - [x] mu_mechanical recalibration (binary search, 23/24 converged)
 - [x] Documentation (spec tecnica + funzionale)
-- [ ] Las Vegas fix (deferred V6.1)
-- [ ] CHECK SETUP tests (optional, deferred)
-- [ ] Race map PU (optional, deferred)
+- [ ] Las Vegas fix (deferred V6.1-1)
+- [ ] Engine map switching (deferred V6.1-2, V6.1-4)
+- [ ] CHECK SETUP tests (optional, deferred V6.1-3)
 
-**V6.0.1 è COMPLETO per il motore fisico di base.**
+**V6.0.1 è COMPLETO per qualifying + setup congruence.**
+**Per race simulations, richiede V6.1 (mappe motore).**
 
 ---
 
