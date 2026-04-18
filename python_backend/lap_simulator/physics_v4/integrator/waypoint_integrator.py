@@ -33,6 +33,7 @@ sys.path.insert(0, str(current_dir))
 from core.constants import (
     G,
     RHO_SEA_LEVEL,
+    calculate_air_density,
     MASS_TOTAL_QUALY_KG,
     DRIVETRAIN_EFFICIENCY,
     PU_TOTAL_PEAK_KW,
@@ -483,11 +484,37 @@ def compute_grip_limit(
 # V6.0 PURO: FUNZIONI PER PHYSICS-DRIVEN CORNER MODEL
 # ============================================================
 
+def get_circuit_elevation_m(circuit_id: str) -> float:
+    """
+    Carica l'elevation di un circuito dai dati di configurazione.
+
+    Returns:
+        Elevation in meters (default 0 se non trovato)
+    """
+    from pathlib import Path
+    import json
+
+    circuits_file = Path(__file__).resolve().parents[3] / "circuits" / f"{circuit_id}.json"
+
+    if not circuits_file.exists():
+        return 0.0  # Default sea level if not found
+
+    try:
+        with open(circuits_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            props = data.get('properties', {})
+            altitude = props.get('altitude', 0)
+            return float(altitude)
+    except Exception:
+        return 0.0
+
+
 def compute_v_max_corners(
     waypoints: List[Dict],
     aero,  # AeroAssembly
     mu_cal: float,
     mass_kg: float,
+    circuit_id: Optional[str] = None,
     suspension_effects: Optional[Dict[str, float]] = None,
     n_iter: int = 3,
 ) -> List[float]:
@@ -504,9 +531,18 @@ def compute_v_max_corners(
     - cu = min(0.95, 0.35 + radius / 150)
     - downforce è stimato iterativamente
 
+    Args:
+        circuit_id: circuit ID per caricare elevation (opzionale)
+
     Returns: List[float] - v_max in m/s per ogni waypoint
     """
     v_max_corner = []
+
+    # V6.2: Carica elevation e calcola air density
+    elevation_m = 0.0
+    if circuit_id:
+        elevation_m = get_circuit_elevation_m(circuit_id)
+    air_density = calculate_air_density(elevation_m)
 
     for wp in waypoints:
         radius_m = wp.get('radius_m', 999999.0)
@@ -522,10 +558,10 @@ def compute_v_max_corners(
 
         # Iterazione convergente: 3 volte
         for iteration in range(n_iter):
-            # Calcola downforce a velocità stimata
+            # Calcola downforce a velocità stimata (usando air_density corretta per elevation)
             aero_forces = aero.compute_forces(
                 speed_ms=v_est,
-                air_density=RHO_SEA_LEVEL
+                air_density=air_density
             )
             f_downforce = aero_forces.f_downforce
 
@@ -1775,6 +1811,7 @@ def integrate_lap_hd(
             aero=aero,
             mu_cal=aero_calibration.get("mu_mechanical", 1.55) if aero_calibration else 1.55,
             mass_kg=mass_kg,
+            circuit_id=circuit_id,
             suspension_effects=susp_effects,
             n_iter=3,
         )

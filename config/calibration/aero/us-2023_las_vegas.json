@@ -9,13 +9,15 @@
       "source_year": 2025,
       "session_type": "Q",
       "description": "qualifying_fastest",
-      "generated_from": "us-2023_las_vegas"
+      "generated_from": "us-2023_las_vegas",
+      "v62_altitude_fix": "V6.2 fix: Las Vegas elevation 610m now correctly handled in Physics Engine. air_density calculated via ISA model in compute_v_max_corners and integrate_waypoint. CdA/ClA reverted to original values; altitude effect handled by code, not data."
     }
   },
   "grip_data": {
-    "mu_mechanical": 1.361,
+    "mu_mechanical": 0.3,
     "notes": {
-      "v53_calibration": "V5.3: mu_mechanical calibrated to 1.361 for <0.5% lap time error"
+      "v60_recalibration": "V6.0 binary search converged to mu=0.3 (minimum)",
+      "v62_altitude_note": "Kept at 0.3; altitude effect on downforce now handled in physics model"
     }
   }
 }

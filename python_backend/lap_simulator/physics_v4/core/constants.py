@@ -18,6 +18,40 @@ NON sono parametri empirici da aggiustare.
 G = 9.80665  # m/s² accelerazione gravitazionale (standard)
 RHO_SEA_LEVEL = 1.225  # kg/m³ densità aria a livello mare (ISA)
 
+def calculate_air_density(elevation_m: float = 0.0) -> float:
+    """
+    Calcola la densità dell'aria basata sull'elevation usando ISA model.
+
+    Barometric formula: rho = rho_0 * (1 - L*h/T0)^(gM/RL)
+    dove:
+    - rho_0 = 1.225 kg/m³ (sea level, 15°C)
+    - h = elevation in m
+    - L = 0.0065 K/m (lapse rate)
+    - T0 = 288.15 K (sea level temperature)
+    - g = 9.81 m/s²
+    - M = 0.029 kg/mol (air molar mass)
+    - R = 8.314 J/(mol*K) (gas constant)
+
+    Args:
+        elevation_m: elevation in meters (default 0 = sea level)
+
+    Returns:
+        Air density in kg/m³
+    """
+    T0 = 288.15  # K (sea level temperature, 15°C)
+    L = 0.0065   # K/m (temperature lapse rate)
+
+    if elevation_m <= 0:
+        return RHO_SEA_LEVEL
+
+    temp_ratio = (T0 - L * elevation_m) / T0
+    if temp_ratio <= 0:
+        return 0.1  # Safeguard for extreme elevations
+
+    # Barometric exponent: gM/(RL) ≈ 5.255
+    exponent = 5.255
+    return RHO_SEA_LEVEL * (temp_ratio ** exponent)
+
 # ============================================================================
 # F1 2025 REGOLAMENTO - MASSE
 # ============================================================================
