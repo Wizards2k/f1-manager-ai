@@ -60,13 +60,11 @@ class RearWing:
         self.CL_MAX = 2.50        # Portanza massima (stallo) - multi-element F1
         self.CL_MIN = -0.80       # Portanza negativa
         self.CD_MIN = 0.035       # Drag minimo (profili ottimizzati)
-        # FIX V5.7: K_FACTOR aumentato da 0.280 a 0.40 per rendere il drag
-        # più sensibile all'angolo dell'ala. La rear wing ha aspect ratio più basso
-        # del front wing → più drag indotto per unità di downforce.
-        # K rear > K front è fisicamente corretto (0.40 > 0.35).
-        # K=0.40 dà: L/D@10°=4.10, L/D@22°=2.66, L/D@42°=1.51 — realistico.
-        # NOTA: Il fix principale per Monza è nel floor drag (vedi floor_rear.py).
-        self.K_FACTOR = 0.400     # Induced drag: L/D range realistico F1
+        # FIX V6.0.1: K_FACTOR ridotto da 0.40 a 0.32 per allargare il range
+        # realistico degli ottimi wing angle. K rear > K front resta corretto
+        # (0.32 > 0.28) per aspect ratio più bassa. Il ribilanciamento riduce
+        # la penalità drag sui circuiti tecnici dove la DF in curva compensa.
+        self.K_FACTOR = 0.220     # Induced drag: L/D range realistico F1
         
         # Parametri DRS
         self.DRS_CL_BOOST = 0.50  # Incremento portanza con DRS
@@ -98,10 +96,7 @@ class RearWing:
         aoa = np.clip(aoa, 0, 45)
 
         # Calcola CL
-        # FIX V5.2: cl_alpha ridotto da 0.045 a 0.038 per spostare il bilanciamento
-        # del downforce verso il fondo (target: 60-65% floor, 35-40% wings).
-        # Lower AR + longer chord = flatter lift slope than front wing
-        cl_alpha = 0.038  # Pendenza CL vs aoa (per grado) - F1 lower AR (era 0.045, poi 0.035)
+        cl_alpha = 0.038  # Pendenza CL vs aoa (per grado) - F1 lower AR
         cl_base = cl_alpha * aoa
         
         # Ground effect

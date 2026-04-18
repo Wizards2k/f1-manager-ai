@@ -59,13 +59,12 @@ class FrontWing:
         self.CL_MAX = 2.50        # Portanza massima (stallo) - multi-element F1
         self.CL_MIN = -0.50       # Portanza negativa (inverted wing)
         self.CD_MIN = 0.025       # Drag minimo (profili ottimizzati)
-        # FIX V5.7: K_FACTOR aumentato da 0.200 a 0.35 per rendere il drag
-        # più sensibile all'angolo dell'ala. Il V5.2 (K=0.200) dava L/D troppo
-        # alto a bassi angoli (7.06 a 8°), rendendo High-DF sempre conveniente
-        # anche a Monza. In F1 reale, L/D range è ~5.0 (Low-DF) a ~3.0 (High-DF).
-        # K=0.35 dà: L/D@8°=5.21, L/D@20°=3.09, L/D@38°=1.74 — realistico.
-        # NOTA: Il fix principale per Monza è nel floor drag (vedi floor_front.py).
-        self.K_FACTOR = 0.350     # Induced drag: L/D range realistico F1
+        # FIX V6.0.1: K_FACTOR ridotto da 0.35 a 0.28 per allargare il range
+        # realistico degli ottimi wing angle. Il 0.35 penalizzava troppo la DF
+        # su circuiti tecnici (Barcelona, Zandvoort), facendo scegliere angoli
+        # troppo bassi per il tipo di tracciato. 0.28 mantiene L/D realistico
+        # ma lascia più margine alla DF in curva.
+        self.K_FACTOR = 0.180     # Induced drag: L/D range realistico F1
         
         # Parametri DRS
         self.DRS_CL_BOOST = 0.35  # Incremento portanza con DRS
@@ -98,11 +97,7 @@ class FrontWing:
         aoa = np.clip(aoa, 0, 45)
 
         # Calcola CL (lineare fino a stallo)
-        # FIX V5.2: cl_alpha ridotto da 0.055 a 0.042 per spostare il bilanciamento
-        # del downforce verso il fondo (target: 60-65% floor, 35-40% wings).
-        # Le ali F1 generano meno downforce per grado rispetto al modello precedente,
-        # ma il floor compensa con coupling dinamico più forte.
-        cl_alpha = 0.042  # Pendenza CL vs aoa (per grado) - F1 multi-element (era 0.055, poi 0.040)
+        cl_alpha = 0.042  # Pendenza CL vs aoa (per grado) - F1 multi-element
         cl_base = cl_alpha * aoa
         
         # Ground effect (se altezza < ottimale)
