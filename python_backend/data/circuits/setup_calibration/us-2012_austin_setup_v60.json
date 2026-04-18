@@ -1,0 +1,31 @@
+{
+    "circuit_name": "austin",
+    "circuit_id": "us-2012_austin",
+    "calibration_version": "v60",
+    "optimal_setup": {
+        "front_wing": 8.0,
+        "rear_wing": 10.0,
+        "bwing": 10.0,
+        "spring_front": 25,
+        "spring_rear": 33,
+        "ARB_front": 19.0,
+        "ARB_rear": 24.0,
+        "ride_height_front": 2,
+        "ride_height_rear": 9,
+        "mu_mechanical": 0.9875,
+        "compound": "C4"
+    },
+    "calibration_results": {
+        "ref_time_s": 92.51,
+        "sim_time_cal_s": 92.16520837099802,
+        "error_pct": 0.37270741433573557
+    },
+    "congruence_test": {
+        "congruent": true,
+        "t_low": 92.47325856280659,
+        "t_cal": 92.16520837099802,
+        "t_high": 92.43214473386332,
+        "d_low_vs_cal": 0.30805019180857585,
+        "d_high_vs_cal": 0.26693636286530875
+    }
+}

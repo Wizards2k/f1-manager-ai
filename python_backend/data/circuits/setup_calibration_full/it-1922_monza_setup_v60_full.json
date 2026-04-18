@@ -1,0 +1,23 @@
+{
+  "circuit_name": "monza",
+  "circuit_id": "it-1922_monza",
+  "calibration_version": "v60_full",
+  "optimal_setup": {
+    "front_wing": 7.0,
+    "rear_wing": 6.0,
+    "bwing": 11.0,
+    "spring_front": 24.0,
+    "spring_rear": 33.0,
+    "ARB_front": 13.0,
+    "ARB_rear": 18.0,
+    "ride_height_front": 5.0,
+    "ride_height_rear": 12.0,
+    "mu_mechanical": 1.1188644409179687,
+    "compound": "C5"
+  },
+  "congruent": true,
+  "t_cal": 78.8689157913324,
+  "t_low": 78.97996430400615,
+  "t_high": 79.58106198261761,
+  "error_pct": 0.00010677029961279484
+}

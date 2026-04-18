@@ -2,8 +2,8 @@
   "aero": {
     "CdA": 1.8125,
     "ClA": 3.0169,
-    "drag_index": 1.25,
-    "downforce_index": 0.6221,
+    "drag_index": 1.28,
+    "downforce_index": 0.95,
     "aero_balance_target": 0.0,
     "notes": {
       "source_year": 2025,

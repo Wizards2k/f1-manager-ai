@@ -1,0 +1,31 @@
+{
+  "circuit_id": "sg-2008_singapore",
+  "circuit_key": "singapore",
+  "gp_name": "Singapore Grand Prix",
+  "reference_driver": "RUS",
+  "real_lap_time_s": 89.158,
+  "sim_pre_lap_time_s": 89.67123225779952,
+  "sim_pre_error_pct": 0.58,
+  "sim_post_lap_time_s": 89.67123225779952,
+  "sim_post_error_pct": 0.58,
+  "improvement_pct": 0.0,
+  "radius_updated": true,
+  "grip_data": {
+    "mu_mechanical": 2.239,
+    "mu_aero_contribution": -0.885,
+    "low_speed_points": 14,
+    "high_speed_points": 265
+  },
+  "floor_data": {
+    "k_wing_coupling": 0.0,
+    "cla_floor_dynamic": 0.0,
+    "mu_by_speed": {
+      "slow": 1.8851372761600855,
+      "medium": 1.8394960041995752,
+      "fast": 1.2374126319973449,
+      "very_fast": 0.6348293145750948
+    }
+  },
+  "pu_lookup_entries": 44,
+  "radius_points_count": 977
+}

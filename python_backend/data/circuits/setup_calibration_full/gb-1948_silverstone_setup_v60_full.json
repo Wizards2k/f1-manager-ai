@@ -1,0 +1,23 @@
+{
+  "circuit_name": "silverstone",
+  "circuit_id": "gb-1948_silverstone",
+  "calibration_version": "v60_full",
+  "optimal_setup": {
+    "front_wing": 8.0,
+    "rear_wing": 10.0,
+    "bwing": 17.0,
+    "spring_front": 24.0,
+    "spring_rear": 33.0,
+    "ARB_front": 13.0,
+    "ARB_rear": 18.0,
+    "ride_height_front": 5.0,
+    "ride_height_rear": 12.0,
+    "mu_mechanical": 0.6000289916992188,
+    "compound": "C5"
+  },
+  "congruent": false,
+  "t_cal": 83.86312100344382,
+  "t_low": 83.46730552227461,
+  "t_high": 85.08029920029786,
+  "error_pct": 1.3491106888085902
+}

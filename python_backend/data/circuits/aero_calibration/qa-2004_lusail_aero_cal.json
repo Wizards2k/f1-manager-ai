@@ -1,0 +1,27 @@
+{
+    "circuit_id": "qa-2004_lusail",
+    "source": "TracingInsights-Archive/2025",
+    "grip_data": {
+        "mu_mechanical": 0.9875,
+        "mu_aero_contribution": 1.509,
+        "c_aero": 0.000313,
+        "compound": "C3",
+        "cla_estimated": 4.0,
+        "low_speed_points": 355,
+        "high_speed_points": 301,
+        "notes": {
+            "v53_calibration": "V5.3: mu_mechanical calibrated to 1.201 for <0.5% lap time error",
+            "v55_calibration": "V5.5: mu_mechanical=1.0809 for <0.5% error (PU stateful)"
+        }
+    },
+    "floor_data": {
+        "k_wing_coupling": 0.04,
+        "cla_floor_dynamic": 1.509,
+        "mu_by_speed": {
+            "slow": 3.0344138564676912,
+            "medium": 3.2816350816729667,
+            "fast": 2.248389999431452,
+            "very_fast": 1.6854949485333406
+        }
+    }
+}

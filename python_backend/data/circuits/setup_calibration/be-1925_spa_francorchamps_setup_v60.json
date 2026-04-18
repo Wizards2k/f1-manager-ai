@@ -1,0 +1,31 @@
+{
+    "circuit_name": "spa",
+    "circuit_id": "be-1925_spa_francorchamps",
+    "calibration_version": "v60",
+    "optimal_setup": {
+        "front_wing": 4.0,
+        "rear_wing": 6.0,
+        "bwing": 5.0,
+        "spring_front": 25,
+        "spring_rear": 33,
+        "ARB_front": 10.0,
+        "ARB_rear": 17.0,
+        "ride_height_front": 6.0,
+        "ride_height_rear": 13.0,
+        "mu_mechanical": 0.31718749999999996,
+        "compound": "C4"
+    },
+    "calibration_results": {
+        "ref_time_s": 100.562,
+        "sim_time_cal_s": 99.38123951265618,
+        "error_pct": 1.1741616985976988
+    },
+    "congruence_test": {
+        "congruent": true,
+        "t_low": 99.53334326090824,
+        "t_cal": 99.38123951265618,
+        "t_high": 99.44915808771334,
+        "d_low_vs_cal": 0.15210374825205975,
+        "d_high_vs_cal": 0.06791857505716337
+    }
+}

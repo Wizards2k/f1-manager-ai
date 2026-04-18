@@ -1,0 +1,50 @@
+{
+  "monza": {
+    "circuit_id": "it-1922_monza",
+    "ref_time": 78.869,
+    "best_time": 79.0458602222621,
+    "best_delta": 0.17686022226210696,
+    "best_susp": {
+      "spring_front": 25.0,
+      "spring_rear": 33.0,
+      "arb_front": 14.0,
+      "arb_rear": 19.0,
+      "ride_height_front": 4.0,
+      "ride_height_rear": 11.0
+    },
+    "front_wing": 8.0,
+    "rear_wing": 10.0
+  },
+  "monaco": {
+    "circuit_id": "mc-1929_monaco",
+    "ref_time": 69.954,
+    "best_time": 69.5656225022287,
+    "best_delta": -0.3883774977712875,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 8.0,
+      "arb_rear": 13.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 38.0,
+    "rear_wing": 42.0
+  },
+  "silverstone": {
+    "circuit_id": "gb-1948_silverstone",
+    "ref_time": 85.01,
+    "best_time": 84.78977562959544,
+    "best_delta": -0.22022437040456566,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 22.0,
+      "arb_rear": 27.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 22.0,
+    "rear_wing": 26.0
+  }
+}

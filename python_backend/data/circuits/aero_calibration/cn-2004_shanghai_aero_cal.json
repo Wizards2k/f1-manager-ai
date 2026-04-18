@@ -1,0 +1,27 @@
+{
+    "circuit_id": "cn-2004_shanghai",
+    "source": "TracingInsights-Archive/2025",
+    "grip_data": {
+        "mu_mechanical": 0.575,
+        "mu_aero_contribution": 1.509,
+        "c_aero": 0.000313,
+        "compound": "C4",
+        "cla_estimated": 4.0,
+        "low_speed_points": 382,
+        "high_speed_points": 323,
+        "notes": {
+            "v53_calibration": "V5.3: mu_mechanical calibrated to 1.317 for <0.5% lap time error",
+            "v55_calibration": "V5.5: mu_mechanical=1.5145 for <0.5% error (PU stateful)"
+        }
+    },
+    "floor_data": {
+        "k_wing_coupling": 0.04,
+        "cla_floor_dynamic": 1.509,
+        "mu_by_speed": {
+            "slow": 2.0863942695659294,
+            "medium": 2.338301810484871,
+            "fast": 1.8743185796031037,
+            "very_fast": 1.5013748039094943
+        }
+    }
+}

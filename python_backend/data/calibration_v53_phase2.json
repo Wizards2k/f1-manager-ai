@@ -1,0 +1,407 @@
+{
+  "baku": {
+    "circuit_id": "az-2016_baku",
+    "ref_time": 101.117,
+    "sim_time": 101.18746950900808,
+    "delta": 0.07046950900807758,
+    "best_susp": {
+      "spring_front": 25.0,
+      "spring_rear": 33.0,
+      "arb_front": 14.0,
+      "arb_rear": 19.0,
+      "ride_height_front": 4.0,
+      "ride_height_rear": 11.0
+    },
+    "front_wing": 8.0,
+    "rear_wing": 10.0,
+    "source": "monza"
+  },
+  "spa": {
+    "circuit_id": "be-1925_spa_francorchamps",
+    "ref_time": 100.562,
+    "sim_time": 100.28445212184457,
+    "delta": -0.27754787815543125,
+    "best_susp": {
+      "spring_front": 25.0,
+      "spring_rear": 33.0,
+      "arb_front": 14.0,
+      "arb_rear": 19.0,
+      "ride_height_front": 4.0,
+      "ride_height_rear": 11.0
+    },
+    "front_wing": 8.0,
+    "rear_wing": 10.0,
+    "source": "monza"
+  },
+  "shanghai": {
+    "circuit_id": "cn-2004_shanghai",
+    "ref_time": 90.641,
+    "sim_time": 90.38136733121736,
+    "delta": -0.25963266878264335,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 22.0,
+      "arb_rear": 27.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 22.0,
+    "rear_wing": 26.0,
+    "source": "silverstone"
+  },
+  "sakhir": {
+    "circuit_id": "bh-2002_sakhir",
+    "ref_time": 89.841,
+    "sim_time": 90.06873708172913,
+    "delta": 0.22773708172913132,
+    "best_susp": {
+      "spring_front": 25.0,
+      "spring_rear": 33.0,
+      "arb_front": 14.0,
+      "arb_rear": 19.0,
+      "ride_height_front": 4.0,
+      "ride_height_rear": 11.0
+    },
+    "front_wing": 8.0,
+    "rear_wing": 10.0,
+    "source": "monza"
+  },
+  "melbourne": {
+    "circuit_id": "au-1953_melbourne",
+    "ref_time": 75.096,
+    "sim_time": 74.98017779670606,
+    "delta": -0.11582220329394488,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 22.0,
+      "arb_rear": 27.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 22.0,
+    "rear_wing": 26.0,
+    "source": "silverstone"
+  },
+  "yas_marina": {
+    "circuit_id": "ae-2009_yas_marina",
+    "ref_time": 82.207,
+    "sim_time": 81.7446708951678,
+    "delta": -0.46232910483219314,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 22.0,
+      "arb_rear": 27.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 22.0,
+    "rear_wing": 26.0,
+    "source": "silverstone"
+  },
+  "barcelona": {
+    "circuit_id": "es-1991_barcelona",
+    "ref_time": 71.546,
+    "sim_time": 71.12469484104777,
+    "delta": -0.4213051589522365,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 22.0,
+      "arb_rear": 27.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 22.0,
+    "rear_wing": 26.0,
+    "source": "silverstone"
+  },
+  "jeddah": {
+    "circuit_id": "sa-2021_jeddah",
+    "ref_time": 87.294,
+    "sim_time": 86.95333683280997,
+    "delta": -0.34066316719003,
+    "best_susp": {
+      "spring_front": 25.0,
+      "spring_rear": 33.0,
+      "arb_front": 14.0,
+      "arb_rear": 19.0,
+      "ride_height_front": 4.0,
+      "ride_height_rear": 11.0
+    },
+    "front_wing": 8.0,
+    "rear_wing": 10.0,
+    "source": "monza"
+  },
+  "singapore": {
+    "circuit_id": "sg-2008_singapore",
+    "ref_time": 89.158,
+    "sim_time": 89.32925725002745,
+    "delta": 0.17125725002745185,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 8.0,
+      "arb_rear": 13.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 38.0,
+    "rear_wing": 42.0,
+    "source": "monaco"
+  },
+  "sao_paulo": {
+    "circuit_id": "br-1940_sao_paulo",
+    "ref_time": 69.511,
+    "sim_time": 69.49029555865636,
+    "delta": -0.020704441343639246,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 22.0,
+      "arb_rear": 27.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 22.0,
+    "rear_wing": 26.0,
+    "source": "silverstone"
+  },
+  "monaco": {
+    "circuit_id": "mc-1929_monaco",
+    "ref_time": 69.954,
+    "best_time": 69.5656225022287,
+    "best_delta": -0.3883774977712875,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 8.0,
+      "arb_rear": 13.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 38.0,
+    "rear_wing": 42.0
+  },
+  "suzuka": {
+    "circuit_id": "jp-1962_suzuka",
+    "ref_time": 86.995,
+    "sim_time": 86.17688592348411,
+    "delta": -0.8181140765158972,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 22.0,
+      "arb_rear": 27.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 22.0,
+    "rear_wing": 26.0,
+    "source": "silverstone"
+  },
+  "silverstone": {
+    "circuit_id": "gb-1948_silverstone",
+    "ref_time": 85.01,
+    "best_time": 84.78977562959544,
+    "best_delta": -0.22022437040456566,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 22.0,
+      "arb_rear": 27.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 22.0,
+    "rear_wing": 26.0
+  },
+  "zandvoort": {
+    "circuit_id": "nl-1948_zandvoort",
+    "ref_time": 68.662,
+    "sim_time": 68.53886403675028,
+    "delta": -0.12313596324972309,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 8.0,
+      "arb_rear": 13.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 38.0,
+    "rear_wing": 42.0,
+    "source": "monaco"
+  },
+  "budapest": {
+    "circuit_id": "hu-1986_budapest",
+    "ref_time": 75.372,
+    "sim_time": 74.89509836638108,
+    "delta": -0.47690163361892246,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 8.0,
+      "arb_rear": 13.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 38.0,
+    "rear_wing": 42.0,
+    "source": "monaco"
+  },
+  "monza": {
+    "circuit_id": "it-1922_monza",
+    "ref_time": 78.869,
+    "best_time": 79.0458602222621,
+    "best_delta": 0.17686022226210696,
+    "best_susp": {
+      "spring_front": 25.0,
+      "spring_rear": 33.0,
+      "arb_front": 14.0,
+      "arb_rear": 19.0,
+      "ride_height_front": 4.0,
+      "ride_height_rear": 11.0
+    },
+    "front_wing": 8.0,
+    "rear_wing": 10.0
+  },
+  "montreal": {
+    "circuit_id": "ca-1978_montreal",
+    "ref_time": 70.899,
+    "sim_time": 71.05417113135836,
+    "delta": 0.15517113135835814,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 22.0,
+      "arb_rear": 27.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 22.0,
+    "rear_wing": 26.0,
+    "source": "silverstone"
+  },
+  "imola": {
+    "circuit_id": "it-1953_imola",
+    "ref_time": 74.67,
+    "sim_time": 74.47678537935325,
+    "delta": -0.19321462064675643,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 22.0,
+      "arb_rear": 27.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 22.0,
+    "rear_wing": 26.0,
+    "source": "silverstone"
+  },
+  "mexico_city": {
+    "circuit_id": "mx-1962_mexico_city",
+    "ref_time": 75.586,
+    "sim_time": 75.9878097852529,
+    "delta": 0.4018097852529081,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 22.0,
+      "arb_rear": 27.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 22.0,
+    "rear_wing": 26.0,
+    "source": "silverstone"
+  },
+  "miami": {
+    "circuit_id": "us-2022_miami",
+    "ref_time": 86.204,
+    "sim_time": 86.17903433271586,
+    "delta": -0.024965667284135407,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 22.0,
+      "arb_rear": 27.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 22.0,
+    "rear_wing": 26.0,
+    "source": "silverstone"
+  },
+  "lusail": {
+    "circuit_id": "qa-2004_lusail",
+    "ref_time": 79.387,
+    "sim_time": 78.51272167363858,
+    "delta": -0.87427832636142,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 22.0,
+      "arb_rear": 27.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 22.0,
+    "rear_wing": 26.0,
+    "source": "silverstone"
+  },
+  "spielberg": {
+    "circuit_id": "at-1969_spielberg",
+    "ref_time": 63.971,
+    "sim_time": 64.05980648926666,
+    "delta": 0.08880648926666623,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 22.0,
+      "arb_rear": 27.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 22.0,
+    "rear_wing": 26.0,
+    "source": "silverstone"
+  },
+  "austin": {
+    "circuit_id": "us-2012_austin",
+    "ref_time": 92.51,
+    "sim_time": 93.45110990621689,
+    "delta": 0.9411099062168802,
+    "best_susp": {
+      "spring_front": 15.0,
+      "spring_rear": 23.0,
+      "arb_front": 22.0,
+      "arb_rear": 27.0,
+      "ride_height_front": 18.0,
+      "ride_height_rear": 25.0
+    },
+    "front_wing": 22.0,
+    "rear_wing": 26.0,
+    "source": "silverstone"
+  },
+  "las_vegas": {
+    "circuit_id": "us-2023_las_vegas",
+    "ref_time": 107.934,
+    "sim_time": 106.72769012790135,
+    "delta": -1.2063098720986432,
+    "best_susp": {
+      "spring_front": 25.0,
+      "spring_rear": 33.0,
+      "arb_front": 14.0,
+      "arb_rear": 19.0,
+      "ride_height_front": 4.0,
+      "ride_height_rear": 11.0
+    },
+    "front_wing": 8.0,
+    "rear_wing": 10.0,
+    "source": "monza"
+  }
+}

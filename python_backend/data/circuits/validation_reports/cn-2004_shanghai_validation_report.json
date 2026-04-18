@@ -1,0 +1,31 @@
+{
+  "circuit_id": "cn-2004_shanghai",
+  "circuit_key": "china",
+  "gp_name": "Chinese Grand Prix",
+  "reference_driver": "PIA",
+  "real_lap_time_s": 90.641,
+  "sim_pre_lap_time_s": 90.48294692370015,
+  "sim_pre_error_pct": 0.17,
+  "sim_post_lap_time_s": 90.48294692370015,
+  "sim_post_error_pct": 0.17,
+  "improvement_pct": 0.0,
+  "radius_updated": true,
+  "grip_data": {
+    "mu_mechanical": 2.23,
+    "mu_aero_contribution": 0.245,
+    "low_speed_points": 15,
+    "high_speed_points": 259
+  },
+  "floor_data": {
+    "k_wing_coupling": 0.0,
+    "cla_floor_dynamic": 0.0,
+    "mu_by_speed": {
+      "slow": 2.0863942695659294,
+      "medium": 2.338301810484871,
+      "fast": 1.8743185796031037,
+      "very_fast": 1.5013748039094943
+    }
+  },
+  "pu_lookup_entries": 42,
+  "radius_points_count": 1080
+}

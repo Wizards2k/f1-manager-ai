@@ -2,14 +2,21 @@
   "aero": {
     "CdA": 1.6973,
     "ClA": 4.4999,
-    "drag_index": 1.1706,
-    "downforce_index": 0.9278,
+    "drag_index": 1.05,
+    "downforce_index": 1.0,
     "aero_balance_target": 0.0,
     "notes": {
       "source_year": 2025,
       "session_type": "Q",
       "description": "qualifying_fastest",
-      "generated_from": "mc-1929_monaco"
+      "generated_from": "mc-1929_monaco",
+      "v415_note": "V4.15: drag_index reduced from 1.1706 to 1.05, downforce_index from 0.9278 to 1.00. Floor coupling makes downforce_index unnecessary. Drag_index still needed for tunnel/circuit drag correction."
+    }
+  },
+  "grip_data": {
+    "mu_mechanical": 1.509,
+    "notes": {
+      "v53_calibration": "V5.3: mu_mechanical calibrated to 1.509 for <0.5% lap time error"
     }
   }
 }

@@ -1,0 +1,29 @@
+{
+  "circuit_id": "hu-1986_budapest",
+  "circuit_key": "hungary",
+  "gp_name": "Hungarian Grand Prix",
+  "reference_driver": "LEC",
+  "real_lap_time_s": 75.372,
+  "sim_pre_lap_time_s": 74.93163808478691,
+  "sim_pre_error_pct": 0.58,
+  "sim_post_lap_time_s": 74.93163808478691,
+  "sim_post_error_pct": 0.58,
+  "improvement_pct": 0.0,
+  "radius_updated": true,
+  "grip_data": {
+    "mu_mechanical": 1.65,
+    "mu_aero_contribution": 0.0
+  },
+  "floor_data": {
+    "k_wing_coupling": 0.0286,
+    "cla_floor_dynamic": 0.286,
+    "mu_by_speed": {
+      "slow": 2.8235513735412896,
+      "medium": 2.41116761247954,
+      "fast": 1.935522970297757,
+      "very_fast": 0.4983960931565759
+    }
+  },
+  "pu_lookup_entries": 38,
+  "radius_points_count": 872
+}

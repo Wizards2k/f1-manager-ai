@@ -1,0 +1,26 @@
+{
+    "circuit_id": "sa-2021_jeddah",
+    "source": "TracingInsights-Archive/2025",
+    "grip_data": {
+        "mu_mechanical": 0.6437,
+        "mu_aero_contribution": 1.321,
+        "c_aero": 0.000274,
+        "compound": "C5",
+        "cla_estimated": 3.5,
+        "low_speed_points": 407,
+        "high_speed_points": 336,
+        "notes": {
+            "v53_calibration": "V5.3: mu_mechanical calibrated to 1.317 for <0.5% lap time error"
+        }
+    },
+    "floor_data": {
+        "k_wing_coupling": 0.035,
+        "cla_floor_dynamic": 1.321,
+        "mu_by_speed": {
+            "slow": 2.3036312611076273,
+            "medium": 2.6494893218180344,
+            "fast": 2.4183417834138545,
+            "very_fast": 1.1821562432421644
+        }
+    }
+}

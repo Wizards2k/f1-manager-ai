@@ -1,0 +1,27 @@
+{
+    "circuit_id": "it-1922_monza",
+    "source": "TracingInsights-Archive/2025",
+    "grip_data": {
+        "mu_mechanical": 0.85,
+        "mu_aero_contribution": 1.132,
+        "c_aero": 0.000235,
+        "compound": "C5",
+        "cla_estimated": 3.0,
+        "low_speed_points": 236,
+        "high_speed_points": 180,
+        "notes": {
+            "v55_calibration": "V5.5: mu_mechanical=1.76 for <0.5% error (PU stateful)",
+            "v57_calibration": "V5.7: mu_mechanical=1.749 after aero setup re-reference to FW=12/RW=14 (aero sweep optimum)"
+        }
+    },
+    "floor_data": {
+        "k_wing_coupling": 0.03,
+        "cla_floor_dynamic": 1.133,
+        "mu_by_speed": {
+            "slow": 1.4542231453466774,
+            "medium": 1.4660523832285417,
+            "fast": 2.1682796095041215,
+            "very_fast": 0.9155365612594857
+        }
+    }
+}

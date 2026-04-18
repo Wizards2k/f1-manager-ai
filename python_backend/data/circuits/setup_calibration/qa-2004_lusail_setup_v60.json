@@ -1,0 +1,31 @@
+{
+    "circuit_name": "lusail",
+    "circuit_id": "qa-2004_lusail",
+    "calibration_version": "v60",
+    "optimal_setup": {
+        "front_wing": 8.0,
+        "rear_wing": 10.0,
+        "bwing": 10.0,
+        "spring_front": 25,
+        "spring_rear": 33,
+        "ARB_front": 19.0,
+        "ARB_rear": 24.0,
+        "ride_height_front": 2,
+        "ride_height_rear": 9,
+        "mu_mechanical": 0.9875,
+        "compound": "C3"
+    },
+    "calibration_results": {
+        "ref_time_s": 79.387,
+        "sim_time_cal_s": 78.3116393610538,
+        "error_pct": 1.3545802700016294
+    },
+    "congruence_test": {
+        "congruent": true,
+        "t_low": 78.58260904011674,
+        "t_cal": 78.3116393610538,
+        "t_high": 78.82383538721318,
+        "d_low_vs_cal": 0.27096967906292946,
+        "d_high_vs_cal": 0.5121960261593728
+    }
+}

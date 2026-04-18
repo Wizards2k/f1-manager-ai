@@ -1,0 +1,31 @@
+{
+    "circuit_name": "mexico_city",
+    "circuit_id": "mx-1962_mexico_city",
+    "calibration_version": "v60",
+    "optimal_setup": {
+        "front_wing": 12.0,
+        "rear_wing": 10.0,
+        "bwing": 10.0,
+        "spring_front": 25,
+        "spring_rear": 33,
+        "ARB_front": 19.0,
+        "ARB_rear": 24.0,
+        "ride_height_front": 2,
+        "ride_height_rear": 9,
+        "mu_mechanical": 0.575,
+        "compound": "C5"
+    },
+    "calibration_results": {
+        "ref_time_s": 75.586,
+        "sim_time_cal_s": 75.26214282769814,
+        "error_pct": 0.42846184783141933
+    },
+    "congruence_test": {
+        "congruent": true,
+        "t_low": 75.40713665670167,
+        "t_cal": 75.26214282769814,
+        "t_high": 75.80863563657532,
+        "d_low_vs_cal": 0.14499382900352487,
+        "d_high_vs_cal": 0.5464928088771757
+    }
+}

@@ -1,0 +1,31 @@
+{
+    "circuit_name": "singapore",
+    "circuit_id": "sg-2008_singapore",
+    "calibration_version": "v60",
+    "optimal_setup": {
+        "front_wing": 26.0,
+        "rear_wing": 30.0,
+        "bwing": 18.0,
+        "spring_front": 10,
+        "spring_rear": 18,
+        "ARB_front": 19.0,
+        "ARB_rear": 24.0,
+        "ride_height_front": 10.0,
+        "ride_height_rear": 17.0,
+        "mu_mechanical": 0.85,
+        "compound": "C5"
+    },
+    "calibration_results": {
+        "ref_time_s": 89.158,
+        "sim_time_cal_s": 89.39389620121801,
+        "error_pct": 0.26458220374841457
+    },
+    "congruence_test": {
+        "congruent": false,
+        "t_low": 87.38461651046363,
+        "t_cal": 89.39389620121801,
+        "t_high": 91.17375925930423,
+        "d_low_vs_cal": 2.009279690754383,
+        "d_high_vs_cal": 1.779863058086221
+    }
+}

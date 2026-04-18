@@ -1,0 +1,31 @@
+{
+    "circuit_name": "las_vegas",
+    "circuit_id": "us-2023_las_vegas",
+    "calibration_version": "v60",
+    "optimal_setup": {
+        "front_wing": 7.0,
+        "rear_wing": 6.0,
+        "bwing": 5.0,
+        "spring_front": 25,
+        "spring_rear": 33,
+        "ARB_front": 10.0,
+        "ARB_rear": 17.0,
+        "ride_height_front": 6.0,
+        "ride_height_rear": 13.0,
+        "mu_mechanical": 0.3000020980834961,
+        "compound": "C5"
+    },
+    "calibration_results": {
+        "ref_time_s": 107.934,
+        "sim_time_cal_s": 105.1317563731724,
+        "error_pct": 2.596256626111887
+    },
+    "congruence_test": {
+        "congruent": true,
+        "t_low": 105.99154070100354,
+        "t_cal": 105.1317563731724,
+        "t_high": 105.24708838266362,
+        "d_low_vs_cal": 0.8597843278311501,
+        "d_high_vs_cal": 0.11533200949122602
+    }
+}

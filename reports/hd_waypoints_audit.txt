@@ -1,0 +1,63 @@
+================================================================================
+AUDIT HD WAYPOINTS - F1 2025
+================================================================================
+
+📊 RIEPILOGO:
+  Circuiti totali: 24
+  ✅ OK: 0
+  ❌ File mancanti: 24
+  ⚠️  Senza raggi: 0
+  ⚠️  Raggi sospetti: 0
+
+📋 DETTAGLIO CIRCUITI:
+--------------------------------------------------------------------------------
+
+❌ ae-2009_yas_marina: FILE NON TROVATO
+
+❌ at-1969_spielberg: FILE NON TROVATO
+
+❌ au-1953_melbourne: FILE NON TROVATO
+
+❌ az-2016_baku: FILE NON TROVATO
+
+❌ be-1925_spa_francorchamps: FILE NON TROVATO
+
+❌ bh-2002_sakhir: FILE NON TROVATO
+
+❌ br-1940_sao_paulo: FILE NON TROVATO
+
+❌ ca-1978_montreal: FILE NON TROVATO
+
+❌ cn-2004_shanghai: FILE NON TROVATO
+
+❌ es-1991_barcelona: FILE NON TROVATO
+
+❌ gb-1948_silverstone: FILE NON TROVATO
+
+❌ hu-1986_budapest: FILE NON TROVATO
+
+❌ it-1922_monza: FILE NON TROVATO
+
+❌ it-1953_imola: FILE NON TROVATO
+
+❌ jp-1962_suzuka: FILE NON TROVATO
+
+❌ mc-1929_monaco: FILE NON TROVATO
+
+❌ mx-1962_mexico_city: FILE NON TROVATO
+
+❌ nl-1948_zandvoort: FILE NON TROVATO
+
+❌ qa-2004_lusail: FILE NON TROVATO
+
+❌ sa-2021_jeddah: FILE NON TROVATO
+
+❌ sg-2008_singapore: FILE NON TROVATO
+
+❌ us-2012_austin: FILE NON TROVATO
+
+❌ us-2022_miami: FILE NON TROVATO
+
+❌ us-2023_las_vegas: FILE NON TROVATO
+
+================================================================================
