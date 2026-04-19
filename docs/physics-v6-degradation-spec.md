@@ -1,11 +1,11 @@
 ---
-title: Physics Engine V6.1 - Degradation & Systems Specification (Fase 2)
+title: Physics Engine V6.3 - Degradation & Systems Specification
 date: 2026-04-19
 status: Draft
 author: AI Agent
 ---
 
-# Physics Engine V6.1 — Specifica Gestione Degrado (Fase 2)
+# Physics Engine V6.3 — Specifica Degrado (Tire Thermal + Wear + Brake Fade)
 
 ## 1. Obiettivo Generale
 Il nuovo Physics Engine V6.0.1 ha rivoluzionato il calcolo balistico della performance con architettura *dual-pass*, unificando la *load sensitivity* (K=0.010) e ribilanciando il peso aerodinamico. Ora che il comportamento baseline della vettura in Qualifica ("Giro secco") è fisicamente stabile e congruente (100% preference pass, 91.7% typology), è necessario sbloccare la **Fase 2**: trasformare le appendici e "penalità additive" del V5 (Usura, Termica Gomme, PU/ERS, Freni, Carburante) in forze e limiti nativi del nuovo motore.
