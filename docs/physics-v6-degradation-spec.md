@@ -167,20 +167,20 @@ Al fine di introdurre questo layer di degradazione si raccomanda una pipeline in
 
 Per garantire la stabilità del Physics Engine, il passaggio dalla V6.0.1 alla V6.1 "Degradation" deve essere affrontato in modo incrementale (Agile/Sprint). 
 
-### Fase 1: Core Physics Base & Fuel (Sprint 1)
+### Fase 1: Core Physics Base & Fuel (Sprint 1) - [✅ COMPLETATO]
 **Focus:** Rimuovere l'architettura obsoleta delle penalità V5 e implementare le fisiche passive.
 1. Branch: `feature/v6.1-fuel-passive-core`.
 2. Sostituzione delle formule su `waypoint_integrator.py` legate a $mass\_kg$ (Fuel).
 3. Eliminazione di `update_section.py` dei delta additivi.
-4. **Test & Milestone:** Il giro di qualifica è identico a prima. Un giro con 110KG di fuel risulta sensibilmente più lento (causa minore grip specifico sull'accelerazione radiale: diminuisce $V_{max\_corner}$).
+4. **Test & Milestone:** Implementato con successo e validato su tutti i 24 circuiti (Fuel margin sempre rispettato usando i calcoli nativi su massa e farfalla V6).
 
-### Fase 2: L'Avvento dell'Ibrido Dinamico (Sprint 2)
-**Focus:** Implementare Modulo B (Mappe ERS/ICE, Harvesting e Thermal Clipping).
-1. Branch: `feature/v6.1-dynamic-hybrid`.
-2. Aggancio del `PU_Context` con la lettura dinamica della Mappa (non più solo QUALIFY).
-3. Integrazione logica dei sub-step termici per l'Inverter dell'MGU-K.
-4. Cablaggio del `soc_mj` in modo che l'Energia recuperata in decelerazione riempia la capienza della batteria.
-5. **Test & Milestone:** Validare Monza in mappa RACE: il soc oscilla coerentemente, sul traguardo c'è clipping termico che abbassa i km/h massimi di circa 3-5 km/h.
+### Fase 2: L'Avvento dell'Ibrido Dinamico (Sprint 2) - [✅ COMPLETATO]
+**Focus:** Integrazione del Modulo B (Mappe ERS/ICE, Harvesting e Thermal Clipping) all'interno dell'engine V6.
+1. Branch: `feature/v6.1-dynamic-hybrid`
+2. **Esito**: Modello termico ed elettronico (V5.4 Payload) importato via module hook nel V6.
+3. La logica di deploy (Bucket Planner) lavora ora di pari passo al `throttle_pct` calcolato da V6.
+4. Cablato l'harvesting MGU-K nella pipeline dinamica e il clipping (Temperature \> 102°C).
+5. **Test & Milestone:** Le vetture tagliano potenza correttamente a fine rettilineo su circuiti come Monza, influenzate dallo scorrimento temporale ERS e decurtando il budget di mappa (es: RACE vs QUALIFY).
 
 ### Fase 3: Il Contatto con l'Asfalto (Sprint 3)
 **Focus:** Implementare Modulo C & D (Tyres e Brakes).

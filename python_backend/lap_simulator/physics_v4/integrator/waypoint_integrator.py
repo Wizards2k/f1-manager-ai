@@ -1948,9 +1948,18 @@ def integrate_lap_hd(
         # V6.1 Modulo A: Consumption & Push Logic
         dt_s_step = state.time_s - prev_time_s
         if dt_s_step > 0:
-            # Throttle injection è attenuata dal push driver (non aprono al 100% per risparmiare)
+            # Throttle injection attenuata dal push driver
             throttle_pace_eff = 0.85 + (max(1, min(10, push_level)) / 10.0) * 0.15
-            throttle_intensity = throttle_pace_eff if getattr(state, 'is_throttle', False) else 0.1
+            raw_throttle = float(wp.get('throttle_pct', 0)) / 100.0
+            
+            if getattr(state, 'is_throttle', False):
+                # Usiamo la % di gas vera (che a Monaco oscilla tra 20% e 60% per gran parte del giro)
+                throttle_intensity = throttle_pace_eff * raw_throttle
+                # Limite inferiore di scorrimento carburante
+                throttle_intensity = max(0.1, throttle_intensity)
+            else:
+                throttle_intensity = 0.05  # Coasting/Braking idle injection
+                
             delta_fuel = max_flow_kg_ps * throttle_intensity * flow_map_multiplier * dt_s_step
             current_mass_kg -= delta_fuel
             total_fuel_consumed_kg += delta_fuel
