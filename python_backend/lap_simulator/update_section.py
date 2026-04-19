@@ -600,20 +600,10 @@ def update_section(
     # Apply dt_ref penalty model (baseline + aero/grip deltas)
     # ------------------------------------------------------------------
     ref_dt = section.dt_ref_s if (hasattr(section, 'dt_ref_s') and section.dt_ref_s > 0.0) else dt_s
-    # Fuel penalty (per lap) scaled by current fuel mass
-    # Convert per-lap penalty to per-section penalty
+    
+    # V6/Legacy cleanup: Fuel penalty is handled natively by physics engine (mass_kg tracking).
+    # We no longer apply arbitrary seconds penalty.
     fuel_delta_s = 0.0
-    if ENABLE_FUEL_PENALTIES and USE_NEW_PENALTY_SYSTEM and config.fuel_penalty_coeff > 0.0:
-        extra_fuel = max(0.0, car_state.pu.fuel_kg - config.fuel_reference_kg)
-        
-        # Use cached section fraction if available
-        if cache:
-            section_cache = cache.sections[section.section_id]
-            section_fraction = section_cache.fuel_section_fraction
-        else:
-            section_fraction = section.length_m / config.circuit_length_m
-            
-        fuel_delta_s = config.fuel_penalty_coeff * extra_fuel * section_fraction
 
     # Tyre penalty (compound + wear + temperature)
     tyre_delta_s = 0.0

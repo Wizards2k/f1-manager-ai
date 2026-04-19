@@ -1575,7 +1575,8 @@ def integrate_lap_hd(
     aero_setup: Optional[Dict] = None,
     mass_kg: float = MASS_TOTAL_QUALY_KG,
     tyre_compound: str = "C3",
-    driver_skill: float = 1.0,
+    driver_skill: float = 1.0,  # F1 driver rating scaled (es. 0.95-1.05)
+    push_level: int = 10,       # UI pace command (1-10)
     verbose: bool = False,
     # Calibration parameters (override defaults)
     mu_override: Optional[Dict[str, float]] = None,
@@ -1834,14 +1835,18 @@ def integrate_lap_hd(
             print(f"  ⚠️ V6.0 v_max_corner failed: {e}, falling back to None")
         v_max_corner_array = None
 
-    # Phase 1B (NUOVO): Applica safety factor circuit-specific
+    # Phase 1B (NUOVO): Applica safety factor e PUSH LEVEL
     if v_max_corner_array is not None:
         try:
             circuit_type = analyze_circuit_profile(waypoints)
             safety_factor = get_safety_factor_v6(circuit_type, circuit_id)
-            v_max_corner_array = [v * safety_factor for v in v_max_corner_array]
+            
+            # Mappa Push Level (1-10) su un fattore di passo (es. 10 -> 1.0, 1 -> 0.95)
+            push_pace_factor = 0.95 + (max(1, min(10, push_level)) / 10.0) * 0.05
+            v_max_corner_array = [v * safety_factor * push_pace_factor for v in v_max_corner_array]
+            
             if verbose:
-                print(f"  ✓ V6.0 safety factor applied: {circuit_type} → {safety_factor:.2f}")
+                print(f"  ✓ V6.0 safety factor applied: {circuit_type} → {safety_factor:.2f} (Push={push_level})")
                 print(f"    After safety: Min: {min(v_max_corner_array):.1f} m/s, "
                       f"Max: {max(v_max_corner_array):.1f} m/s")
         except Exception as e:
@@ -1865,6 +1870,26 @@ def integrate_lap_hd(
             print(f"  ⚠️ V6.0 braking zones failed: {e}, falling back to None")
         brake_needed = None
 
+    # V6.1 Degradation Modulo A: Peso dinamico carburante
+    current_mass_kg = mass_kg
+    total_fuel_consumed_kg = 0.0
+    
+    # Engine map multipliers
+    flow_map_multiplier = 1.0  # default QUALIFY
+    if pu_ctx:
+        map_name = getattr(pu_ctx, 'engine_map', 'QUALIFY').upper()
+        if map_name == "RACE":
+            flow_map_multiplier = 0.90
+        elif map_name == "PRACTICE":
+            flow_map_multiplier = 0.85
+        elif map_name == "ECONOMY":
+            flow_map_multiplier = 0.75
+        elif map_name == "SAFETY_CAR":
+            flow_map_multiplier = 0.40
+
+    # Max flow in F1: ~100 kg/h
+    max_flow_kg_ps = 0.0277
+
     for i in range(len(waypoints) - 1):
         wp = waypoints[i]
         wp_next = waypoints[i + 1]
@@ -1885,13 +1910,14 @@ def integrate_lap_hd(
                 section_speed_scale = 1.0
         
         # Integra step
+        prev_time_s = state.time_s
         state = integrate_waypoint(
             state=state,
             waypoint=wp,
             next_waypoint=wp_next,
             aero=aero,
             setup=aero_setup,
-            mass_kg=mass_kg,
+            mass_kg=current_mass_kg,
             tyre_compound=tyre_compound,
             driver_skill=driver_skill,
             mu_base=mu_base_local,
@@ -1918,6 +1944,16 @@ def integrate_lap_hd(
             # V6.2: Altitude-corrected air density
             air_density=lap_air_density,
         )
+        
+        # V6.1 Modulo A: Consumption & Push Logic
+        dt_s_step = state.time_s - prev_time_s
+        if dt_s_step > 0:
+            # Throttle injection è attenuata dal push driver (non aprono al 100% per risparmiare)
+            throttle_pace_eff = 0.85 + (max(1, min(10, push_level)) / 10.0) * 0.15
+            throttle_intensity = throttle_pace_eff if getattr(state, 'is_throttle', False) else 0.1
+            delta_fuel = max_flow_kg_ps * throttle_intensity * flow_map_multiplier * dt_s_step
+            current_mass_kg -= delta_fuel
+            total_fuel_consumed_kg += delta_fuel
         
         # Aggiorna statistiche
         v_max_ms = max(v_max_ms, state.velocity_ms)
@@ -1965,6 +2001,7 @@ def integrate_lap_hd(
         "circuit_id": circuit_id,
         "aero_setup": aero_setup,
         "aero_calibration": aero_calibration,
+        "fuel_consumed_kg": total_fuel_consumed_kg,
     }
     
     # V5.4: Add PU stateful results
