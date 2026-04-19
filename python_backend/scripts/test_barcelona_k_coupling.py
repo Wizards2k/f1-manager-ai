@@ -9,8 +9,8 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from lap_simulator.physics_v4.core.car_setup import PhysicsV4Setup
-from lap_simulator.physics_v4.calibration.aero_calibration import get_aero_calibration
+from lap_simulator.physics_engine.core.car_setup import PhysicsV4Setup
+from lap_simulator.physics_engine.calibration.aero_calibration import get_aero_calibration
 from scripts.calibrate_v57 import ALL_CIRCUITS, SUSP_SETUPS, DRIVER
 
 BARCELONA_JSON = ROOT / "data/circuits/aero_calibration/es-1991_barcelona_aero_cal.json"

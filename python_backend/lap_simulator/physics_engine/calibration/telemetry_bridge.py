@@ -10,7 +10,7 @@ Questo modulo:
 6. Fornisce Reference Pull per il waypoint_integrator
 
 Usage:
-    from lap_simulator.physics_v4.calibration.telemetry_bridge import TelemetryBridge
+    from lap_simulator.physics_engine.calibration.telemetry_bridge import TelemetryBridge
 
     bridge = TelemetryBridge()
     ref_data = bridge.get_reference_pull("mc-1929_monaco")

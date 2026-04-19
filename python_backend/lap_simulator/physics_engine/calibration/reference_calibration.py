@@ -15,9 +15,9 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-from lap_simulator.physics_v4.core.car_setup import PhysicsV4Setup
-from lap_simulator.physics_v4.core.team_driver_data import DriverSkill, TeamData, TeamDriverLoader
-from lap_simulator.physics_v4.setup.default_setups import DefaultSetups
+from lap_simulator.physics_engine.core.car_setup import PhysicsV4Setup
+from lap_simulator.physics_engine.core.team_driver_data import DriverSkill, TeamData, TeamDriverLoader
+from lap_simulator.physics_engine.setup.default_setups import DefaultSetups
 
 
 DEFAULT_CALIBRATION_CIRCUIT_ID = "it-1922_monza"

@@ -23,7 +23,7 @@ PYTHON_BACKEND_ROOT = SCRIPT_DIR.parent
 if str(PYTHON_BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(PYTHON_BACKEND_ROOT))
 
-from lap_simulator.physics_v4.calibration.reference_calibration import (  # noqa: E402
+from lap_simulator.physics_engine.calibration.reference_calibration import (  # noqa: E402
     DEFAULT_CALIBRATION_CIRCUIT_ID,
     DEFAULT_CALIBRATION_DRIVER_NAME,
     DEFAULT_CALIBRATION_ENGINE_MAP,

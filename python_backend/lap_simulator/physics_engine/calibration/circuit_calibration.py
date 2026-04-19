@@ -5,7 +5,7 @@ Parametri di calibrazione per circuiti F1 2025.
 Questi parametri permettono di ottenere tempi realistici per ogni circuito.
 
 Usage:
-    from lap_simulator.physics_v4.calibration.circuit_calibration import get_circuit_calibration
+    from lap_simulator.physics_engine.calibration.circuit_calibration import get_circuit_calibration
     
     cal = get_circuit_calibration("mc-1929_monaco")
     result = integrate_lap_hd(

@@ -26,8 +26,8 @@ ROOT = SCRIPT_DIR.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from lap_simulator.physics_v4.core.car_setup import PhysicsV4Setup           # noqa: E402
-from lap_simulator.physics_v4.core.team_driver_data import (                 # noqa: E402
+from lap_simulator.physics_engine.core.car_setup import PhysicsV4Setup           # noqa: E402
+from lap_simulator.physics_engine.core.team_driver_data import (                 # noqa: E402
     get_team_data, get_driver_data,
 )
 

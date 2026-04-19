@@ -4,7 +4,7 @@ from pathlib import Path
 current_dir = Path(__file__).parent.resolve()
 sys.path.insert(0, str(current_dir))
 
-from lap_simulator.physics_v4.integrator.waypoint_integrator import integrate_lap_hd
+from lap_simulator.physics_engine.integrator.waypoint_integrator import integrate_lap_hd
 
 def run_all_circuits():
     calendar = [

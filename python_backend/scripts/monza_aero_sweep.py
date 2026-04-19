@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from lap_simulator.physics_v4.core.car_setup import PhysicsV4Setup, DriverSkill
+from lap_simulator.physics_engine.core.car_setup import PhysicsV4Setup, DriverSkill
 
 # Aero sweep — covers the full realistic Monza setup space
 SWEEPS = [

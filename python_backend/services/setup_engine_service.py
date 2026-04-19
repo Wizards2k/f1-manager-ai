@@ -8,7 +8,7 @@ import json
 
 from models import DEFAULT_SETUP_CONFIG
 from utils.setup_engine import evaluate_setup, evaluate_setup_categories
-from lap_simulator.physics_v4.calibration.aero_calibration import (
+from lap_simulator.physics_engine.calibration.aero_calibration import (
     apply_aero_setup_bias,
     compute_aero_setup_bias,
     get_aero_calibration,

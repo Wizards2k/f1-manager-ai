@@ -7,7 +7,7 @@ from dataclasses import dataclass, asdict
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from lap_simulator.physics_v4.core.car_setup import PhysicsV4Setup, DriverSkill
+from lap_simulator.physics_engine.core.car_setup import PhysicsV4Setup, DriverSkill
 
 CIRCUIT_CATEGORIES = {
     "monza": "fast", "baku": "fast", "jeddah": "fast", "las_vegas": "fast", "spa": "fast",
@@ -66,7 +66,7 @@ def sim(cid, fw, rw, bw, sf, sr, af, ar, hf, hr, comp, mu=None):
         cal["grip_data"]["mu_mechanical"] = mu
         json.dump(cal, open(AERO_CAL_DIR / f"{cid}_aero_cal.json", 'w'), indent=4)
         try:
-            from lap_simulator.physics_v4.calibration.aero_calibration import get_aero_calibration
+            from lap_simulator.physics_engine.calibration.aero_calibration import get_aero_calibration
             get_aero_calibration.cache_clear()
         except: pass
     setup = PhysicsV4Setup(driver_data=DRIVER, circuit=cid, session="qualifying")
@@ -125,7 +125,7 @@ def phase4(cid, cfg, mu):
     cal["grip_data"]["mu_mechanical"] = mu
     json.dump(cal, open(AERO_CAL_DIR / f"{cid}_aero_cal.json", 'w'), indent=4)
     try:
-        from lap_simulator.physics_v4.calibration.aero_calibration import get_aero_calibration
+        from lap_simulator.physics_engine.calibration.aero_calibration import get_aero_calibration
         get_aero_calibration.cache_clear()
     except: pass
 

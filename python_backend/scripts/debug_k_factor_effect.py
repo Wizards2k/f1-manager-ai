@@ -7,9 +7,9 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from lap_simulator.physics_v4.aero.aero_assembly import AeroAssembly
-from lap_simulator.physics_v4.aero.front_wing import FrontWing
-from lap_simulator.physics_v4.aero.rear_wing import RearWing
+from lap_simulator.physics_engine.aero.aero_assembly import AeroAssembly
+from lap_simulator.physics_engine.aero.front_wing import FrontWing
+from lap_simulator.physics_engine.aero.rear_wing import RearWing
 
 
 def test_with_k(k_fw, k_rw, fw_aoa, rw_aoa):

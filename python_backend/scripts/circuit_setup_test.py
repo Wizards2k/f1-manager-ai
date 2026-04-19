@@ -29,9 +29,9 @@ _PYTHON_BACKEND  = _HERE.parent                             # .../python_backend
 if str(_PYTHON_BACKEND) not in sys.path:
     sys.path.insert(0, str(_PYTHON_BACKEND))
 
-from lap_simulator.physics_v4.core.car_setup import PhysicsV4Setup
-from lap_simulator.physics_v4.core.team_driver_data import get_team_data, get_driver_data
-from lap_simulator.physics_v4.setup.default_setups import DefaultSetups
+from lap_simulator.physics_engine.core.car_setup import PhysicsV4Setup
+from lap_simulator.physics_engine.core.team_driver_data import get_team_data, get_driver_data
+from lap_simulator.physics_engine.setup.default_setups import DefaultSetups
 
 
 # ──────────────────────────────────────────────────────────────────────────────

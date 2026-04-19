@@ -10,7 +10,7 @@ Interfaccia completa per configurare l'auto con parametri reali:
 - Carburante (fuel load per sessione)
 
 Usage:
-    from lap_simulator.physics_v4 import PhysicsV4Setup, TeamDriverLoader
+    from lap_simulator.physics_engine import PhysicsV4Setup, TeamDriverLoader
     
     # Carica dati McLaren + Norris
     loader = TeamDriverLoader()
@@ -528,9 +528,9 @@ class PhysicsV4Setup:
             - telemetry: punti telemetria
         """
         # Import qui per evitare circular imports
-        from lap_simulator.physics_v4.integrator.waypoint_integrator import integrate_lap_hd
-        from lap_simulator.physics_v4.calibration.circuit_calibration import get_circuit_calibration
-        from lap_simulator.physics_v4.calibration.aero_calibration import get_aero_calibration
+        from lap_simulator.physics_engine.integrator.waypoint_integrator import integrate_lap_hd
+        from lap_simulator.physics_engine.calibration.circuit_calibration import get_circuit_calibration
+        from lap_simulator.physics_engine.calibration.aero_calibration import get_aero_calibration
         
         # Applica preferenze driver
         setup = self.apply_driver_preferences()

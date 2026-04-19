@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from lap_simulator.physics_v4.core.car_setup import PhysicsV4Setup, DriverSkill
+from lap_simulator.physics_engine.core.car_setup import PhysicsV4Setup, DriverSkill
 
 REFERENCE = {
     "monza":       {"circuit_id": "it-1922_monza",      "fw": 12.0, "rw": 14.0, "compound": "C5", "bwing": 7.0,  "susp": "monza"},

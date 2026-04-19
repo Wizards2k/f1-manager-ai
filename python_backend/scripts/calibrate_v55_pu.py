@@ -13,8 +13,8 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from lap_simulator.physics_v4.integrator.waypoint_integrator import integrate_lap_hd
-import lap_simulator.physics_v4.integrator.waypoint_integrator as _wi
+from lap_simulator.physics_engine.integrator.waypoint_integrator import integrate_lap_hd
+import lap_simulator.physics_engine.integrator.waypoint_integrator as _wi
 
 # CRITICAL: waypoint_integrator.py uses relative imports, so the
 # get_aero_calibration it uses is from 'calibration.aero_calibration',
@@ -24,7 +24,7 @@ import lap_simulator.physics_v4.integrator.waypoint_integrator as _wi
 try:
     from calibration.aero_calibration import get_aero_calibration as _get_aero_cal_internal
 except ImportError:
-    from lap_simulator.physics_v4.calibration.aero_calibration import get_aero_calibration as _get_aero_cal_internal
+    from lap_simulator.physics_engine.calibration.aero_calibration import get_aero_calibration as _get_aero_cal_internal
 
 ALL_CIRCUITS = {
     "baku": {"circuit_id": "az-2016_baku", "front_wing": 12.0, "rear_wing": 14.0, "compound": "C4", "fuel_kg": 20.0, "ref_time": 101.117, "susp_source": "monza"},
@@ -80,7 +80,7 @@ def save_aero_cal(circuit_id, data):
     # relative vs absolute imports in waypoint_integrator.py)
     _get_aero_cal_internal.cache_clear()
     try:
-        from lap_simulator.physics_v4.calibration.aero_calibration import get_aero_calibration
+        from lap_simulator.physics_engine.calibration.aero_calibration import get_aero_calibration
         get_aero_calibration.cache_clear()
     except ImportError:
         pass
@@ -241,7 +241,7 @@ def main():
     print(f"\n--- FINAL VALIDATION ---")
     _get_aero_cal_internal.cache_clear()
     try:
-        from lap_simulator.physics_v4.calibration.aero_calibration import get_aero_calibration
+        from lap_simulator.physics_engine.calibration.aero_calibration import get_aero_calibration
         get_aero_calibration.cache_clear()
     except ImportError:
         pass

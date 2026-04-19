@@ -40,7 +40,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from lap_simulator.physics_v4.core.car_setup import PhysicsV4Setup, DriverSkill
+from lap_simulator.physics_engine.core.car_setup import PhysicsV4Setup, DriverSkill
 from lap_simulator.push_penalty import compute_push_penalty
 from lap_simulator.data_types import CircuitConfig
 
@@ -404,7 +404,7 @@ def test_tyre_compound():
         ("C6  (ultra-soft)",    "C6"),
     ]
 
-    from lap_simulator.physics_v4.core.constants import MU_BASE
+    from lap_simulator.physics_engine.core.constants import MU_BASE
 
     for name, cfg in TEST_CIRCUITS.items():
         rows = []

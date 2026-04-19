@@ -17,10 +17,10 @@ from typing import Dict, List, Tuple
 # Aggiungi root al path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from lap_simulator.physics_v4.core.car_setup import (
+from lap_simulator.physics_engine.core.car_setup import (
     PhysicsV4Setup, AeroSetup, SuspensionSetup, TyreSetup
 )
-from lap_simulator.physics_v4.core.team_driver_data import get_team_data, get_driver_data
+from lap_simulator.physics_engine.core.team_driver_data import get_team_data, get_driver_data
 
 
 def setup_optimal() -> Dict:

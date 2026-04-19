@@ -7,8 +7,8 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from lap_simulator.physics_v4.core.car_setup import PhysicsV4Setup
-from lap_simulator.physics_v4.integrator.waypoint_integrator import load_hd_waypoints
+from lap_simulator.physics_engine.core.car_setup import PhysicsV4Setup
+from lap_simulator.physics_engine.integrator.waypoint_integrator import load_hd_waypoints
 from scripts.calibrate_v57 import ALL_CIRCUITS, SUSP_SETUPS, DRIVER
 
 circuit_id = "us-2023_las_vegas"
