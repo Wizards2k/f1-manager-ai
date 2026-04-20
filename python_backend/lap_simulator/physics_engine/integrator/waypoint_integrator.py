@@ -1532,8 +1532,103 @@ def integrate_waypoint(
         v_target_ms=v_target_ms,
         dt_step=dt_step,
     )
-    # Store in state for Phase 3 (slip/heat calculation)
-    # This will be used when calculating per-wheel heating/cooling
+
+    # V6.3: Calculate per-wheel slip and apply thermal multiplier + wear
+    if state.tires_state is None:
+        from lap_simulator.physics_engine.tyres.tyre_thermal import TiresState as TiresStateClass
+        state.tires_state = TiresStateClass()
+
+    wheels_slip = {}
+    for wheel_name in ['FL', 'FR', 'RL', 'RR']:
+        wheel_attr = wheel_name.lower()
+        tire_state = getattr(state.tires_state, wheel_attr)
+
+        # Thermal multiplier for this wheel
+        thermal_mult = _gaussian_thermal_multiplier(
+            tire_state.surface_temp_c,
+            tire_state.core_temp_c,
+            tyre_compound
+        )
+
+        # Grip reduction from wear
+        wear_factor = (100.0 - tire_state.wear_pct) / 100.0
+
+        # μ tyre for this wheel
+        mu_tyre_wheel = mu_base.get(tyre_compound, 1.3) * thermal_mult * wear_factor
+
+        # Grip available (kN)
+        f_grip_available = wheels_load[wheel_name] * mu_tyre_wheel
+
+        # Grip required (target lateral acceleration)
+        target_g_lat = source_waypoint.get('target_g_lat', 1.0)
+        f_grip_required = (mass_kg * 9.81 / 1000.0) * target_g_lat
+
+        # Slip (0.0 = no slip, 1.0 = full slip)
+        slip = max(0.0, 1.0 - (f_grip_available / max(0.1, f_grip_required)))
+        wheels_slip[wheel_name] = slip
+
+    # V6.3: Update tire thermal state (per-wheel heating and wear)
+    K_SURFACE_FRIC = 0.95
+    K_HYSTERESIS_CORE = 0.35
+    K_BRAKING_TRANSFER = 0.25
+
+    # Brake heat distribution (55% front, 45% rear)
+    brake_bias = setup.get('brake_bias', 0.55)
+
+    for wheel_name in ['FL', 'FR', 'RL', 'RR']:
+        wheel_attr = wheel_name.lower()
+        tire_state = getattr(state.tires_state, wheel_attr)
+        load_kn = wheels_load[wheel_name]
+        slip = wheels_slip[wheel_name]
+
+        # 1. Surface heating (friction + braking)
+        friction_heat = K_SURFACE_FRIC * load_kn * slip * state.velocity_ms * dt_step
+
+        # Braking heat (only if braking)
+        brake_heat = 0.0
+        if state.is_braking and brake_pct > 5:
+            braking_energy_mj = 0.5 * mass_kg * state.velocity_ms ** 2 / 1e6
+            if wheel_name in ['FL', 'FR']:
+                brake_heat = K_BRAKING_TRANSFER * braking_energy_mj * brake_bias / 2.0 * dt_step
+            else:
+                brake_heat = K_BRAKING_TRANSFER * braking_energy_mj * (1.0 - brake_bias) / 2.0 * dt_step
+
+        tire_state.surface_temp_c += (friction_heat + brake_heat)
+
+        # 2. Core heating (hysteresis)
+        core_heat = K_HYSTERESIS_CORE * load_kn * state.velocity_ms * dt_step
+        tire_state.core_temp_c += core_heat
+
+        # 3. Cooling (convective, asymmetric for brake duct)
+        h_conv_base = 15.0
+        brake_duct_opening = setup.get('brake_duct', 0.5)
+
+        if wheel_name in ['FL', 'FR']:
+            h_conv = h_conv_base * state.velocity_ms * (0.5 + brake_duct_opening)
+        else:
+            h_conv = h_conv_base * state.velocity_ms * 0.5
+
+        q_cool = h_conv * (tire_state.surface_temp_c - 25.0) * dt_step / 1000.0
+        tire_state.surface_temp_c -= q_cool
+
+        # 4. Wear accumulation (accelerated outside thermal window)
+        temp_dev = abs(tire_state.surface_temp_c - _get_optimal_temp(tyre_compound))
+        sigma = _get_sigma(tyre_compound)
+
+        if temp_dev < sigma:
+            severity = 1.0
+        else:
+            severity = 1.0 + ((temp_dev - sigma) / sigma) ** 1.5
+
+        k_wear = {'C5': 0.19, 'C4': 0.18, 'C3': 0.17}.get(tyre_compound, 0.18)
+        wear_per_km = k_wear * severity * slip
+        wear_delta = wear_per_km * (dist_step / 1000.0)
+        tire_state.wear_pct += wear_delta
+
+        # Clamp temperatures and wear
+        tire_state.surface_temp_c = max(20.0, min(150.0, tire_state.surface_temp_c))
+        tire_state.core_temp_c = max(20.0, min(130.0, tire_state.core_temp_c))
+        tire_state.wear_pct = min(100.0, tire_state.wear_pct)
 
     # V6.0: Braking decision semplificata
     # Se brake_needed[waypoint_idx] = True AND velocità > target, frena
