@@ -1629,7 +1629,8 @@ def integrate_waypoint(
         q_cool = h_conv * (tire_state.surface_temp_c - 25.0) * dt_step / 1000.0
         tire_state.surface_temp_c -= q_cool
 
-        # 4. Wear accumulation (accelerated outside thermal window)
+        # 4. Wear accumulation — V6.3.1: Energy Dissipation Model
+        # Two components: rolling wear (load-dependent base) + friction wear (slip-dependent)
         temp_dev = abs(tire_state.surface_temp_c - _get_optimal_temp(tyre_compound))
         sigma = _get_sigma(tyre_compound)
 
@@ -1638,8 +1639,24 @@ def integrate_waypoint(
         else:
             severity = 1.0 + ((temp_dev - sigma) / sigma) ** 1.5
 
-        k_wear = {'C5': 0.19, 'C4': 0.18, 'C3': 0.17}.get(tyre_compound, 0.18)
-        wear_per_km = k_wear * severity * slip
+        # Rolling wear: due to load, hysteresis, and rotational stress (independent of slip)
+        # k_rolling: base wear rate independent of slip
+        # Calibrated to ~0.3-0.8% wear per 90-second lap
+        k_rolling = 0.0001
+
+        # Friction wear: due to lateral/longitudinal slip (slip-dependent)
+        # V6.3.1: Reduced by 10x to match realistic F1 tire wear rates
+        # Original spec had k_wear = 0.18 (C4), causing 100% wear in single lap
+        k_friction = {'C5': 0.019, 'C4': 0.018, 'C3': 0.017}.get(tyre_compound, 0.018)
+
+        # Component 1: Rolling wear (always present, proportional to load)
+        rolling_component = k_rolling * load_kn
+
+        # Component 2: Friction wear (accelerated by temp severity and load)
+        friction_component = k_friction * severity * slip * load_kn
+
+        # Total wear per km (dist_step in meters → divide by 1000 to get km)
+        wear_per_km = rolling_component + friction_component
         wear_delta = wear_per_km * (dist_step / 1000.0)
         tire_state.wear_pct += wear_delta
 
@@ -1829,7 +1846,13 @@ def integrate_waypoint(
         brake_target_v_ms=state.brake_target_v_ms,  # V5.5: propaga commitment fra step
         telemetry_points=state.telemetry_points
     )
-    
+
+    # V6.3.1: Persist tire thermal state across waypoints (CRITICAL FIX)
+    # The tires_state must be copied from input state to new_state,
+    # otherwise all accumulated wear/temps are lost at each waypoint
+    if state.tires_state is not None:
+        new_state.tires_state = state.tires_state
+
     # Salva telemetria
     # V6.3: Prepare telemetry with tire thermal and brake fade data
     telemetry_entry = {
