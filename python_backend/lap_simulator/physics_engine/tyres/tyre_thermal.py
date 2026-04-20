@@ -42,6 +42,14 @@ class TiresState:
 
 
 @dataclass
+class BrakeState:
+	"""V6.3: Brake thermal state (front/rear separated)."""
+	temp_front_c: float = 20.0  # °C initial (cold)
+	temp_rear_c: float = 20.0   # °C initial (cold)
+	heat_accumulated_kj: float = 0.0  # Accumulator for sub-step thermal integration
+
+
+@dataclass
 class TyreThermalState:
     """Stato termico gomma."""
     surface_temp_c: float  # °C temperatura superficiale

@@ -102,9 +102,17 @@ class PhysicsState:
     # V6.3: Tire thermal state (per-wheel independent)
     tires_state: Optional['TiresState'] = None
 
+    # V6.3: Brake thermal state (front/rear)
+    brake_state: Optional['BrakeState'] = None
+
+    # V6.3: Telemetry fields for brake fade
+    brake_fade_factor: float = 0.0  # Fade factor [0-1], 1=full fade
+    brake_temp_front_c: float = 20.0  # Front brake temperature
+    brake_temp_rear_c: float = 20.0  # Rear brake temperature
+
     # Telemetria
     telemetry_points: List[Dict] = None
-    
+
     def __post_init__(self):
         if self.telemetry_points is None:
             self.telemetry_points = []
@@ -112,6 +120,9 @@ class PhysicsState:
             # Import TiresState directly from module to avoid __init__ side effects
             from lap_simulator.physics_engine.tyres.tyre_thermal import TiresState as TiresStateClass
             self.tires_state = TiresStateClass()  # Initialize with default FL/FR/RL/RR
+        if self.brake_state is None:
+            from lap_simulator.physics_engine.tyres.tyre_thermal import BrakeState as BrakeStateClass
+            self.brake_state = BrakeStateClass()  # Initialize with temp_front=20°C, temp_rear=20°C
 
 
 def load_hd_waypoints(circuit_id: str) -> List[Dict]:
@@ -1258,7 +1269,14 @@ def integrate_waypoint(
         
         f_steer_drag = steer_drag_coeff * steering_angle_deg * ((v_kph / v_ref_kph) ** 2) * velocity_factor
         state.f_drag += f_steer_drag
-    
+
+    # V6.3: Brake duct aerodynamic drag penalty (Modulo D)
+    # Brake duct opening adds drag: max 0.005 c_da at 100% opening
+    brake_duct_opening = setup.get('brake_duct', 0.5) if setup else 0.5
+    c_da_brake_duct = 0.005 * brake_duct_opening  # Adds up to 0.005 to c_da
+    f_drag_brake_duct = 0.5 * RHO_SEA_LEVEL * (state.velocity_ms ** 2) * c_da_brake_duct
+    state.f_drag += f_drag_brake_duct
+
     # ============================================================
     # 3. FORZA GRAVITÀ - Pendenza
     # ============================================================
@@ -1640,9 +1658,78 @@ def integrate_waypoint(
         # Fallback: se brake_needed non è disponibile, non frenare (backward compatibility)
         must_brake = False
 
+    # V6.3: Brake fade thermal integration (Modulo D)
+    # Calculate brake heat generation during braking and update fade factor
+    if must_brake and brake_state is not None and state.velocity_ms > v_target_ms:
+        # Deceleration required
+        dt_braking = dist_step / max(state.velocity_ms, 1.0)  # Time for this step
+        decel_required = max(0.0, (state.velocity_ms - v_target_ms) / dt_braking)
+
+        # Joule dissipated (ΔKE = 0.5 * m * (v_old² - v_new²))
+        joules_dissipated = 0.5 * mass_kg * (state.velocity_ms ** 2 - v_target_ms ** 2)
+
+        # Brake heat distribution (brake bias from setup, default 55% front / 45% rear)
+        brake_bias = setup.get('brake_bias', 0.55) if setup else 0.55
+        heat_front_kj = (joules_dissipated / 1000.0) * brake_bias
+        heat_rear_kj = (joules_dissipated / 1000.0) * (1.0 - brake_bias)
+
+        # Sub-step thermal integration (0.01s for numerical stability)
+        SUB_DT = 0.01
+        N_SUBSTEPS = max(1, int(dt_braking / SUB_DT))
+        heat_per_substep_front = heat_front_kj / max(N_SUBSTEPS, 1)
+        heat_per_substep_rear = heat_rear_kj / max(N_SUBSTEPS, 1)
+
+        # Brake cooling parameters
+        H_CONV_BASE = 15.0  # Base convection coefficient
+        C_TH_BRAKE = 2.5  # Thermal capacity (kJ/K)
+        T_AMBIENT = 20.0  # Ambient temperature
+
+        brake_duct_opening = setup.get('brake_duct', 0.5) if setup else 0.5
+
+        # Sub-stepping thermal loop
+        for _ in range(N_SUBSTEPS):
+            # Heat transfer to temperature (ΔT = Q / C_th)
+            temp_rise_front = heat_per_substep_front / C_TH_BRAKE
+            temp_rise_rear = heat_per_substep_rear / C_TH_BRAKE
+
+            # Cooling (convective, asymmetric: duct helps front only)
+            # Front: benefits from brake duct
+            h_conv_front = H_CONV_BASE * state.velocity_ms * (0.5 + brake_duct_opening)
+            q_cool_front_kj = h_conv_front * (brake_state.temp_front_c - T_AMBIENT) * SUB_DT / 1000.0
+
+            # Rear: only ram-air
+            h_conv_rear = H_CONV_BASE * state.velocity_ms * 0.5
+            q_cool_rear_kj = h_conv_rear * (brake_state.temp_rear_c - T_AMBIENT) * SUB_DT / 1000.0
+
+            # Update temperatures
+            brake_state.temp_front_c = max(T_AMBIENT, brake_state.temp_front_c + temp_rise_front - q_cool_front_kj / C_TH_BRAKE)
+            brake_state.temp_rear_c = max(T_AMBIENT, brake_state.temp_rear_c + temp_rise_rear - q_cool_rear_kj / C_TH_BRAKE)
+
     # FIX V4.7: Use longitudinal grip for braking decel limit
     max_brake_decel_phys = f_grip_total_longitudinal / mass_kg
     max_brake_decel = min(max_brake_decel_g * G, max_brake_decel_phys)
+
+    # V6.3: Apply brake fade factor to reduce deceleration
+    if must_brake and brake_state is not None:
+        # Fade factor calculation (threshold 850°C, full fade at 890°C)
+        FADE_THRESHOLD_C = 850.0
+        FADE_SENSITIVITY_C = 40.0
+
+        # Use worst of front/rear temperature
+        worst_brake_temp = max(brake_state.temp_front_c, brake_state.temp_rear_c)
+        fade_factor = max(0.0, min(1.0, (worst_brake_temp - FADE_THRESHOLD_C) / FADE_SENSITIVITY_C))
+
+        # Reduce available deceleration by fade factor
+        max_brake_decel = max_brake_decel * (1.0 - fade_factor)
+
+        # Store fade factor for telemetry
+        state.brake_fade_factor = fade_factor
+        state.brake_temp_front_c = brake_state.temp_front_c
+        state.brake_temp_rear_c = brake_state.temp_rear_c
+    else:
+        state.brake_fade_factor = 0.0
+        state.brake_temp_front_c = state.brake_state.temp_front_c if state.brake_state else 20.0
+        state.brake_temp_rear_c = state.brake_state.temp_rear_c if state.brake_state else 20.0
 
     # V6.0: Applicazione frenata semplificata
     if must_brake:
@@ -1744,7 +1831,8 @@ def integrate_waypoint(
     )
     
     # Salva telemetria
-    new_state.telemetry_points.append({
+    # V6.3: Prepare telemetry with tire thermal and brake fade data
+    telemetry_entry = {
         'distance_m': new_state.distance_m,
         'velocity_ms': new_state.velocity_ms,
         'velocity_kph': new_state.velocity_ms * 3.6,
@@ -1754,7 +1842,33 @@ def integrate_waypoint(
         'is_braking': new_state.is_braking,
         'is_throttle': new_state.is_throttle,
         'drs_active': new_state.is_drs_active,
+    }
+
+    # V6.3: Add tire thermal state (per-wheel)
+    if new_state.tires_state is not None:
+        telemetry_entry.update({
+            'tires_fl_temp_surface_c': new_state.tires_state.fl.surface_temp_c,
+            'tires_fl_temp_core_c': new_state.tires_state.fl.core_temp_c,
+            'tires_fl_wear_pct': new_state.tires_state.fl.wear_pct,
+            'tires_fr_temp_surface_c': new_state.tires_state.fr.surface_temp_c,
+            'tires_fr_temp_core_c': new_state.tires_state.fr.core_temp_c,
+            'tires_fr_wear_pct': new_state.tires_state.fr.wear_pct,
+            'tires_rl_temp_surface_c': new_state.tires_state.rl.surface_temp_c,
+            'tires_rl_temp_core_c': new_state.tires_state.rl.core_temp_c,
+            'tires_rl_wear_pct': new_state.tires_state.rl.wear_pct,
+            'tires_rr_temp_surface_c': new_state.tires_state.rr.surface_temp_c,
+            'tires_rr_temp_core_c': new_state.tires_state.rr.core_temp_c,
+            'tires_rr_wear_pct': new_state.tires_state.rr.wear_pct,
+        })
+
+    # V6.3: Add brake thermal state and fade
+    telemetry_entry.update({
+        'brake_temp_front_c': new_state.brake_temp_front_c,
+        'brake_temp_rear_c': new_state.brake_temp_rear_c,
+        'brake_fade_factor': new_state.brake_fade_factor,
     })
+
+    new_state.telemetry_points.append(telemetry_entry)
     
     return new_state
 
