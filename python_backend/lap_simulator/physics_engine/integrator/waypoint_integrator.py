@@ -1660,7 +1660,7 @@ def integrate_waypoint(
 
     # V6.3: Brake fade thermal integration (Modulo D)
     # Calculate brake heat generation during braking and update fade factor
-    if must_brake and brake_state is not None and state.velocity_ms > v_target_ms:
+    if must_brake and state.brake_state is not None and state.velocity_ms > v_target_ms:
         # Deceleration required
         dt_braking = dist_step / max(state.velocity_ms, 1.0)  # Time for this step
         decel_required = max(0.0, (state.velocity_ms - v_target_ms) / dt_braking)
@@ -1695,28 +1695,28 @@ def integrate_waypoint(
             # Cooling (convective, asymmetric: duct helps front only)
             # Front: benefits from brake duct
             h_conv_front = H_CONV_BASE * state.velocity_ms * (0.5 + brake_duct_opening)
-            q_cool_front_kj = h_conv_front * (brake_state.temp_front_c - T_AMBIENT) * SUB_DT / 1000.0
+            q_cool_front_kj = h_conv_front * (state.brake_state.temp_front_c - T_AMBIENT) * SUB_DT / 1000.0
 
             # Rear: only ram-air
             h_conv_rear = H_CONV_BASE * state.velocity_ms * 0.5
-            q_cool_rear_kj = h_conv_rear * (brake_state.temp_rear_c - T_AMBIENT) * SUB_DT / 1000.0
+            q_cool_rear_kj = h_conv_rear * (state.brake_state.temp_rear_c - T_AMBIENT) * SUB_DT / 1000.0
 
             # Update temperatures
-            brake_state.temp_front_c = max(T_AMBIENT, brake_state.temp_front_c + temp_rise_front - q_cool_front_kj / C_TH_BRAKE)
-            brake_state.temp_rear_c = max(T_AMBIENT, brake_state.temp_rear_c + temp_rise_rear - q_cool_rear_kj / C_TH_BRAKE)
+            state.brake_state.temp_front_c = max(T_AMBIENT, state.brake_state.temp_front_c + temp_rise_front - q_cool_front_kj / C_TH_BRAKE)
+            state.brake_state.temp_rear_c = max(T_AMBIENT, state.brake_state.temp_rear_c + temp_rise_rear - q_cool_rear_kj / C_TH_BRAKE)
 
     # FIX V4.7: Use longitudinal grip for braking decel limit
     max_brake_decel_phys = f_grip_total_longitudinal / mass_kg
     max_brake_decel = min(max_brake_decel_g * G, max_brake_decel_phys)
 
     # V6.3: Apply brake fade factor to reduce deceleration
-    if must_brake and brake_state is not None:
+    if must_brake and state.brake_state is not None:
         # Fade factor calculation (threshold 850°C, full fade at 890°C)
         FADE_THRESHOLD_C = 850.0
         FADE_SENSITIVITY_C = 40.0
 
         # Use worst of front/rear temperature
-        worst_brake_temp = max(brake_state.temp_front_c, brake_state.temp_rear_c)
+        worst_brake_temp = max(state.brake_state.temp_front_c, state.brake_state.temp_rear_c)
         fade_factor = max(0.0, min(1.0, (worst_brake_temp - FADE_THRESHOLD_C) / FADE_SENSITIVITY_C))
 
         # Reduce available deceleration by fade factor
@@ -1724,8 +1724,8 @@ def integrate_waypoint(
 
         # Store fade factor for telemetry
         state.brake_fade_factor = fade_factor
-        state.brake_temp_front_c = brake_state.temp_front_c
-        state.brake_temp_rear_c = brake_state.temp_rear_c
+        state.brake_temp_front_c = state.brake_state.temp_front_c
+        state.brake_temp_rear_c = state.brake_state.temp_rear_c
     else:
         state.brake_fade_factor = 0.0
         state.brake_temp_front_c = state.brake_state.temp_front_c if state.brake_state else 20.0
