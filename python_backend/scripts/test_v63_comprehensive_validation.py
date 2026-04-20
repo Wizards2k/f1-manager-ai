@@ -141,11 +141,10 @@ def test_2_oversteer_setup():
                     print(f"  ❌ Oversteer: Rear {rear_avg:.2f}% ≤ Front {front_avg:.2f}% (diff: {front_avg-rear_avg:.2f}%)")
 
 def test_2b_understeer_setup():
-    """TEST 2B: Understeer setup (high FW) - front wear reduced gap vs oversteer"""
+    """TEST 2B: Understeer setup (high FW) - front axle should wear more"""
     print("\n" + "="*90)
-    print("TEST 2B: Understeer Setup (24/11) - Verify Reduced Rear Dominance")
-    print("Circuiti bilanciati (Suzuka, Barcellona) - Static 55% rear load still dominates")
-    print("Expected: Rear > Front, BUT gap smaller than oversteer setup")
+    print("TEST 2B: Understeer Setup (24/11) - Verify Front > Rear Wear")
+    print("Circuiti bilanciati (Suzuka, Barcellona)")
     print("="*90)
 
     circuits = [
@@ -165,14 +164,11 @@ def test_2b_understeer_setup():
                 final_wear = data["final_wear"]
                 front_avg = (final_wear["FL"] + final_wear["FR"]) / 2
                 rear_avg = (final_wear["RL"] + final_wear["RR"]) / 2
-                gap = rear_avg - front_avg
 
-                if gap >= 0 and gap < 5.0:  # Reduced dominance: gap < 5% (oversteer has ~6-8%)
-                    print(f"  ✅ Understeer: Rear {rear_avg:.2f}% ≥ Front {front_avg:.2f}% (gap: {gap:.2f}%, reduced)")
-                elif gap >= 0:
-                    print(f"  ⚠️ Understeer: Rear {rear_avg:.2f}% > Front {front_avg:.2f}% (gap: {gap:.2f}%, larger than expected)")
+                if front_avg > rear_avg:
+                    print(f"  ✅ Understeer: Front {front_avg:.2f}% > Rear {rear_avg:.2f}% (diff: {front_avg-rear_avg:.2f}%)")
                 else:
-                    print(f"  ℹ️  Understeer: Front {front_avg:.2f}% > Rear {rear_avg:.2f}% (gap inverted: {-gap:.2f}%)")
+                    print(f"  ❌ Understeer: Front {front_avg:.2f}% ≤ Rear {rear_avg:.2f}% (diff: {rear_avg-front_avg:.2f}%)")
 
 def test_3_right_hand_corners():
     """TEST 3: Silverstone (right-hand heavy) - left side should wear more"""

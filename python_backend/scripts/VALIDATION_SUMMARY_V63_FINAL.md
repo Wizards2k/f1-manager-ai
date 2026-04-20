@@ -50,18 +50,18 @@
 - **Physics:** Oversteer reduces front wing → less front downforce → front tires load lower → rear dominance confirmed
 - **Note:** Circuit changed from Monaco (brake-heavy) to balanced circuits where setup effects clearer
 
-### TEST 2B: Understeer Setup (24/11) — Front Wear with Static Load Dominance
-**Status:** ✅ **PASS** (V6.3.3 addition, "Opzione A" acceptance)
+### TEST 2B: Understeer Setup (24/11) — Front Axle Overload
+**Status:** ✅ **PASS** (V6.3.5 after downforce distribution rebalance)
 - **Setup:** 24/11 (high front wing, less rear downforce)
-- **Expected:** Rear > Front wear, BUT gap reduced vs oversteer
+- **Expected:** Front > Rear wear (high FW overloads front axle → front slip)
 - **Observed:**
-  - Suzuka: Rear 14.56% ≥ Front 11.75% (gap: 2.81%, reduced from oversteer 8.50%) ✅
-  - Barcellona: Rear 11.09% ≥ Front 8.94% (gap: 2.14%, reduced from oversteer 6.47%) ✅
-- **Physics Insight:** Static 55% rear load distribution dominates even with increased front downforce
-  - Understeer increases front downforce (~52% vs baseline 45%) but doesn't fully invert rear dominance
-  - Gap reduction (8.50% → 2.81%) confirms load distribution is setup-responsive
-  - This is realistic: front wing angles can't overcome fundamental CG positioning (~55% over rear axle)
-- **Validation:** Confirms load distribution model correctly handles both static load and setup-dependent downforce
+  - Suzuka: Front 15.16% > Rear 11.13% (diff: 4.03%) ✅
+  - Barcellona: Front 11.52% > Rear 8.49% (diff: 3.03%) ✅
+- **Physics:** Correct understeer behavior restored via stronger downforce distribution formula
+  - New formula: `df_front_frac = 0.45 + 0.28 * (wing_ratio - 1.64)` (clamped [0.25, 0.70])
+  - Understeer 24/11 (ratio 2.18) → 60% DF front (overpowers 55% static rear bias)
+  - Oversteer 12/11 (ratio 1.09) → 30% DF front (rear even more loaded)
+- **Validation:** Setup-dependent slip axis now emerges correctly: high FW → front-limited → front wear
 
 ### TEST 3: Right-Hand Corners (Silverstone) — Lateral Asymmetry
 **Status:** ✅ **PASS**
@@ -109,10 +109,10 @@ load_rr = (static_load_rear/2 + df_rear/2) - lat_sign * lat_transfer - brake_tra
 
 **Components:**
 1. **Static Load:** 45% front, 55% rear (distributed equally per side)
-2. **Downforce:** Setup-dependent split via `df_front_frac = 0.392 + 0.092 * (wing_ratio - 1.0)`
-   - 18/11 balanced → 45/55
-   - 24/11 understeer → 52/48
-   - 12/11 oversteer → 40/60
+2. **Downforce:** Setup-dependent split via `df_front_frac = 0.45 + 0.28 * (wing_ratio - 1.64)` clamped [0.25, 0.70]
+   - 18/11 balanced → 45/55 (neutral)
+   - 24/11 understeer → 60/40 (front-overloaded → front slip → front wear)
+   - 12/11 oversteer → 30/70 (rear-overloaded → rear slip → rear wear)
 3. **Lateral Transfer:** From cornering lateral g-forces; direction inverted for left-bias circuits
 4. **Brake Transfer:** 60% to front axle during deceleration
 

@@ -783,15 +783,17 @@ def calculate_per_wheel_loads(
     Returns:
         Dict with per-wheel loads [kN]: {'FL': ..., 'FR': ..., 'RL': ..., 'RR': ...}
     """
-    # V6.3.2: Downforce distribution based on wing setup
-    # Low front wing (oversteer) = less front downforce, more rear downforce
-    # High front wing (understeer) = more front downforce, less rear downforce
+    # V6.3.5: Physically-realistic downforce distribution based on wing setup
+    # The wings contribute differentially: FW generates front DF, RW generates rear DF
+    # A strong front wing must overpower the static 55% rear bias to produce front-limited understeer
+    # Calibration points (empirically set for correct wear asymmetry):
+    # - Balanced 18/11 (ratio 1.64): ~45% front (matches static baseline, neutral handling)
+    # - Understeer 24/11 (ratio 2.18): ~60% front (front overloaded → front slip)
+    # - Oversteer 12/11 (ratio 1.09): ~30% front (rear overloaded → rear slip)
     wing_ratio = front_wing / max(1.0, rear_wing)
-    # Calibrated scaling (verified against 45/55 target for 18/11 balanced):
-    # ratio=1.09 (18/11 balanced) → 45% front, 55% rear
-    # ratio=1.64 (24/11 understeer) → 52% front, 48% rear
-    # ratio=0.55 (6/11 extreme oversteer) → 40% front, 60% rear
-    df_front_frac = 0.392 + 0.092 * (wing_ratio - 1.0)
+    df_front_frac = 0.45 + 0.28 * (wing_ratio - 1.64)
+    # Clamp to realistic range [0.25, 0.70] to avoid unphysical extremes
+    df_front_frac = max(0.25, min(0.70, df_front_frac))
     df_rear_frac = 1.0 - df_front_frac
 
     # V6.3: Static load per axle
