@@ -1664,6 +1664,45 @@ def integrate_waypoint(
     return new_state
 
 
+def _gaussian_thermal_multiplier(surface_temp_c: float, core_temp_c: float, compound: str) -> float:
+    """V6.3: Gaussian thermal multiplier for grip reduction outside optimal window.
+
+    Returns grip multiplier (0-1) based on surface and core temperatures.
+    Peak grip (1.0) at optimal temp; degrades as bell curve away from optimum.
+    """
+    optim_data = {
+        'C5': {'optim_surf': 100.0, 'sigma_surf': 7.5, 'optim_core': 85.0, 'sigma_core': 6.5},
+        'C4': {'optim_surf': 105.0, 'sigma_surf': 8.0, 'optim_core': 90.0, 'sigma_core': 7.0},
+        'C3': {'optim_surf': 110.0, 'sigma_surf': 8.5, 'optim_core': 95.0, 'sigma_core': 7.5},
+    }
+
+    data = optim_data.get(compound, optim_data['C4'])
+
+    # Gaussian curve: exp(-(x - μ)² / (2σ²))
+    surf_mult = math.exp(-((surface_temp_c - data['optim_surf']) ** 2) /
+                         (2 * data['sigma_surf'] ** 2))
+    core_mult = math.exp(-((core_temp_c - data['optim_core']) ** 2) /
+                         (2 * data['sigma_core'] ** 2))
+
+    return surf_mult * core_mult
+
+
+def _get_optimal_temp(compound: str) -> float:
+    """V6.3: Get optimal surface temperature for tire compound."""
+    optim_temps = {'C5': 100.0, 'C4': 105.0, 'C3': 110.0}
+    return optim_temps.get(compound, 105.0)
+
+
+def _get_sigma(compound: str) -> float:
+    """V6.3: Get thermal window width (sigma) for tire compound.
+
+    Wider sigma = more forgiving compound (C3 hard).
+    Narrower sigma = sharper penalty outside window (C5 soft).
+    """
+    sigmas = {'C5': 7.5, 'C4': 8.0, 'C3': 8.5}
+    return sigmas.get(compound, 8.0)
+
+
 def integrate_lap_hd(
     circuit_id: str,
     aero_setup: Optional[Dict] = None,
