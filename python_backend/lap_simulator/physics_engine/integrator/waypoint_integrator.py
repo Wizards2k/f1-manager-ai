@@ -99,12 +99,19 @@ class PhysicsState:
     # vicino alla velocità target (Monaco: 174 → ~12 transizioni).
     brake_target_v_ms: Optional[float] = None
 
+    # V6.3: Tire thermal state (per-wheel independent)
+    tires_state: Optional['TiresState'] = None
+
     # Telemetria
     telemetry_points: List[Dict] = None
     
     def __post_init__(self):
         if self.telemetry_points is None:
             self.telemetry_points = []
+        if self.tires_state is None:
+            # Import TiresState directly from module to avoid __init__ side effects
+            from lap_simulator.physics_engine.tyres.tyre_thermal import TiresState as TiresStateClass
+            self.tires_state = TiresStateClass()  # Initialize with default FL/FR/RL/RR
 
 
 def load_hd_waypoints(circuit_id: str) -> List[Dict]:

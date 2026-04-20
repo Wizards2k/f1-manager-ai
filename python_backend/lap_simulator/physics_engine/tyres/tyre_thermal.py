@@ -10,9 +10,35 @@ Gestione temperature gomme:
 NOTA: Modulo V4 standalone, non dipende da codice V1
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict
 import numpy as np
+
+
+@dataclass
+class TireState:
+	"""Tire state for SINGLE WHEEL (FL, FR, RL, RR each have separate instance) - V6.3."""
+	surface_temp_c: float = 85.0  # °C, reactive to friction/cooling
+	core_temp_c: float = 75.0     # °C, inertial, slower change
+	wear_pct: float = 0.0         # Cumulative wear [0-100]
+	is_graining: bool = False     # Graining flag
+	is_blistering: bool = False   # Blistering flag
+
+
+@dataclass
+class TiresState:
+	"""Container for all 4 wheels tire state (V6.3) - per-wheel independent tracking."""
+	fl: TireState = field(default_factory=TireState)  # Front Left
+	fr: TireState = field(default_factory=TireState)  # Front Right
+	rl: TireState = field(default_factory=TireState)  # Rear Left
+	rr: TireState = field(default_factory=TireState)  # Rear Right
+
+	def reset_at_pit_stop(self):
+		"""Reset all tires at pit stop (new tires)."""
+		self.fl = TireState(surface_temp_c=85.0, core_temp_c=75.0, wear_pct=0.0)
+		self.fr = TireState(surface_temp_c=85.0, core_temp_c=75.0, wear_pct=0.0)
+		self.rl = TireState(surface_temp_c=85.0, core_temp_c=75.0, wear_pct=0.0)
+		self.rr = TireState(surface_temp_c=85.0, core_temp_c=75.0, wear_pct=0.0)
 
 
 @dataclass
