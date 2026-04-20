@@ -1645,9 +1645,10 @@ def integrate_waypoint(
         k_rolling = 0.0001
 
         # Friction wear: due to lateral/longitudinal slip (slip-dependent)
-        # V6.3.1: Reduced by 10x to match realistic F1 tire wear rates
-        # Original spec had k_wear = 0.18 (C4), causing 100% wear in single lap
-        k_friction = {'C5': 0.019, 'C4': 0.018, 'C3': 0.017}.get(tyre_compound, 0.018)
+        # V6.3.1: Reduced by 200x to match realistic F1 tire wear rates
+        # Original spec: 0.18 → caused 100% wear in single lap
+        # Target: ~0.5-2% wear per 90-second lap on high-deg circuits
+        k_friction = {'C5': 0.00095, 'C4': 0.0009, 'C3': 0.00085}.get(tyre_compound, 0.0009)
 
         # Component 1: Rolling wear (always present, proportional to load)
         rolling_component = k_rolling * load_kn
