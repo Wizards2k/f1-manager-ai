@@ -35,9 +35,9 @@ _PYTHON_BACKEND = _HERE.parent
 if str(_PYTHON_BACKEND) not in sys.path:
     sys.path.insert(0, str(_PYTHON_BACKEND))
 
-from lap_simulator.physics_v4.core.car_setup import PhysicsV4Setup
-from lap_simulator.physics_v4.core.team_driver_data import get_team_data, get_driver_data
-from lap_simulator.physics_v4.setup.default_setups import DefaultSetups
+from lap_simulator.physics_engine.core.car_setup import PhysicsV4Setup
+from lap_simulator.physics_engine.core.team_driver_data import get_team_data, get_driver_data
+from lap_simulator.physics_engine.setup.default_setups import DefaultSetups
 
 # ── costanti ERS ─────────────────────────────────────────────────────────────
 _ERS_DEPLOY_MAX = 0.67   # MJ/km (full quali deploy = fraction 1.0)
@@ -375,7 +375,7 @@ def battery_tyres(circuit_id: str, defaults: Dict,
         p(f"5 · C6  (mescola + morbida)", "C6"),
     ]
 
-    from lap_simulator.physics_v4.core.constants import MU_BASE
+    from lap_simulator.physics_engine.core.constants import MU_BASE
     def row_fn(e, res):
         compound = e["sim_params"]["compound"]
         mu = MU_BASE.get(compound, "?")

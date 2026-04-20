@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from lap_simulator.physics_v4.aero.aero_assembly import AeroAssembly
+from lap_simulator.physics_engine.aero.aero_assembly import AeroAssembly
 
 def test_wing_angle_response():
     """Test if changing wing angles increases downforce."""

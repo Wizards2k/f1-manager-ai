@@ -23,9 +23,9 @@ from typing import Dict, List
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from lap_simulator.physics_v4.core.car_setup import PhysicsV4Setup
-from lap_simulator.physics_v4.core.team_driver_data import get_team_data, get_driver_data
-from lap_simulator.physics_v4.setup.default_setups import DefaultSetups
+from lap_simulator.physics_engine.core.car_setup import PhysicsV4Setup
+from lap_simulator.physics_engine.core.team_driver_data import get_team_data, get_driver_data
+from lap_simulator.physics_engine.setup.default_setups import DefaultSetups
 
 
 # ──────────────────────────────────────────────────

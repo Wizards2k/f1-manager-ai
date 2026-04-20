@@ -14,10 +14,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from lap_simulator.physics_v4.core.car_setup import PhysicsV4Setup
-from lap_simulator.physics_v4.core.team_driver_data import get_team_data, get_driver_data
-from lap_simulator.physics_v4.aero.front_wing import FrontWing
-from lap_simulator.physics_v4.aero.rear_wing import RearWing
+from lap_simulator.physics_engine.core.car_setup import PhysicsV4Setup
+from lap_simulator.physics_engine.core.team_driver_data import get_team_data, get_driver_data
+from lap_simulator.physics_engine.aero.front_wing import FrontWing
+from lap_simulator.physics_engine.aero.rear_wing import RearWing
 
 
 def analyze_aero_setup(circuit_id: str, setup_dict: dict, setup_name: str):

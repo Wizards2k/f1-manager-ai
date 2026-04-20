@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from lap_simulator.physics_v4.integrator.waypoint_integrator import integrate_lap_hd
+from lap_simulator.physics_engine.integrator.waypoint_integrator import integrate_lap_hd
 
 ALL_CIRCUITS = {
     "baku": {"circuit_id": "az-2016_baku", "front_wing": 12.0, "rear_wing": 14.0, "compound": "C4", "fuel_kg": 20.0, "ref_time": 101.117, "susp_source": "monza"},

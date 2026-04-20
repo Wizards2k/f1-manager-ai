@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from lap_simulator.physics_v4.core.car_setup import PhysicsV4Setup, DriverSkill
+from lap_simulator.physics_engine.core.car_setup import PhysicsV4Setup, DriverSkill
 from lap_simulator.push_penalty import compute_push_penalty
 
 # ============================================================================
@@ -168,7 +168,7 @@ def _patch_mu(circuit_id, mu):
 def _clear_aero_cache():
     """Clear the LRU cache of get_aero_calibration."""
     try:
-        from lap_simulator.physics_v4.calibration.aero_calibration import get_aero_calibration
+        from lap_simulator.physics_engine.calibration.aero_calibration import get_aero_calibration
         get_aero_calibration.cache_clear()
     except:
         pass

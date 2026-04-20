@@ -1118,7 +1118,7 @@ def run_simulation(circuit_id: str, aero_setup: Dict = None,
     """
     # Import dinamico per evitare dipendenze circolari
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from lap_simulator.physics_v4.integrator.waypoint_integrator import integrate_lap_hd
+    from lap_simulator.physics_engine.integrator.waypoint_integrator import integrate_lap_hd
 
     if aero_setup is None:
         aero_setup = {"front_wing": 20.0, "rear_wing": 22.0}

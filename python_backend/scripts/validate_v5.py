@@ -24,8 +24,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from lap_simulator.physics_v4.integrator.waypoint_integrator import integrate_lap_hd
-from lap_simulator.physics_v4.calibration.telemetry_bridge import TelemetryBridge, CIRCUIT_MAP
+from lap_simulator.physics_engine.integrator.waypoint_integrator import integrate_lap_hd
+from lap_simulator.physics_engine.calibration.telemetry_bridge import TelemetryBridge, CIRCUIT_MAP
 
 # Output directory
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "data" / "circuits" / "validation_reports"
