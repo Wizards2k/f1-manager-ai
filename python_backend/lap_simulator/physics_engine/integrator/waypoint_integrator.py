@@ -1940,6 +1940,9 @@ def integrate_lap_hd(
     # per modellare la dipendenza RPM-potenza del motore.
     pu_lookup_blend: float = 0.0,
     pu_config: Optional[Dict] = None,  # V5.5: None=V5.3 flat (legacy), {"engine_map": "QUALIFY"}=V5.4 stateful
+    # V6.3: Multi-lap thermal carryover
+    initial_tire_temps: Optional[Dict[str, float]] = None,  # {"FL": 95.0, "FR": 94.0, ...} from previous lap
+    cumulative_tire_wear: Optional[Dict[str, float]] = None,  # {"FL": 2.3, "FR": 2.1, ...} accumulated wear %
 ) -> Dict[str, Any]:
     """
     Simula giro completo su circuito HD.
@@ -2042,7 +2045,22 @@ def integrate_lap_hd(
         acceleration_ms2=0.0,
         time_s=0.0,
     )
-    
+
+    # V6.3: Initialize tire thermal state from previous lap (carryover)
+    if initial_tire_temps:
+        # Use provided tire temps instead of default 85°C
+        state.tires_state.fl.surface_temp_c = initial_tire_temps.get("FL", 85.0)
+        state.tires_state.fr.surface_temp_c = initial_tire_temps.get("FR", 85.0)
+        state.tires_state.rl.surface_temp_c = initial_tire_temps.get("RL", 85.0)
+        state.tires_state.rr.surface_temp_c = initial_tire_temps.get("RR", 85.0)
+
+    # V6.3: Initialize cumulative tire wear from previous laps
+    if cumulative_tire_wear:
+        state.tires_state.fl.wear_pct = cumulative_tire_wear.get("FL", 0.0)
+        state.tires_state.fr.wear_pct = cumulative_tire_wear.get("FR", 0.0)
+        state.tires_state.rl.wear_pct = cumulative_tire_wear.get("RL", 0.0)
+        state.tires_state.rr.wear_pct = cumulative_tire_wear.get("RR", 0.0)
+
     # Integra su tutti i waypoints
     # Inizializza tracking settori
     if sector_boundaries:
@@ -2381,5 +2399,20 @@ def integrate_lap_hd(
             "deployment_zones": zones_summary,
             "energy_trace": pu_ctx.energy_trace,
         }
-    
+
+    # V6.3: Add tire thermal state for multi-lap carryover
+    if state.tires_state:
+        result["final_tire_temps"] = {
+            "FL": state.tires_state.fl.surface_temp_c,
+            "FR": state.tires_state.fr.surface_temp_c,
+            "RL": state.tires_state.rl.surface_temp_c,
+            "RR": state.tires_state.rr.surface_temp_c,
+        }
+        result["cumulative_tire_wear"] = {
+            "FL": state.tires_state.fl.wear_pct,
+            "FR": state.tires_state.fr.wear_pct,
+            "RL": state.tires_state.rl.wear_pct,
+            "RR": state.tires_state.rr.wear_pct,
+        }
+
     return result
