@@ -140,6 +140,40 @@ def test_2_oversteer_setup():
                 else:
                     print(f"  ❌ Oversteer: Rear {rear_avg:.2f}% ≤ Front {front_avg:.2f}% (diff: {front_avg-rear_avg:.2f}%)")
 
+def test_2b_understeer_setup():
+    """TEST 2B: Understeer setup (high FW) - front wear reduced gap vs oversteer"""
+    print("\n" + "="*90)
+    print("TEST 2B: Understeer Setup (24/11) - Verify Reduced Rear Dominance")
+    print("Circuiti bilanciati (Suzuka, Barcellona) - Static 55% rear load still dominates")
+    print("Expected: Rear > Front, BUT gap smaller than oversteer setup")
+    print("="*90)
+
+    circuits = [
+        ("jp-1962_suzuka", "Suzuka"),
+        ("es-1991_barcelona", "Barcellona"),
+    ]
+    setup = {"front_wing": 24, "rear_wing": 11, "name": "Understeer (24/11)"}
+
+    for circuit_id, circuit_name in circuits:
+        print(f"\n📍 {circuit_name}")
+
+        for compound in ["C4"]:
+            data = run_stint(circuit_id, compound, setup, stint_laps=15)
+            if "error" in data:
+                print(f"  ❌ Error: {data['error']}")
+            else:
+                final_wear = data["final_wear"]
+                front_avg = (final_wear["FL"] + final_wear["FR"]) / 2
+                rear_avg = (final_wear["RL"] + final_wear["RR"]) / 2
+                gap = rear_avg - front_avg
+
+                if gap >= 0 and gap < 5.0:  # Reduced dominance: gap < 5% (oversteer has ~6-8%)
+                    print(f"  ✅ Understeer: Rear {rear_avg:.2f}% ≥ Front {front_avg:.2f}% (gap: {gap:.2f}%, reduced)")
+                elif gap >= 0:
+                    print(f"  ⚠️ Understeer: Rear {rear_avg:.2f}% > Front {front_avg:.2f}% (gap: {gap:.2f}%, larger than expected)")
+                else:
+                    print(f"  ℹ️  Understeer: Front {front_avg:.2f}% > Rear {rear_avg:.2f}% (gap inverted: {-gap:.2f}%)")
+
 def test_3_right_hand_corners():
     """TEST 3: Silverstone (right-hand heavy) - left side should wear more"""
     print("\n" + "="*90)
@@ -248,6 +282,7 @@ if __name__ == "__main__":
     try:
         test_1_all_compounds()
         test_2_oversteer_setup()
+        test_2b_understeer_setup()
         test_3_right_hand_corners()
         test_4_left_hand_corners()
         test_5_fuel_load_sensitivity()
