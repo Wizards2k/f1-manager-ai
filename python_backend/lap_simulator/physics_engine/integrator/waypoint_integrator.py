@@ -802,19 +802,30 @@ def calculate_per_wheel_loads(
     df_front_kn = (f_downforce * df_front_frac) / 1000.0
     df_rear_kn = (f_downforce * df_rear_frac) / 1000.0
 
-    # V6.3.2: Lateral load transfer (cornering)
-    # Lateral g-force from velocity/radius
+    # V6.3.4: Lateral load transfer CORRETTO (formula fisica reale F1)
+    # Formula: delta_F_totale = m * a_lat * (h_cg / track_width)
+    # F1: h_cg ≈ 0.3m, track ≈ 1.6m → h_cg/track ≈ 0.19
+    # Clamped to realistic max 3.5g lateral
+    # Il trasferimento totale si divide tra le 2 ruote dello stesso asse → diviso 2
     lat_accel_g = (velocity_ms ** 2) / (radius_m * 9.81) if radius_m < 9999 else 0.0
+    lat_accel_g = min(3.5, lat_accel_g)
     total_load_kn = (static_load_front_kn + static_load_rear_kn + (f_downforce / 1000.0))
-    load_transfer_lateral_kn = (total_load_kn * lat_accel_g) / 2.0
+    H_CG_OVER_TRACK = 0.19
+    # Dividiamo per 2 perchè va applicato per ruota (non per asse)
+    load_transfer_lateral_kn = (total_load_kn * lat_accel_g * H_CG_OVER_TRACK) / 2.0
 
-    # V6.3.2: Brake load transfer (longitudinal)
-    # Brake deceleration: if v_target < v_current, compute delta-v / dt
+    # V6.3.4: Brake load transfer CORRETTO
+    # Formula: delta_F_totale = m * a_decel * (h_cg / wheelbase)
+    # F1: h_cg ≈ 0.3m, wheelbase ≈ 3.6m → h_cg/L ≈ 0.083
+    # Il trasferimento totale si divide tra le 2 ruote anteriori → diviso 2
     decel_g = 0.0
     if v_target_ms < velocity_ms and dt_step > 0.001:
         delta_v_ms = velocity_ms - v_target_ms
         decel_g = (delta_v_ms / dt_step) / 9.81
-    load_transfer_brake_kn = (total_load_kn * decel_g) * 0.6 / 2.0  # 60% weight shift to front
+    decel_g = min(5.0, decel_g)
+    H_CG_OVER_L = 0.083
+    # Dividiamo per 2 perchè va applicato per ruota anteriore (non per asse anteriore totale)
+    load_transfer_brake_kn = (total_load_kn * decel_g * H_CG_OVER_L) / 2.0
 
     # V6.3.2: Per-wheel load (FL, FR, RL, RR)
     # V6.3.3: Load transfer direction is circuit-dependent:
@@ -1592,6 +1603,12 @@ def integrate_waypoint(
         from lap_simulator.physics_engine.tyres.tyre_thermal import TiresState as TiresStateClass
         state.tires_state = TiresStateClass()
 
+    # V6.3.4: Slip calculation FIXED - grip required distributed per-wheel by load fraction
+    # Bug precedente: grip totale auto confrontato con grip singola ruota → slip sempre altissimo
+    target_g_lat = source_waypoint.get('target_g_lat', 1.0)
+    f_grip_required_total_kn = (mass_kg * 9.81 / 1000.0) * target_g_lat
+    total_load_kn = sum(wheels_load.values())
+
     wheels_slip = {}
     for wheel_name in ['FL', 'FR', 'RL', 'RR']:
         wheel_attr = wheel_name.lower()
@@ -1610,15 +1627,16 @@ def integrate_waypoint(
         # μ tyre for this wheel
         mu_tyre_wheel = mu_base.get(tyre_compound, 1.3) * thermal_mult * wear_factor
 
-        # Grip available (kN)
+        # Grip available (kN) per questa ruota
         f_grip_available = wheels_load[wheel_name] * mu_tyre_wheel
 
-        # Grip required (target lateral acceleration)
-        target_g_lat = source_waypoint.get('target_g_lat', 1.0)
-        f_grip_required = (mass_kg * 9.81 / 1000.0) * target_g_lat
+        # Grip richiesto per questa ruota: proporzionale al carico
+        # (ruote più cariche devono generare più grip, come in realtà)
+        load_fraction = wheels_load[wheel_name] / max(0.1, total_load_kn)
+        f_grip_required_wheel = f_grip_required_total_kn * load_fraction
 
         # Slip (0.0 = no slip, 1.0 = full slip)
-        slip = max(0.0, 1.0 - (f_grip_available / max(0.1, f_grip_required)))
+        slip = max(0.0, 1.0 - (f_grip_available / max(0.1, f_grip_required_wheel)))
         wheels_slip[wheel_name] = slip
 
     # V6.3: Update tire thermal state (per-wheel heating and wear)
