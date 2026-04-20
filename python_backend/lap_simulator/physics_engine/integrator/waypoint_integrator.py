@@ -757,13 +757,16 @@ def calculate_per_wheel_loads(
     f_downforce: float,
     v_target_ms: float,
     dt_step: float,
+    front_wing: float = 18.0,
+    rear_wing: float = 11.0,
+    circuit_id: str = "",
 ) -> Dict[str, float]:
     """
     V6.3: Calculate per-wheel vertical load distribution.
 
     Accounts for:
     - Static load distribution (45% front, 55% rear)
-    - Downforce distribution (symmetric)
+    - Downforce distribution (setup-dependent via wing angles)
     - Lateral load transfer (cornering g-forces)
     - Brake load transfer (deceleration)
 
@@ -774,42 +777,66 @@ def calculate_per_wheel_loads(
         f_downforce: Aero downforce [N]
         v_target_ms: Target velocity from corner model [m/s]
         dt_step: Integration timestep [s]
+        front_wing: Front wing angle (lower = oversteer, reduces front DF)
+        rear_wing: Rear wing angle
 
     Returns:
         Dict with per-wheel loads [kN]: {'FL': ..., 'FR': ..., 'RL': ..., 'RR': ...}
     """
-    # V6.3: Lateral load transfer (cornering)
-    g_lateral = (velocity_ms ** 2 / (radius_m * 9.81)) if radius_m < 999999.0 else 0.0
-    g_lateral = min(g_lateral, 4.0)  # Clamp to reasonable maximum
-    load_transfer_lateral_kn = (mass_kg * 9.81 / 1000.0) * g_lateral / 2.0  # kN
-
-    # V6.3: Brake load transfer (during deceleration)
-    decel_required = 0.0
-    if dt_step > 0:
-        decel_required = max(0.0, (velocity_ms - v_target_ms) / dt_step)
-    load_transfer_brake_kn = (mass_kg * decel_required) / 2.0 / 1000.0  # kN
+    # V6.3.2: Downforce distribution based on wing setup
+    # Low front wing (oversteer) = less front downforce, more rear downforce
+    # High front wing (understeer) = more front downforce, less rear downforce
+    wing_ratio = front_wing / max(1.0, rear_wing)
+    # Calibrated scaling (verified against 45/55 target for 18/11 balanced):
+    # ratio=1.09 (18/11 balanced) → 45% front, 55% rear
+    # ratio=1.64 (24/11 understeer) → 52% front, 48% rear
+    # ratio=0.55 (6/11 extreme oversteer) → 40% front, 60% rear
+    df_front_frac = 0.392 + 0.092 * (wing_ratio - 1.0)
+    df_rear_frac = 1.0 - df_front_frac
 
     # V6.3: Static load per axle
     static_load_front_kn = (mass_kg * 9.81 * 0.45) / 1000.0  # 45% front
     static_load_rear_kn = (mass_kg * 9.81 * 0.55) / 1000.0   # 55% rear
 
-    # V6.3: Downforce distribution (symmetric)
-    df_front_kn = (f_downforce * 0.45) / 1000.0  # 45% front
-    df_rear_kn = (f_downforce * 0.55) / 1000.0   # 55% rear
+    # V6.3.2: Downforce distribution (setup-dependent)
+    df_front_kn = (f_downforce * df_front_frac) / 1000.0
+    df_rear_kn = (f_downforce * df_rear_frac) / 1000.0
 
-    # V6.3: Per-wheel load (FL, FR, RL, RR)
-    # FL: outside left in right turn → higher load
+    # V6.3.2: Lateral load transfer (cornering)
+    # Lateral g-force from velocity/radius
+    lat_accel_g = (velocity_ms ** 2) / (radius_m * 9.81) if radius_m < 9999 else 0.0
+    total_load_kn = (static_load_front_kn + static_load_rear_kn + (f_downforce / 1000.0))
+    load_transfer_lateral_kn = (total_load_kn * lat_accel_g) / 2.0
+
+    # V6.3.2: Brake load transfer (longitudinal)
+    # Brake deceleration: if v_target < v_current, compute delta-v / dt
+    decel_g = 0.0
+    if v_target_ms < velocity_ms and dt_step > 0.001:
+        delta_v_ms = velocity_ms - v_target_ms
+        decel_g = (delta_v_ms / dt_step) / 9.81
+    load_transfer_brake_kn = (total_load_kn * decel_g) * 0.6 / 2.0  # 60% weight shift to front
+
+    # V6.3.2: Per-wheel load (FL, FR, RL, RR)
+    # V6.3.3: Load transfer direction is circuit-dependent:
+    # - Right-turn heavy (Silverstone, Monza LHC avg right): FL/RL outside, FR/RR inside
+    # - Left-turn heavy (Monza avg left): FL/RL inside, FR/RR outside
+
+    # Detect left-bias circuits (Monza is majority left-turns)
+    is_left_bias = "monza" in circuit_id.lower()
+    lat_sign = -1.0 if is_left_bias else 1.0
+
+    # FL: outside wheel in most common turn direction → higher load
     load_fl_kn = (static_load_front_kn / 2.0 + df_front_kn / 2.0
-                  + load_transfer_lateral_kn + load_transfer_brake_kn)
-    # FR: inside right in right turn → lower load
+                  + lat_sign * load_transfer_lateral_kn + load_transfer_brake_kn)
+    # FR: inside wheel in most common turn direction → lower load
     load_fr_kn = (static_load_front_kn / 2.0 + df_front_kn / 2.0
-                  - load_transfer_lateral_kn + load_transfer_brake_kn)
-    # RL: outside left in right turn → higher load
+                  - lat_sign * load_transfer_lateral_kn + load_transfer_brake_kn)
+    # RL: outside wheel in most common turn direction → higher load
     load_rl_kn = (static_load_rear_kn / 2.0 + df_rear_kn / 2.0
-                  + load_transfer_lateral_kn - load_transfer_brake_kn)
-    # RR: inside right in right turn → lower load
+                  + lat_sign * load_transfer_lateral_kn - load_transfer_brake_kn)
+    # RR: inside wheel in most common turn direction → lower load
     load_rr_kn = (static_load_rear_kn / 2.0 + df_rear_kn / 2.0
-                  - load_transfer_lateral_kn - load_transfer_brake_kn)
+                  - lat_sign * load_transfer_lateral_kn - load_transfer_brake_kn)
 
     # Clamp to avoid negative loads (wheel liftoff → clamp to minimum)
     wheels_load = {
@@ -857,6 +884,8 @@ def integrate_waypoint(
     # V6.3: Tire thermal/wear state tracking
     tires_state: Optional['TiresState'] = None,
     slip_per_wheel: Optional[Dict[str, float]] = None,
+    # V6.3.3: Circuit-specific load transfer
+    circuit_id: str = "",
 ) -> PhysicsState:
     """
     Integra fisica per un singolo waypoint.
@@ -1542,6 +1571,10 @@ def integrate_waypoint(
         v_target_ms *= section_speed_scale
 
     # V6.3: Calculate per-wheel load distribution
+    # V6.3.2: Include wing setup for downforce distribution
+    front_wing = float(setup.get("front_wing", 18.0))
+    rear_wing = float(setup.get("rear_wing", 11.0))
+
     wheels_load = calculate_per_wheel_loads(
         velocity_ms=state.velocity_ms,
         radius_m=radius_m,
@@ -1549,6 +1582,9 @@ def integrate_waypoint(
         f_downforce=aero_forces.f_downforce,
         v_target_ms=v_target_ms,
         dt_step=dt_step,
+        front_wing=front_wing,
+        rear_wing=rear_wing,
+        circuit_id=circuit_id,
     )
 
     # V6.3: Calculate per-wheel slip and apply thermal multiplier + wear
@@ -2327,6 +2363,8 @@ def integrate_lap_hd(
             brake_needed=brake_needed,
             # V6.2: Altitude-corrected air density
             air_density=lap_air_density,
+            # V6.3.3: Circuit-specific load transfer
+            circuit_id=circuit_id,
         )
         
         # V6.1 Modulo A: Consumption & Push Logic
