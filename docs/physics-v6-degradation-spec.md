@@ -141,6 +141,25 @@ Al fine di introdurre questo layer di degradazione si raccomanda una pipeline in
 3. **Consumo Carburante:** Implementare una nuova funzione `compute_fuel_consumption(throttle_pct, engine_map, dt)` che sottragga grammi di carburante ad ogni waypoint basandosi sul flusso del carburante stabilito dalla mappa ICE.
 4. **Cleanup:** Rimuovere qualsiasi variabile `fuel_penalty_s` dal costrutto legacy `update_section.py` e `lap_simulator.py`.
 
+**⚠️ GAP IDENTIFICATO — Fuel Multi-Lap Carryover (V6.4-P0-3):**
+
+Il Modulo A è implementato **intra-lap** (consumo per waypoint, massa dinamica propagata) ma manca il **carryover inter-lap**:
+
+| Aspetto | Stato | Dettaglio |
+|---|---|---|
+| Consumo intra-lap (per waypoint) | ✅ Implementato | `delta_fuel = max_flow_kg_ps * throttle_intensity * flow_map_multiplier * dt_s_step` |
+| Massa dinamica intra-lap | ✅ Implementato | `current_mass_kg` ridotto e propagato a `integrate_waypoint()` |
+| `fuel_consumed_kg` nel result | ✅ Presente | Nel dict di output di `integrate_lap_hd()` |
+| `fuel_remaining_kg` nel result | ❌ Mancante | Non calcolato né restituito |
+| Parametro `initial_fuel_kg` per carryover | ❌ Mancante | A differenza di `initial_tire_temps` e `cumulative_tire_wear` |
+| Test multi-lap usa consumo reale | ❌ No | `test_v63_comprehensive_validation.py` usa hardcoded `14.5 kg/lap` |
+
+**Lavori da fare per completare il Modulo A:**
+1. Aggiungere `fuel_remaining_kg` al result dict: `result["fuel_remaining_kg"] = current_mass_kg - MASS_DRY_KG - MASS_DRIVER_KG`
+2. Aggiungere parametro `initial_fuel_kg` a `integrate_lap_hd()` per carryover inter-lap (come `initial_tire_temps`)
+3. Aggiornare `run_stint()` in `test_v63_comprehensive_validation.py` per usare `fuel_consumed_kg` dal result invece di hardcoded `14.5 kg/lap`
+4. Aggiornare il Race Loop Orchestrator (P0-1) per gestire automaticamente il fuel carryover
+
 ### Modulo B: ERS e Engine Maps Switching
 
 **Analisi Componente:** Attualmente il V6.0.1 forza `init_pu_context(circuit_id, "QUALIFY")`. Dobbiamo poter eseguire giri in mappa RACE o ECONOMY, attivando il reale prelievo dalla batteria e l'harvest dal MGU-K.
@@ -1402,17 +1421,27 @@ telemetry_point = {
 
 ## 10. Implementation Checklist
 
-Before releasing V6.1, verify:
+### ✅ Completato (V6.3)
 
-- [ ] All thermal constants quantified in code (k_surface_fric, k_hysteresis_core, k_braking_transfer)
-- [ ] Gaussian thermal multiplier integrated into grip calculation
-- [ ] Tire state persistence across laps (wear_pct carries forward)
-- [ ] Brake fade state tracking (temp_front_c, temp_rear_c, heat_accumulated_kj)
-- [ ] Brake duct drag addition to aero assembly
-- [ ] Fuel consumption loop (consume ~14-15kg/lap at RACE pace)
-- [ ] Sub-stepping for thermal integration (0.01s substeps)
-- [ ] Telemetry logging (tyre_surface_temp, tyre_core_temp, brake_temp_front, fade_factor, fuel_remaining)
-- [ ] Regression test passes: V6.1 QUALIFY = V6.2 (within ±0.1s)
-- [ ] Multi-lap test passes: 5-lap race shows realistic degradation
-- [ ] Pit stop reset logic (all thermal state reset, wear reset, fuel refilled)
-- [ ] Documentation updated with all parameters
+- [x] All thermal constants quantified in code (k_surface_fric, k_hysteresis_core, k_braking_transfer)
+- [x] Gaussian thermal multiplier integrated into grip calculation
+- [x] Tire state persistence across laps (wear_pct carries forward)
+- [x] Brake fade state tracking (temp_front_c, temp_rear_c, heat_accumulated_kj)
+- [x] Fuel consumption loop intra-lap (consume ~14-15kg/lap at RACE pace)
+- [x] Sub-stepping for thermal integration (0.01s substeps)
+- [x] Telemetry logging (tyre_surface_temp, tyre_core_temp, brake_temp_front, fade_factor)
+- [x] Regression test passes: V6.3 QUALIFY = V6.2 (within ±0.1s)
+- [x] Multi-lap test passes: 5-lap race shows realistic degradation
+- [x] Pit stop reset logic (tire thermal state reset, wear reset)
+- [x] Documentation updated with all parameters
+
+### ❌ Da completare (V6.4)
+
+- [ ] **Fuel Multi-Lap Carryover (P0-3):** Aggiungere `fuel_remaining_kg` al result dict di `integrate_lap_hd()`
+- [ ] **Fuel Multi-Lap Carryover (P0-3):** Aggiungere parametro `initial_fuel_kg` a `integrate_lap_hd()` per carryover inter-lap
+- [ ] **Fuel Multi-Lap Carryover (P0-3):** Aggiornare `run_stint()` per usare `fuel_consumed_kg` reale invece di hardcoded `14.5 kg/lap`
+- [ ] **Brake duct drag addition** to aero assembly (c_da_brake_duct = 0.005 * duct_opening_pct)
+- [ ] **Pit stop fuel refill** logic (fuel reset to specified amount, not just tire reset)
+- [ ] **Telemetry: fuel_remaining** logging per waypoint (attualmente loggato solo fuel_consumed_kg totale)
+- [ ] **Race Loop Orchestrator (P0-1):** Creare `race_orchestrator.py` con carryover automatico (fuel + tires + brakes + PU)
+- [ ] **DRS Activation Logic (P0-2):** Logica automatica DRS basata su zone e gap al veicolo davanti

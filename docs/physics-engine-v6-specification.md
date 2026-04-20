@@ -1,9 +1,9 @@
 ---
-title: Physics Engine V6.2 - Specifica Tecnica e Funzionale
-date: 2026-04-19
-version: 1.3
+title: Physics Engine V6.3 - Specifica Tecnica e Funzionale
+date: 2026-04-21
+version: 1.6
 author: Claude Opus 4.7
-status: V6.2 COMPLETE (Altitude ISA + Las Vegas drag fix — 24/24 lap time accuracy)
+status: V6.3 COMPLETE + Gap Analysis V6.4 (Tire Degradation — 24/24 lap time accuracy — Finalization priorities defined)
 ---
 
 # Physics Engine V6.2 — Specifica Completa
@@ -591,19 +591,53 @@ Completare prima dell'integrazione gameplay:
 | **V6.2-MEX** | Mexico City wing recalibration 16/9 → 22/14 (ρ -24%) | 🟢 Basso | ✅ DONE | 9d05664 |
 | **V6.2-LV** | Las Vegas drag_index=1.20 fix (-2.86% → -0.15%) — root cause parasitic drag | 🟡 Medio | ✅ DONE | 1dba87f |
 
-### 7.4 Deferred Work Items (V6.3+)
+### 7.4 Priorità di Finalizzazione — Gap Analysis V6.3+
 
-**Priorità:** Bassa → Molto bassa (confidence validation only, vision for future features)
+Analisi completa dei gap rimanenti tra il motore fisico V6.3 e un prodotto giocabile. Classificati per priorità e impatto sul gameplay.
 
-| # | Task | Impatto | Priorità | Descrizione | Blockers |
-|---|------|--------|----------|-----------|----------|
-| **V6.3-P2** | CHECK SETUP Sensitivity Tests (6 tests) | 🟢 Basso | Bassa | Validazione di aero sweep, suspension stiffness, fuel load, tyre compound, ICE/ERS mode, push level — risposta corretta engine a setup changes | Nessuno (optional confidence) |
-| **V6.3-P3** | Generic Multi-Parameter Optimizer | 🔵 Visione | Molto bassa | Estendere grid search da ali a sospensioni + fuel. Algoritmo suggerito: Bayesian Optimization. Richiede "fuel-neutral" mu model per evitare ricalibrazione. | V6.2 stabile + re-architecting mu coupling |
+#### 🔴 P0 — Critici per Race Simulation
 
-**Esclusioni Intenzionali (Out of scope per diminishing returns):**
-- **Tire degradation modeling:** Baseline model assume tyre performance flat-line. Aggiunta di modello degradazione richiederebbe telemetria empirica per ogni circuito+compound.
-- **Weather effects (rain/temps):** Assunzione corrente: fixed per sessione. Modello dinamico richiederebbe cloud/weather integration (gameplay feature).
-- **Pit strategy optimizer:** Out of scope physics — è task di gameplay/AI, non physics engine.
+| # | Gap | Descrizione | Sforzo | Impatto Gameplay | Note Implementazione |
+|---|-----|-------------|--------|------------------|---------------------|
+| **V6.4-P0-1** | **Race Loop Orchestrator** | `integrate_lap_hd()` supporta carryover (`initial_tire_temps`, `cumulative_tire_wear`) ma non esiste un race loop orchestrato che gestisca automaticamente: fuel burn lap-per-lap, engine map switching (RACE→SC→RACE), pit stop con cambio gomme (reset temps/wear), degradazione progressiva prestazioni. Il test `test_v63_comprehensive_validation.py` ha un `run_stint()` manuale ma non è parte del motore. | Medio | **Critico** — senza questo non si può simulare una gara | Creare `race_orchestrator.py` con `simulate_stint(circuit, n_laps, setup, strategy)` che chiama `integrate_lap_hd()` per ogni giro con carryover automatico. |
+| **V6.4-P0-2** | **DRS Activation Logic** | Il modulo `rear_wing.py` ha `set_drs()` e `PhysicsState` ha `is_drs_active`, ma **non esiste logica automatica** che attiva/disattiva il DRS durante la simulazione. Il DRS viene letto passivamente dai waypoint (`wp.get('drs_active')`) senza strategia di attivazione basata su: prossimità al veicolo davanti (1s gap), zone DRS del circuito, session type (non attivo in practice/fpit). | Basso | **Alto** — DRS è essenziale per velocità rettilinei realistiche in gara | Aggiungere `drs_zones` ai circuiti JSON e logica di attivazione in `integrate_waypoint()` basata su gap al veicolo davanti e zona DRS. |
+| **V6.4-P0-3** | **Fuel Multi-Lap Carryover** | Il consumo carburante intra-lap è implementato (Modulo A: `current_mass_kg` ridotto per waypoint, `fuel_consumed_kg` nel result). Tuttavia **manca il carryover inter-lap**: (1) `fuel_remaining_kg` non è nel result dict, (2) non esiste parametro `initial_fuel_kg` per giro N+1 (a differenza di `initial_tire_temps` e `cumulative_tire_wear`), (3) il test `test_v63_comprehensive_validation.py` usa consumo hardcoded `14.5 kg/lap` invece del valore reale calcolato dal motore. | Basso | **Alto** — senza questo la massa iniziale del giro N+1 è errata | Aggiungere `fuel_remaining_kg` al result dict di `integrate_lap_hd()`, aggiungere parametro `initial_fuel_kg` per carryover, aggiornare `run_stint()` per usare il consumo reale. |
+
+#### 🟡 P1 — Importanti per Realismo e Gameplay
+
+| # | Gap | Descrizione | Sforzo | Impatto Gameplay | Note Implementazione |
+|---|-----|-------------|--------|------------------|---------------------|
+| **V6.4-P1-1** | **Weather Model** | Nessun supporto per pioggia (wet/intermediate tyres), track temperature dinamica (affecting grip), wind (headwind/tailwind affecting drag), temperatura ambiente variabile. Il motore assume condizioni asciutte e fisse per sessione. Per un gioco F1 è funzionalità essenziale. | Medio | **Alto** — la pioggia è la condizione più importante in F1 | Creare `weather_model.py` con `WeatherState` (track_temp, ambient_temp, wind_speed, wind_dir, rain_intensity) e modificare `mu_mechanical` e `air_density` di conseguenza. Aggiungere compound INTERMEDIATE e WET a `tyre_construction.py`. |
+| **V6.4-P1-2** | **Damage Model** | Non esiste alcun modulo `damage` nel physics engine. Manca: damage da contatto (aero loss, suspension damage), damage da usura eccessiva (tire blowout, brake failure), impatto performance progressivo (downforce reduction per damage%). | Medio | **Medio** — collisioni e danni sono parte del gameplay F1 | Creare `damage_model.py` con `DamageState` (aero_damage_pct, suspension_damage_pct) e scaling progressivo su downforce e grip. |
+| **V6.4-P1-3** | **Multi-Parameter Setup Optimizer** | La grid search attuale copre solo FW/RW. Per il gameplay AI serve un ottimizzatore multi-parametro (ali + sospensioni + fuel + compound). Senza questo l'AI non può ottimizzare il setup completo. | Alto | **Alto** — AI setup tuning è core gameplay | Estendere `calibrate_v60_optimal_wings.py` a `optimize_setup_v64.py` con Bayesian Optimization su 6+ parametri. Richiede "fuel-neutral" μ model per evitare ricalibrazione. |
+
+#### 🟢 P2 — Validazione e Affinamento
+
+| # | Gap | Descrizione | Sforzo | Impatto Gameplay | Note Implementazione |
+|---|-----|-------------|--------|------------------|---------------------|
+| **V6.4-P2-1** | **CHECK SETUP Sensitivity Tests** | Script `test_check_setup_sensitivity.py` esiste ma **Test 5 (Engine Map)** non cambia effettivamente la mappa — usa sempre `set_ers_mode("quali_deploy")` per tutti e 3 i casi. Nessuna evidenza di esecuzione con successo. | Basso | **Basso** — validazione confidenza | Fix Test 5 per usare engine_map differenti per QUALIFY/RACE/PRACTICE e eseguire tutti e 6 i test. |
+| **V6.4-P2-2** | **TEST 6 Fix (Slip Limit)** | Validation suite riporta 5.5/6 PASS — TEST 6 (slip limit) è "weak due to environmental constraint". Il modello di degradazione per slittamento ha un limite nell'ambiente di test non risolto. | Basso | **Basso** — edge case | Investigare lo slip limit ambientale e aggiustare i parametri di test o il modello. |
+| **V6.4-P2-3** | **Barcelona/Spa Typology Fix** | Barcelona optimal_fw=13 (atteso ~22 per SLOW), Spa optimal_fw=16 (borderline FAST). Limiti fisiologici del single-lap model, ma per il gameplay l'AI suggerirà assetto basso-ala su circuiti tecnici. | Basso | **Basso** — cosmetico | Considerare un "race-weighted" optimization che penalizza il drag meno per circuiti tecnici (simulando tire management su più giri). |
+| **V6.4-P2-4** | **Telemetry 24-Field End-to-End Validation** | La specifica V6.3 menziona "24-field per-wheel telemetry" ma non c'è uno script che verifichi che tutti i 24 campi siano popolati correttamente per ogni waypoint in un giro completo. | Basso | **Basso** — QA | Creare `test_telemetry_fields.py` che simula un giro completo e verifica la presenza e correttezza di tutti i 24 campi telemetry per ogni waypoint. |
+
+#### 🔵 P3 — Visione Futura (Out of Scope V6.4)
+
+| # | Gap | Descrizione | Sforzo | Impatto Gameplay | Note |
+|---|-----|-------------|--------|------------------|------|
+| **V6.5-V1** | **Pit Strategy Optimizer** | Ottimizzazione strategia pit stop (quando cambiare gomme, quale compound). Out of scope physics — è task di gameplay/AI. | Alto | Alto | Richiede race loop orchestrator (P0-1) come prerequisito. |
+| **V6.5-V2** | **Dynamic Weather Integration** | Modello meteo dinamico con transizioni pioggia/secco durante la gara. Richiede cloud/weather integration (gameplay feature). | Alto | Alto | Richiede weather model base (P1-1) come prerequisito. |
+| **V6.5-V3** | **Tire Compound Strategy** | Logica per pit stop timing, compound strategy (soft→medium, medium→hard), degradation curves per compound nel contesto multi-lap. | Medio | Alto | Richiede race loop orchestrator (P0-1) come prerequisito. |
+
+#### Riepilogo Priorità
+
+```
+🔴 P0 (Critico per gameplay):  Race Loop Orchestrator + DRS Logic + Fuel Carryover
+🟡 P1 (Importante per realismo): Weather Model + Damage Model + Multi-Param Optimizer
+🟢 P2 (Validazione):             CHECK SETUP Tests + TEST 6 Fix + Typology + Telemetry
+🔵 P3 (Visione futura):           Pit Strategy + Dynamic Weather + Compound Strategy
+```
+
+**Raccomandazione:** Prima di dichiarare il motore "finalizzato per il gameplay", completare almeno i tre item P0 (Race Loop Orchestrator, DRS Logic e Fuel Carryover). Senza questi, il motore può simulare singoli giri (qualifying/practice) ma non può eseguire una gara completa — il fuel carryover è particolarmente critico perché la massa iniziale di ogni giro successivo determina direttamente grip, accelerazione e consumo.
 
 ### 7.5 Implementation Checklist (V6.1 & V6.2 Complete)
 
@@ -652,9 +686,17 @@ Completare prima dell'integrazione gameplay:
   - Lap time accuracy: 23/24 → **24/24** ✅
 - [x] **Preference test 24/24** mantenuto dopo tutti i fix
 
-**Deferred to V6.3+:**
-- [ ] CHECK SETUP tests (V6.1-3: optional sensitivity validation — aero sweep, suspension, fuel, tyres, ICE/ERS, push level)
-- [ ] Optimizer generico setup (multi-parametric optimization: ali + sospensioni + fuel)
+**Deferred to V6.4 (vedi §7.4 per dettagli completi):**
+- [ ] 🔴 **V6.4-P0-1**: Race Loop Orchestrator (critico per gara)
+- [ ] 🔴 **V6.4-P0-2**: DRS Activation Logic (critico per rettilinei realistici)
+- [ ] 🔴 **V6.4-P0-3**: Fuel Multi-Lap Carryover (critico per massa corretta tra giri)
+- [ ] 🟡 **V6.4-P1-1**: Weather Model (pioggia, track temp, vento)
+- [ ] 🟡 **V6.4-P1-2**: Damage Model (aero loss, suspension damage)
+- [ ] 🟡 **V6.4-P1-3**: Multi-Parameter Setup Optimizer (Bayesian)
+- [ ] 🟢 **V6.4-P2-1**: CHECK SETUP Sensitivity Tests (fix Test 5 + esecuzione)
+- [ ] 🟢 **V6.4-P2-2**: TEST 6 Fix (slip limit)
+- [ ] 🟢 **V6.4-P2-3**: Barcelona/Spa Typology Fix
+- [ ] 🟢 **V6.4-P2-4**: Telemetry 24-Field End-to-End Validation
 
 **✅ V6.1 è COMPLETO: Qualify + Race + Practice simulations con FIA-compliant PU/ERS.**
 **✅ V6.2 è COMPLETO: altitude-aware, Las Vegas risolto, 24/24 lap time accuracy raggiunta.**
@@ -790,12 +832,27 @@ python scripts/test_engine_maps.py --all
 python scripts/calibrate_v60_optimal_wings.py --quick
 ```
 
-**For V6.3+ Work (if continuing):**
+**For V6.4 Work (P0 — Finalizzazione Gameplay):**
 
-1. **CHECK SETUP Tests** — 6 sensitivity tests (aero, suspension, fuel, tyres, ICE/ERS, push level) to validate physics response. Low priority, high confidence validation.
-   - Script: `scripts/check_setup_sensitivity.py [--circuit monza] [--test 1-6]`
+1. **Race Loop Orchestrator** — Creare `race_orchestrator.py` con `simulate_stint()` che chiama `integrate_lap_hd()` per ogni giro con carryover automatico (fuel burn, tire temps/wear, engine map switching, pit stop reset). Senza questo non si può simulare una gara.
+   - File: `lap_simulator/physics_engine/integrator/race_orchestrator.py`
+   - Prerequisito: `integrate_lap_hd()` già supporta `initial_tire_temps` e `cumulative_tire_wear`
+
+2. **DRS Activation Logic** — Aggiungere logica automatica DRS nel waypoint integrator basata su zone DRS del circuito e gap al veicolo davanti. Il modulo `rear_wing.py` ha già `set_drs()`.
+   - File: modificare `waypoint_integrator.py` + aggiungere `drs_zones` ai circuiti JSON
+   - Prerequisito: `rear_wing.py` DRS API già implementata
+
+3. **Fuel Multi-Lap Carryover** — Aggiungere `fuel_remaining_kg` al result dict di `integrate_lap_hd()`, aggiungere parametro `initial_fuel_kg` per carryover inter-lap (come `initial_tire_temps` per le gomme). Attualmente il consumo è calcolato intra-lap ma la massa iniziale del giro N+1 non è derivata dal consumo reale.
+   - File: modificare `waypoint_integrator.py` (result dict + nuovo parametro)
+   - Prerequisito: consumo carburante intra-lap già implementato (Modulo A)
+
+**For V6.4 Work (P1 — Realismo):**
+
+1. **Weather Model** — Creare `weather_model.py` con `WeatherState` (track_temp, ambient_temp, wind, rain) e modificare `mu_mechanical` e `air_density` di conseguenza. Aggiungere compound INTERMEDIATE e WET.
    
-2. **Generic Setup Optimizer** — Multi-parametric optimization (wings + suspension + fuel) using Bayesian Optimization. Very low priority, vision feature. Blocked on "fuel-neutral" μ model.
+2. **Damage Model** — Creare `damage_model.py` con `DamageState` (aero_damage_pct, suspension_damage_pct) e scaling progressivo su downforce e grip.
+
+3. **Multi-Parameter Optimizer** — Estendere grid search da FW/RW a sospensioni + fuel + compound. Algoritmo suggerito: Bayesian Optimization. Richiede "fuel-neutral" μ model.
 
 ---
 
@@ -851,13 +908,16 @@ python scripts/recalibrate_mu_v60.py --quick
 **Documento:** Specifica Tecnica + Roadmap Integrata  
 **Redatto:** 2026-04-18  
 **Aggiornato:** 2026-04-20 (V6.3 Complete + Tire Degradation)  
-**Version:** 1.5 — **V6.3 FINAL: Tire degradation model complete, 5.5/6 validation tests, Production Ready**
+**Version:** 1.6 — **V6.3 FINAL + Gap Analysis V6.4: Finalization priorities defined**
 
-**Status:** ✅ **PRODUCTION-READY FOR GAME INTEGRATION**
+**Status:** ✅ **PRODUCTION-READY FOR SINGLE-LAP SIMULATION** | ⚠️ **THREE P0 GAPS FOR FULL RACE SIMULATION**
 - ✅ V6.0.1 Physics Core: 24/24 lap time accuracy
 - ✅ V6.1 PU/ERS: 4 engine maps, FIA-compliant
 - ✅ V6.2 Altitude/Drag: ISA model, circuit-specific calibration
 - ✅ V6.3 Tire Degradation: Per-wheel thermal/wear, setup asymmetries
+- 🔴 V6.4-P0-1: Race Loop Orchestrator (critico per gara)
+- 🔴 V6.4-P0-2: DRS Activation Logic (critico per rettilinei realistici)
+- 🔴 V6.4-P0-3: Fuel Multi-Lap Carryover (critico per massa corretta tra giri)
 
 **Final Metrics:**
 - Setup Congruence: **24/24** ✅
@@ -866,4 +926,4 @@ python scripts/recalibrate_mu_v60.py --quick
 - Validation Tests: **5.5/6 PASS** ✅
 - Branch Status: **Merged to feature/lap-simulator-v6** ✅
 
-**Next Milestone:** V6.4+ (optional: CHECK SETUP sensitivity tests, generic multi-parameter optimizer — low priority vision features)
+**Next Milestone:** V6.4 — Completare P0 (Race Loop + DRS + Fuel Carryover) per finalizzazione gameplay completa
