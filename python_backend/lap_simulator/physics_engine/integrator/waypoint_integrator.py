@@ -739,6 +739,78 @@ def compute_braking_zones_v6(
     return brake_needed
 
 
+def calculate_per_wheel_loads(
+    velocity_ms: float,
+    radius_m: float,
+    mass_kg: float,
+    f_downforce: float,
+    v_target_ms: float,
+    dt_step: float,
+) -> Dict[str, float]:
+    """
+    V6.3: Calculate per-wheel vertical load distribution.
+
+    Accounts for:
+    - Static load distribution (45% front, 55% rear)
+    - Downforce distribution (symmetric)
+    - Lateral load transfer (cornering g-forces)
+    - Brake load transfer (deceleration)
+
+    Args:
+        velocity_ms: Current velocity [m/s]
+        radius_m: Corner radius [m], 999999 for straight
+        mass_kg: Total car mass [kg]
+        f_downforce: Aero downforce [N]
+        v_target_ms: Target velocity from corner model [m/s]
+        dt_step: Integration timestep [s]
+
+    Returns:
+        Dict with per-wheel loads [kN]: {'FL': ..., 'FR': ..., 'RL': ..., 'RR': ...}
+    """
+    # V6.3: Lateral load transfer (cornering)
+    g_lateral = (velocity_ms ** 2 / (radius_m * 9.81)) if radius_m < 999999.0 else 0.0
+    g_lateral = min(g_lateral, 4.0)  # Clamp to reasonable maximum
+    load_transfer_lateral_kn = (mass_kg * 9.81 / 1000.0) * g_lateral / 2.0  # kN
+
+    # V6.3: Brake load transfer (during deceleration)
+    decel_required = 0.0
+    if dt_step > 0:
+        decel_required = max(0.0, (velocity_ms - v_target_ms) / dt_step)
+    load_transfer_brake_kn = (mass_kg * decel_required) / 2.0 / 1000.0  # kN
+
+    # V6.3: Static load per axle
+    static_load_front_kn = (mass_kg * 9.81 * 0.45) / 1000.0  # 45% front
+    static_load_rear_kn = (mass_kg * 9.81 * 0.55) / 1000.0   # 55% rear
+
+    # V6.3: Downforce distribution (symmetric)
+    df_front_kn = (f_downforce * 0.45) / 1000.0  # 45% front
+    df_rear_kn = (f_downforce * 0.55) / 1000.0   # 55% rear
+
+    # V6.3: Per-wheel load (FL, FR, RL, RR)
+    # FL: outside left in right turn → higher load
+    load_fl_kn = (static_load_front_kn / 2.0 + df_front_kn / 2.0
+                  + load_transfer_lateral_kn + load_transfer_brake_kn)
+    # FR: inside right in right turn → lower load
+    load_fr_kn = (static_load_front_kn / 2.0 + df_front_kn / 2.0
+                  - load_transfer_lateral_kn + load_transfer_brake_kn)
+    # RL: outside left in right turn → higher load
+    load_rl_kn = (static_load_rear_kn / 2.0 + df_rear_kn / 2.0
+                  + load_transfer_lateral_kn - load_transfer_brake_kn)
+    # RR: inside right in right turn → lower load
+    load_rr_kn = (static_load_rear_kn / 2.0 + df_rear_kn / 2.0
+                  - load_transfer_lateral_kn - load_transfer_brake_kn)
+
+    # Clamp to avoid negative loads (wheel liftoff → clamp to minimum)
+    wheels_load = {
+        'FL': max(0.1, load_fl_kn),
+        'FR': max(0.1, load_fr_kn),
+        'RL': max(0.1, load_rl_kn),
+        'RR': max(0.1, load_rr_kn),
+    }
+
+    return wheels_load
+
+
 def integrate_waypoint(
     state: PhysicsState,
     waypoint: Dict,
@@ -771,6 +843,9 @@ def integrate_waypoint(
     brake_needed: Optional[List[bool]] = None,  # Pre-computed braking zones
     # V6.2: Altitude-corrected air density (sea level default)
     air_density: float = 1.225,
+    # V6.3: Tire thermal/wear state tracking
+    tires_state: Optional['TiresState'] = None,
+    slip_per_wheel: Optional[Dict[str, float]] = None,
 ) -> PhysicsState:
     """
     Integra fisica per un singolo waypoint.
@@ -1447,6 +1522,18 @@ def integrate_waypoint(
     # Applica section speed scale (se overridato da calibrazione)
     if section_speed_scale > 0.0:
         v_target_ms *= section_speed_scale
+
+    # V6.3: Calculate per-wheel load distribution
+    wheels_load = calculate_per_wheel_loads(
+        velocity_ms=state.velocity_ms,
+        radius_m=radius_m,
+        mass_kg=mass_kg,
+        f_downforce=aero_forces.f_downforce,
+        v_target_ms=v_target_ms,
+        dt_step=dt_step,
+    )
+    # Store in state for Phase 3 (slip/heat calculation)
+    # This will be used when calculating per-wheel heating/cooling
 
     # V6.0: Braking decision semplificata
     # Se brake_needed[waypoint_idx] = True AND velocità > target, frena
