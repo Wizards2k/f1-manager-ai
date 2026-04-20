@@ -1,12 +1,12 @@
 """
-Realistic 15-Lap Thermal Carryover Test — V6.3
-Simulates 15-lap race stint with proper thermal state carryover between laps.
-Tests understeer vs oversteer setup asymmetries using actual physics integration.
+15-Lap Thermal Carryover Test with Aggressive Underdriving — V6.3
+Uses low push_level (3-4) to force slip and wear accumulation.
+Tests understeer vs oversteer thermal asymmetries.
 """
 
 import sys
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict
 
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
@@ -19,10 +19,9 @@ from lap_simulator.physics_engine.calibration.aero_calibration import get_aero_c
 
 def simulate_15lap_stint(circuit: str, compound: str, setup_type: str, setup_config: Dict) -> Dict:
     """
-    Simulate 15-lap race stint with thermal carryover between laps.
-    Uses integrate_lap_hd() with initial_tire_temps for proper thermal accumulation.
+    Simulate 15-lap race stint with aggressive underdriving to force slip/wear.
+    Push_level 3-4 (conservative) ensures slip margin and measurable wear.
     """
-    # Setup
     team = get_team_data("mclaren")
     driver = get_driver_data("Lando Norris")
 
@@ -37,61 +36,53 @@ def simulate_15lap_stint(circuit: str, compound: str, setup_type: str, setup_con
     setup.set_tyres(compound=compound)
     setup.set_ers_mode("balanced")
 
-    # Prepare aero setup dict
     aero_setup = {
         "front_wing": setup_config["front_wing"],
         "rear_wing": setup_config["rear_wing"],
     }
     aero_calibration = get_aero_calibration(circuit)
 
-    # Track data across 15 laps
     lap_results = []
-    # LAP 1: OUTLAP (cold tires) - start at 20°C (off-track temperature)
     current_tire_temps = {"FL": 20.0, "FR": 20.0, "RL": 20.0, "RR": 20.0}
     cumulative_wear = {"FL": 0.0, "FR": 0.0, "RL": 0.0, "RR": 0.0}
     total_time = 0.0
 
     for lap_num in range(1, 16):
-        # Fuel consumption: start 110kg, consume ~14.5kg/lap
         fuel_remaining = max(5.0, 110.0 - (lap_num - 1) * 14.5)
 
-        # Push level: Lap 1 is outlap (easy), rest are race pace (aggressive) for slip/wear
-        push_level = 5 if lap_num == 1 else 9  # 9/10 = aggressive race pace
+        # Aggressive underdriving: push_level 3-4 creates slip margin (not maximum grip)
+        # Lap 1: outlap conservative (push_level 2)
+        # Laps 2-15: controlled race pace (push_level 4) with deliberate margin
+        push_level = 2 if lap_num == 1 else 4
 
         try:
-            # Call integrate_lap_hd with thermal carryover parameters
             result = integrate_lap_hd(
                 circuit_id=circuit,
                 aero_setup=aero_setup,
-                mass_kg=750.0,  # kg (110kg fuel start)
+                mass_kg=750.0,
                 tyre_compound=compound,
-                driver_skill=1.0,
-                push_level=push_level,  # Aggressive (9) for race laps, moderate (5) for outlap
+                driver_skill=0.85,  # Reduced from 1.0 to create more slip
+                push_level=push_level,
                 aero_calibration=aero_calibration,
-                ers_power_fraction=0.5,  # RACE mode
+                ers_power_fraction=0.5,
                 pu_config={"engine_map": "RACE"},
-                # V6.3: Thermal carryover
                 initial_tire_temps=current_tire_temps,
                 cumulative_tire_wear=cumulative_wear,
             )
 
             lap_time = result.get("lap_time_s", 0)
             v_max = result.get("v_max_kph", 0)
-
             total_time += lap_time
 
-            # Extract final tire state for next lap
             current_tire_temps = result.get("final_tire_temps")
             cumulative_wear = result.get("cumulative_tire_wear")
 
-            # Debug: Check if final_tire_temps is None (carryover not working)
             if current_tire_temps is None:
                 return {
-                    "error": f"Lap {lap_num}: final_tire_temps is None (carryover not working)",
+                    "error": f"Lap {lap_num}: final_tire_temps is None",
                     "lap_num": lap_num,
                 }
 
-            # Store lap result
             lap_results.append({
                 "lap_num": lap_num,
                 "lap_time": lap_time,
@@ -122,26 +113,26 @@ def simulate_15lap_stint(circuit: str, compound: str, setup_type: str, setup_con
     asymmetry_msg = ""
 
     if setup_type == "understeer":
-        if front_wear_avg > rear_wear_avg:
+        if front_wear_avg > rear_wear_avg + 0.2:
             asymmetry_valid = True
-            asymmetry_msg = f"✓ Front wear {front_wear_avg:.2f}% > Rear {rear_wear_avg:.2f}%"
+            asymmetry_msg = f"✓ Front wear {front_wear_avg:.3f}% > Rear {rear_wear_avg:.3f}%"
         else:
-            asymmetry_msg = f"✗ Front wear {front_wear_avg:.2f}% ≤ Rear {rear_wear_avg:.2f}%"
+            asymmetry_msg = f"✗ Front wear {front_wear_avg:.3f}% ≤ Rear {rear_wear_avg:.3f}%"
 
     elif setup_type == "oversteer":
-        if rear_wear_avg > front_wear_avg:
+        if rear_wear_avg > front_wear_avg + 0.2:
             asymmetry_valid = True
-            asymmetry_msg = f"✓ Rear wear {rear_wear_avg:.2f}% > Front {front_wear_avg:.2f}%"
+            asymmetry_msg = f"✓ Rear wear {rear_wear_avg:.3f}% > Front {front_wear_avg:.3f}%"
         else:
-            asymmetry_msg = f"✗ Rear wear {rear_wear_avg:.2f}% ≤ Front {front_wear_avg:.2f}%"
+            asymmetry_msg = f"✗ Rear wear {rear_wear_avg:.3f}% ≤ Front {front_wear_avg:.3f}%"
 
     elif setup_type == "optimal":
         wear_range = max(final_wear.values()) - min(final_wear.values())
-        if wear_range <= 1.0:
+        if wear_range <= 0.5:
             asymmetry_valid = True
-            asymmetry_msg = f"✓ Balanced wear: range {wear_range:.2f}%"
+            asymmetry_msg = f"✓ Balanced wear: range {wear_range:.3f}%"
         else:
-            asymmetry_msg = f"✗ Imbalanced wear: range {wear_range:.2f}%"
+            asymmetry_msg = f"✗ Imbalanced wear: range {wear_range:.3f}%"
 
     return {
         "lap_results": lap_results,
@@ -163,7 +154,6 @@ def print_stint_summary(circuit: str, compound: str, setup_type: str, data: Dict
     lap_results = data.get("lap_results", [])
     final_wear = data.get("final_wear", {})
 
-    # Print key laps
     print(f"\n    Lap Progression:")
     for idx in [0, 7, 14]:
         if idx < len(lap_results):
@@ -184,13 +174,13 @@ def print_stint_summary(circuit: str, compound: str, setup_type: str, data: Dict
             print(
                 f"      Lap {lap['lap_num']:2d}: Time {lap['lap_time']:6.2f}s | "
                 f"Temps FL={fl_temp:5.1f}°C FR={fr_temp:5.1f}°C RL={rl_temp:5.1f}°C RR={rr_temp:5.1f}°C | "
-                f"Wear FL={fl_wear:5.2f}% FR={fr_wear:5.2f}% RL={rl_wear:5.2f}% RR={rr_wear:5.2f}%"
+                f"Wear FL={fl_wear:6.3f}% FR={fr_wear:6.3f}% RL={rl_wear:6.3f}% RR={rr_wear:6.3f}%"
             )
 
     print(f"\n    Final Wear (Lap 15):")
     print(
-        f"      FL: {final_wear.get('FL', 0):6.2f}%  FR: {final_wear.get('FR', 0):6.2f}%  "
-        f"RL: {final_wear.get('RL', 0):6.2f}%  RR: {final_wear.get('RR', 0):6.2f}%"
+        f"      FL: {final_wear.get('FL', 0):7.3f}%  FR: {final_wear.get('FR', 0):7.3f}%  "
+        f"RL: {final_wear.get('RL', 0):7.3f}%  RR: {final_wear.get('RR', 0):7.3f}%"
     )
 
     print(f"\n    Asymmetry: {data['asymmetry_msg']}")
@@ -199,10 +189,10 @@ def print_stint_summary(circuit: str, compound: str, setup_type: str, data: Dict
 
 if __name__ == "__main__":
     print("=" * 100)
-    print("15-LAP THERMAL CARRYOVER TEST — V6.3 (Monaco: Brake-Heavy Circuit)")
+    print("15-LAP THERMAL CARRYOVER TEST — V6.3 (Monaco, Aggressive Underdriving)")
+    print("Push_level 2-4 to force slip/wear. Driver_skill 0.85 for natural driving errors.")
     print("=" * 100)
 
-    # Test configuration — Monaco for credible slip generation and thermal asymmetry
     circuits = ["mc-1929_monaco"]
     compounds = ["C4"]
     setups = {
@@ -217,7 +207,7 @@ if __name__ == "__main__":
     for circuit in circuits:
         circuit_name = circuit.split("_")[-1].title()
         print(f"\n{'='*100}")
-        print(f"🏁 {circuit_name} — 15-Lap Stint with Thermal Carryover")
+        print(f"🏁 {circuit_name} — 15-Lap Stint (Aggressive Underdriving for Slip/Wear)")
         print(f"{'='*100}")
 
         for compound in compounds:
@@ -245,7 +235,7 @@ if __name__ == "__main__":
     print(f"Failed: {failed}/{passed + failed}")
 
     if failed == 0:
-        print("\n✅ ALL TESTS PASSED — 15-Lap Thermal Carryover Working\n")
+        print("\n✅ ALL TESTS PASSED — 15-Lap Thermal Carryover with Slip/Wear Verified\n")
         sys.exit(0)
     else:
         print(f"\n⚠️  {failed} tests failed\n")
