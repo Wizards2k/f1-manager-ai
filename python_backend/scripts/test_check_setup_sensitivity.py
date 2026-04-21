@@ -22,6 +22,11 @@ from lap_simulator.physics_engine.core.car_setup import PhysicsV4Setup, DriverSk
 from lap_simulator.physics_engine.calibration.aero_calibration import get_aero_calibration
 from scripts.calibrate_v57 import ALL_CIRCUITS, SUSP_SETUPS, DRIVER
 
+# Suspension stiffness variations (based on Monza setup)
+SUSP_SOFT = {"spring_front": 15.0, "spring_rear": 20.0, "ARB_front": 4.0, "ARB_rear": 6.0, "ride_height_front": 10.0, "ride_height_rear": 17.0}
+SUSP_MEDIUM = {"spring_front": 25.0, "spring_rear": 33.0, "ARB_front": 8.0, "ARB_rear": 13.0, "ride_height_front": 10.0, "ride_height_rear": 17.0}
+SUSP_STIFF = {"spring_front": 35.0, "spring_rear": 45.0, "ARB_front": 12.0, "ARB_rear": 18.0, "ride_height_front": 10.0, "ride_height_rear": 17.0}
+
 
 def sim_lap(circuit_id: str, setup_dict: Dict, verbose: bool = False) -> float:
     """Run single lap simulation with given setup."""
@@ -45,9 +50,10 @@ def sim_lap(circuit_id: str, setup_dict: Dict, verbose: bool = False) -> float:
         setup.set_tyres(compound=setup_dict['compound'])
 
     if 'push_level' in setup_dict:
-        # Push level maps to driver skill (internal scaling)
-        skill = 0.75 + (setup_dict['push_level'] / 100.0) * 0.35
-        setup.car.driver.skill = DriverSkill(pace=skill, racecraft=0.5, consistency=0.5)
+        # Push level maps to throttle skill (driver aggression)
+        throttle = 0.85 + (setup_dict['push_level'] / 100.0) * 0.25  # 0.85 to 1.10
+        # Modify throttle_skill in existing driver
+        setup.car.driver.throttle_skill = throttle
 
     setup.set_ers_mode("quali_deploy")
 
@@ -62,21 +68,21 @@ print("V6.3 CHECK SETUP SENSITIVITY TESTS")
 print("="*95)
 print("Validating physics response to setup changes\n")
 
-# Test circuit (pick one with good data)
+# Test circuit (Monza for all tests)
 test_circuit = "it-1922_monza"
-circuit_name = "Monza"
+circuit_name = "Monza (drag-limited track)"
 
 print(f"Test Circuit: {circuit_name}\n")
 
 # =============================================================================
-# TEST 1: Aero Sweep (Wing Angles)
+# TEST 1: Aero Sweep (Wing Angles) — Monza is drag-limited, LOW should win
 # =============================================================================
 print("="*95)
-print("TEST 1: Aero Sweep — More Downforce Should Increase Corner Speed")
+print("TEST 1: Aero Sweep — Monza Drag-Limited: Lower Wings Faster")
 print("="*95)
 
 wing_configs = [
-    {"front_wing": 6, "rear_wing": 6, "name": "LOW (6/6)"},
+    {"front_wing": 6, "rear_wing": 4, "name": "LOW (6/4)"},
     {"front_wing": 14, "rear_wing": 10, "name": "MID (14/10)"},
     {"front_wing": 24, "rear_wing": 14, "name": "HIGH (24/14)"},
 ]
@@ -87,13 +93,14 @@ for cfg in wing_configs:
     times.append(t)
     print(f"  {cfg['name']:20s}: {t:7.3f}s")
 
-# Check monotonicity: higher wing = faster lap time (more DF helps on high-speed corners)
-if times[0] > times[1] > times[2]:
-    print("  ✅ PASS: Monotonic decrease (more DF = faster lap)\n")
-elif times[0] > times[2] and times[1] > times[2]:
-    print("  ✅ PASS: HIGH wing fastest (more DF wins)\n")
+# Check that LOW is fastest (Monza is drag-dominated)
+if times[0] < times[1] < times[2]:
+    delta = times[2] - times[0]
+    print(f"  ✅ PASS: LOW fastest (drag-limited: {delta:.3f}s delta)\n")
+elif times[0] < times[2]:
+    print(f"  ✅ PASS: LOW faster than HIGH (drag sensitivity confirmed)\n")
 else:
-    print("  ❌ FAIL: Non-monotonic response (unexpected behavior)\n")
+    print(f"  ❌ FAIL: Unexpected aero response\n")
 
 # =============================================================================
 # TEST 2: Suspension Stiffness
@@ -102,17 +109,32 @@ print("="*95)
 print("TEST 2: Suspension Stiffness — Stiffer Should Improve Handling Balance")
 print("="*95)
 
+def sim_lap_with_susp(circuit_id: str, aero_dict: Dict, susp_dict: Dict, verbose: bool = False) -> float:
+    """Run single lap simulation with given setup (including suspension)."""
+    setup = PhysicsV4Setup(driver_data=DRIVER, circuit=circuit_id, session="qualifying")
+
+    setup.set_aero(front_wing=aero_dict['front_wing'], rear_wing=aero_dict['rear_wing'])
+    setup.set_suspension(**susp_dict)
+    setup.set_fuels(fuel_kg=50.0, fuel_mix="standard")
+    setup.set_tyres(compound="C5")
+    setup.set_ers_mode("quali_deploy")
+
+    result = setup.simulate_lap(verbose=False)
+    lap_time = result.get("lap_time_s", 0.0)
+    return lap_time
+
 susp_configs = [
-    {"suspension": "soft", "name": "SOFT (k_roll low)"},
-    {"suspension": "medium", "name": "MEDIUM (balanced)"},
-    {"suspension": "stiff", "name": "STIFF (k_roll high)"},
+    {"susp": SUSP_SOFT, "name": "SOFT (springs: 15/20)"},
+    {"susp": SUSP_MEDIUM, "name": "MEDIUM (springs: 25/33)"},
+    {"susp": SUSP_STIFF, "name": "STIFF (springs: 35/45)"},
 ]
 
+aero_base = {"front_wing": 9, "rear_wing": 4}  # Monza optimal
 times = []
 for cfg in susp_configs:
-    t = sim_lap(test_circuit, cfg)
+    t = sim_lap_with_susp(test_circuit, aero_base, cfg['susp'])
     times.append(t)
-    print(f"  {cfg['name']:25s}: {t:7.3f}s")
+    print(f"  {cfg['name']:30s}: {t:7.3f}s")
 
 # Check if MEDIUM/STIFF are competitive (not too much variation expected)
 time_range = max(times) - min(times)
@@ -192,8 +214,8 @@ map_configs = [
 times = []
 for cfg in map_configs:
     setup = PhysicsV4Setup(driver_data=DRIVER, circuit=test_circuit, session="qualifying")
-    setup.set_aero(front_wing=14, rear_wing=10)
-    setup.set_suspension(**SUSP_SETUPS["medium"])
+    setup.set_aero(front_wing=9, rear_wing=4)  # Monza optimal
+    setup.set_suspension(**SUSP_MEDIUM)
     setup.set_fuels(fuel_kg=50.0, fuel_mix="standard")
     setup.set_tyres(compound="C5")
     setup.set_ers_mode("quali_deploy")  # Trigger engine map selection
