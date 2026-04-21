@@ -277,3 +277,100 @@ class TyreThermal:
             'ambient_temp_c': self.ambient_temp,
             'track_temp_c': self.track_temp,
         }
+
+# ============================================================================
+# V6.3: Tire thermal and wear update (from waypoint_integrator.py)
+# ============================================================================
+def _get_optimal_temp(compound: str) -> float:
+    """V6.3: Get optimal surface temperature for tire compound."""
+    optim_temps = {'C5': 100.0, 'C4': 105.0, 'C3': 110.0}
+    return optim_temps.get(compound, 105.0)
+
+
+def _get_sigma(compound: str) -> float:
+    """V6.3: Get thermal window width (sigma) for tire compound."""
+    sigmas = {'C5': 7.5, 'C4': 8.0, 'C3': 8.5}
+    return sigmas.get(compound, 8.0)
+
+
+def update_tire_thermal_wear(
+    tires_state,
+    wheels_load: Dict[str, float],
+    wheels_slip: Dict[str, float],
+    velocity_ms: float,
+    dt_step: float,
+    dist_step: float,
+    tyre_compound: str,
+    is_braking: bool,
+    brake_pct: float,
+    mass_kg: float,
+    setup: Dict,
+) -> None:
+    """
+    Aggiorna lo stato termico e l'usura delle gomme per ogni ruota.
+
+    Estratto dal waypoint_integrator.py V6.3 per modularizzazione.
+    """
+    K_SURFACE_FRIC = 0.95
+    K_HYSTERESIS_CORE = 0.35
+    K_BRAKING_TRANSFER = 0.25
+    brake_bias = setup.get('brake_bias', 0.55)
+
+    for wheel_name in ['FL', 'FR', 'RL', 'RR']:
+        wheel_attr = wheel_name.lower()
+        tire_state = getattr(tires_state, wheel_attr)
+        load_kn = wheels_load[wheel_name]
+        slip = wheels_slip[wheel_name]
+
+        # 1. Surface heating (friction + braking)
+        friction_heat = K_SURFACE_FRIC * load_kn * slip * velocity_ms * dt_step
+
+        brake_heat = 0.0
+        if is_braking and brake_pct > 5:
+            braking_energy_mj = 0.5 * mass_kg * velocity_ms ** 2 / 1e6
+            if wheel_name in ['FL', 'FR']:
+                brake_heat = K_BRAKING_TRANSFER * braking_energy_mj * brake_bias / 2.0 * dt_step
+            else:
+                brake_heat = K_BRAKING_TRANSFER * braking_energy_mj * (1.0 - brake_bias) / 2.0 * dt_step
+
+        tire_state.surface_temp_c += (friction_heat + brake_heat)
+
+        # 2. Core heating (hysteresis)
+        core_heat = K_HYSTERESIS_CORE * load_kn * velocity_ms * dt_step
+        tire_state.core_temp_c += core_heat
+
+        # 3. Cooling (convective, asymmetric for brake duct)
+        h_conv_base = 15.0
+        brake_duct_opening = setup.get('brake_duct', 0.5)
+
+        if wheel_name in ['FL', 'FR']:
+            h_conv = h_conv_base * velocity_ms * (0.5 + brake_duct_opening)
+        else:
+            h_conv = h_conv_base * velocity_ms * 0.5
+
+        q_cool = h_conv * (tire_state.surface_temp_c - 25.0) * dt_step / 1000.0
+        tire_state.surface_temp_c -= q_cool
+
+        # 4. Wear accumulation
+        temp_dev = abs(tire_state.surface_temp_c - _get_optimal_temp(tyre_compound))
+        sigma = _get_sigma(tyre_compound)
+
+        if temp_dev < sigma:
+            severity = 1.0
+        else:
+            severity = 1.0 + ((temp_dev - sigma) / sigma) ** 1.5
+
+        k_rolling = 0.0001
+        k_friction = {'C5': 0.00095, 'C4': 0.0009, 'C3': 0.00085}.get(tyre_compound, 0.0009)
+
+        rolling_component = k_rolling * load_kn
+        friction_component = k_friction * severity * slip * load_kn
+
+        wear_per_km = rolling_component + friction_component
+        wear_delta = wear_per_km * (dist_step / 1000.0)
+        tire_state.wear_pct += wear_delta
+
+        # Clamp
+        tire_state.surface_temp_c = max(20.0, min(150.0, tire_state.surface_temp_c))
+        tire_state.core_temp_c = max(20.0, min(130.0, tire_state.core_temp_c))
+        tire_state.wear_pct = min(100.0, tire_state.wear_pct)

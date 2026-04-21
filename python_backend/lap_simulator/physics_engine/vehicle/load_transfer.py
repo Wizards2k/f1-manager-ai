@@ -276,3 +276,91 @@ class LoadTransfer:
                 'load_rear_right_kn': self.state.load_rear_right,
             }
         }
+
+# ============================================================================
+# V6.3: Per-wheel load calculation (from waypoint_integrator.py)
+# ============================================================================
+def calculate_per_wheel_loads(
+    velocity_ms: float,
+    radius_m: float,
+    mass_kg: float,
+    f_downforce: float,
+    v_target_ms: float,
+    dt_step: float,
+    front_wing: float = 18.0,
+    rear_wing: float = 11.0,
+    circuit_id: str = "",
+) -> Dict[str, float]:
+    """
+    V6.3: Calculate per-wheel vertical load distribution.
+
+    Accounts for:
+    - Static load distribution (45% front, 55% rear)
+    - Downforce distribution (setup-dependent via wing angles)
+    - Lateral load transfer (cornering g-forces)
+    - Brake load transfer (deceleration)
+
+    Args:
+        velocity_ms: Current velocity [m/s]
+        radius_m: Corner radius [m], 999999 for straight
+        mass_kg: Total car mass [kg]
+        f_downforce: Aero downforce [N]
+        v_target_ms: Target velocity from corner model [m/s]
+        dt_step: Integration timestep [s]
+        front_wing: Front wing angle (lower = oversteer, reduces front DF)
+        rear_wing: Rear wing angle
+        circuit_id: Circuit ID for left-bias detection
+
+    Returns:
+        Dict with per-wheel loads [kN]: {'FL': ..., 'FR': ..., 'RL': ..., 'RR': ...}
+    """
+    # V6.3.5: Physically-realistic downforce distribution based on wing setup
+    wing_ratio = front_wing / max(1.0, rear_wing)
+    df_front_frac = 0.45 + 0.28 * (wing_ratio - 1.64)
+    df_front_frac = max(0.25, min(0.70, df_front_frac))
+    df_rear_frac = 1.0 - df_front_frac
+
+    # Static load per axle
+    static_load_front_kn = (mass_kg * 9.81 * 0.45) / 1000.0
+    static_load_rear_kn = (mass_kg * 9.81 * 0.55) / 1000.0
+
+    # Downforce distribution
+    df_front_kn = (f_downforce * df_front_frac) / 1000.0
+    df_rear_kn = (f_downforce * df_rear_frac) / 1000.0
+
+    # Lateral load transfer
+    lat_accel_g = (velocity_ms ** 2) / (radius_m * 9.81) if radius_m < 9999 else 0.0
+    lat_accel_g = min(3.5, lat_accel_g)
+    total_load_kn = (static_load_front_kn + static_load_rear_kn + (f_downforce / 1000.0))
+    H_CG_OVER_TRACK = 0.19
+    load_transfer_lateral_kn = (total_load_kn * lat_accel_g * H_CG_OVER_TRACK) / 2.0
+
+    # Brake load transfer
+    decel_g = 0.0
+    if v_target_ms < velocity_ms and dt_step > 0.001:
+        delta_v_ms = velocity_ms - v_target_ms
+        decel_g = (delta_v_ms / dt_step) / 9.81
+    decel_g = min(5.0, decel_g)
+    H_CG_OVER_L = 0.083
+    load_transfer_brake_kn = (total_load_kn * decel_g * H_CG_OVER_L) / 2.0
+
+    # Circuit-specific load transfer direction
+    is_left_bias = "monza" in circuit_id.lower()
+    lat_sign = -1.0 if is_left_bias else 1.0
+
+    # Per-wheel loads
+    load_fl_kn = (static_load_front_kn / 2.0 + df_front_kn / 2.0
+                  + lat_sign * load_transfer_lateral_kn + load_transfer_brake_kn)
+    load_fr_kn = (static_load_front_kn / 2.0 + df_front_kn / 2.0
+                  - lat_sign * load_transfer_lateral_kn + load_transfer_brake_kn)
+    load_rl_kn = (static_load_rear_kn / 2.0 + df_rear_kn / 2.0
+                  + lat_sign * load_transfer_lateral_kn - load_transfer_brake_kn)
+    load_rr_kn = (static_load_rear_kn / 2.0 + df_rear_kn / 2.0
+                  - lat_sign * load_transfer_lateral_kn - load_transfer_brake_kn)
+
+    return {
+        'FL': max(0.1, load_fl_kn),
+        'FR': max(0.1, load_fr_kn),
+        'RL': max(0.1, load_rl_kn),
+        'RR': max(0.1, load_rr_kn),
+    }

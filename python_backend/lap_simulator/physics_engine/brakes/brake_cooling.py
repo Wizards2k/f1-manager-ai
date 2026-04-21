@@ -229,3 +229,76 @@ class BrakeCooling:
             'tyre_heat_transfer': self.config.tyre_heat_transfer,
             'ambient_temp_c': self.ambient_temp,
         }
+
+# ============================================================================
+# V6.3: Brake thermal integration (from waypoint_integrator.py)
+# ============================================================================
+def update_brake_thermal(
+    brake_state,
+    velocity_ms: float,
+    mass_kg: float,
+    v_current_ms: float,
+    v_target_ms: float,
+    setup: Dict,
+    dt_step: float,
+) -> float:
+    """
+    Aggiorna lo stato termico dei freni e calcola il fade factor.
+
+    Estratto dal waypoint_integrator.py V6.3 per modularizzazione.
+
+    Args:
+        brake_state: oggetto BrakeState con temp_front_c/temp_rear_c
+        velocity_ms: velocità corrente [m/s]
+        mass_kg: massa auto [kg]
+        v_current_ms: velocità prima della frenata [m/s]
+        v_target_ms: velocità target dopo frenata [m/s]
+        setup: dict con brake_bias e brake_duct
+        dt_step: timestep di integrazione [s]
+
+    Returns:
+        fade_factor: 0.0-1.0 (1.0 = full fade)
+    """
+    if brake_state is None or v_current_ms <= v_target_ms:
+        return 0.0
+
+    # Joule dissipated
+    joules_dissipated = 0.5 * mass_kg * (v_current_ms ** 2 - v_target_ms ** 2)
+
+    # Brake heat distribution
+    brake_bias = setup.get('brake_bias', 0.55) if setup else 0.55
+    heat_front_kj = (joules_dissipated / 1000.0) * brake_bias
+    heat_rear_kj = (joules_dissipated / 1000.0) * (1.0 - brake_bias)
+
+    # Sub-step thermal integration
+    SUB_DT = 0.01
+    dt_braking = dt_step
+    N_SUBSTEPS = max(1, int(dt_braking / SUB_DT))
+    heat_per_substep_front = heat_front_kj / max(N_SUBSTEPS, 1)
+    heat_per_substep_rear = heat_rear_kj / max(N_SUBSTEPS, 1)
+
+    H_CONV_BASE = 15.0
+    C_TH_BRAKE = 2.5
+    T_AMBIENT = 20.0
+    brake_duct_opening = setup.get('brake_duct', 0.5) if setup else 0.5
+
+    for _ in range(N_SUBSTEPS):
+        temp_rise_front = heat_per_substep_front / C_TH_BRAKE
+        temp_rise_rear = heat_per_substep_rear / C_TH_BRAKE
+
+        h_conv_front = H_CONV_BASE * velocity_ms * (0.5 + brake_duct_opening)
+        q_cool_front_kj = h_conv_front * (brake_state.temp_front_c - T_AMBIENT) * SUB_DT / 1000.0
+
+        h_conv_rear = H_CONV_BASE * velocity_ms * 0.5
+        q_cool_rear_kj = h_conv_rear * (brake_state.temp_rear_c - T_AMBIENT) * SUB_DT / 1000.0
+
+        brake_state.temp_front_c = max(T_AMBIENT, brake_state.temp_front_c + temp_rise_front - q_cool_front_kj / C_TH_BRAKE)
+        brake_state.temp_rear_c = max(T_AMBIENT, brake_state.temp_rear_c + temp_rise_rear - q_cool_rear_kj / C_TH_BRAKE)
+
+    # Fade factor
+    FADE_THRESHOLD_C = 850.0
+    FADE_SENSITIVITY_C = 40.0
+    worst_brake_temp = max(brake_state.temp_front_c, brake_state.temp_rear_c)
+    fade_factor = max(0.0, min(1.0, (worst_brake_temp - FADE_THRESHOLD_C) / FADE_SENSITIVITY_C))
+
+    return fade_factor

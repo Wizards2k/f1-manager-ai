@@ -12,7 +12,7 @@ NOTA: Modulo V4 standalone, non dipende da codice V1
 """
 
 from dataclasses import dataclass
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 import numpy as np
 
 from .tyre_construction import TyreConstruction, TyreCompoundParams
@@ -300,3 +300,138 @@ class TyreGripModel:
             'wear': self.wear.get_summary(),
             'current_state': self.get_state(),
         }
+
+# ============================================================================
+# V6.3: Grip calculation from waypoint_integrator.py (extracted for modularization)
+# ============================================================================
+def compute_grip_forces(
+    mu_base: Dict[str, float],
+    tyre_compound: str,
+    aero_calibration: Optional[Dict],
+    reference_pull: Optional[Dict],
+    waypoint: Dict,
+    driver_skill: float,
+    suspension_effects: Optional[Dict[str, float]],
+    velocity_ms: float,
+    is_braking: bool,
+    is_throttle: bool,
+    f_downforce: float,
+    mass_kg: float,
+    radius_m: float,
+    is_corner: bool,
+) -> Dict[str, float]:
+    """
+    Calcola le forze di grip laterale e longitudinale.
+
+    Estratto dal waypoint_integrator.py V6.3 per modularizzazione.
+    Mantiene la stessa logica e costanti del codice originale.
+
+    Returns:
+        Dict con:
+        - mu_base_val: grip coefficient effettivo
+        - f_grip_total_lateral: N
+        - f_grip_total_longitudinal: N
+        - f_grip_total: N (selezionato in base a braking/throttle)
+        - v_max_corner_ms: m/s
+        - lat_load_factor: float
+        - long_load_factor: float
+        - load_sensitivity_k: float
+    """
+    import math
+
+    # Grip base dal compound
+    mu_base_val = mu_base.get(tyre_compound, 1.65)
+
+    # V5.0: mu_mechanical dalla calibrazione aero
+    aero_cal_mu_mechanical = None
+    if aero_calibration is not None:
+        aero_cal_mu_mechanical = aero_calibration.get("mu_mechanical")
+        if aero_cal_mu_mechanical is not None:
+            try:
+                aero_cal_mu_mechanical = float(aero_cal_mu_mechanical)
+            except (TypeError, ValueError):
+                aero_cal_mu_mechanical = None
+
+    if aero_cal_mu_mechanical is not None and aero_cal_mu_mechanical > 0:
+        calibration_compound = aero_calibration.get("calibration_compound", "C3") if aero_calibration else "C3"
+        cal_mu = mu_base.get(calibration_compound, 1.82)
+        target_mu = mu_base.get(tyre_compound, 1.65)
+        compound_ratio = target_mu / cal_mu if cal_mu > 0 else 1.0
+        mu_base_val = aero_cal_mu_mechanical * compound_ratio
+    elif reference_pull is not None:
+        ref_mu_mechanical = reference_pull.get("mu_mechanical", 0.0)
+        if 1.5 < ref_mu_mechanical < 2.0:
+            compound_scale = mu_base_val / mu_base.get(tyre_compound, 1.65)
+            mu_base_val = ref_mu_mechanical * compound_scale
+
+    # Track grip factor
+    track_grip_factor = waypoint.get('telemetry_mu', 1.0)
+    if track_grip_factor is not None and track_grip_factor > 0:
+        mu_base_val *= track_grip_factor
+
+    # Driver skill
+    mu_base_val *= driver_skill
+
+    # Suspension effects
+    susp_fx = suspension_effects or {}
+    mu_base_val *= susp_fx.get('mechanical_grip_factor', 1.0)
+
+    # Downforce e carico verticale
+    G = 9.80665
+    RHO_SEA_LEVEL = 1.225
+    dynamic_pressure = 0.5 * RHO_SEA_LEVEL * velocity_ms ** 2
+    f_vertical = mass_kg * G + f_downforce
+    f_vertical_kn = f_vertical / 1000.0
+
+    # Load sensitivity
+    load_sensitivity_k = 0.010
+    lat_load_factor = 1.0 - (load_sensitivity_k * f_vertical_kn)
+    lat_load_factor = max(0.75, min(1.0, lat_load_factor))
+    long_load_factor = 1.0 - (load_sensitivity_k * 0.5 * f_vertical_kn)
+    long_load_factor = max(0.85, min(1.0, long_load_factor))
+
+    # Grip totale laterale
+    f_grip_total_lateral = mu_base_val * f_vertical * lat_load_factor
+
+    # Corner grip penalty da ARB
+    corner_grip_penalty = susp_fx.get('corner_grip_penalty', 0.0)
+    if corner_grip_penalty > 0.0:
+        f_grip_total_lateral *= (1.0 - corner_grip_penalty)
+
+    # Grip totale longitudinale
+    f_grip_total_longitudinal = mu_base_val * f_vertical * long_load_factor
+
+    # Traction bonus (differenziale in uscita curva)
+    v_kph = velocity_ms * 3.6
+    steering_angle_deg = abs(waypoint.get('steering_angle_deg', 0.0))
+    if v_kph < 160.0 and steering_angle_deg < 25.0 and is_throttle and radius_m < 60.0 and radius_m > 0.0:
+        f_grip_total_longitudinal *= 1.20
+
+    # Selezione grip totale in base a braking/throttle
+    if is_braking:
+        braking_stability = susp_fx.get('braking_stability_factor', 1.0)
+        load_transfer_factor = 0.85 * braking_stability
+        f_grip_total = f_grip_total_longitudinal * load_transfer_factor
+    elif is_throttle:
+        load_transfer_factor = 1.05
+        f_grip_total = f_grip_total_longitudinal * load_transfer_factor
+    else:
+        f_grip_total = f_grip_total_lateral
+
+    # v_max_corner_ms
+    if is_corner:
+        cu = min(0.95, 0.35 + radius_m / 150.0)
+        v_max_corner_ms = math.sqrt(f_grip_total_lateral * cu * radius_m / mass_kg)
+    else:
+        v_max_corner_ms = 999.0
+
+    return {
+        'mu_base_val': mu_base_val,
+        'f_grip_total_lateral': f_grip_total_lateral,
+        'f_grip_total_longitudinal': f_grip_total_longitudinal,
+        'f_grip_total': f_grip_total,
+        'v_max_corner_ms': v_max_corner_ms,
+        'lat_load_factor': lat_load_factor,
+        'long_load_factor': long_load_factor,
+        'load_sensitivity_k': load_sensitivity_k,
+    }

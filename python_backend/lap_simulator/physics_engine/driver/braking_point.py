@@ -259,3 +259,106 @@ class BrakingPoint:
             'brake_bias': self.brake_bias,
             'optimal_braking_point': self.optimal_braking_point,
         }
+
+
+# ============================================================================
+# V6.0: Braking zones lookahead (from waypoint_integrator.py)
+# ============================================================================
+def analyze_circuit_profile(waypoints: List[Dict]) -> str:
+    """
+    Classifica il circuito in base al profilo dei raggi di curvatura.
+
+    Determina il tipo di circuito per applicare il safety factor appropriato:
+    - TIGHT: Monaco, Budapest (> 40% curve con r < 100m)
+    - MIXED: Suzuka, Barcelona (avg_r < 120m, ma non troppo tight)
+    - FAST: Silverstone, Monza, Spa (< 15% tight, avg_r > 150m)
+    - BALANCED: resto dei circuiti
+    - STRAIGHT: circuiti senza curve significative
+
+    Returns: tipo di circuito (str)
+    """
+    radii = [wp.get('radius_m', 999999.0) for wp in waypoints]
+    corners = [r for r in radii if r < 400.0]
+
+    if not corners:
+        return "STRAIGHT"
+
+    avg_radius = sum(corners) / len(corners)
+    tight_count = sum(1 for r in corners if r < 100.0)
+    tight_pct = (tight_count / len(corners)) * 100.0 if corners else 0.0
+
+    if tight_pct > 40:
+        return "TIGHT"
+    elif avg_radius < 120:
+        return "MIXED"
+    elif tight_pct < 15 and avg_radius > 150:
+        return "FAST"
+    else:
+        return "BALANCED"
+
+
+def get_safety_factor_v6(circuit_type: str, circuit_id: str) -> float:
+    """
+    Determina il safety factor per v_max_corner in base al tipo di circuito.
+    """
+    defaults = {
+        "TIGHT": 0.85,
+        "MIXED": 0.88,
+        "BALANCED": 0.88,
+        "FAST": 0.78,
+        "STRAIGHT": 0.92,
+    }
+
+    overrides = {
+        "mc-1929_monaco": 0.82,
+        "gb-1948_silverstone": 0.60,
+        "it-1922_monza": 0.60,
+        "be-1925_spa_francorchamps": 0.68,
+        "mx-1962_mexico_city": 0.82,
+        "jp-1962_suzuka": 0.85,
+        "es-1991_barcelona": 0.87,
+    }
+
+    if circuit_id in overrides:
+        return overrides[circuit_id]
+
+    return defaults.get(circuit_type, 0.88)
+
+
+def compute_braking_zones_v6(
+    waypoints: List[Dict],
+    v_max_corner: List[float],
+    max_brake_decel_g: float,
+) -> List[bool]:
+    """
+    V6.0 LOOKAHEAD: Identifica zone di frenata usando v_max_corner fisico.
+
+    Returns: List[bool] - True dove serve frenare
+    """
+    G = 9.80665
+    brake_needed = [False] * len(waypoints)
+    a_max = max_brake_decel_g * G
+
+    for i in range(len(waypoints) - 1):
+        v_current = v_max_corner[i]
+        lookahead_max = max(150.0, v_current * 4.0)
+        base_dist = waypoints[i].get('dist_m', 0.0)
+        must_brake_now = False
+
+        for j in range(i + 1, len(waypoints)):
+            wp_dist = waypoints[j].get('dist_m', 0.0)
+            dist_to_wp = wp_dist - base_dist
+            if dist_to_wp > lookahead_max:
+                break
+            v_target = v_max_corner[j]
+            if dist_to_wp < 1.0:
+                continue
+            a_needed = (v_current**2 - v_target**2) / (2.0 * dist_to_wp)
+            a_needed_with_margin = a_needed * 1.20
+            if a_needed_with_margin > a_max:
+                must_brake_now = True
+                break
+
+        brake_needed[i] = must_brake_now
+
+    return brake_needed
