@@ -1,0 +1,82 @@
+{
+  "mc-1929_monaco": {
+    "circuit_id": "mc-1929_monaco",
+    "lap_time_s": 69.531,
+    "v_max_kph": 288.9,
+    "v_min_kph": 40.4,
+    "v_avg_kph": 170.5,
+    "fuel_consumed_kg": 1.0574,
+    "waypoints_count": 696,
+    "avg_acceleration_ms2": 4.4853,
+    "max_brake_fade": 0.0,
+    "sector_times": [
+      21.167,
+      46.418,
+      1.947
+    ]
+  },
+  "it-1922_monza": {
+    "circuit_id": "it-1922_monza",
+    "lap_time_s": 78.671,
+    "v_max_kph": 374.9,
+    "v_min_kph": 82.1,
+    "v_avg_kph": 263.2,
+    "fuel_consumed_kg": 1.7196,
+    "waypoints_count": 1176,
+    "avg_acceleration_ms2": 4.5488,
+    "max_brake_fade": 0.0,
+    "sector_times": [
+      24.363,
+      50.932,
+      3.376
+    ]
+  },
+  "jp-1962_suzuka": {
+    "circuit_id": "jp-1962_suzuka",
+    "lap_time_s": 87.308,
+    "v_max_kph": 344.3,
+    "v_min_kph": 76.5,
+    "v_avg_kph": 238.9,
+    "fuel_consumed_kg": 1.7992,
+    "waypoints_count": 1185,
+    "avg_acceleration_ms2": 3.581,
+    "max_brake_fade": 0.0,
+    "sector_times": [
+      26.341,
+      54.826,
+      6.141
+    ]
+  },
+  "gb-1948_silverstone": {
+    "circuit_id": "gb-1948_silverstone",
+    "lap_time_s": 83.788,
+    "v_max_kph": 345.0,
+    "v_min_kph": 70.3,
+    "v_avg_kph": 250.1,
+    "fuel_consumed_kg": 1.8408,
+    "waypoints_count": 1189,
+    "avg_acceleration_ms2": 4.8373,
+    "max_brake_fade": 0.0,
+    "sector_times": [
+      26.115,
+      55.805,
+      1.869
+    ]
+  },
+  "es-1991_barcelona": {
+    "circuit_id": "es-1991_barcelona",
+    "lap_time_s": 71.607,
+    "v_max_kph": 340.1,
+    "v_min_kph": 77.6,
+    "v_avg_kph": 233.4,
+    "fuel_consumed_kg": 1.3947,
+    "waypoints_count": 954,
+    "avg_acceleration_ms2": 3.6423,
+    "max_brake_fade": 0.0,
+    "sector_times": [
+      18.359,
+      49.438,
+      3.81
+    ]
+  }
+}
