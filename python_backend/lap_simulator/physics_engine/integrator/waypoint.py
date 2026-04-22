@@ -60,6 +60,11 @@ def integrate_waypoint(
     tires_state: Optional['TiresState'] = None,
     slip_per_wheel: Optional[Dict[str, float]] = None,
     circuit_id: str = "",
+    # V6.4: DRS activation logic
+    drs_enabled: bool = True,
+    drs_gap_ahead_s: Optional[float] = None,
+    lap_number: int = 1,
+    is_safety_car: bool = False,
 ) -> PhysicsState:
     """
     Integra fisica per un singolo waypoint.
@@ -85,7 +90,24 @@ def integrate_waypoint(
     v_ref_kph = source_waypoint.get('v_ref_kph', waypoint.get('v_ref_kph', 200.0))
     throttle_pct = source_waypoint.get('throttle_pct', waypoint.get('throttle_pct', 0))
     brake_pct = source_waypoint.get('brake_pct', waypoint.get('brake_pct', 0))
-    drs_active = source_waypoint.get('drs_active', waypoint.get('drs_active', False))
+    # V6.4: DRS activation logic
+    # The waypoint 'drs_active' field marks DRS ZONES on the circuit.
+    # In a real race, DRS can only be activated when:
+    #   1. The car is in a DRS zone (waypoint flag)
+    #   2. The gap to the car ahead is < 1.0 seconds
+    #   3. It's not lap 1 (after start/restart)
+    #   4. Safety car is not active
+    # In qualifying/practice, DRS is always available in zones.
+    drs_zone = source_waypoint.get('drs_active', waypoint.get('drs_active', False))
+    if drs_zone and drs_enabled and lap_number > 1 and not is_safety_car:
+        # Race mode: DRS eligible only if within 1s gap to car ahead
+        if drs_gap_ahead_s is not None:
+            drs_active = drs_gap_ahead_s < 1.0
+        else:
+            # No gap info available (qualifying/practice): DRS always active in zones
+            drs_active = True
+    else:
+        drs_active = False
     section_kind = str((section_guidance or {}).get('kind') or '')
     if section_guidance:
         section_radius_m = section_guidance.get('radius_m')

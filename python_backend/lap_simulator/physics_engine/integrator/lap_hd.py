@@ -58,6 +58,13 @@ def integrate_lap_hd(
     pu_config: Optional[Dict] = None,
     initial_tire_temps: Optional[Dict[str, float]] = None,
     cumulative_tire_wear: Optional[Dict[str, float]] = None,
+    # V6.4: Fuel carryover for multi-lap stints
+    initial_fuel_kg: Optional[float] = None,
+    # V6.4: DRS activation logic
+    drs_enabled: bool = True,
+    drs_gap_ahead_s: Optional[float] = None,
+    lap_number: int = 1,
+    is_safety_car: bool = False,
 ) -> Dict[str, Any]:
     """
     Simula giro completo su circuito HD.
@@ -277,7 +284,16 @@ def integrate_lap_hd(
         brake_needed = None
 
     # V6.1 Degradation Modulo A: Peso dinamico carburante
-    current_mass_kg = mass_kg
+    # V6.4: If initial_fuel_kg is provided, compute mass from dry weight + fuel
+    # This enables multi-lap carryover where fuel decreases each lap.
+    # If not provided, use the legacy mass_kg parameter directly.
+    DRY_MASS_KG = 798.0  # F1 2025 minimum dry weight (no driver, no fuel)
+    if initial_fuel_kg is not None:
+        current_mass_kg = DRY_MASS_KG + initial_fuel_kg
+        fuel_at_lap_start_kg = initial_fuel_kg
+    else:
+        current_mass_kg = mass_kg
+        fuel_at_lap_start_kg = None
     total_fuel_consumed_kg = 0.0
     
     flow_map_multiplier = 1.0
@@ -342,6 +358,11 @@ def integrate_lap_hd(
             brake_needed=brake_needed,
             air_density=lap_air_density,
             circuit_id=circuit_id,
+            # V6.4: DRS activation
+            drs_enabled=drs_enabled,
+            drs_gap_ahead_s=drs_gap_ahead_s,
+            lap_number=lap_number,
+            is_safety_car=is_safety_car,
         )
         
         dt_s_step = state.time_s - prev_time_s
@@ -401,6 +422,8 @@ def integrate_lap_hd(
         "aero_setup": aero_setup,
         "aero_calibration": aero_calibration,
         "fuel_consumed_kg": total_fuel_consumed_kg,
+        # V6.4: Fuel carryover — fuel remaining at end of lap
+        "fuel_remaining_kg": (fuel_at_lap_start_kg - total_fuel_consumed_kg) if fuel_at_lap_start_kg is not None else None,
     }
     
     if pu_ctx is not None:

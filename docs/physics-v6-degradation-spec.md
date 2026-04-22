@@ -141,24 +141,20 @@ Al fine di introdurre questo layer di degradazione si raccomanda una pipeline in
 3. **Consumo Carburante:** Implementare una nuova funzione `compute_fuel_consumption(throttle_pct, engine_map, dt)` che sottragga grammi di carburante ad ogni waypoint basandosi sul flusso del carburante stabilito dalla mappa ICE.
 4. **Cleanup:** Rimuovere qualsiasi variabile `fuel_penalty_s` dal costrutto legacy `update_section.py` e `lap_simulator.py`.
 
-**⚠️ GAP IDENTIFICATO — Fuel Multi-Lap Carryover (V6.4-P0-3):**
+**✅ RISOLTO — Fuel Multi-Lap Carryover (V6.4-P0-3):**
 
-Il Modulo A è implementato **intra-lap** (consumo per waypoint, massa dinamica propagata) ma manca il **carryover inter-lap**:
+Il Modulo A è ora implementato **completamente** (intra-lap + inter-lap):
 
 | Aspetto | Stato | Dettaglio |
 |---|---|---|
 | Consumo intra-lap (per waypoint) | ✅ Implementato | `delta_fuel = max_flow_kg_ps * throttle_intensity * flow_map_multiplier * dt_s_step` |
 | Massa dinamica intra-lap | ✅ Implementato | `current_mass_kg` ridotto e propagato a `integrate_waypoint()` |
 | `fuel_consumed_kg` nel result | ✅ Presente | Nel dict di output di `integrate_lap_hd()` |
-| `fuel_remaining_kg` nel result | ❌ Mancante | Non calcolato né restituito |
-| Parametro `initial_fuel_kg` per carryover | ❌ Mancante | A differenza di `initial_tire_temps` e `cumulative_tire_wear` |
-| Test multi-lap usa consumo reale | ❌ No | `test_v63_comprehensive_validation.py` usa hardcoded `14.5 kg/lap` |
-
-**Lavori da fare per completare il Modulo A:**
-1. Aggiungere `fuel_remaining_kg` al result dict: `result["fuel_remaining_kg"] = current_mass_kg - MASS_DRY_KG - MASS_DRIVER_KG`
-2. Aggiungere parametro `initial_fuel_kg` a `integrate_lap_hd()` per carryover inter-lap (come `initial_tire_temps`)
-3. Aggiornare `run_stint()` in `test_v63_comprehensive_validation.py` per usare `fuel_consumed_kg` dal result invece di hardcoded `14.5 kg/lap`
-4. Aggiornare il Race Loop Orchestrator (P0-1) per gestire automaticamente il fuel carryover
+| `fuel_remaining_kg` nel result | ✅ V6.4 Aggiunto | `result["fuel_remaining_kg"] = initial_fuel_kg - total_fuel_consumed_kg` |
+| Parametro `initial_fuel_kg` per carryover | ✅ V6.4 Aggiunto | Come `initial_tire_temps`, calcola massa da `798.0 + initial_fuel_kg` |
+| Test multi-lap usa consumo reale | ✅ V6.4 Aggiornato | `simulate_stint()` usa `fuel_remaining_kg` dal result |
+| Race Loop Orchestrator | ✅ V6.4 Creato | `race_orchestrator.py` con `simulate_stint()` e `simulate_race()` |
+| DRS Activation Logic | ✅ V6.4 Aggiunto | DRS zone + gap < 1.0s + lap > 1 + no safety car |
 
 ### Modulo B: ERS e Engine Maps Switching
 
@@ -1437,11 +1433,11 @@ telemetry_point = {
 
 ### ❌ Da completare (V6.4)
 
-- [ ] **Fuel Multi-Lap Carryover (P0-3):** Aggiungere `fuel_remaining_kg` al result dict di `integrate_lap_hd()`
-- [ ] **Fuel Multi-Lap Carryover (P0-3):** Aggiungere parametro `initial_fuel_kg` a `integrate_lap_hd()` per carryover inter-lap
-- [ ] **Fuel Multi-Lap Carryover (P0-3):** Aggiornare `run_stint()` per usare `fuel_consumed_kg` reale invece di hardcoded `14.5 kg/lap`
+- [x] **Fuel Multi-Lap Carryover (P0-3):** Aggiungere `fuel_remaining_kg` al result dict di `integrate_lap_hd()`
+- [x] **Fuel Multi-Lap Carryover (P0-3):** Aggiungere parametro `initial_fuel_kg` a `integrate_lap_hd()` per carryover inter-lap
+- [x] **Fuel Multi-Lap Carryover (P0-3):** Aggiornare `run_stint()` per usare `fuel_consumed_kg` reale invece di hardcoded `14.5 kg/lap`
 - [ ] **Brake duct drag addition** to aero assembly (c_da_brake_duct = 0.005 * duct_opening_pct)
-- [ ] **Pit stop fuel refill** logic (fuel reset to specified amount, not just tire reset)
+- [x] **Pit stop fuel refill** logic (fuel reset to specified amount, not just tire reset)
 - [ ] **Telemetry: fuel_remaining** logging per waypoint (attualmente loggato solo fuel_consumed_kg totale)
-- [ ] **Race Loop Orchestrator (P0-1):** Creare `race_orchestrator.py` con carryover automatico (fuel + tires + brakes + PU)
-- [ ] **DRS Activation Logic (P0-2):** Logica automatica DRS basata su zone e gap al veicolo davanti
+- [x] **Race Loop Orchestrator (P0-1):** Creare `race_orchestrator.py` con carryover automatico (fuel + tires + brakes + PU)
+- [x] **DRS Activation Logic (P0-2):** Logica automatica DRS basata su zone e gap al veicolo davanti

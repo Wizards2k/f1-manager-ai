@@ -595,13 +595,13 @@ Completare prima dell'integrazione gameplay:
 
 Analisi completa dei gap rimanenti tra il motore fisico V6.3 e un prodotto giocabile. Classificati per priorità e impatto sul gameplay.
 
-#### 🔴 P0 — Critici per Race Simulation
+#### 🔴 P0 — Critici per Race Simulation ✅ COMPLETATI V6.4
 
-| # | Gap | Descrizione | Sforzo | Impatto Gameplay | Note Implementazione |
-|---|-----|-------------|--------|------------------|---------------------|
-| **V6.4-P0-1** | **Race Loop Orchestrator** | `integrate_lap_hd()` supporta carryover (`initial_tire_temps`, `cumulative_tire_wear`) ma non esiste un race loop orchestrato che gestisca automaticamente: fuel burn lap-per-lap, engine map switching (RACE→SC→RACE), pit stop con cambio gomme (reset temps/wear), degradazione progressiva prestazioni. Il test `test_v63_comprehensive_validation.py` ha un `run_stint()` manuale ma non è parte del motore. | Medio | **Critico** — senza questo non si può simulare una gara | Creare `race_orchestrator.py` con `simulate_stint(circuit, n_laps, setup, strategy)` che chiama `integrate_lap_hd()` per ogni giro con carryover automatico. |
-| **V6.4-P0-2** | **DRS Activation Logic** | Il modulo `rear_wing.py` ha `set_drs()` e `PhysicsState` ha `is_drs_active`, ma **non esiste logica automatica** che attiva/disattiva il DRS durante la simulazione. Il DRS viene letto passivamente dai waypoint (`wp.get('drs_active')`) senza strategia di attivazione basata su: prossimità al veicolo davanti (1s gap), zone DRS del circuito, session type (non attivo in practice/fpit). | Basso | **Alto** — DRS è essenziale per velocità rettilinei realistiche in gara | Aggiungere `drs_zones` ai circuiti JSON e logica di attivazione in `integrate_waypoint()` basata su gap al veicolo davanti e zona DRS. |
-| **V6.4-P0-3** | **Fuel Multi-Lap Carryover** | Il consumo carburante intra-lap è implementato (Modulo A: `current_mass_kg` ridotto per waypoint, `fuel_consumed_kg` nel result). Tuttavia **manca il carryover inter-lap**: (1) `fuel_remaining_kg` non è nel result dict, (2) non esiste parametro `initial_fuel_kg` per giro N+1 (a differenza di `initial_tire_temps` e `cumulative_tire_wear`), (3) il test `test_v63_comprehensive_validation.py` usa consumo hardcoded `14.5 kg/lap` invece del valore reale calcolato dal motore. | Basso | **Alto** — senza questo la massa iniziale del giro N+1 è errata | Aggiungere `fuel_remaining_kg` al result dict di `integrate_lap_hd()`, aggiungere parametro `initial_fuel_kg` per carryover, aggiornare `run_stint()` per usare il consumo reale. |
+| # | Gap | Descrizione | Sforzo | Impatto Gameplay | Status |
+|---|-----|-------------|--------|------------------|--------|
+| **V6.4-P0-1** | **Race Loop Orchestrator** | `integrate_lap_hd()` supporta carryover (`initial_tire_temps`, `cumulative_tire_wear`) ma non esiste un race loop orchestrato che gestisca automaticamente: fuel burn lap-per-lap, engine map switching (RACE→SC→RACE), pit stop con cambio gomme (reset temps/wear), degradazione progressiva prestazioni. | Medio | **Critico** | ✅ **Implementato** — `race_orchestrator.py` con `simulate_stint()` e `simulate_race()`, pit stop, fuel carryover, DRS |
+| **V6.4-P0-2** | **DRS Activation Logic** | Il modulo `rear_wing.py` ha `set_drs()` e `PhysicsState` ha `is_drs_active`, ma **non esiste logica automatica** che attiva/disattiva il DRS durante la simulazione. | Basso | **Alto** | ✅ **Implementato** — DRS zone + gap < 1.0s + lap > 1 + no safety car in `integrate_waypoint()` |
+| **V6.4-P0-3** | **Fuel Multi-Lap Carryover** | Il consumo carburante intra-lap è implementato ma **manca il carryover inter-lap**: `fuel_remaining_kg` non nel result, `initial_fuel_kg` mancante, test hardcoded. | Basso | **Alto** | ✅ **Implementato** — `initial_fuel_kg` param + `fuel_remaining_kg` in result + `simulate_stint()` usa consumo reale |
 
 #### 🟡 P1 — Importanti per Realismo e Gameplay
 
@@ -631,13 +631,13 @@ Analisi completa dei gap rimanenti tra il motore fisico V6.3 e un prodotto gioca
 #### Riepilogo Priorità
 
 ```
-🔴 P0 (Critico per gameplay):  Race Loop Orchestrator + DRS Logic + Fuel Carryover
+🔴 P0 (Critico per gameplay):  ✅ COMPLETATI V6.4 — Race Loop Orchestrator + DRS Logic + Fuel Carryover
 🟡 P1 (Importante per realismo): Weather Model + Damage Model + Multi-Param Optimizer
 🟢 P2 (Validazione):             CHECK SETUP Tests + TEST 6 Fix + Typology + Telemetry
 🔵 P3 (Visione futura):           Pit Strategy + Dynamic Weather + Compound Strategy
 ```
 
-**Raccomandazione:** Prima di dichiarare il motore "finalizzato per il gameplay", completare almeno i tre item P0 (Race Loop Orchestrator, DRS Logic e Fuel Carryover). Senza questi, il motore può simulare singoli giri (qualifying/practice) ma non può eseguire una gara completa — il fuel carryover è particolarmente critico perché la massa iniziale di ogni giro successivo determina direttamente grip, accelerazione e consumo.
+**V6.4 P0 Status:** ✅ Tutti e tre gli item P0 sono completati. Il motore può ora simulare gare complete con carryover automatico di fuel, tire state, DRS condizionale e pit stop. I prossimi item da implementare sono P1 (Weather, Damage, Optimizer).
 
 ### 7.5 Implementation Checklist (V6.1 & V6.2 Complete)
 
@@ -687,9 +687,9 @@ Analisi completa dei gap rimanenti tra il motore fisico V6.3 e un prodotto gioca
 - [x] **Preference test 24/24** mantenuto dopo tutti i fix
 
 **Deferred to V6.4 (vedi §7.4 per dettagli completi):**
-- [ ] 🔴 **V6.4-P0-1**: Race Loop Orchestrator (critico per gara)
-- [ ] 🔴 **V6.4-P0-2**: DRS Activation Logic (critico per rettilinei realistici)
-- [ ] 🔴 **V6.4-P0-3**: Fuel Multi-Lap Carryover (critico per massa corretta tra giri)
+- [x] 🔴 **V6.4-P0-1**: Race Loop Orchestrator (critico per gara) ✅ `race_orchestrator.py`
+- [x] 🔴 **V6.4-P0-2**: DRS Activation Logic (critico per rettilinei realistici) ✅ zone + gap logic
+- [x] 🔴 **V6.4-P0-3**: Fuel Multi-Lap Carryover (critico per massa corretta tra giri) ✅ `initial_fuel_kg` + `fuel_remaining_kg`
 - [ ] 🟡 **V6.4-P1-1**: Weather Model (pioggia, track temp, vento)
 - [ ] 🟡 **V6.4-P1-2**: Damage Model (aero loss, suspension damage)
 - [ ] 🟡 **V6.4-P1-3**: Multi-Parameter Setup Optimizer (Bayesian)
@@ -907,17 +907,17 @@ python scripts/recalibrate_mu_v60.py --quick
 
 **Documento:** Specifica Tecnica + Roadmap Integrata  
 **Redatto:** 2026-04-18  
-**Aggiornato:** 2026-04-20 (V6.3 Complete + Tire Degradation)  
-**Version:** 1.6 — **V6.3 FINAL + Gap Analysis V6.4: Finalization priorities defined**
+**Aggiornato:** 2026-04-22 (V6.4 P0 Complete — Race Simulation Ready)  
+**Version:** 1.7 — **V6.4 P0 COMPLETE: Race Loop Orchestrator + DRS Logic + Fuel Carryover**
 
-**Status:** ✅ **PRODUCTION-READY FOR SINGLE-LAP SIMULATION** | ⚠️ **THREE P0 GAPS FOR FULL RACE SIMULATION**
+**Status:** ✅ **PRODUCTION-READY FOR SINGLE-LAP + MULTI-LAP RACE SIMULATION**
 - ✅ V6.0.1 Physics Core: 24/24 lap time accuracy
 - ✅ V6.1 PU/ERS: 4 engine maps, FIA-compliant
 - ✅ V6.2 Altitude/Drag: ISA model, circuit-specific calibration
 - ✅ V6.3 Tire Degradation: Per-wheel thermal/wear, setup asymmetries
-- 🔴 V6.4-P0-1: Race Loop Orchestrator (critico per gara)
-- 🔴 V6.4-P0-2: DRS Activation Logic (critico per rettilinei realistici)
-- 🔴 V6.4-P0-3: Fuel Multi-Lap Carryover (critico per massa corretta tra giri)
+- ✅ V6.4-P0-1: Race Loop Orchestrator (`race_orchestrator.py` — `simulate_stint()`, `simulate_race()`)
+- ✅ V6.4-P0-2: DRS Activation Logic (zone + gap < 1.0s + lap > 1 + no safety car)
+- ✅ V6.4-P0-3: Fuel Multi-Lap Carryover (`initial_fuel_kg` + `fuel_remaining_kg`)
 
 **Final Metrics:**
 - Setup Congruence: **24/24** ✅

@@ -563,6 +563,8 @@ class PhysicsV4Setup:
             suspension_setup=setup.get("suspension"),
             ers_power_fraction=ers_power_fraction,
             pu_config=pu_config,
+            # V6.4: Fuel carryover — pass fuel load from setup
+            initial_fuel_kg=self.car.fuel.fuel_kg,
             verbose=verbose
         )
         

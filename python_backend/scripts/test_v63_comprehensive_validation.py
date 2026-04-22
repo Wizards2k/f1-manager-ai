@@ -1,6 +1,9 @@
 """
 V6.3 Comprehensive Validation Test Suite
 Tests all 6 critical scenarios for tire degradation model
+
+V6.4: Updated to use simulate_stint() from race_orchestrator for proper
+fuel carryover instead of hardcoded 14.5 kg/lap.
 """
 
 import sys
@@ -11,11 +14,64 @@ backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from lap_simulator.physics_engine.integrator.waypoint_integrator import integrate_lap_hd
+from lap_simulator.physics_engine.integrator.race_orchestrator import StintConfig, simulate_stint
 from lap_simulator.physics_engine.calibration.aero_calibration import get_aero_calibration
+
 
 def run_stint(circuit: str, compound: str, setup_config: Dict, fuel_start_kg: float = 110.0,
               stint_laps: int = 15) -> Dict:
-    """Run multi-lap stint with thermal carryover"""
+    """Run multi-lap stint with full state carryover (V6.4: uses race_orchestrator).
+
+    This replaces the old manual loop with hardcoded 14.5 kg/lap fuel consumption.
+    Now uses simulate_stint() which properly tracks fuel, tires, and DRS.
+    """
+    aero_calibration = get_aero_calibration(circuit)
+
+    config = StintConfig(
+        circuit_id=circuit,
+        compound=compound,
+        fuel_start_kg=fuel_start_kg,
+        stint_laps=stint_laps,
+        engine_map="RACE",
+        push_level=8,
+        aero_setup={
+            "front_wing": setup_config["front_wing"],
+            "rear_wing": setup_config["rear_wing"],
+        },
+        aero_calibration=aero_calibration,
+        driver_skill=1.0,
+        drs_enabled=True,
+    )
+
+    stint_result = simulate_stint(config)
+
+    if stint_result.error:
+        return {"error": stint_result.error}
+
+    # Convert StintResult to legacy format for test compatibility
+    lap_results = []
+    for lap in stint_result.lap_results:
+        lap_results.append({
+            "lap_num": lap["lap_num"],
+            "lap_time": lap["lap_time_s"],
+            "tire_temps": lap.get("tire_temps"),
+            "tire_wear": lap.get("tire_wear"),
+            "fuel": lap.get("fuel_remaining_kg", 0),
+        })
+
+    return {
+        "lap_results": lap_results,
+        "total_time": stint_result.total_time_s,
+        "final_wear": stint_result.final_tire_wear,
+    }
+
+
+def run_stint_legacy(circuit: str, compound: str, setup_config: Dict, fuel_start_kg: float = 110.0,
+                     stint_laps: int = 15) -> Dict:
+    """Legacy stint runner using integrate_lap_hd directly (for comparison/debugging).
+
+    Uses V6.4 initial_fuel_kg parameter for proper fuel carryover.
+    """
     aero_setup = {
         "front_wing": setup_config["front_wing"],
         "rear_wing": setup_config["rear_wing"],
@@ -25,18 +81,17 @@ def run_stint(circuit: str, compound: str, setup_config: Dict, fuel_start_kg: fl
     lap_results = []
     current_tire_temps = {"FL": 85.0, "FR": 85.0, "RL": 85.0, "RR": 85.0}
     cumulative_wear = {"FL": 0.0, "FR": 0.0, "RL": 0.0, "RR": 0.0}
+    current_fuel_kg = fuel_start_kg
     total_time = 0.0
 
     for lap_num in range(1, stint_laps + 1):
-        # Fuel consumption: ~14.5kg per lap at race pace
-        fuel_remaining = max(5.0, fuel_start_kg - (lap_num - 1) * 14.5)
         push_level = 5 if lap_num == 1 else 9
 
         try:
             result = integrate_lap_hd(
                 circuit_id=circuit,
                 aero_setup=aero_setup,
-                mass_kg=750.0 + fuel_remaining,  # Include fuel in mass
+                mass_kg=798.0 + current_fuel_kg,  # V6.4: dry mass + fuel
                 tyre_compound=compound,
                 driver_skill=1.0,
                 push_level=push_level,
@@ -45,11 +100,21 @@ def run_stint(circuit: str, compound: str, setup_config: Dict, fuel_start_kg: fl
                 pu_config={"engine_map": "RACE"},
                 initial_tire_temps=current_tire_temps,
                 cumulative_tire_wear=cumulative_wear,
+                initial_fuel_kg=current_fuel_kg,  # V6.4: fuel carryover
             )
 
             lap_time = result.get("lap_time_s", 0)
             current_tire_temps = result.get("final_tire_temps")
             cumulative_wear = result.get("cumulative_tire_wear")
+
+            # V6.4: Use fuel_remaining_kg from result instead of hardcoded estimate
+            fuel_remaining = result.get("fuel_remaining_kg")
+            if fuel_remaining is not None:
+                current_fuel_kg = fuel_remaining
+            else:
+                # Fallback: subtract consumed
+                current_fuel_kg -= result.get("fuel_consumed_kg", 0)
+
             total_time += lap_time
 
             lap_results.append({
@@ -57,7 +122,7 @@ def run_stint(circuit: str, compound: str, setup_config: Dict, fuel_start_kg: fl
                 "lap_time": lap_time,
                 "tire_temps": current_tire_temps,
                 "tire_wear": cumulative_wear,
-                "fuel": fuel_remaining,
+                "fuel": current_fuel_kg,
             })
         except Exception as e:
             return {"error": f"Lap {lap_num}: {type(e).__name__}: {str(e)[:100]}"}
