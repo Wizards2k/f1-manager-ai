@@ -1,9 +1,9 @@
 ---
-title: Physics Engine V6.3 - Specifica Tecnica e Funzionale
-date: 2026-04-21
-version: 1.6
+title: Physics Engine V6.4 - Specifica Tecnica e Funzionale
+date: 2026-04-22
+version: 1.7
 author: Claude Opus 4.7
-status: V6.3 COMPLETE + Gap Analysis V6.4 (Tire Degradation — 24/24 lap time accuracy — Finalization priorities defined)
+status: V6.4 P0 COMPLETE — Race Simulation Ready (P1: Weather + Damage + Optimizer next)
 ---
 
 # Physics Engine V6.2 — Specifica Completa
@@ -537,7 +537,7 @@ Conferma che K_FACTOR ha effetto quadratico coerente.
 
 Completare prima dell'integrazione gameplay:
 
-**Multi-lap Race Simulation:**
+**Multi-lap Race Simulation (✅ ora eseguibili con `simulate_stint()`):**
 - [ ] Test 1 qualifying lap + 3 race laps su **Monza** con setup ottimale
 - [ ] Verifica: qualifying lap è il più veloce, race laps sono più lenti ma dentro range
 - [ ] Verifica: coerenza lap-to-lap (lap 2 ≈ lap 3 con stessa degradazione)
@@ -551,6 +551,11 @@ Completare prima dell'integrazione gameplay:
 - [ ] **QUALIFY**: temperatura in rise (target 102°C threshold)
 - [ ] **RACE**: temperatura stabile mid-range (80–95°C)
 - [ ] **PRACTICE**: temperatura conservativa (< 80°C, priorità battery harvest)
+
+**DRS & Fuel Carryover (V6.4 P0 — ora implementati):**
+- [ ] Verifica DRS: attivo solo in zone + gap < 1.0s + lap > 1 + no safety car
+- [ ] Verifica fuel carryover: massa diminuisce correttamente lap-per-lap
+- [ ] Verifica pit stop: reset gomme, aggiunta fuel, cambio compound, penalità tempo
 
 **Multi-Circuit Spot Check (5 diverse categorie):**
 - [ ] **Monza** (FAST, 94.5% straights): QUALIFY optimal ~9°, time ~79–81s
@@ -832,27 +837,26 @@ python scripts/test_engine_maps.py --all
 python scripts/calibrate_v60_optimal_wings.py --quick
 ```
 
-**For V6.4 Work (P0 — Finalizzazione Gameplay):**
+**For V6.4 Work (P0 — ✅ COMPLETATO):**
 
-1. **Race Loop Orchestrator** — Creare `race_orchestrator.py` con `simulate_stint()` che chiama `integrate_lap_hd()` per ogni giro con carryover automatico (fuel burn, tire temps/wear, engine map switching, pit stop reset). Senza questo non si può simulare una gara.
-   - File: `lap_simulator/physics_engine/integrator/race_orchestrator.py`
-   - Prerequisito: `integrate_lap_hd()` già supporta `initial_tire_temps` e `cumulative_tire_wear`
+1. ✅ **Race Loop Orchestrator** — `race_orchestrator.py` con `simulate_stint()` e `simulate_race()`. Carryover automatico fuel, tires, DRS, pit stop.
+2. ✅ **DRS Activation Logic** — DRS attivo solo in zone + gap < 1.0s + lap > 1 + no safety car. Implementato in `waypoint.py`.
+3. ✅ **Fuel Multi-Lap Carryover** — `initial_fuel_kg` param + `fuel_remaining_kg` in result. Implementato in `lap_hd.py`.
 
-2. **DRS Activation Logic** — Aggiungere logica automatica DRS nel waypoint integrator basata su zone DRS del circuito e gap al veicolo davanti. Il modulo `rear_wing.py` ha già `set_drs()`.
-   - File: modificare `waypoint_integrator.py` + aggiungere `drs_zones` ai circuiti JSON
-   - Prerequisito: `rear_wing.py` DRS API già implementata
-
-3. **Fuel Multi-Lap Carryover** — Aggiungere `fuel_remaining_kg` al result dict di `integrate_lap_hd()`, aggiungere parametro `initial_fuel_kg` per carryover inter-lap (come `initial_tire_temps` per le gomme). Attualmente il consumo è calcolato intra-lap ma la massa iniziale del giro N+1 non è derivata dal consumo reale.
-   - File: modificare `waypoint_integrator.py` (result dict + nuovo parametro)
-   - Prerequisito: consumo carburante intra-lap già implementato (Modulo A)
-
-**For V6.4 Work (P1 — Realismo):**
+**For V6.4 Work (P1 — Realismo — PROSSIMO MILESTONE):**
 
 1. **Weather Model** — Creare `weather_model.py` con `WeatherState` (track_temp, ambient_temp, wind, rain) e modificare `mu_mechanical` e `air_density` di conseguenza. Aggiungere compound INTERMEDIATE e WET.
    
 2. **Damage Model** — Creare `damage_model.py` con `DamageState` (aero_damage_pct, suspension_damage_pct) e scaling progressivo su downforce e grip.
 
 3. **Multi-Parameter Optimizer** — Estendere grid search da FW/RW a sospensioni + fuel + compound. Algoritmo suggerito: Bayesian Optimization. Richiede "fuel-neutral" μ model.
+
+**For V6.4 Work (P2 — Validazione):**
+
+1. **CHECK SETUP Sensitivity Tests** — Fix Test 5 (Engine Map) che usa sempre `quali_deploy` e eseguire tutti e 6 i test.
+2. **TEST 6 Fix (Slip Limit)** — Investigare lo slip limit ambientale e aggiustare parametri.
+3. **Barcelona/Spa Typology Fix** — Considerare "race-weighted" optimization per circuiti tecnici.
+4. **Telemetry 24-Field E2E Validation** — Verificare tutti i 24 campi telemetry per ogni waypoint.
 
 ---
 
@@ -873,6 +877,11 @@ python scripts/calibrate_v60_optimal_wings.py --quick
 | `optimal_wings_v60.json` | V6.2b: Las Vegas time update 104.78s → 107.771s (drag fix) | 1dba87f |
 | `us-2023_las_vegas_aero_cal.json` | V6.2b: add aero.drag_index=1.20 (parasitic drag compensation) | 1dba87f |
 | `physics-engine-v6-specification.md` | V6.2 doc update: altitude fix, Mexico recal, Las Vegas root cause + solution | a4d169a, THIS |
+| `lap_hd.py` | V6.4: `initial_fuel_kg`, `drs_enabled`, `drs_gap_ahead_s`, `lap_number`, `is_safety_car` params + `fuel_remaining_kg` in result | 953e070 |
+| `waypoint.py` | V6.4: DRS conditional activation logic (zone + gap + lap + safety car) | 953e070 |
+| `race_orchestrator.py` | V6.4: NEW — `StintConfig`, `StintResult`, `simulate_stint()`, `simulate_race()` | 953e070 |
+| `car_setup.py` | V6.4: passes `initial_fuel_kg` from `FuelSetup` to `integrate_lap_hd()` | 953e070 |
+| `test_v63_comprehensive_validation.py` | V6.4: uses `simulate_stint()` instead of hardcoded 14.5 kg/lap | 953e070 |
 
 ---
 
@@ -926,4 +935,4 @@ python scripts/recalibrate_mu_v60.py --quick
 - Validation Tests: **5.5/6 PASS** ✅
 - Branch Status: **Merged to feature/lap-simulator-v6** ✅
 
-**Next Milestone:** V6.4 — Completare P0 (Race Loop + DRS + Fuel Carryover) per finalizzazione gameplay completa
+**Next Milestone:** V6.4 — Completare P1 (Weather Model + Damage Model + Multi-Param Optimizer) per realismo gameplay
