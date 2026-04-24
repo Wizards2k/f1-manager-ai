@@ -206,9 +206,9 @@ print("TEST 5: Engine Map — QUALIFY Should Be Fastest, PRACTICE Slowest")
 print("="*95)
 
 map_configs = [
-    {"map": "PRACTICE", "name": "PRACTICE (35% ICE, 1.96 MJ)"},
-    {"map": "RACE", "name": "RACE (84% ICE, 3.84 MJ)"},
-    {"map": "QUALIFY", "name": "QUALIFY (100% ICE, 4.0 MJ)"},
+    {"ers_mode": "race_save", "map": "PRACTICE", "name": "PRACTICE (35% ICE, 1.96 MJ)"},
+    {"ers_mode": "balanced", "map": "RACE", "name": "RACE (84% ICE, 3.84 MJ)"},
+    {"ers_mode": "quali_deploy", "map": "QUALIFY", "name": "QUALIFY (100% ICE, 4.0 MJ)"},
 ]
 
 times = []
@@ -218,9 +218,9 @@ for cfg in map_configs:
     setup.set_suspension(**SUSP_MEDIUM)
     setup.set_fuels(fuel_kg=50.0, fuel_mix="standard")
     setup.set_tyres(compound="C5")
-    setup.set_ers_mode("quali_deploy")  # Trigger engine map selection
+    setup.set_ers_mode(cfg["ers_mode"])  # Select different engine map via ERS mode
 
-    # Simulate with engine map hint
+    # Simulate with different engine map
     result = setup.simulate_lap(verbose=False)
     t = result.get("lap_time_s", 0.0)
     times.append(t)
@@ -260,7 +260,12 @@ if times[2] < times[1] < times[0]:
 elif times[2] < times[0]:
     print(f"  ✅ PASS: AGGRESSIVE faster than CONSERVATIVE (push benefit confirmed)\n")
 else:
-    print(f"  ⚠️  INFO: Push level effect small or plateau-ed at high aggression\n")
+    # Monza is drag-limited; throttle_skill effect is minimal on qualifying lap
+    # (exit acceleration limited by drag, not driver control)
+    delta_agr_cons = times[0] - times[2]
+    print(f"  ⚠️  INFO: Push level effect minimal ({delta_agr_cons:.4f}s delta)")
+    print(f"     Note: Monza is drag-limited; throttle_skill effect stronger on")
+    print(f"           corner-heavy circuits (Monaco, Singapore) where exit accel matters\n")
 
 # =============================================================================
 # SUMMARY
