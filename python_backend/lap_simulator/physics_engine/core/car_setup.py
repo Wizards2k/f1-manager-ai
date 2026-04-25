@@ -1,5 +1,5 @@
 """
-Physics V4 - Full Car Setup Interface
+Physics V6.4 - Full Car Setup Interface
 
 Interfaccia completa per configurare l'auto con parametri reali:
 - Assetto aero (ali, floor, sidepods)
@@ -10,7 +10,7 @@ Interfaccia completa per configurare l'auto con parametri reali:
 - Carburante (fuel load per sessione)
 
 Usage:
-    from lap_simulator.physics_engine import PhysicsV4Setup, TeamDriverLoader
+    from lap_simulator.physics_engine import PhysicsV6Setup, TeamDriverLoader
     
     # Carica dati McLaren + Norris
     loader = TeamDriverLoader()
@@ -18,7 +18,7 @@ Usage:
     norris = loader.get_driver("Lando Norris")
     
     # Configura auto per qualifica Monza
-    setup = PhysicsV4Setup(
+    setup = PhysicsV6Setup(
         team_data=mclaren,
         driver_data=norris,
         circuit="it-1922_monza",
@@ -233,12 +233,15 @@ def real_to_slider(param: str, real_value: float) -> float:
     return inversions[param](real_value)
 
 
-class PhysicsV4Setup:
+class PhysicsV6Setup:
     """
-    Builder e interfaccia per configurazioni auto realistiche.
+    Builder e interfaccia per configurazioni auto realistiche (V6.4).
+    
+    Renamed from PhysicsV4Setup — the V4 naming was outdated since V6.0.
+    PhysicsV4Setup is available as a backward-compatible alias.
     
     Usage:
-        setup = PhysicsV4Setup(
+        setup = PhysicsV6Setup(
             team_data=mclaren,
             driver_data=norris,
             circuit="it-1922_monza",
@@ -578,3 +581,11 @@ class PhysicsV4Setup:
         result["aero_calibration"] = aero_calibration
 
         return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Backward-compatible alias
+# ─────────────────────────────────────────────────────────────────────────────
+# PhysicsV4Setup was the original name. Renamed to PhysicsV6Setup in V6.4
+# to reflect the actual engine version. The old name still works.
+PhysicsV4Setup = PhysicsV6Setup

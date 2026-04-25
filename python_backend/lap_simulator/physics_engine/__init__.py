@@ -1,5 +1,5 @@
 """
-Physics Engine V4 - Newtonian Physics Simulator for F1 2025
+Physics Engine V6.4 - Newtonian Physics Simulator for F1 2025
 
 Motore fisico completamente indipendente da V1/V2/V3.
 Simula le forze fisiche reali (Newton, kg, m/s²) senza penalty empiriche.
@@ -7,7 +7,7 @@ Simula le forze fisiche reali (Newton, kg, m/s²) senza penalty empiriche.
 Il tempo sul giro EMERGE dalla simulazione fisica, non è un riferimento + aggiustamenti.
 """
 
-__version__ = "4.0.0"
+__version__ = "6.4.0"
 __author__ = "F1 Manager AI Development Team"
 
 # Core modules
@@ -62,7 +62,8 @@ from .core.team_driver_data import (
 
 # Car Setup
 from .core.car_setup import (
-    PhysicsV4Setup,
+    PhysicsV6Setup,
+    PhysicsV4Setup,  # Backward-compatible alias for PhysicsV6Setup
     CarSetup,
     AeroSetup,
     SuspensionSetup,
