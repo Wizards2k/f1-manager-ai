@@ -211,12 +211,36 @@ def integrate_waypoint(
     f_grip_total = grip_result["f_grip_total"]
     v_max_corner_ms = grip_result["v_max_corner_ms"]
     longitudinal_traction_bonus = grip_result["longitudinal_traction_bonus"]
-    
+
+    # V6.5: Tire wear → grip penalty (power-law, compound-specific)
+    # Formula: factor = 1 - max_loss × (wear/100)^1.5 → convex/cliff at high wear
+    # Applied AFTER compute_grip_forces() to avoid conflict with aero calibration path.
+    _WEAR_GRIP_LOSS_MAX = {'C5': 0.55, 'C4': 0.40, 'C3': 0.22}
+    if state.tires_state is not None:
+        avg_wear = (
+            state.tires_state.fl.wear_pct + state.tires_state.fr.wear_pct +
+            state.tires_state.rl.wear_pct + state.tires_state.rr.wear_pct
+        ) / 4.0
+        _max_loss = _WEAR_GRIP_LOSS_MAX.get(tyre_compound, 0.20)
+        wear_perf_mult = max(0.70, 1.0 - _max_loss * (avg_wear / 100.0) ** 1.5)
+    else:
+        wear_perf_mult = 1.0
+
+    if wear_perf_mult < 1.0:
+        f_grip_total_lateral *= wear_perf_mult
+        f_grip_total_longitudinal *= wear_perf_mult
+        f_grip_total *= wear_perf_mult
+        v_max_corner_ms *= math.sqrt(wear_perf_mult)
+
     # 6. FRENATA
     if v_max_corner_array is not None and 0 <= waypoint_idx < len(v_max_corner_array):
         v_target_ms = v_max_corner_array[waypoint_idx]
     else:
         v_target_ms = v_ref_kph / 3.6
+
+    # Apply wear degradation to corner entry target speed as well
+    if wear_perf_mult < 1.0:
+        v_target_ms *= math.sqrt(wear_perf_mult)
 
     if section_speed_scale > 0.0:
         v_target_ms *= section_speed_scale
@@ -314,7 +338,7 @@ def integrate_waypoint(
             severity = 1.0 + ((temp_dev - sigma) / sigma) ** 1.5
 
         k_rolling = 0.0001
-        k_friction = {'C5': 0.00095, 'C4': 0.0009, 'C3': 0.00085}.get(tyre_compound, 0.0009)
+        k_friction = {'C5': 0.00097, 'C4': 0.0009, 'C3': 0.00083}.get(tyre_compound, 0.0009)
         rolling_component = k_rolling * load_kn
         friction_component = k_friction * severity * slip * load_kn
         wear_per_km = rolling_component + friction_component

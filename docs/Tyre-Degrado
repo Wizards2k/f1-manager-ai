@@ -1,0 +1,63 @@
+Hai perfettamente ragione: il tuo intuito tecnico colpisce nel segno. Se il tuo simulatore mostra tempi migliori con gomma al 60% rispetto a gomma nuova solo per via del minor peso, significa che il **"Crossover Point"** tra vantaggio del peso e svantaggio del degrado è sbilanciato.
+
+In F1, la benzina ti rende più veloce, ma il degrado della gomma ti rende "più lento" in modo non lineare. Ecco l'analisi fisica di come devi bilanciare questi due fattori nel Motore V3.
+
+---
+
+### 1. Il Delta Benzina (Il vantaggio)
+A Monza, 10 kg di benzina valgono circa **0.35s - 0.40s**. 
+* Se parti con 100 kg e arrivi a fine gara con 5 kg, hai guadagnato circa **3.5 - 3.8 secondi** di pura performance meccanica (l'auto accelera più forte e frena in meno spazio).
+
+### 2. Il Delta Gomma (Lo svantaggio)
+Il degrado non è solo "consumo del battistrada", ma è diviso in due componenti che devi sommare:
+
+* **Degrado Meccanico (Grip Coefficient $\mu$):** Man mano che la gomma si consuma, il coefficiente di attrito cala. Una gomma al 60% ha perso il "picco" chimico.
+* **Degrado Termico (Overheating):** Una gomma usurata ha meno spessore di gomma (battistrada). Meno gomma significa meno massa per dissipare il calore. Quindi, una gomma al 60% **surriscalda molto più velocemente** di una nuova, portandoti fuori dalla finestra di esercizio.
+
+
+
+---
+
+### 3. Perché il tuo modello sta "sbagliando"? (Il Crossover Point)
+
+In una simulazione realistica 2025, il degrado deve quasi sempre **superare** il vantaggio della benzina dopo una certa soglia.
+
+| Fase di Gara | Effetto Benzina (s) | Effetto Gomma (s) | Netto (Delta Laptime) |
+| :--- | :--- | :--- | :--- |
+| **Giro 1 (Pieno)** | +3.50 (Lenta) | 0.00 (Max Grip) | +3.50s |
+| **Giro 15** | +2.80 | +0.60 | +3.40s (Migliora) |
+| **Giro 30 (60% Usura)**| +1.50 | +2.50 | **+4.00s (Peggiora!)** |
+
+**Il problema nel tuo codice:** Se il tempo scende sempre, il tuo coefficiente di degrado $\mu$ è troppo basso o lineare. Il degrado della gomma deve essere **esponenziale** o avere un "cliff" (gradino).
+
+---
+
+### 4. Come correggere il Motore V3
+
+Nel tuo `tyre_model.py`, non usare una sottrazione fissa. Usa un moltiplicatore di grip basato sull'usura ($W$):
+
+$$\mu_{current} = \mu_{new} \cdot (1 - K_{deg} \cdot W^2)$$
+
+* Elevando l'usura ($W$) al quadrato, i primi giri l'impatto è minimo (la benzina vince), ma superato il 40-50% di usura, il valore di $\mu$ crolla drasticamente. 
+
+#### Esempio pratico nel simulatore:
+1. **Giro 1:** Peso 800kg, $\mu = 1.6$. Tempo: 1:22.0
+2. **Giro 40:** Peso 710kg (Vantaggio!), ma $\mu = 1.3$ (Perdita grip del 20%).
+3. **Risultato:** Anche se l'auto è leggera, non può scaricare la potenza a terra e deve fare le curve molto più lentamente. Il tempo deve salire a 1:24.0.
+
+---
+
+### 5. Specifiche per i circuiti richiesti (Il "Tipping Point")
+
+Ecco quando il degrado dovrebbe iniziare a vincere sulla benzina nel tuo motore V3:
+
+* **Monza:** Molto tardi. Essendo un circuito di trazione e rettilinei, il peso conta tantissimo. Qui è possibile vedere tempi costanti per molti giri.
+* **Suzuka:** Molto presto. Il grip laterale è tutto. Dopo 10-12 giri, anche se l'auto è più leggera, le gomme "finite" ti fanno perdere 2 secondi nel solo primo settore.
+* **Barcellona:** Idem come Suzuka. Il degrado è così alto che il vantaggio del peso viene cancellato dopo soli 8-10 giri di Soft.
+
+
+
+### Il consiglio per il tuo file `physics-engine-v3-spec.md`:
+Aggiungi una funzione di **"Grip Cliff"**. Quando l'usura supera il 70%, riduci il grip di un ulteriore 10% istantaneamente. Questo simula la gomma che arriva alla tela/struttura, rendendo impossibile fare tempi record.
+
+**Vuoi che ti scriva la formula esatta da inserire nel calcolo del `target_g_lat` per far sì che la gomma usurata "molli" prima della benzina?**

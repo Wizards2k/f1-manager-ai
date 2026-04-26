@@ -1,0 +1,72 @@
+Le strategie di stint in F1 sono variate leggermente con il cambio di asfalto di alcuni circuiti, ma per il 2025 i pattern si sono consolidati attorno alla gestione termica e alla sensibilità al peso che abbiamo analizzato nei documenti precedenti.
+
+Ecco una disamina delle strategie più utilizzate per i circuiti richiesti, basata su dati storici recenti e proiezioni tecniche per le vetture 2025.
+
+---
+
+## 1. Monza (Tempio della Velocità)
+A Monza la strategia è quasi sempre **One-Stop** a causa dell'altissima perdita di tempo in pit-lane (circa 24-25 secondi) e della difficoltà di superare nonostante il DRS.
+
+* **Strategia Standard:** **C3 (Soft/Medium) → C2 (Hard)**
+    * **Stint 1:** Giri 18-22.
+    * **Stint 2:** Fino alla fine (Giro 53).
+* **Variante:** Se l'asfalto è molto caldo (oltre 45°C), alcuni team tentano la doppia sosta Soft-Medium-Hard, ma solo se hanno un vantaggio di velocità tale da recuperare il tempo perso.
+
+## 2. Suzuka (Giappone)
+Suzuka è un circuito "High Energy" (Severità 5 nella nostra tabella). L'usura laterale nelle S-Curves rende quasi obbligatoria la **Doppia Sosta**.
+
+* **Strategia Standard:** **C3 (Soft) → C2 (Hard) → C2 (Hard)** o **C3 → C2 → C3**
+    * **Stint 1:** Molto breve (Giri 12-16) per scaricare il peso benzina iniziale.
+    * **Stint 2:** Consolidamento con la Hard.
+    * **Stint 3:** Sprint finale.
+* **Nota:** Qui il "Degrado Termico" (Bulk Temperature) è il fattore limitante; chi gestisce meglio le anteriori nel primo settore vince la gara.
+
+
+
+## 3. San Paolo (Interlagos)
+Il Brasile è imprevedibile per via del meteo, ma su pista asciutta la strategia è orientata sulle **Due Soste** a causa della trazione richiesta in salita e della brevità del giro, che permette di recuperare tempo con gomma fresca.
+
+* **Strategia Standard:** **C4 (Medium) → C3 (Hard) → C4 (Medium)**
+    * **Stint 1:** Giri 18-24.
+    * **Stint 2:** Stint centrale lungo sulla Hard.
+    * **Stint 3:** Ultimi 15-20 giri all'attacco con la Medium.
+* **Caratteristica:** La pit-lane è corta, il che incoraggia le strategie multi-stop.
+
+## 4. Austin (COTA)
+Il circuito delle Americhe è estremamente severo a causa dei dossi (bumpiness) e delle temperature elevate. La **Doppia Sosta** è la norma.
+
+* **Strategia Standard:** **C3 (Medium) → C2 (Hard) → C3 (Medium)**
+    * **Stint 1:** Giri 14-18.
+    * **Stint 2:** Stint centrale sulla Hard (fondamentale per la fase di clipping termico ERS).
+    * **Stint 3:** Finale su Medium.
+* **Fattore Chiave:** L'ingresso ai box è molto rapido, rendendo la sosta meno "punitiva" rispetto a Monza.
+
+
+
+## 5. Barcellona (Montmeló)
+Il circuito di riferimento per i test. Qui si vede la vera efficienza aerodinamica. La severità è alta (Livello 5) e la strategia dominante è la **Doppia Sosta**.
+
+* **Strategia Standard:** **C3 (Soft) → C2 (Medium) → C1 (Hard)**
+    * **Stint 1:** Breve (Giri 12-15) per evitare il "cliff" della Soft.
+    * **Stint 2:** Giri 15-40.
+    * **Stint 3:** Finale sulla Hard o una seconda Medium se il degrado è gestibile.
+* **Nota:** La curva 3 e la curva 9 distruggono la gomma anteriore sinistra. La strategia ruota interamente attorno al risparmio di quella specifica copertura.
+
+---
+
+### 📊 Tabella Riassuntiva Strategie
+
+| Circuito | Soste Tipiche | Mescola Start | Mescola Centrale | Mescola Finale |
+| :--- | :---: | :---: | :---: | :---: |
+| **Monza** | 1 | Soft/Medium | Hard | - |
+| **Suzuka** | 2 | Soft | Hard | Hard/Medium |
+| **San Paolo** | 2 | Medium | Hard | Medium |
+| **Austin** | 2 | Medium | Hard | Medium |
+| **Barcellona** | 2 | Soft/Medium | Medium | Hard |
+
+### Come applicare questo al tuo Motore V3?
+Per rendere il simulatore realistico, quando calcoli il tempo di una sezione nel file `it-1922_monza_HD.json`, devi applicare il **Coefficiente di Degrado** che abbiamo definito nel documento termico.
+* Se un pilota è al **Giro 20** a Monza con le Soft, il suo `tyre_mu` (grip) deve essere inferiore del **3-4%** rispetto al Giro 1.
+* Se non effettua il cambio gomme, il tuo simulatore dovrebbe vedere il tempo salire drasticamente fino al "Cliff" (crollo prestazionale).
+
+Vuoi che integriamo una variabile `lap_number` nel tuo `integrator.py` per calcolare automaticamente la perdita di grip basata su queste strategie?
