@@ -26,6 +26,38 @@ from integrator.drag import compute_total_drag
 from integrator.grip import compute_grip_forces
 from integrator.state import PhysicsState
 
+# V6.7: Per-circuit wear severity multiplier.
+# Scales wear_per_km to reflect circuit-specific tyre stress (lateral loads,
+# abrasive asphalt, braking density). Baseline = 1.0 (Suzuka reference).
+# Lower values → easier on tyres (Monza, Monaco, Baku, Las Vegas)
+# Higher values → harder on tyres (Barcelona, Hungary, Zandvoort)
+_CIRCUIT_WEAR_SEVERITY = {
+    "it-1922_monza":          0.70,  # long straights, light corners
+    "us-2023_las_vegas":      0.70,  # very long straights, few real corners
+    "mc-1929_monaco":         0.75,  # slow corners, no sustained high-G
+    "az-2016_baku":           0.80,  # long straights, few meaningful corners
+    "sa-2021_jeddah":         0.85,  # fast flowing, less sustained loads
+    "mx-1962_mexico_city":    0.85,  # high altitude, reduced aero/load
+    "be-1925_spa_francorchamps": 0.90,  # long straights offset high-speed sectors
+    "ca-1978_montreal":       0.90,  # semi-street, moderate
+    "ae-2009_yas_marina":     0.95,  # mix of low-speed and straights
+    "sg-2008_singapore":      0.95,  # street circuit, varied
+    "au-1953_melbourne":      1.00,  # balanced baseline
+    "cn-2004_shanghai":       1.00,  # long T1, moderate stress
+    "jp-1962_suzuka":         1.00,  # reference high-energy circuit
+    "us-2022_miami":          1.00,  # medium severity
+    "at-1969_spielberg":      1.05,  # short lap, medium-high loads
+    "br-1940_sao_paulo":      1.05,  # traction demands, varied
+    "it-1953_imola":          1.05,  # high-speed, some sustained corners
+    "bh-2002_sakhir":         1.10,  # abrasive, sustained turn loads
+    "es-1991_barcelona":      1.10,  # sustained high-G, abrasive surface
+    "qa-2004_lusail":         1.10,  # high-G flowing layout
+    "gb-1948_silverstone":    1.15,  # Copse, Maggots-Becketts lateral loads
+    "us-2012_austin":         1.15,  # bumpy, high lateral loads S1
+    "nl-1948_zandvoort":      1.20,  # banked corners, continuous lateral loads
+    "hu-1986_budapest":       1.25,  # twisty, many corners, lots of steering
+}
+
 
 def integrate_waypoint(
     state: PhysicsState,
@@ -342,6 +374,7 @@ def integrate_waypoint(
         rolling_component = k_rolling * load_kn
         friction_component = k_friction * severity * slip * load_kn
         wear_per_km = rolling_component + friction_component
+        wear_per_km *= _CIRCUIT_WEAR_SEVERITY.get(circuit_id, 1.0)
         wear_delta = wear_per_km * (dist_step / 1000.0)
         tire_state.wear_pct += wear_delta
 
