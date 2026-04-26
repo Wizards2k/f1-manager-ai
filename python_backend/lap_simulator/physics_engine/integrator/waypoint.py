@@ -281,6 +281,14 @@ def integrate_waypoint(
     front_wing = float(setup.get("front_wing", 18.0))
     rear_wing = float(setup.get("rear_wing", 11.0))
 
+    # V6.7: Aero imbalance factor — deviation from neutral (df_front=0.45 at ratio≈1.64)
+    # An unbalanced setup forces higher slip angles on the overloaded axle.
+    # positive → understeer (front overloaded), negative → oversteer (rear overloaded)
+    _wing_ratio = front_wing / max(1.0, rear_wing)
+    _df_front_frac = max(0.25, min(0.70, 0.45 + 0.28 * (_wing_ratio - 1.64)))
+    _AERO_IMBALANCE_SLIP_K = 0.25  # slip added per unit imbalance (max ~±0.06 at extremes)
+    _aero_imbalance = _df_front_frac - 0.45
+
     import importlib
     parent_pkg = 'lap_simulator.physics_engine'
     lt = importlib.import_module(f"{parent_pkg}.vehicle.load_transfer")
@@ -371,6 +379,12 @@ def integrate_waypoint(
 
         k_rolling = 0.0001
         k_friction = {'C5': 0.00097, 'C4': 0.0009, 'C3': 0.00083}.get(tyre_compound, 0.0009)
+        # V6.7: Aero imbalance penalty — unbalanced setup forces slip on overloaded axle
+        _is_front = wheel_name in ('FL', 'FR')
+        if _is_front and _aero_imbalance > 0:
+            slip = min(1.0, slip + _aero_imbalance * _AERO_IMBALANCE_SLIP_K)
+        elif not _is_front and _aero_imbalance < 0:
+            slip = min(1.0, slip + abs(_aero_imbalance) * _AERO_IMBALANCE_SLIP_K)
         rolling_component = k_rolling * load_kn
         friction_component = k_friction * severity * slip * load_kn
         wear_per_km = rolling_component + friction_component
