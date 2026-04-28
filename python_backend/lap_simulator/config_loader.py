@@ -96,7 +96,42 @@ def _parse_section(raw: Dict[str, Any]) -> SectionContext:
     v_exit = raw.get("v_exit_kph", raw.get("v_exit", 0.0))
     v_min = raw.get("v_min_kph", raw.get("v_min", 0.0))
     v_max = raw.get("v_max_kph", raw.get("v_max", 0.0))
-    avg_speed = raw.get("avg_speed_kph", raw.get("avg_speed", 200))
+    
+    # Calculate avg_speed from available data
+    avg_speed_raw = raw.get("avg_speed_kph", raw.get("avg_speed", None))
+    if avg_speed_raw is not None:
+        avg_speed = avg_speed_raw
+    else:
+        # Fallback: calculate from dt_ref and length
+        dt_ref = raw.get("dt_ref_s", raw.get("dt_ref", None))
+        if dt_ref is not None and length > 0:
+            avg_speed = (length / dt_ref) * 3.6  # Convert from m/s to kph
+        elif v_entry > 0 and v_exit > 0:
+            # Use geometric mean for better estimation
+            avg_speed = (v_entry * v_exit) ** 0.5
+        elif v_min > 0 and v_max > 0:
+            avg_speed = (v_min + v_max) / 2
+        else:
+            # Last fallback: estimate from kind
+            kind_raw = raw.get("kind", raw.get("section_kind", "Straight"))
+            if "Straight" in kind_raw:
+                avg_speed = 300.0  # High speed straight
+            elif "Corner" in kind_raw:
+                if "VerySlow" in kind_raw:
+                    avg_speed = 60.0
+                elif "Slow" in kind_raw:
+                    avg_speed = 100.0
+                elif "Medium" in kind_raw:
+                    avg_speed = 160.0
+                elif "Fast" in kind_raw:
+                    avg_speed = 220.0
+                elif "UltraFast" in kind_raw:
+                    avg_speed = 280.0
+                else:
+                    avg_speed = 140.0
+            else:
+                avg_speed = 200.0
+    
     braking_energy = raw.get("braking_energy_mj", raw.get("braking_energy", 0.0))
     
     # Calculate braking energy if not available (for HD files)

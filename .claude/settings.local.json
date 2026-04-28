@@ -4,7 +4,20 @@
       "Bash(git checkout:*)",
       "Bash(npm run:*)",
       "Bash(python3)",
-      "Bash(python3 -c ':*)"
+      "Bash(python3 -c ':*)",
+      "Bash(python scripts/validate_v53.py --quick)",
+      "Bash(\"d:/Svilupppo/F1Manager2025/f1-manager-ai/.venv/Scripts/python.exe\" scripts/validate_v53.py --quick)",
+      "Bash(\"d:/Svilupppo/F1Manager2025/f1-manager-ai/.venv/Scripts/python.exe\" -c \"print\\('hello'\\)\")",
+      "Bash(\"d:/Svilupppo/F1Manager2025/f1-manager-ai/.venv/Scripts/python.exe\" -u scripts/validate_v53.py --quick)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(\"d:/Svilupppo/F1Manager2025/f1-manager-ai/.venv/Scripts/python.exe\" -c \"import sys; print\\(sys.version\\); sys.path.insert\\(0, '.'\\); from lap_simulator.physics_v4.integrator.waypoint_integrator import integrate_lap_hd; print\\('import OK'\\)\")",
+      "Bash(ls -la validate_*.log)",
+      "Bash(\"d:/Svilupppo/F1Manager2025/f1-manager-ai/.venv/Scripts/python.exe\" -c \"import os; [print\\(f, os.path.getsize\\(f\\)\\) for f in ['validate_out.log','validate_err.log']]\")",
+      "Bash(d:/Svilupppo/F1Manager2025/f1-manager-ai/.venv/Scripts/python.exe -u -c ':*)",
+      "Bash(PYTHONIOENCODING=utf-8 \"d:/Svilupppo/F1Manager2025/f1-manager-ai/.venv/Scripts/python.exe\" -u scripts/validate_v53.py --quick)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(d:/Svilupppo/F1Manager2025/f1-manager-ai/.venv/Scripts/python.exe -c ':*)",
+      "Bash(d:/Svilupppo/F1Manager2025/f1-manager-ai/.venv/Scripts/python.exe -X utf8 -c ':*)"
     ]
   }
 }
