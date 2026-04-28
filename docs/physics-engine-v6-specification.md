@@ -936,3 +936,37 @@ python scripts/recalibrate_mu_v60.py --quick
 - Branch Status: **Merged to feature/lap-simulator-v6** ✅
 
 **Next Milestone:** V6.4 — Completare P1 (Weather Model + Damage Model + Multi-Param Optimizer) per realismo gameplay
+
+---
+
+## 10. V6.5 — Game Integration (Opzione A+ Per-Sezione)
+
+**Status:** 🟡 **SPECIFICA COMPLETA — In attesa di implementazione**
+
+Il Physics Engine V6.4 è pronto per l'integrazione nel ciclo di gioco. La strategia scelta è l'**Opzione A+ (Adattatore Per-Sezione con Stato Persistente)**, che sostituisce `update_section()` con `update_section_v6()` mantenendo inalterato il formato dei dati verso il frontend.
+
+**Documento di riferimento:** [`docs/physics-engine-v6-integration-spec.md`](physics-engine-v6-integration-spec.md)
+
+**Benchmark confermati:**
+- `integrate_waypoint()`: ~0.1ms per waypoint
+- Tempo calcolo/tick: ~2.5ms a game_speed 1x, ~15ms a 6x
+- Budget tick: 100ms → **occupato solo il 2-15%**
+
+**Vantaggi chiave:**
+- ✅ Interazione giocatore in tempo reale (push, ERS, engine map)
+- ✅ Eventi dinamici nativi (battaglie, blue flags, pit stop, meteo)
+- ✅ Stato carryover (temperatura gomme, usura, fuel, ERS, freni)
+- ✅ Frontend inalterato (formato `race_update` identico)
+- ✅ Fallback sicuro (flag `USE_PHYSICS_ENGINE_V6` per tornare al V1)
+
+**Piano di implementazione:**
+1. **SectionMapper** — Estrae waypoints HD per sezione
+2. **StateAdapter** — Traduce `CarState` ↔ `PhysicsState`
+3. **update_section_v6()** — Orchestratore per-sezione
+4. **Integrazione Bridge** — Modifiche a `CarTrackState` e `_move_cars()`
+5. **Eventi Dinamici** — Passaggio parametri push/ERS/DRS/dirty air
+6. **Testing** — Comparativo V1 vs V6, performance, regressione
+
+**Stima:** 8-13 giorni
+
+---
