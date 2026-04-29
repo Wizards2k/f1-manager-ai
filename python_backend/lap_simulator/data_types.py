@@ -96,6 +96,7 @@ class Waypoint:
     surface_type: str
     macro_sector_id: str
     section_kind: str
+    telemetry_mu: float = 0.0  # derived mechanical grip from HD telemetry
 
 @dataclass
 class SectionContext:
