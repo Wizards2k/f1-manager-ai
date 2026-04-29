@@ -106,6 +106,9 @@ BLUE_FLAG_PROXIMITY_THRESHOLD_M = 250.0
 BRAKE_WARN_TOLERANCE = 0.05
 BRAKE_WARN_BLINK_WINDOW_S = 3.0
 
+# Set USE_PHYSICS_V6=1 to activate Physics Engine V6 integration (G1-G5)
+USE_PHYSICS_V6 = os.getenv("USE_PHYSICS_V6", "0").lower() in {"1", "true", "yes", "on"}
+
 # Session categorization for blue flag policy
 PRACTICE_SESSION_KINDS = {"FP1", "FP2", "FP3", "P1", "P2", "P3", "Q", "QUALI", "QUALIFYING"}
 QUALIFYING_SESSION_KINDS = {"Q", "QUALI", "QUALIFY", "QUALIFYING"}
@@ -193,6 +196,16 @@ class CarTrackState:
     tyre_set: Optional['TyreSet'] = None
     current_run_program: Optional[str] = None
 
+    # ── V6 (G2): Stato fisico persistente tra sezioni dello stesso stint ──
+    physics_state: Optional[Any] = None   # PhysicsState da physics_engine
+
+    # ── V6 (G3): PU_Context persistente tra sezioni (SOC ERS non azzerato per sezione) ──
+    pu_ctx: Optional[Any] = None          # PU_Context da pu_stateful_v2
+
+    # ── V6 (G4+G5): Aggiornati da FASE 3, letti da FASE 2 (ritardo 1 tick) ──
+    dirty_air_factor: float = 0.0         # da BattleResult.dirty_air_penalties
+    drs_gap_ahead_s: Optional[float] = None  # gap all'auto davanti [s]
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "car_id": self.car_id,
@@ -219,6 +232,9 @@ class CarTrackState:
             "setup_data_complete": self.setup_data_complete,
             "tyre_set_id": self.tyre_set_id,
             "current_run_program": self.current_run_program,
+            # V6: physics_state e pu_ctx non serializzati (reinizializzati al resume)
+            "dirty_air_factor": self.dirty_air_factor,
+            "drs_gap_ahead_s": self.drs_gap_ahead_s,
         }
 
     @classmethod
@@ -251,6 +267,9 @@ class CarTrackState:
         ts.setup_data_complete = data.get("setup_data_complete", False)
         ts.tyre_set_id = data.get("tyre_set_id")
         ts.current_run_program = data.get("current_run_program")
+        # V6: physics_state e pu_ctx non deserializzati (reinizializzati al primo uso)
+        ts.dirty_air_factor = float(data.get("dirty_air_factor", 0.0))
+        ts.drs_gap_ahead_s = data.get("drs_gap_ahead_s")
         return ts
 
 
@@ -487,6 +506,16 @@ class SessionBridge:
         self._player_runtime_state: Dict[str, Dict[str, Any]] = {}
         self._track_states: Dict[str, CarTrackState] = {}
         self._team_plans: Dict[str, TeamSessionPlan] = {}
+        # ── V6 Physics precomputed data (G1) ──
+        self._hd_waypoints: List[Dict] = []
+        self._reference_sections: Dict = {}
+        self._aero_calibration: Dict = {}
+        self._circuit_calibration: Dict = {}
+        self._v_max_corner_array: List[float] = []
+        self._brake_needed: List = []
+        self._section_wp_index: Dict[int, Tuple[int, int]] = {}
+        self._air_density: float = 1.225
+        self._v6_physics_ready: bool = False
 
     # ------------------------------------------------------------------
     # Serialization
@@ -710,6 +739,95 @@ class SessionBridge:
         for s in self.sections:
             cum += s.length_m
             self._section_end_m.append(cum)
+
+        # ── V6 Physics precompute (G1) ──
+        # Runs always: data is used only when USE_PHYSICS_V6=1 in _move_cars()
+        self._v6_physics_ready = False
+        try:
+            import bisect
+            from lap_simulator.physics_engine.integrator.io import (
+                load_hd_waypoints,
+                load_reference_sections,
+            )
+            from lap_simulator.physics_engine.integrator.physics import (
+                compute_v_max_corners,
+                get_circuit_elevation_m,
+            )
+            from lap_simulator.physics_engine.aero.aero_assembly import AeroAssembly as PhysAero
+            from lap_simulator.physics_engine.calibration.aero_calibration import get_aero_calibration
+            from lap_simulator.physics_engine.calibration.circuit_calibration import get_circuit_calibration
+            from lap_simulator.physics_engine.core.constants import (
+                MU_BASE,
+                calculate_air_density,
+            )
+            from lap_simulator.physics_engine.driver.braking_point import compute_braking_zones_v6
+
+            self._hd_waypoints = load_hd_waypoints(circuit_id)
+            self._reference_sections = load_reference_sections(circuit_id) or {}
+            self._aero_calibration = get_aero_calibration(circuit_id) or {}
+            circuit_cal = get_circuit_calibration(circuit_id) or {}
+            self._circuit_calibration = circuit_cal
+
+            elevation_m = get_circuit_elevation_m(circuit_id)
+            self._air_density = calculate_air_density(elevation_m)
+
+            # Pre-indice sezione → (start_wp_idx, end_wp_idx) — richiede _section_end_m
+            wp_distances = [wp.get("dist_m", 0.0) for wp in self._hd_waypoints]
+            self._section_wp_index = {}
+            for sec_idx, sec in enumerate(self.sections):
+                start_m = self._section_end_m[sec_idx] - sec.length_m
+                end_m = self._section_end_m[sec_idx]
+                s_idx = bisect.bisect_left(wp_distances, start_m)
+                e_idx = bisect.bisect_right(wp_distances, end_m)
+                self._section_wp_index[sec_idx] = (s_idx, e_idx)
+
+            # Precomputa v_max_corner con assetto neutro di riferimento
+            ref_aero = PhysAero()
+            ref_aero.set_component_angles({"front_wing": 20.0, "rear_wing": 22.0, "b_wing": 10.0})
+            k_wing = self._aero_calibration.get("k_wing_coupling")
+            if k_wing:
+                try:
+                    ref_aero.set_k_wing_coupling(float(k_wing))
+                except (TypeError, ValueError):
+                    pass
+            mu_cal = float(self._aero_calibration.get("mu_mechanical", MU_BASE.get("C3", 1.82)))
+            mu_override = circuit_cal.get("mu_override")
+            if mu_override:
+                mu_cal = next(iter(mu_override.values()), mu_cal)
+            self._v_max_corner_array = compute_v_max_corners(
+                waypoints=self._hd_waypoints,
+                aero=ref_aero,
+                mu_cal=mu_cal,
+                mass_kg=720.0,
+                circuit_id=circuit_id,
+            )
+
+            # Precomputa brake_needed (lookahead per la frenata)
+            max_brake_g = float(circuit_cal.get("max_brake_decel_g", 6.5) or 6.5)
+            self._brake_needed = compute_braking_zones_v6(
+                waypoints=self._hd_waypoints,
+                v_max_corner=self._v_max_corner_array,
+                max_brake_decel_g=max_brake_g,
+            )
+
+            self._v6_physics_ready = True
+            logger.debug(
+                "V6 physics precomputed for %s: %d waypoints, %d sections indexed, "
+                "air_density=%.4f kg/m³",
+                circuit_id, len(self._hd_waypoints),
+                len(self._section_wp_index), self._air_density,
+            )
+        except Exception as exc:
+            logger.warning("V6 physics precompute failed for %s: %s", circuit_id, exc)
+            self._hd_waypoints = []
+            self._reference_sections = {}
+            self._aero_calibration = {}
+            self._circuit_calibration = {}
+            self._v_max_corner_array = []
+            self._brake_needed = []
+            self._section_wp_index = {}
+            self._air_density = 1.225
+            self._v6_physics_ready = False
 
         # Precompute sector boundaries from sector_markers_m
         # sector_markers_m = [0, S1_end_m, S2_end_m] → S3 ends at circuit_length
@@ -1152,6 +1270,18 @@ class SessionBridge:
             "tyre_is_q3_reserve": bool(tyre_is_q3_reserve),
         }
 
+    def _hot_swap_engine_map(self, ts: CarTrackState, new_map_str: str) -> None:
+        """Cambia engine map preservando il SOC corrente (G3 — hot-swap ERS mode)."""
+        if not USE_PHYSICS_V6 or ts.pu_ctx is None:
+            return
+        try:
+            from lap_simulator.physics_engine.integrator.pu_stateful_v2 import init_pu_context
+            current_soc = ts.pu_ctx.soc_mj
+            ts.pu_ctx = init_pu_context(circuit_id=self.circuit_id or "", engine_map=new_map_str)
+            ts.pu_ctx.soc_mj = current_soc  # preserva SOC
+        except Exception as exc:
+            logger.warning("_hot_swap_engine_map failed for %s: %s", ts.car_id, exc)
+
     def _sync_ers_mode_state(self, ts: CarTrackState) -> None:
         entry = ts.car_entry
         if entry is None:
@@ -1185,6 +1315,12 @@ class SessionBridge:
         if selected_active_map is None:
             selected_active_map = getattr(ts, "selected_active_map", None)
         if selected_active_map is not None:
+            # ── V6 G3: hot-swap engine map preservando SOC se la mappa cambia ──
+            if USE_PHYSICS_V6 and ts.pu_ctx is not None:
+                new_map_str = selected_active_map.value if hasattr(selected_active_map, "value") else str(selected_active_map)
+                current_map_str = getattr(ts.pu_ctx, "engine_map", None)
+                if current_map_str != new_map_str:
+                    self._hot_swap_engine_map(ts, new_map_str)
             ts.selected_active_map = selected_active_map
             entry.state.pu.active_map = selected_active_map
         if race_car is not None:
@@ -1278,22 +1414,63 @@ class SessionBridge:
             if ts.section_time_acc >= effective_dt_ref:
                 overflow = ts.section_time_acc - effective_dt_ref
 
-                # Call update_section() for physics
+                # Call update_section() / update_section_v6() for physics
                 entry = ts.car_entry
                 try:
-                    result = update_section(
-                        car_state=entry.state,
-                        aero_setup=entry.aero_setup,
-                        driver_skills=entry.driver_skills,
-                        section=section,
-                        env=self.env,
-                        config=self.circuit_config,
-                        push_level=entry.push_level,
-                        delta_aero=getattr(entry, 'delta_aero', 0.0),
-                        delta_grip=getattr(entry, 'delta_grip', 0.0),
-                        apply_baseline_delta=getattr(entry, 'apply_baseline_delta', True),
-                        is_qualifying=is_qualifying_session,
-                    )
+                    if USE_PHYSICS_V6 and self._v6_physics_ready and ts.lap_phase == LapPhase.HOT_LAP:
+                        from lap_simulator.update_section_v6 import update_section_v6
+                        engine_map_str = (
+                            ts.selected_active_map.value
+                            if hasattr(ts.selected_active_map, "value")
+                            else str(ts.selected_active_map or "RACE")
+                        )
+                        result, ts.physics_state, ts.pu_ctx = update_section_v6(
+                            car_state=entry.state,
+                            aero_setup=entry.aero_setup,
+                            driver_skills=entry.driver_skills,
+                            section=section,
+                            env=self.env,
+                            config=self.circuit_config,
+                            push_level=entry.push_level,
+                            delta_aero=getattr(entry, "delta_aero", 0.0),
+                            delta_grip=getattr(entry, "delta_grip", 0.0),
+                            apply_baseline_delta=getattr(entry, "apply_baseline_delta", True),
+                            is_qualifying=is_qualifying_session,
+                            circuit_id=self.circuit_id or "",
+                            lap_number=ts.lap_number,
+                            hd_waypoints=self._hd_waypoints,
+                            v_max_corner_array=self._v_max_corner_array,
+                            brake_needed=self._brake_needed,
+                            section_wp_index=self._section_wp_index,
+                            section_idx=ts.current_section_idx,
+                            reference_sections=self._reference_sections,
+                            aero_calibration=self._aero_calibration,
+                            circuit_calibration=self._circuit_calibration,
+                            air_density=self._air_density,
+                            physics_state=ts.physics_state,
+                            pu_ctx=ts.pu_ctx,
+                            engine_map=engine_map_str,
+                            dirty_air_factor=ts.dirty_air_factor,
+                            drs_gap_ahead_s=ts.drs_gap_ahead_s,
+                            is_safety_car=(
+                                self.pso.clock.flag != SessionFlag.GREEN
+                                if self.pso and self.pso.clock else False
+                            ),
+                        )
+                    else:
+                        result = update_section(
+                            car_state=entry.state,
+                            aero_setup=entry.aero_setup,
+                            driver_skills=entry.driver_skills,
+                            section=section,
+                            env=self.env,
+                            config=self.circuit_config,
+                            push_level=entry.push_level,
+                            delta_aero=getattr(entry, 'delta_aero', 0.0),
+                            delta_grip=getattr(entry, 'delta_grip', 0.0),
+                            apply_baseline_delta=getattr(entry, 'apply_baseline_delta', True),
+                            is_qualifying=is_qualifying_session,
+                        )
                 except Exception as e:
                     logger.error("update_section error for %s: %s", car_id, e)
                     result = None
@@ -1930,18 +2107,29 @@ class SessionBridge:
             # Also preserve battery SOC
             entry.state.pu.ers_energy_mj = prev_pu.ers_energy_mj
 
+        initial_map = _resolve_engine_map_for_ers_mode(_normalize_ers_mode_name(getattr(entry.state, "ers_mode", None)) or "STANDARD") or entry.state.pu.active_map
         self._track_states[car_id] = CarTrackState(
             car_id=car_id,
             car_entry=entry,
             laps_planned=stint_laps,
             is_player=True,
             pit_exit_delay_s=2.0,  # player gets short delay
-            selected_active_map=_resolve_engine_map_for_ers_mode(_normalize_ers_mode_name(getattr(entry.state, "ers_mode", None)) or "STANDARD") or entry.state.pu.active_map,
+            selected_active_map=initial_map,
             selected_ers_mode=_normalize_ers_mode_name(getattr(entry.state, "ers_mode", None)) or "STANDARD",
             tyre_set_id=(active_tyre_set.set_id if active_tyre_set else (tyre_set_id or None)),
             tyre_set=active_tyre_set,
             current_run_program=run_program,
         )
+        # ── V6 G3: init pu_ctx fresco a inizio stint ──
+        if USE_PHYSICS_V6 and self.circuit_id:
+            try:
+                from lap_simulator.physics_engine.integrator.pu_stateful_v2 import init_pu_context
+                map_str = initial_map.value if hasattr(initial_map, "value") else str(initial_map or "RACE")
+                self._track_states[car_id].pu_ctx = init_pu_context(
+                    circuit_id=self.circuit_id, engine_map=map_str,
+                )
+            except Exception as exc:
+                logger.warning("player_send_out: init_pu_context failed for %s: %s", car_id, exc)
         self._sync_ers_mode_state(self._track_states[car_id])
         
         # Update race_car state immediately to prevent race condition with main loop
@@ -2273,6 +2461,11 @@ class SessionBridge:
         circuit_m = self.circuit_config.circuit_length_m
         n_sections = len(self.sections)
 
+        # ── V6 G4: reset dirty_air_factor per tutte le auto (poi sovrascritto per le coppie in battaglia) ──
+        if USE_PHYSICS_V6:
+            for ts in self._track_states.values():
+                ts.dirty_air_factor = 0.0
+
         # ── Group on-track cars by current section ──
         section_cars: Dict[int, List[tuple]] = {}
         for car_id, ts in self._track_states.items():
@@ -2478,9 +2671,31 @@ class SessionBridge:
                     self._battle_cooldown.add(pair.attacker_id)
                     self._battle_cooldown.add(pair.defender_id)
 
+            # ── V6 G4: pipe dirty_air_penalties → CarTrackState.dirty_air_factor ──
+            if USE_PHYSICS_V6:
+                for car_id_da, penalty in result.dirty_air_penalties.items():
+                    ts_da = self._track_states.get(car_id_da)
+                    if ts_da is not None:
+                        ts_da.dirty_air_factor = float(penalty)
+
             # Store events
             self.battle_events.extend(result.events)
             self._queue_battle_events(result.events)
+
+        # ── V6 G5: calcola drs_gap_ahead_s per ogni auto in pista ──
+        # on_track_progress è già costruito sopra nel metodo
+        if USE_PHYSICS_V6 and on_track_progress:
+            on_track_sorted = sorted(on_track_progress, key=lambda x: x[2], reverse=True)
+            for i, (car_id_g5, ts_g5, _progress) in enumerate(on_track_sorted):
+                if i == 0:
+                    ts_g5.drs_gap_ahead_s = None
+                else:
+                    _, car_ahead_ts, car_ahead_progress = on_track_sorted[i - 1]
+                    gap_m = car_ahead_progress - _progress  # sempre >= 0 (sort decrescente)
+                    v_follower = getattr(getattr(ts_g5.car_entry, "state", None), "v_current_ms", 50.0)
+                    v_leader = getattr(getattr(car_ahead_ts.car_entry, "state", None), "v_current_ms", 50.0)
+                    v_avg = max((v_follower + v_leader) / 2.0, 1.0)
+                    ts_g5.drs_gap_ahead_s = gap_m / v_avg
 
         # Cooldown no longer needed (no gap enforcement)
         self._battle_cooldown.clear()
@@ -2836,19 +3051,32 @@ class SessionBridge:
                 if record is not None:
                     sr.dispatched = True
                     pit_exit = random.uniform(2.0, 5.0)
+                    ai_initial_map = (
+                        _resolve_engine_map_for_ers_mode(
+                            _normalize_ers_mode_name(getattr(car_entry.state, "ers_mode", None)) or "STANDARD"
+                        ) or car_entry.state.pu.active_map
+                    )
                     car_state = CarTrackState(
                         car_id=car_id,
                         car_entry=car_entry,
                         laps_planned=run_plan.laps_planned,
                         pit_exit_delay_s=pit_exit,
-                        selected_active_map=_resolve_engine_map_for_ers_mode(
-                            _normalize_ers_mode_name(getattr(car_entry.state, "ers_mode", None)) or "STANDARD"
-                        ) or car_entry.state.pu.active_map,
+                        selected_active_map=ai_initial_map,
                         selected_ers_mode=_normalize_ers_mode_name(getattr(car_entry.state, "ers_mode", None)) or "STANDARD",
                         tyre_set_id=reserved_set_id,
                         tyre_set=reserved_set,
                         current_run_program=getattr(run_plan.program, "value", str(run_plan.program)),
                     )
+                    # ── V6 G3: init pu_ctx fresco a inizio stint AI ──
+                    if USE_PHYSICS_V6 and self.circuit_id:
+                        try:
+                            from lap_simulator.physics_engine.integrator.pu_stateful_v2 import init_pu_context
+                            ai_map_str = ai_initial_map.value if hasattr(ai_initial_map, "value") else str(ai_initial_map or "RACE")
+                            car_state.pu_ctx = init_pu_context(
+                                circuit_id=self.circuit_id, engine_map=ai_map_str,
+                            )
+                        except Exception as exc:
+                            logger.warning("AI dispatch: init_pu_context failed for %s: %s", car_id, exc)
                     self._track_states[car_id] = car_state
                     race_car.current_lap_start = time.time()
                     race_car.current_lap_time_partial = 0.0
