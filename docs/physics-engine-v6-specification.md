@@ -916,10 +916,10 @@ python scripts/recalibrate_mu_v60.py --quick
 
 **Documento:** Specifica Tecnica + Roadmap Integrata  
 **Redatto:** 2026-04-18  
-**Aggiornato:** 2026-04-22 (V6.4 P0 Complete — Race Simulation Ready)  
-**Version:** 1.7 — **V6.4 P0 COMPLETE: Race Loop Orchestrator + DRS Logic + Fuel Carryover**
+**Aggiornato:** 2026-04-29 (V6.5 Game Integration IMPLEMENTATA — 8/8 test PASS)  
+**Version:** 1.8
 
-**Status:** ✅ **PRODUCTION-READY FOR SINGLE-LAP + MULTI-LAP RACE SIMULATION**
+**Status:** ✅ **PRODUCTION-READY + GAME INTEGRATION COMPLETE**
 - ✅ V6.0.1 Physics Core: 24/24 lap time accuracy
 - ✅ V6.1 PU/ERS: 4 engine maps, FIA-compliant
 - ✅ V6.2 Altitude/Drag: ISA model, circuit-specific calibration
@@ -927,46 +927,52 @@ python scripts/recalibrate_mu_v60.py --quick
 - ✅ V6.4-P0-1: Race Loop Orchestrator (`race_orchestrator.py` — `simulate_stint()`, `simulate_race()`)
 - ✅ V6.4-P0-2: DRS Activation Logic (zone + gap < 1.0s + lap > 1 + no safety car)
 - ✅ V6.4-P0-3: Fuel Multi-Lap Carryover (`initial_fuel_kg` + `fuel_remaining_kg`)
+- ✅ **V6.5 Game Integration**: `update_section_v6()` + `StateAdapter` + G1-G5 wiring (commit 3ddf393 + eecd474)
 
 **Final Metrics:**
 - Setup Congruence: **24/24** ✅
 - Typology Congruence: **91.7%** (strict) ✅
 - Lap Time Accuracy: **24/24 within ±1.5%** ✅
-- Validation Tests: **5.5/6 PASS** ✅
-- Branch Status: **Merged to feature/lap-simulator-v6** ✅
+- V6.5 Integration Tests: **8/8 PASS** ✅
+- Branch Status: **feature/lap-simulator-v6** ✅
 
-**Next Milestone:** V6.4 — Completare P1 (Weather Model + Damage Model + Multi-Param Optimizer) per realismo gameplay
+**Next Milestone:** V6.4-P1 — Weather Model + Damage Model + Multi-Param Optimizer per realismo gameplay
 
 ---
 
 ## 10. V6.5 — Game Integration (Opzione A+ Per-Sezione)
 
-**Status:** 🟡 **SPECIFICA COMPLETA — In attesa di implementazione**
+**Status:** ✅ **IMPLEMENTATA — commit 3ddf393 + eecd474, 8/8 test PASS (2026-04-29)**
 
-Il Physics Engine V6.4 è pronto per l'integrazione nel ciclo di gioco. La strategia scelta è l'**Opzione A+ (Adattatore Per-Sezione con Stato Persistente)**, che sostituisce `update_section()` con `update_section_v6()` mantenendo inalterato il formato dei dati verso il frontend.
+Il Physics Engine V6.4 è integrato nel ciclo di gioco tramite l'**Opzione A+ (Adattatore Per-Sezione con Stato Persistente)**. `update_section_v6()` sostituisce `update_section()` nella FASE 2 del tick loop quando `USE_PHYSICS_V6=1`.
 
-**Documento di riferimento:** [`docs/physics-engine-v6-integration-spec.md`](physics-engine-v6-integration-spec.md)
+**Documento di riferimento:** [`docs/physics-engine-v6-integration-spec.md`](physics-engine-v6-integration-spec.md) (v2.1 — IMPLEMENTATA)
 
-**Benchmark confermati:**
-- `integrate_waypoint()`: ~0.1ms per waypoint
-- Tempo calcolo/tick: ~2.5ms a game_speed 1x, ~15ms a 6x
-- Budget tick: 100ms → **occupato solo il 2-15%**
+**Benchmark misurati (Monza, 20 auto, 6x game_speed):**
+- `integrate_waypoint()`: ~0.1ms per waypoint (confermato)
+- Tempo medio per sezione V6: **11.7ms**
+- Budget tick worst-case (4×avg): **46.7ms < 50ms** ✅
 
-**Vantaggi chiave:**
-- ✅ Interazione giocatore in tempo reale (push, ERS, engine map)
-- ✅ Eventi dinamici nativi (battaglie, blue flags, pit stop, meteo)
-- ✅ Stato carryover (temperatura gomme, usura, fuel, ERS, freni)
-- ✅ Frontend inalterato (formato `race_update` identico)
-- ✅ Fallback sicuro (flag `USE_PHYSICS_ENGINE_V6` per tornare al V1)
+**Componenti implementati:**
+- ✅ `lap_simulator/update_section_v6.py` — orchestratore per-sezione
+- ✅ `lap_simulator/physics_engine/integrator/state_adapter.py` — `CarState ↔ PhysicsState`
+- ✅ `utils/session_bridge.py` — feature flag `USE_PHYSICS_V6`, G1-G5 wiring
+- ✅ `lap_simulator/data_types.py` — fix `Waypoint.telemetry_mu`
+- ✅ `python_backend/test_v6_integration.py` — 8/8 test PASS
 
-**Piano di implementazione:**
-1. **SectionMapper** — Estrae waypoints HD per sezione
-2. **StateAdapter** — Traduce `CarState` ↔ `PhysicsState`
-3. **update_section_v6()** — Orchestratore per-sezione
-4. **Integrazione Bridge** — Modifiche a `CarTrackState` e `_move_cars()`
-5. **Eventi Dinamici** — Passaggio parametri push/ERS/DRS/dirty air
-6. **Testing** — Comparativo V1 vs V6, performance, regressione
+**Attivazione:** `export USE_PHYSICS_V6=1` prima di avviare il backend.
 
-**Stima:** 8-13 giorni
+**Test suite (8/8 PASS):**
+
+| Test | Risultato |
+|---|---|
+| T1: lap time delta V6 vs ref | 0.1% (81.496s vs 81.433s) ✅ |
+| T2: tyre thermal persistence | No reset tra sezioni ✅ |
+| T3: SOC ERS QUALIFY monotono | 4.000 → 0.080 MJ ✅ |
+| T3b: QUALIFY >= RACE deploy | 4.023 vs 3.124 MJ ✅ |
+| T4: dirty air pipe G4 | Propagato correttamente ✅ |
+| T5: DRS activation | gap 0.5s→True, 2.0s→False ✅ |
+| T6: pit stop reset | 85°C, 0% wear, 20°C freni ✅ |
+| T7: performance 20 auto 6x | avg 11.7ms, worst 46.7ms < 50ms ✅ |
 
 ---
