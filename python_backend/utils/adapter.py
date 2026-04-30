@@ -465,9 +465,10 @@ def apply_lap_result_to_racecar(car, lap_result: LapResult, circuit_length_m: fl
     car.total_laps += 1
     car.total_session_laps += 1
 
-    # --- Best lap ---
-    if not hasattr(car, "best_lap_time") or lap_result.lap_time_s < getattr(car, "best_lap_time", float("inf")):
-        car.best_lap_time = lap_result.lap_time_s
+    # --- Best lap (ignore degenerate sub-30s readings) ---
+    if lap_result.lap_time_s > 30.0:
+        if not hasattr(car, "best_lap_time") or lap_result.lap_time_s < getattr(car, "best_lap_time", float("inf")):
+            car.best_lap_time = lap_result.lap_time_s
 
     # --- Sector times ---
     if lap_result.sector_times_s:

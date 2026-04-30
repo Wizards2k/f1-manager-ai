@@ -1705,8 +1705,8 @@ class SessionBridge:
 
         is_competitive = (ts.lap_phase == LapPhase.HOT_LAP)
 
-        # Best lap (only competitive laps)
-        if is_competitive:
+        # Best lap (only competitive laps, ignore degenerate sub-30s readings)
+        if is_competitive and lap_time > 30.0:
             if not hasattr(race_car, "best_lap_time") or lap_time < getattr(race_car, "best_lap_time", float("inf")):
                 race_car.best_lap_time = lap_time
 

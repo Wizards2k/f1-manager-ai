@@ -502,8 +502,8 @@ class RaceCar:
         # Aggiorna usura gomme
         self.update_tire_wear()
         
-        # Aggiorna miglior tempo in sessione
-        if not hasattr(self, 'best_lap_time') or realistic_lap_time < self.best_lap_time:
+        # Aggiorna miglior tempo in sessione (ignora letture degeneri sotto 30s)
+        if realistic_lap_time > 30.0 and (not hasattr(self, 'best_lap_time') or realistic_lap_time < self.best_lap_time):
             self.best_lap_time = realistic_lap_time
             # Snapshot dei settori del best lap (stesso giro) per delta coerenti
             self.best_lap_sectors = {
